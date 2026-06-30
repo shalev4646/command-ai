@@ -1,3 +1,4 @@
+import random
 import streamlit as st
 
 from backend import get_ai_response, get_loaded_docs_info
@@ -145,23 +146,26 @@ if st.session_state.role is None:
             st.rerun()
     st.stop()
 
-SUGGESTED = [
+ALL_QUESTIONS = [
     "כמה שעות שינה מגיעות לי?",
     "האם אפשר לקצר שינה בתרגיל?",
     "מה קורה אם הפרו את זכות השינה שלי?",
     "מי צריך לאשר חריגה משעות שינה?",
+    "מה הם תנאי החופשה לחייל בשירות חובה?",
+    "כמה ימי חופשה מגיעים לי בשנה?",
+    "האם מפקד יכול לבטל חופשה?",
+    "מה זכויותיי אם אני חולה בזמן חופשה?",
+    "מה המינימום שינה בתרגיל מבצעי?",
+    "האם מגיעה לי שינה רצופה?",
 ]
+
+if "suggested" not in st.session_state:
+    st.session_state.suggested = random.sample(ALL_QUESTIONS, 4)
 
 
 def queue_question(q: str):
     st.session_state.pending_question = q
 
-
-def submit_search():
-    query = st.session_state.get("search_box", "")
-    if query:
-        st.session_state.pending_question = query
-        st.session_state.search_box = ""
 
 
 def handle_question(question: str):
@@ -221,19 +225,9 @@ for msg in st.session_state.messages:
 # ── Suggested questions (only when no conversation yet) ──
 if not st.session_state.messages:
     st.markdown("<p style='color:#6e7681; font-size:0.85rem; text-align:center; margin-bottom:6px;'>שאלות נפוצות</p>", unsafe_allow_html=True)
-    for i, q in enumerate(SUGGESTED):
+    for i, q in enumerate(st.session_state.suggested):
         if st.button(q, key=f"sug_{i}", use_container_width=True):
             queue_question(q)
-
-# ── Search input (only when no conversation) ──
-if not st.session_state.messages:
-    st.text_input(
-        "חיפוש",
-        key="search_box",
-        placeholder="שאל שאלה על פקודות צבאיות...",
-        label_visibility="collapsed",
-        on_change=submit_search,
-    )
 
 # ── Process pending question ──
 if st.session_state.pending_question:
