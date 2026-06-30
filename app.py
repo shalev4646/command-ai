@@ -2,107 +2,123 @@ import streamlit as st
 
 from backend import get_ai_response, get_loaded_docs_info
 
-st.set_page_config(page_title="CommandAI", page_icon="🛡️", layout="wide")
+st.set_page_config(
+    page_title="CommandAI",
+    page_icon="🛡️",
+    layout="centered",
+    initial_sidebar_state="collapsed",
+)
 
 st.markdown("""
 <style>
-/* ---- Base typography: clean, bold, readable ---- */
-html, body, [data-testid="stAppViewContainer"], [data-testid="stSidebar"] {
+/* ── Reset & base ── */
+html, body, [data-testid="stAppViewContainer"] {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    background-color: #0d1117;
+    color: #e6edf3;
 }
 
-/* Center the main container, restrict width, give content room to breathe */
+/* Hide Streamlit chrome */
+#MainMenu, footer, header { visibility: hidden; }
+[data-testid="stToolbar"] { display: none; }
+[data-testid="collapsedControl"] { display: none; }
+
+/* ── Main container ── */
 .main .block-container {
-    max-width: 900px;
-    padding-top: 3rem;
-    padding-bottom: 4rem;
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
+    max-width: 480px;
+    padding: 1rem 1rem 5rem 1rem;
     margin: 0 auto;
 }
 
-h1 { font-size: 2.6rem !important; font-weight: 700 !important; line-height: 1.25 !important; margin-bottom: 0.4rem !important; }
-h3 { font-size: 1.35rem !important; font-weight: 700 !important; }
-p  { font-size: 1.1rem !important; line-height: 1.65 !important; }
-small { font-size: 0.95rem !important; }
-
-/* Breathing room between stacked elements */
-[data-testid="stVerticalBlock"] > div { margin-bottom: 0.4rem; }
-
-/* Style the search bar — large, touch-friendly */
-.stTextInput > div > div > input {
+/* ── Typography ── */
+h1 {
+    font-size: 1.8rem !important;
+    font-weight: 800 !important;
+    color: #3b82f6 !important;
+    margin: 0.5rem 0 0.2rem 0 !important;
     text-align: center;
-    border-radius: 12px;
-    border: 1.5px solid #c0c0c0;
-    padding: 18px 16px;
-    font-size: 1.15rem;
-    min-height: 60px;
 }
+p { font-size: 0.95rem !important; line-height: 1.5 !important; }
 
-/* Style the 2x2 grid cards */
-.question-card {
-    background-color: #ffffff;
-    padding: 28px;
-    border-radius: 14px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-    text-align: center;
-    margin-bottom: 20px;
-    border: 1px solid #e0e0e0;
-    color: #333333;
-    font-weight: 600;
-    font-size: 1.1rem;
-}
-
-/* Buttons — large, bold, easy to tap with a thumb */
+/* ── Buttons — compact, tappable ── */
 div[data-testid="stButton"] > button {
     width: 100%;
-    border-radius: 12px;
-    background-color: white;
-    border: 1.5px solid #e0e0e0;
-    color: #333;
-    font-size: 1.15rem;
+    border-radius: 10px;
+    background-color: #161b22;
+    border: 1px solid #30363d;
+    color: #c9d1d9;
+    font-size: 0.95rem;
     font-weight: 600;
-    padding: 22px 18px;
-    min-height: 64px;
-    line-height: 1.4;
-    margin-bottom: 14px;
+    padding: 12px 14px;
+    min-height: 48px;
+    line-height: 1.3;
+    margin-bottom: 8px;
     white-space: normal;
+    text-align: right;
+    transition: border-color 0.15s, color 0.15s;
 }
 div[data-testid="stButton"] > button:hover {
-    border-color: #0f52ba;
-    color: #0f52ba;
-    box-shadow: 0 4px 12px rgba(15, 82, 186, 0.12);
+    border-color: #3b82f6;
+    color: #3b82f6;
 }
 
-/* Sidebar polish */
-[data-testid="stSidebar"] { padding-top: 1.5rem; }
-[data-testid="stSidebar"] h3 { font-size: 1.2rem !important; }
-
-/* ---- Mobile-first responsiveness ---- */
-@media (max-width: 768px) {
-    .main .block-container { padding-top: 1.5rem; padding-left: 1rem; padding-right: 1rem; }
-    h1 { font-size: 2rem !important; }
-    h3 { font-size: 1.2rem !important; }
-    p  { font-size: 1.05rem !important; }
-
-    /* 2x2 grid collapses to a 1x4 vertical, thumb-friendly list */
-    [data-testid="stHorizontalBlock"] { flex-direction: column !important; gap: 0 !important; }
-    [data-testid="stHorizontalBlock"] > div { width: 100% !important; }
-
-    div[data-testid="stButton"] > button {
-        font-size: 1.05rem;
-        padding: 20px 16px;
-        min-height: 72px;
-    }
-    .stTextInput > div > div > input {
-        font-size: 1.05rem;
-        padding: 16px 14px;
-        min-height: 56px;
-    }
+/* ── Entry screen role buttons ── */
+.st-key-role_soldier button,
+.st-key-role_commander button {
+    min-height: 72px !important;
+    font-size: 1.1rem !important;
+    background-color: #161b22 !important;
 }
+
+/* ── Search / text input ── */
+.stTextInput > div > div > input {
+    background-color: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    color: #e6edf3;
+    padding: 12px 14px;
+    font-size: 0.95rem;
+    min-height: 46px;
+}
+.stTextInput > div > div > input::placeholder { color: #6e7681; }
+
+/* ── Chat input ── */
+[data-testid="stChatInput"] textarea {
+    background-color: #161b22 !important;
+    border: 1px solid #30363d !important;
+    border-radius: 10px !important;
+    color: #e6edf3 !important;
+    font-size: 0.95rem !important;
+}
+
+/* ── Chat messages ── */
+[data-testid="stChatMessage"] {
+    background-color: #161b22;
+    border: 1px solid #21262d;
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+}
+
+/* ── Section gaps ── */
+[data-testid="stVerticalBlock"] > div { margin-bottom: 0.2rem; }
+.stMarkdown { margin-bottom: 0.2rem !important; }
+
+/* ── Sidebar (hidden by default on mobile) ── */
+[data-testid="stSidebar"] {
+    background-color: #0d1117;
+    border-right: 1px solid #21262d;
+}
+
+/* ── Caption / small text ── */
+.stCaption, small { color: #6e7681 !important; font-size: 0.8rem !important; }
+
+/* ── Spinner ── */
+.stSpinner > div { border-top-color: #3b82f6 !important; }
 </style>
 """, unsafe_allow_html=True)
 
+# ── Session state ──
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "pending_question" not in st.session_state:
@@ -110,59 +126,23 @@ if "pending_question" not in st.session_state:
 if "role" not in st.session_state:
     st.session_state.role = None
 
-# ---------------------------------------------------------------------------
-# Entry / role gate — must be cleared before the dashboard is shown
-# ---------------------------------------------------------------------------
+# ── Entry / role gate ──
 if st.session_state.role is None:
-    st.markdown("""
-    <style>
-    .entry-wrap { text-align: center; margin-top: 3rem; margin-bottom: 1rem; }
-    .entry-wrap h1 { color: #0f52ba !important; margin-bottom: 0.3rem !important; }
-    .entry-wrap p { color: #555555 !important; font-size: 1.2rem !important; margin-bottom: 2rem !important; }
-    .st-key-role_soldier button, .st-key-role_commander button {
-        height: 160px;
-        font-size: 1.3rem;
-        font-weight: 700;
-        border-radius: 14px;
-        border: 1.5px solid #e0e0e0;
-        background-color: #ffffff;
-        color: #333333;
-    }
-    .st-key-role_soldier button:hover, .st-key-role_commander button:hover {
-        border-color: #0f52ba;
-        color: #0f52ba;
-        box-shadow: 0 4px 12px rgba(15, 82, 186, 0.15);
-    }
+    st.markdown("<div style='text-align:center; padding-top:2rem;'>", unsafe_allow_html=True)
+    st.markdown("# CommandAI")
+    st.markdown("<p style='text-align:center; color:#6e7681;'>בחר את סוג הכניסה שלך</p>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    @media (max-width: 768px) {
-        .entry-wrap { margin-top: 1.5rem; }
-        .entry-wrap p { font-size: 1.05rem !important; }
-        .st-key-role_soldier button, .st-key-role_commander button {
-            height: 110px;
-            font-size: 1.15rem;
-        }
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-    st.markdown(
-        "<div class='entry-wrap'><h1>CommandAI</h1>"
-        "<p>בחר את סוג הכניסה שלך למערכת</p></div>",
-        unsafe_allow_html=True,
-    )
-
-    _, mid, _ = st.columns([1, 4, 1])
-    with mid:
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("🪖 כניסת חיילים", key="role_soldier", use_container_width=True):
-                st.session_state.role = "soldier"
-                st.rerun()
-        with col2:
-            if st.button("⭐ כניסת מפקדים", key="role_commander", use_container_width=True):
-                st.session_state.role = "commander"
-                st.rerun()
-
+    st.markdown("<br>", unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🪖 כניסת חיילים", key="role_soldier", use_container_width=True):
+            st.session_state.role = "soldier"
+            st.rerun()
+    with col2:
+        if st.button("⭐ כניסת מפקדים", key="role_commander", use_container_width=True):
+            st.session_state.role = "commander"
+            st.rerun()
     st.stop()
 
 SUGGESTED = [
@@ -173,8 +153,8 @@ SUGGESTED = [
 ]
 
 
-def queue_question(question: str):
-    st.session_state.pending_question = question
+def queue_question(q: str):
+    st.session_state.pending_question = q
 
 
 def submit_search():
@@ -195,81 +175,37 @@ def handle_question(question: str):
     st.session_state.messages.append({"role": "assistant", "content": answer})
 
 
-# ---------------------------------------------------------------------------
-# Sidebar
-# ---------------------------------------------------------------------------
+# ── Sidebar ──
 with st.sidebar:
     role_label = "חייל" if st.session_state.role == "soldier" else "מפקד"
     st.caption(f"מחובר כ-{role_label}")
     if st.button("🔄 החלף תפקיד", key="switch_role"):
         st.session_state.role = None
         st.rerun()
-
     st.markdown("---")
-    st.markdown("### 🛡️ פקודות טעונות")
+    st.markdown("### פקודות טעונות")
     docs = get_loaded_docs_info()
     if docs:
         for doc in docs:
             st.markdown(f"**{doc['id']}**  \n{doc['title']}")
     else:
         st.caption("אין פקודות טעונות")
-
-    st.markdown("---")
-    st.markdown("### היסטוריה")
-    user_msgs = [m for m in st.session_state.messages if m["role"] == "user"]
-    for msg in user_msgs[-6:]:
-        st.caption(msg["content"][:35] + "..." if len(msg["content"]) > 35 else msg["content"])
-
     st.markdown("---")
     if st.button("🗑️ שיחה חדשה"):
         st.session_state.messages = []
         st.rerun()
 
-# ---------------------------------------------------------------------------
-# Main area — strict flow: header -> search -> spacing -> 2x2 question grid
-# ---------------------------------------------------------------------------
+# ── Header ──
+role_label = "חייל" if st.session_state.role == "soldier" else "מפקד"
 st.markdown(
-    "<div style='text-align: center; color: #0f52ba;'>"
-    "<h1>CommandAI</h1>"
-    "<p>מערכת חכמה לניתוח פקודות מטכ\"ל</p>"
-    "</div>",
+    f"<div style='text-align:center; padding: 0.5rem 0 0.8rem 0;'>"
+    f"<h1>CommandAI</h1>"
+    f"<p style='color:#6e7681; margin:0; font-size:0.85rem;'>מערכת חכמה לניתוח פקודות מטכ\"ל · {role_label}</p>"
+    f"</div>",
     unsafe_allow_html=True,
 )
 
-st.text_input(
-    "חיפוש",
-    key="search_box",
-    placeholder="שאל שאלה על פקודות צבאיות...",
-    label_visibility="collapsed",
-    on_change=submit_search,
-)
-
-st.markdown("<br><br>", unsafe_allow_html=True)
-
-col1, col2 = st.columns(2)
-with col1:
-    if st.button(SUGGESTED[0], key="sug_0", use_container_width=True):
-        queue_question(SUGGESTED[0])
-with col2:
-    if st.button(SUGGESTED[1], key="sug_1", use_container_width=True):
-        queue_question(SUGGESTED[1])
-
-col3, col4 = st.columns(2)
-with col3:
-    if st.button(SUGGESTED[2], key="sug_2", use_container_width=True):
-        queue_question(SUGGESTED[2])
-with col4:
-    if st.button(SUGGESTED[3], key="sug_3", use_container_width=True):
-        queue_question(SUGGESTED[3])
-
-if st.session_state.pending_question:
-    q = st.session_state.pending_question
-    st.session_state.pending_question = None
-    handle_question(q)
-
-# ---------------------------------------------------------------------------
-# Conversation
-# ---------------------------------------------------------------------------
+# ── Conversation ──
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         content = msg["content"]
@@ -282,9 +218,34 @@ for msg in st.session_state.messages:
                 st.markdown("✓ **מותר**")
         st.markdown(content)
 
+# ── Suggested questions (only when no conversation yet) ──
+if not st.session_state.messages:
+    st.markdown("<p style='color:#6e7681; font-size:0.85rem; text-align:center; margin-bottom:6px;'>שאלות נפוצות</p>", unsafe_allow_html=True)
+    for i, q in enumerate(SUGGESTED):
+        if st.button(q, key=f"sug_{i}", use_container_width=True):
+            queue_question(q)
+
+# ── Search input (only when no conversation) ──
+if not st.session_state.messages:
+    st.text_input(
+        "חיפוש",
+        key="search_box",
+        placeholder="שאל שאלה על פקודות צבאיות...",
+        label_visibility="collapsed",
+        on_change=submit_search,
+    )
+
+# ── Process pending question ──
+if st.session_state.pending_question:
+    q = st.session_state.pending_question
+    st.session_state.pending_question = None
+    handle_question(q)
+    st.rerun()
+
+# ── Chat input (always visible) ──
 if prompt := st.chat_input("שאל שאלה על פקודות צבאיות..."):
     handle_question(prompt)
     st.rerun()
 
 doc_count = len(get_loaded_docs_info())
-st.caption(f"CommandAI — {doc_count} פקודות טעונות | המערכת עונה אך ורק על בסיס המקורות | v2.0")
+st.caption(f"CommandAI · {doc_count} פקודות · v2.1")
