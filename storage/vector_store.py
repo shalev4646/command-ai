@@ -5,6 +5,8 @@ import chromadb
 from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2
 
 _COLLECTION = "idf_orders"
+_CHUNK_WORDS = 1500
+_OVERLAP_WORDS = 200
 
 _client: chromadb.ClientAPI | None = None
 _collection: chromadb.Collection | None = None
@@ -23,11 +25,45 @@ def _get_collection() -> chromadb.Collection:
     return _collection
 
 
+def _split_raw_text(text: str, doc_id: str, title: str) -> list[dict]:
+    """Split raw text into overlapping word-based chunks."""
+    words = text.split()
+    chunks = []
+    i = 0
+    n = 0
+    while i < len(words):
+        chunk_text = " ".join(words[i:i + _CHUNK_WORDS])
+        chunks.append({
+            "id": f"{doc_id}__chunk{n}",
+            "text": f"{title}\n{chunk_text}",
+            "doc_id": doc_id,
+            "title": title,
+            "section": f"chunk{n}",
+            "clause": str(n),
+            "tags": "",
+        })
+        n += 1
+        i += _CHUNK_WORDS - _OVERLAP_WORDS
+    return chunks
+
+
 def index_document(doc: dict) -> int:
     """Index all clauses from a document. Returns number of chunks added."""
     col = _get_collection()
     doc_id = doc.get("document_id", "unknown")
     title = doc.get("title", "")
+
+    # Fallback: if no structured sections but raw_text exists, chunk it directly
+    if not doc.get("sections") and not doc.get("annex_exceptions") and doc.get("raw_text"):
+        chunks = _split_raw_text(doc["raw_text"], doc_id, title)
+        if not chunks:
+            return 0
+        col.upsert(
+            ids=[c["id"] for c in chunks],
+            documents=[c["text"] for c in chunks],
+            metadatas=[{k: v for k, v in c.items() if k not in ("id", "text")} for c in chunks],
+        )
+        return len(chunks)
 
     ids, texts, metas = [], [], []
 

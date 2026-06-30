@@ -78,3 +78,87 @@ def get_loaded_docs_info() -> list[dict]:
 
 def get_index_info() -> dict:
     return get_index_stats()
+
+
+# Suggested questions per document_id prefix
+_QUESTIONS_BY_TOPIC: dict[str, list[str]] = {
+    "PM-33.0213": [
+        "כמה שעות שינה מגיעות לי?",
+        "האם אפשר לקצר שינה בתרגיל?",
+        "מה קורה אם הפרו את זכות השינה שלי?",
+        "מי צריך לאשר חריגה משעות שינה?",
+        "מה המינימום שינה בתרגיל מבצעי?",
+        "האם מגיעה לי שינה רצופה?",
+    ],
+    "PM-35.0402": [
+        "כמה ימי חופשה מגיעים לי בשנה?",
+        "האם מפקד יכול לבטל חופשה?",
+        "מה זכויותיי אם אני חולה בזמן חופשה?",
+        "מה הם תנאי החופשה לחייל בשירות חובה?",
+        "האם אפשר לצבור ימי חופשה?",
+        "מה חופשת שחרור?",
+    ],
+    "PM-33.0302": [
+        "מה העונשים האפשריים בדין משמעתי?",
+        "מי רשאי לשפוט בדין משמעתי?",
+        "האם מגיע לי ייצוג בדין משמעתי?",
+        "מה זכותי לערער על עונש משמעתי?",
+        "מה ההבדל בין מחבוש לקנס?",
+        "כמה ימי מחבוש מפקד יכול לתת?",
+    ],
+}
+
+_DEFAULT_QUESTIONS = [
+    "מה זכויותיי כחייל?",
+    "האם מגיע לי שינה מספקת?",
+    "מה העונש על עבירה משמעתית?",
+]
+
+
+def get_suggested_questions() -> list[str]:
+    """Return questions covering all currently loaded documents."""
+    docs = get_loaded_docs_info()
+    all_questions: list[str] = []
+    for doc in docs:
+        doc_id = doc.get("id", "")
+        questions = _QUESTIONS_BY_TOPIC.get(doc_id, _DEFAULT_QUESTIONS)
+        all_questions.extend(questions)
+    if not all_questions:
+        all_questions = _DEFAULT_QUESTIONS
+    return all_questions
+
+
+def ensure_pdfs_ingested(pdf_dir: Path | None = None) -> list[str]:
+    """Scan pdf_dir for PDFs and ingest any that don't have a JSON yet. Returns newly ingested names."""
+    from ingestion.pdf_to_json import ingest
+
+    if pdf_dir is None:
+        pdf_dir = Path(__file__).parent / "pdf-ldf_law"
+    if not pdf_dir.exists():
+        return []
+
+    json_dir = Path(__file__).parent / "storage" / "json_store"
+    # Collect source_file values from existing JSONs
+    ingested_files: set[str] = set()
+    for f in json_dir.glob("*.json"):
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+            if d.get("source_file"):
+                ingested_files.add(d["source_file"])
+        except Exception:
+            pass
+
+    newly_ingested = []
+    for pdf in sorted(pdf_dir.glob("*.pdf")):
+        if pdf.name not in ingested_files:
+            try:
+                ingest(str(pdf))
+                newly_ingested.append(pdf.name)
+                import sys
+                sys.stdout.buffer.write(f"[CommandAI] ingested: {pdf.name}\n".encode("utf-8"))
+                sys.stdout.buffer.flush()
+            except Exception as e:
+                import sys
+                sys.stdout.buffer.write(f"[CommandAI] error ingesting {pdf.name}: {e}\n".encode("utf-8", errors="replace"))
+                sys.stdout.buffer.flush()
+    return newly_ingested

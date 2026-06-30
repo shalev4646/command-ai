@@ -88,6 +88,7 @@ def ingest(pdf_path: str) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     slug = re.sub(r"[^\w֐-׿-]", "-", title)[:60]
     meta["raw_text"] = text
+    meta["source_file"] = pdf.name
     out_path = out_dir / f"{slug}.json"
     out_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
 

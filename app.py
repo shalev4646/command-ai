@@ -1,7 +1,13 @@
 import random
 import streamlit as st
 
-from backend import get_ai_response, get_loaded_docs_info
+from backend import get_ai_response, get_loaded_docs_info, ensure_pdfs_ingested, get_suggested_questions
+
+@st.cache_resource(show_spinner=False)
+def _startup_ingest():
+    ensure_pdfs_ingested()
+
+_startup_ingest()
 
 st.set_page_config(
     page_title="CommandAI",
@@ -146,21 +152,9 @@ if st.session_state.role is None:
             st.rerun()
     st.stop()
 
-ALL_QUESTIONS = [
-    "כמה שעות שינה מגיעות לי?",
-    "האם אפשר לקצר שינה בתרגיל?",
-    "מה קורה אם הפרו את זכות השינה שלי?",
-    "מי צריך לאשר חריגה משעות שינה?",
-    "מה הם תנאי החופשה לחייל בשירות חובה?",
-    "כמה ימי חופשה מגיעים לי בשנה?",
-    "האם מפקד יכול לבטל חופשה?",
-    "מה זכויותיי אם אני חולה בזמן חופשה?",
-    "מה המינימום שינה בתרגיל מבצעי?",
-    "האם מגיעה לי שינה רצופה?",
-]
-
 if "suggested" not in st.session_state:
-    st.session_state.suggested = random.sample(ALL_QUESTIONS, 4)
+    all_q = get_suggested_questions()
+    st.session_state.suggested = random.sample(all_q, min(4, len(all_q)))
 
 
 def queue_question(q: str):
@@ -187,11 +181,18 @@ with st.sidebar:
         st.session_state.role = None
         st.rerun()
     st.markdown("---")
-    st.markdown("### פקודות טעונות")
+    st.markdown("### 📋 פקודות טעונות")
     docs = get_loaded_docs_info()
     if docs:
         for doc in docs:
-            st.markdown(f"**{doc['id']}**  \n{doc['title']}")
+            st.markdown(
+                f"""<div style='background:#161b22; border:1px solid #30363d; border-radius:8px;
+                    padding:8px 12px; margin-bottom:6px;'>
+                    <div style='color:#3b82f6; font-size:0.78rem; font-weight:600;'>{doc['id']}</div>
+                    <div style='color:#e6edf3; font-size:0.88rem; margin-top:2px;'>{doc['title']}</div>
+                </div>""",
+                unsafe_allow_html=True,
+            )
     else:
         st.caption("אין פקודות טעונות")
     st.markdown("---")
@@ -242,4 +243,4 @@ if prompt := st.chat_input("שאל שאלה על פקודות צבאיות..."):
     st.rerun()
 
 doc_count = len(get_loaded_docs_info())
-st.caption(f"CommandAI · {doc_count} פקודות · v2.1")
+st.caption(f"CommandAI · {doc_count} פקודות טעונות · v2.2")
