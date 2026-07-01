@@ -1,7 +1,14 @@
 import random
+import traceback
 import streamlit as st
 
-from backend import get_ai_response, get_loaded_docs_info, ensure_pdfs_ingested, get_suggested_questions
+try:
+    from backend import get_ai_response, get_loaded_docs_info, ensure_pdfs_ingested, get_suggested_questions
+except Exception:
+    st.set_page_config(page_title="CommandAI - Error", layout="wide")
+    st.error("שגיאה בטעינת המערכת (import של backend נכשל):")
+    st.code(traceback.format_exc())
+    st.stop()
 
 @st.cache_resource(show_spinner=False)
 def _startup_ingest():
