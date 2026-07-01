@@ -80,34 +80,6 @@ def get_index_info() -> dict:
     return get_index_stats()
 
 
-# Suggested questions per document_id prefix
-_QUESTIONS_BY_TOPIC: dict[str, list[str]] = {
-    "PM-33.0213": [
-        "כמה שעות שינה מגיעות לי?",
-        "האם אפשר לקצר שינה בתרגיל?",
-        "מה קורה אם הפרו את זכות השינה שלי?",
-        "מי צריך לאשר חריגה משעות שינה?",
-        "מה המינימום שינה בתרגיל מבצעי?",
-        "האם מגיעה לי שינה רצופה?",
-    ],
-    "PM-35.0402": [
-        "כמה ימי חופשה מגיעים לי בשנה?",
-        "האם מפקד יכול לבטל חופשה?",
-        "מה זכויותיי אם אני חולה בזמן חופשה?",
-        "מה הם תנאי החופשה לחייל בשירות חובה?",
-        "האם אפשר לצבור ימי חופשה?",
-        "מה חופשת שחרור?",
-    ],
-    "PM-33.0302": [
-        "מה העונשים האפשריים בדין משמעתי?",
-        "מי רשאי לשפוט בדין משמעתי?",
-        "האם מגיע לי ייצוג בדין משמעתי?",
-        "מה זכותי לערער על עונש משמעתי?",
-        "מה ההבדל בין מחבוש לקנס?",
-        "כמה ימי מחבוש מפקד יכול לתת?",
-    ],
-}
-
 _DEFAULT_QUESTIONS = [
     "מה זכויותיי כחייל?",
     "האם מגיע לי שינה מספקת?",
@@ -116,13 +88,15 @@ _DEFAULT_QUESTIONS = [
 
 
 def get_suggested_questions() -> list[str]:
-    """Return questions covering all currently loaded documents."""
-    docs = get_loaded_docs_info()
+    """Return questions covering all currently loaded documents.
+
+    Each document carries its own LLM-generated `suggested_questions`
+    (produced at ingestion time), so this automatically covers whatever
+    documents happen to be loaded — no per-document hardcoding needed.
+    """
     all_questions: list[str] = []
-    for doc in docs:
-        doc_id = doc.get("id", "")
-        questions = _QUESTIONS_BY_TOPIC.get(doc_id, _DEFAULT_QUESTIONS)
-        all_questions.extend(questions)
+    for doc in load_documents():
+        all_questions.extend(doc.get("suggested_questions") or [])
     if not all_questions:
         all_questions = _DEFAULT_QUESTIONS
     return all_questions
