@@ -35,7 +35,15 @@ html, body, [data-testid="stAppViewContainer"] {
 /* Hide Streamlit chrome */
 #MainMenu, footer, header { visibility: hidden; }
 [data-testid="stToolbar"] { display: none; }
-[data-testid="collapsedControl"] { display: none; }
+
+/* ── Sidebar open/close button ── */
+[data-testid="collapsedControl"] {
+    background-color: #161b22 !important;
+    border: 1px solid #30363d !important;
+    border-radius: 8px !important;
+    top: 0.6rem !important;
+}
+[data-testid="collapsedControl"] svg { fill: #3b82f6 !important; }
 
 /* ── Main container ── */
 .main .block-container {
@@ -139,6 +147,8 @@ if "pending_question" not in st.session_state:
     st.session_state.pending_question = None
 if "role" not in st.session_state:
     st.session_state.role = None
+if "conversation_history" not in st.session_state:
+    st.session_state.conversation_history = []
 
 # ── Entry / role gate ──
 if st.session_state.role is None:
@@ -166,6 +176,21 @@ if "suggested" not in st.session_state:
 
 def queue_question(q: str):
     st.session_state.pending_question = q
+
+
+def archive_current_conversation():
+    """Save the active conversation into history before it's cleared."""
+    if not st.session_state.messages:
+        return
+    first_user_msg = next(
+        (m["content"] for m in st.session_state.messages if m["role"] == "user"),
+        "שיחה",
+    )
+    st.session_state.conversation_history.insert(0, {
+        "title": first_user_msg[:40],
+        "messages": st.session_state.messages.copy(),
+    })
+    st.session_state.conversation_history = st.session_state.conversation_history[:10]
 
 
 
@@ -203,7 +228,19 @@ with st.sidebar:
     else:
         st.caption("אין פקודות טעונות")
     st.markdown("---")
+
+    st.markdown("### 🕘 שיחות אחרונות")
+    if st.session_state.conversation_history:
+        for i, conv in enumerate(st.session_state.conversation_history):
+            if st.button(f"💬 {conv['title']}", key=f"hist_{i}", use_container_width=True):
+                st.session_state.messages = conv["messages"].copy()
+                st.rerun()
+    else:
+        st.caption("אין שיחות קודמות")
+    st.markdown("---")
+
     if st.button("🗑️ שיחה חדשה"):
+        archive_current_conversation()
         st.session_state.messages = []
         st.rerun()
 
