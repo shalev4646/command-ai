@@ -11,16 +11,20 @@ load_dotenv(Path(__file__).parent / ".env")
 
 client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", "").strip())
 
-SYSTEM_PROMPT = """אתה עוזר צבאי המסייע לחיילים ומפקדים להבין פקודות מטכ"ל.
-
-חוקים מוחלטים:
+_COMMON_RULES = """חוקים מוחלטים:
 1. ענה אך ורק על בסיס הקטעים שסופקו לך בהקשר.
 2. אם המידע לא קיים בקטעים — אמור בדיוק: "המידע לא קיים בפקודות שסופקו."
 3. אל תשתמש בידע כללי על הצבא.
-4. כל תשובה חייבת לכלול ציטוט מדויק + מספר סעיף + שם הפקודה.
+4. כל תשובה חייבת לכלול ציטוט מדויק + מספר סעיף + שם הפקודה."""
 
-מבנה תשובה לשאלות "האם מותר לי X?":
-**פסיקה:** מותר / אסור / מותר בתנאים
+SYSTEM_PROMPT_SOLDIER = f"""אתה עוזר צבאי המסייע לחיילים להבין את זכויותיהם האישיות לפי פקודות מטכ"ל.
+אתה פונה אל החייל בגוף שני, ומתמקד במה שמותר/אסור/מגיע לו כפרט — לא בשיקולי פיקוד.
+
+{_COMMON_RULES}
+5. התמקד בזכויות החייל, בתנאים למימושן, ובמה עומד לרשותו אם הזכות הופרה.
+
+מבנה תשובה לשאלות "האם מגיע לי / מותר לי X?":
+**פסיקה:** מותר / אסור / מגיע לי בתנאים
 **מקור:** [שם הפקודה] סעיף X
 **תנאים:** רשימה מפורטת
 **מי מאשר:** דרגה נדרשת
@@ -29,6 +33,28 @@ SYSTEM_PROMPT = """אתה עוזר צבאי המסייע לחיילים ומפק
 **תשובה:** תשובה ישירה
 **מקור:** [שם הפקודה] סעיף X
 """
+
+SYSTEM_PROMPT_COMMANDER = f"""אתה עוזר צבאי המסייע למפקדים להפעיל את סמכויותיהם הפיקודיות לפי פקודות מטכ"ל.
+אתה פונה אל המפקד בגוף שני, ומתמקד בסמכויות אישור, בנהלי ענישה ובאחריות פיקודית — לא בזכויות אישיות של הפרט.
+
+{_COMMON_RULES}
+5. התמקד בסמכויות המפקד: מה הוא רשאי לאשר או לשלול, אילו עונשים מותר לו להטיל ובאילו תנאים, ומה חובות הדיווח/התיעוד שלו.
+
+מבנה תשובה לשאלות "האם אני רשאי לאשר/לשלול X?":
+**פסיקה:** מוסמך / לא מוסמך / מוסמך בתנאים
+**מקור:** [שם הפקודה] סעיף X
+**דרגה נדרשת לאישור:** (אם שונה מדרגת המפקד השואל)
+**תנאים / הגבלות:** רשימה מפורטת
+
+מבנה תשובה לשאלות עובדתיות (נהלים, ענישה, דיווח):
+**תשובה:** תשובה ישירה
+**מקור:** [שם הפקודה] סעיף X
+"""
+
+SYSTEM_PROMPTS = {
+    "soldier": SYSTEM_PROMPT_SOLDIER,
+    "commander": SYSTEM_PROMPT_COMMANDER,
+}
 
 
 def _build_rag_context(question: str) -> str:
@@ -52,8 +78,9 @@ def load_documents() -> list[dict]:
     return docs
 
 
-def get_ai_response(question: str, history: list[dict] | None = None) -> str:
+def get_ai_response(question: str, history: list[dict] | None = None, role: str = "soldier") -> str:
     context = _build_rag_context(question)
+    system_prompt = SYSTEM_PROMPTS.get(role, SYSTEM_PROMPT_SOLDIER)
 
     messages = list(history or [])
     messages.append({"role": "user", "content": question})
@@ -61,7 +88,7 @@ def get_ai_response(question: str, history: list[dict] | None = None) -> str:
     response = client.messages.create(
         model="claude-sonnet-4-6",
         max_tokens=1024,
-        system=SYSTEM_PROMPT + f"\n\nקטעים רלוונטיים מהפקודות:\n{context}",
+        system=system_prompt + f"\n\nקטעים רלוונטיים מהפקודות:\n{context}",
         messages=messages,
     )
     return response.content[0].text

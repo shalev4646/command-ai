@@ -309,7 +309,7 @@ def handle_question(question: str):
         for m in st.session_state.messages[:-1]
     ]
     with st.spinner("מחפש בפקודות..."):
-        answer = get_ai_response(question, history)
+        answer = get_ai_response(question, history, role=st.session_state.role)
     st.session_state.messages.append({"role": "assistant", "content": answer})
 
 
