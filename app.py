@@ -23,124 +23,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-st.markdown("""
-<style>
-/* ── Reset & base ── */
-html, body, [data-testid="stAppViewContainer"] {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-    background-color: #0d1117;
-    color: #e6edf3;
-}
-
-/* Hide Streamlit chrome */
-#MainMenu, footer, header { visibility: hidden; }
-[data-testid="stToolbar"] { display: none; }
-
-/* ── Sidebar open/close button ── */
-[data-testid="collapsedControl"] {
-    background-color: #161b22 !important;
-    border: 1px solid #30363d !important;
-    border-radius: 8px !important;
-    top: 0.6rem !important;
-}
-[data-testid="collapsedControl"] svg { fill: #3b82f6 !important; }
-
-/* ── Main container ── */
-.main .block-container {
-    max-width: 480px;
-    padding: 1rem 1rem 5rem 1rem;
-    margin: 0 auto;
-}
-
-/* ── Typography ── */
-h1 {
-    font-size: 1.8rem !important;
-    font-weight: 800 !important;
-    color: #3b82f6 !important;
-    margin: 0.5rem 0 0.2rem 0 !important;
-    text-align: center;
-}
-p { font-size: 0.95rem !important; line-height: 1.5 !important; }
-
-/* ── Buttons — compact, tappable ── */
-div[data-testid="stButton"] > button {
-    width: 100%;
-    border-radius: 10px;
-    background-color: #161b22;
-    border: 1px solid #30363d;
-    color: #c9d1d9;
-    font-size: 0.95rem;
-    font-weight: 600;
-    padding: 12px 14px;
-    min-height: 48px;
-    line-height: 1.3;
-    margin-bottom: 8px;
-    white-space: normal;
-    text-align: right;
-    transition: border-color 0.15s, color 0.15s;
-}
-div[data-testid="stButton"] > button:hover {
-    border-color: #3b82f6;
-    color: #3b82f6;
-}
-
-/* ── Entry screen role buttons ── */
-.st-key-role_soldier button,
-.st-key-role_commander button {
-    min-height: 72px !important;
-    font-size: 1.1rem !important;
-    background-color: #161b22 !important;
-}
-
-/* ── Search / text input ── */
-.stTextInput > div > div > input {
-    background-color: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 10px;
-    color: #e6edf3;
-    padding: 12px 14px;
-    font-size: 0.95rem;
-    min-height: 46px;
-}
-.stTextInput > div > div > input::placeholder { color: #6e7681; }
-
-/* ── Chat input ── */
-[data-testid="stChatInput"] textarea {
-    background-color: #161b22 !important;
-    border: 1px solid #30363d !important;
-    border-radius: 10px !important;
-    color: #e6edf3 !important;
-    font-size: 0.95rem !important;
-}
-
-/* ── Chat messages ── */
-[data-testid="stChatMessage"] {
-    background-color: #161b22;
-    border: 1px solid #21262d;
-    border-radius: 10px;
-    padding: 10px 14px;
-    margin-bottom: 8px;
-}
-
-/* ── Section gaps ── */
-[data-testid="stVerticalBlock"] > div { margin-bottom: 0.2rem; }
-.stMarkdown { margin-bottom: 0.2rem !important; }
-
-/* ── Sidebar (hidden by default on mobile) ── */
-[data-testid="stSidebar"] {
-    background-color: #0d1117;
-    border-right: 1px solid #21262d;
-}
-
-/* ── Caption / small text ── */
-.stCaption, small { color: #6e7681 !important; font-size: 0.8rem !important; }
-
-/* ── Spinner ── */
-.stSpinner > div { border-top-color: #3b82f6 !important; }
-</style>
-""", unsafe_allow_html=True)
-
-# ── Session state ──
+# ── Session state (initialized before theming, since accent depends on role) ──
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "pending_question" not in st.session_state:
@@ -150,12 +33,181 @@ if "role" not in st.session_state:
 if "conversation_history" not in st.session_state:
     st.session_state.conversation_history = []
 
+# ── Theme: olive for soldiers, gold for commanders ──
+IS_COMMANDER = st.session_state.role == "commander"
+ACCENT = "#c9a227" if IS_COMMANDER else "#7c8f52"
+ACCENT_HOVER = "#e0bc3d" if IS_COMMANDER else "#96ab68"
+ACCENT_SOFT = "rgba(201,162,39,0.14)" if IS_COMMANDER else "rgba(124,143,82,0.14)"
+
+st.markdown(f"""
+<style>
+:root {{
+    --bg: #0a0a0a;
+    --bg-card: #17181a;
+    --border: #2a2b2d;
+    --text: #f0eee9;
+    --text-dim: #918d87;
+    --accent: {ACCENT};
+    --accent-hover: {ACCENT_HOVER};
+    --accent-soft: {ACCENT_SOFT};
+}}
+
+html, body, [data-testid="stAppViewContainer"] {{
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+}}
+
+/* Hide Streamlit chrome, but keep the sidebar toggle (lives inside <header>) visible.
+   Note: stToolbar itself must stay display:flex — it's the ancestor of the sidebar
+   toggle button, and display:none on an ancestor can't be undone on a child. */
+#MainMenu, footer {{ visibility: hidden; }}
+header {{ visibility: hidden; }}
+[data-testid="stToolbarActions"] {{ display: none; }}
+
+/* ── Sidebar open/close buttons ── */
+[data-testid="stExpandSidebarButton"],
+[data-testid="stSidebarCollapseButton"] {{
+    visibility: visible !important;
+    background-color: var(--bg-card) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4) !important;
+}}
+[data-testid="stExpandSidebarButton"] svg,
+[data-testid="stSidebarCollapseButton"] svg {{ fill: var(--accent) !important; }}
+
+/* ── Main container — tight, edge-to-edge feel ── */
+[data-testid="stMainBlockContainer"], .main .block-container {{
+    max-width: 480px;
+    padding: 0.75rem 1rem 6.5rem 1rem !important;
+    margin: 0 auto;
+}}
+
+/* ── Typography ── */
+h1 {{
+    font-size: 1.9rem !important;
+    font-weight: 800 !important;
+    color: var(--accent) !important;
+    letter-spacing: -0.02em;
+    margin: 0.4rem 0 0.15rem 0 !important;
+    text-align: center;
+}}
+p {{ font-size: 1rem !important; line-height: 1.55 !important; }}
+
+/* ── Buttons — rounded, soft shadow, tactile press ── */
+div[data-testid="stButton"] > button {{
+    width: 100%;
+    border-radius: 14px;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 14px 16px;
+    min-height: 52px;
+    line-height: 1.35;
+    margin-bottom: 10px;
+    white-space: normal;
+    text-align: right;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+    transition: transform 0.1s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}}
+div[data-testid="stButton"] > button:hover {{
+    border-color: var(--accent);
+    box-shadow: 0 3px 14px rgba(0,0,0,0.5);
+}}
+div[data-testid="stButton"] > button:active {{
+    transform: scale(0.97);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}}
+
+/* ── Entry screen role buttons ── */
+.st-key-role_soldier button,
+.st-key-role_commander button {{
+    min-height: 88px !important;
+    font-size: 1.15rem !important;
+    background: linear-gradient(180deg, #1c1d1f 0%, #17181a 100%) !important;
+}}
+.st-key-role_soldier button {{ border-color: #4c5738 !important; }}
+.st-key-role_commander button {{ border-color: #6b5a17 !important; }}
+
+/* ── Search / text input ── */
+.stTextInput > div > div > input {{
+    background-color: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    color: var(--text);
+    padding: 14px 16px;
+    font-size: 1rem;
+    min-height: 48px;
+}}
+.stTextInput > div > div > input::placeholder {{ color: var(--text-dim); }}
+
+/* ── Chat input — sticky at the bottom for one-handed typing ── */
+[data-testid="stBottom"] {{
+    background: linear-gradient(180deg, rgba(10,10,10,0) 0%, var(--bg) 40%) !important;
+}}
+[data-testid="stBottomBlockContainer"] {{
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 0.5rem 1rem 1rem 1rem !important;
+}}
+[data-testid="stChatInputTextArea"] {{
+    background-color: var(--bg-card) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 16px !important;
+    color: var(--text) !important;
+    font-size: 1rem !important;
+}}
+[data-testid="stChatInputSubmitButton"] {{
+    background-color: var(--accent) !important;
+    border-radius: 12px !important;
+}}
+
+/* ── Chat messages — user vs assistant visually distinct ── */
+[data-testid="stChatMessage"] {{
+    background-color: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 12px 16px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}}
+[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {{
+    background-color: var(--accent-soft);
+    border-color: var(--accent);
+}}
+
+/* ── Section gaps ── */
+[data-testid="stVerticalBlock"] > div {{ margin-bottom: 0.2rem; }}
+.stMarkdown {{ margin-bottom: 0.2rem !important; }}
+
+/* ── Sidebar ── */
+[data-testid="stSidebar"] {{
+    background-color: var(--bg);
+    border-left: 1px solid var(--border);
+}}
+[data-testid="stSidebar"] * {{ text-align: right; }}
+
+/* ── Caption / small text ── */
+.stCaption, small {{ color: var(--text-dim) !important; font-size: 0.82rem !important; }}
+
+/* ── Spinner ── */
+.stSpinner > div {{ border-top-color: var(--accent) !important; }}
+</style>
+""", unsafe_allow_html=True)
+
 # ── Entry / role gate ──
 if st.session_state.role is None:
-    st.markdown("<div style='text-align:center; padding-top:2rem;'>", unsafe_allow_html=True)
-    st.markdown("# CommandAI")
-    st.markdown("<p style='text-align:center; color:#6e7681;'>בחר את סוג הכניסה שלך</p>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div style='text-align:center; padding-top:3rem;'>"
+        "<div style='font-size:2.6rem;'>🛡️</div>"
+        "<h1>CommandAI</h1>"
+        "<p style='text-align:center; color:var(--text-dim); margin-top:0;'>בחר את סוג הכניסה שלך</p>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
     st.markdown("<br>", unsafe_allow_html=True)
     col1, col2 = st.columns(2)
@@ -193,7 +245,6 @@ def archive_current_conversation():
     st.session_state.conversation_history = st.session_state.conversation_history[:10]
 
 
-
 def handle_question(question: str):
     st.session_state.messages.append({"role": "user", "content": question})
     history = [
@@ -207,7 +258,7 @@ def handle_question(question: str):
 
 # ── Sidebar ──
 with st.sidebar:
-    role_label = "חייל" if st.session_state.role == "soldier" else "מפקד"
+    role_label = "מפקד" if IS_COMMANDER else "חייל"
     st.caption(f"מחובר כ-{role_label}")
     if st.button("🔄 החלף תפקיד", key="switch_role"):
         st.session_state.role = None
@@ -218,10 +269,10 @@ with st.sidebar:
     if docs:
         for doc in docs:
             st.markdown(
-                f"""<div style='background:#161b22; border:1px solid #30363d; border-radius:8px;
+                f"""<div style='background:#1c1d1f; border:1px solid #2a2b2d; border-radius:10px;
                     padding:8px 12px; margin-bottom:6px;'>
-                    <div style='color:#3b82f6; font-size:0.78rem; font-weight:600;'>{doc['id']}</div>
-                    <div style='color:#e6edf3; font-size:0.88rem; margin-top:2px;'>{doc['title']}</div>
+                    <div style='color:var(--accent); font-size:0.78rem; font-weight:600;'>{doc['id']}</div>
+                    <div style='color:#f0eee9; font-size:0.88rem; margin-top:2px;'>{doc['title']}</div>
                 </div>""",
                 unsafe_allow_html=True,
             )
@@ -245,11 +296,10 @@ with st.sidebar:
         st.rerun()
 
 # ── Header ──
-role_label = "חייל" if st.session_state.role == "soldier" else "מפקד"
 st.markdown(
     f"<div style='text-align:center; padding: 0.5rem 0 0.8rem 0;'>"
     f"<h1>CommandAI</h1>"
-    f"<p style='color:#6e7681; margin:0; font-size:0.85rem;'>מערכת חכמה לניתוח פקודות מטכ\"ל · {role_label}</p>"
+    f"<p style='color:var(--text-dim); margin:0; font-size:0.85rem;'>מערכת חכמה לניתוח פקודות מטכ\"ל · {role_label}</p>"
     f"</div>",
     unsafe_allow_html=True,
 )
@@ -269,7 +319,7 @@ for msg in st.session_state.messages:
 
 # ── Suggested questions (only when no conversation yet) ──
 if not st.session_state.messages:
-    st.markdown("<p style='color:#6e7681; font-size:0.85rem; text-align:center; margin-bottom:6px;'>שאלות נפוצות</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color:var(--text-dim); font-size:0.85rem; text-align:center; margin-bottom:6px;'>שאלות נפוצות</p>", unsafe_allow_html=True)
     for i, q in enumerate(st.session_state.suggested):
         if st.button(q, key=f"sug_{i}", use_container_width=True):
             queue_question(q)
@@ -281,10 +331,10 @@ if st.session_state.pending_question:
     handle_question(q)
     st.rerun()
 
-# ── Chat input (always visible) ──
+# ── Chat input (always visible, sticky) ──
 if prompt := st.chat_input("שאל שאלה על פקודות צבאיות..."):
     handle_question(prompt)
     st.rerun()
 
 doc_count = len(get_loaded_docs_info())
-st.caption(f"CommandAI · {doc_count} פקודות טעונות · v2.2")
+st.caption(f"CommandAI · {doc_count} פקודות טעונות · v2.3")
