@@ -52,7 +52,7 @@ st.markdown(f"""
     --accent-soft: {ACCENT_SOFT};
 }}
 
-html, body, [data-testid="stAppViewContainer"] {{
+html, body, [data-testid="stApp"], [data-testid="stAppViewContainer"] {{
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
     background-color: var(--bg);
     color: var(--text);
@@ -144,19 +144,33 @@ div[data-testid="stButton"] > button:active {{
 }}
 .stTextInput > div > div > input::placeholder {{ color: var(--text-dim); }}
 
-/* ── Chat input — sticky at the bottom for one-handed typing ── */
+/* ── Chat input — sticky at the bottom for one-handed typing ──
+   stChatInput itself (not just the textarea) is styled as the pill: the
+   textarea has a lot of built-in wrapper padding, so theming only the
+   textarea left an oversized, awkward box around a small dark pill. */
 [data-testid="stBottom"] {{
-    background: linear-gradient(180deg, rgba(10,10,10,0) 0%, var(--bg) 40%) !important;
+    background-color: var(--bg) !important;
+    border-top: 1px solid var(--border);
 }}
 [data-testid="stBottomBlockContainer"] {{
     max-width: 480px;
     margin: 0 auto;
-    padding: 0.5rem 1rem 1rem 1rem !important;
+    padding: 0.6rem 1rem 1rem 1rem !important;
 }}
-[data-testid="stChatInputTextArea"] {{
+[data-testid="stChatInput"] {{
     background-color: var(--bg-card) !important;
     border: 1px solid var(--border) !important;
-    border-radius: 16px !important;
+    border-radius: 22px !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.35) !important;
+    align-items: center !important;
+}}
+[data-testid="stChatInput"]:focus-within {{
+    border-color: var(--accent) !important;
+}}
+[data-testid="stChatInputTextArea"] {{
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
     color: var(--text) !important;
     font-size: 1rem !important;
 }}
@@ -342,7 +356,7 @@ if st.session_state.pending_question:
     st.rerun()
 
 # ── Chat input (always visible, sticky) ──
-if prompt := st.chat_input("שאל שאלה על פקודות צבאיות..."):
+if prompt := st.chat_input("שאל שאלה על פקודות..."):
     handle_question(prompt)
     st.rerun()
 
