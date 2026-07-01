@@ -5,7 +5,7 @@ from pathlib import Path
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
-from storage.vector_store import retrieve, get_index_stats
+from storage.vector_store import retrieve
 
 load_dotenv(Path(__file__).parent / ".env")
 
@@ -58,7 +58,7 @@ SYSTEM_PROMPTS = {
 
 
 def _build_rag_context(question: str) -> str:
-    chunks = retrieve(question, n_results=8)
+    chunks = retrieve(question, n_results=10)
     if not chunks:
         return "אין מסמכים טעונים במערכת."
     parts = []
@@ -113,10 +113,6 @@ def get_loaded_docs_info() -> list[dict]:
         for d in load_documents()
         if d.get("document_id")
     ]
-
-
-def get_index_info() -> dict:
-    return get_index_stats()
 
 
 _DEFAULT_QUESTIONS = [

@@ -55,8 +55,6 @@ def _get_tool_input(response) -> dict:
             return block.input
     return {}
 
-CHUNK_SIZE = 1500  # תווים לכל chunk
-
 
 def extract_text(pdf_path: Path) -> str:
     """Extract text using PyMuPDF (handles Hebrew RTL correctly)."""
@@ -102,33 +100,6 @@ def generate_suggested_questions(text: str) -> list[str]:
     return [q for q in questions if isinstance(q, str) and q.strip()][:6]
 
 
-def split_into_chunks(text: str, doc_id: str, title: str) -> list[dict]:
-    """Split raw text into overlapping chunks for indexing."""
-    chunks = []
-    words = text.split()
-    step = CHUNK_SIZE
-    overlap = 200
-
-    i = 0
-    chunk_num = 0
-    while i < len(words):
-        chunk_words = words[i:i + step]
-        chunk_text = " ".join(chunk_words)
-        chunks.append({
-            "id": f"{doc_id}__chunk{chunk_num}",
-            "text": f"{title}\n{chunk_text}",
-            "doc_id": doc_id,
-            "title": title,
-            "section": f"chunk{chunk_num}",
-            "clause": str(chunk_num),
-            "tags": "",
-        })
-        chunk_num += 1
-        i += step - overlap
-
-    return chunks
-
-
 def ingest(pdf_path: str) -> Path:
     pdf = Path(pdf_path)
     text = extract_text(pdf)
@@ -136,7 +107,6 @@ def ingest(pdf_path: str) -> Path:
         raise ValueError(f"לא נמצא טקסט ב-{pdf.name}")
 
     meta = extract_metadata(text)
-    doc_id = meta.get("document_id", "UNKNOWN")
     title = meta.get("title", pdf.stem)
 
     # save minimal JSON for sidebar display
@@ -149,15 +119,10 @@ def ingest(pdf_path: str) -> Path:
     out_path = out_dir / f"{slug}.json"
     out_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    # index raw text chunks into vector store
-    from storage.vector_store import _get_collection
-    col = _get_collection()
-    chunks = split_into_chunks(text, doc_id, title)
-    col.upsert(
-        ids=[c["id"] for c in chunks],
-        documents=[c["text"] for c in chunks],
-        metadatas=[{k: v for k, v in c.items() if k not in ("id", "text")} for c in chunks],
-    )
+    # reuse the same chunking/indexing logic used for bulk (re)indexing, so
+    # there's one place that defines how documents get chunked
+    from storage.vector_store import index_document
+    index_document(meta)
 
     return out_path
 

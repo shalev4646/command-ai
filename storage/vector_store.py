@@ -5,8 +5,8 @@ import chromadb
 from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2
 
 _COLLECTION = "idf_orders"
-_CHUNK_WORDS = 1500
-_OVERLAP_WORDS = 200
+_CHUNK_WORDS = 600
+_OVERLAP_WORDS = 100
 
 _client: chromadb.ClientAPI | None = None
 _collection: chromadb.Collection | None = None
@@ -157,52 +157,52 @@ def index_all_documents(json_dir: Path | None = None) -> int:
     return total
 
 
-def _unique_doc_ids() -> list[str]:
+def retrieve(query: str, n_results: int = 10, max_per_doc: int = 4) -> list[dict]:
+    """Return the globally most relevant chunks, capped per document.
+
+    Previously this queried each document separately with a *minimum*
+    chunks-per-document floor, so an irrelevant document would still force
+    its way into the results and crowd out a highly relevant one that just
+    happened to have more chunks (e.g. a query squarely about disciplinary
+    punishments would only get 2 of that document's 22 chunks, with the
+    rest of the budget spent on unrelated leave/sleep-hours chunks). Doing
+    one global query and capping the *maximum* per document instead lets a
+    genuinely relevant document dominate, while still giving other
+    documents a chance if they score well on a broader question.
+    """
     col = _get_collection()
-    if col.count() == 0:
-        return []
-    all_meta = col.get(limit=1000, include=["metadatas"])["metadatas"]
-    return list({m.get("doc_id") for m in all_meta if m.get("doc_id") and m.get("doc_id") != "UNKNOWN"})
-
-
-def retrieve(query: str, n_results: int = 6) -> list[dict]:
-    """Return top chunks per document, ensuring every document is represented."""
-    col = _get_collection()
-    if col.count() == 0:
+    count = col.count()
+    if count == 0:
         return []
 
-    doc_ids = _unique_doc_ids()
-    per_doc = max(2, n_results // max(len(doc_ids), 1))
+    try:
+        results = col.query(
+            query_texts=[query],
+            n_results=min(count, n_results * 4),
+            include=["documents", "metadatas", "distances"],
+        )
+    except Exception:
+        return []
 
     chunks = []
-    seen_ids = set()
-
-    for doc_id in doc_ids:
-        try:
-            results = col.query(
-                query_texts=[query],
-                n_results=min(per_doc, col.count()),
-                where={"doc_id": doc_id},
-                include=["documents", "metadatas", "distances"],
-            )
-            for doc_text, meta, dist in zip(
-                results["documents"][0],
-                results["metadatas"][0],
-                results["distances"][0],
-            ):
-                chunk_key = doc_text[:80]
-                if chunk_key not in seen_ids:
-                    seen_ids.add(chunk_key)
-                    chunks.append({
-                        "text": doc_text,
-                        "doc_id": meta.get("doc_id"),
-                        "title": meta.get("title"),
-                        "section": meta.get("section"),
-                        "clause": meta.get("clause"),
-                        "score": round(1 - dist, 3),
-                    })
-        except Exception:
-            pass
+    per_doc_count: dict[str, int] = {}
+    for doc_text, meta, dist in zip(
+        results["documents"][0],
+        results["metadatas"][0],
+        results["distances"][0],
+    ):
+        doc_id = meta.get("doc_id")
+        if per_doc_count.get(doc_id, 0) >= max_per_doc:
+            continue
+        per_doc_count[doc_id] = per_doc_count.get(doc_id, 0) + 1
+        chunks.append({
+            "text": doc_text,
+            "doc_id": doc_id,
+            "title": meta.get("title"),
+            "section": meta.get("section"),
+            "clause": meta.get("clause"),
+            "score": round(1 - dist, 3),
+        })
 
     chunks.sort(key=lambda x: x["score"], reverse=True)
     return chunks[:n_results]
