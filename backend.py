@@ -67,10 +67,22 @@ def get_ai_response(question: str, history: list[dict] | None = None) -> str:
     return response.content[0].text
 
 
+def get_pdf_bytes(source_file: str) -> bytes | None:
+    """Read the original PDF for a loaded document, if it's still on disk."""
+    pdf_path = Path(__file__).parent / "pdf-ldf_law" / source_file
+    if not pdf_path.exists():
+        return None
+    return pdf_path.read_bytes()
+
+
 def get_loaded_docs_info() -> list[dict]:
-    """Return title + document_id for each loaded document."""
+    """Return title + document_id + source PDF filename for each loaded document."""
     return [
-        {"title": d.get("title", "?"), "id": d.get("document_id", "?")}
+        {
+            "title": d.get("title", "?"),
+            "id": d.get("document_id", "?"),
+            "source_file": d.get("source_file"),
+        }
         for d in load_documents()
         if d.get("document_id")
     ]

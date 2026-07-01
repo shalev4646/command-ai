@@ -3,6 +3,4 @@ venv/
 __pycache__/
 *.pyc
 storage/chroma_db/
-pdf-ldf_law/
-*.pdf
 New Text Document.txt

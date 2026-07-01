@@ -3,7 +3,7 @@ import traceback
 import streamlit as st
 
 try:
-    from backend import get_ai_response, get_loaded_docs_info, ensure_pdfs_ingested, get_suggested_questions
+    from backend import get_ai_response, get_loaded_docs_info, get_pdf_bytes, ensure_pdfs_ingested, get_suggested_questions
 except Exception:
     st.set_page_config(page_title="CommandAI - Error", layout="wide")
     st.error("שגיאה בטעינת המערכת (import של backend נכשל):")
@@ -219,6 +219,17 @@ div[data-testid="stButton"] > button:active {{
 }}
 [data-testid="stSidebar"] * {{ text-align: right; }}
 
+/* ── Expander (loaded documents) ── */
+[data-testid="stExpander"] {{
+    background-color: var(--bg-card) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 12px !important;
+}}
+[data-testid="stExpander"] summary {{
+    color: var(--text) !important;
+    font-weight: 600;
+}}
+
 /* ── Caption / small text ── */
 .stCaption, small {{ color: var(--text-dim) !important; font-size: 0.82rem !important; }}
 
@@ -293,20 +304,30 @@ with st.sidebar:
         st.session_state.role = None
         st.rerun()
     st.markdown("---")
-    st.markdown("### 📋 פקודות טעונות")
     docs = get_loaded_docs_info()
-    if docs:
-        for doc in docs:
-            st.markdown(
-                f"""<div style='background:#1c1d1f; border:1px solid #2a2b2d; border-radius:10px;
-                    padding:8px 12px; margin-bottom:6px;'>
-                    <div style='color:var(--accent); font-size:0.78rem; font-weight:600;'>{doc['id']}</div>
-                    <div style='color:#f0eee9; font-size:0.88rem; margin-top:2px;'>{doc['title']}</div>
-                </div>""",
-                unsafe_allow_html=True,
-            )
-    else:
-        st.caption("אין פקודות טעונות")
+    with st.expander(f"📋 פקודות טעונות ({len(docs)})", expanded=False):
+        if docs:
+            for doc in docs:
+                st.markdown(
+                    f"""<div style='background:#1c1d1f; border:1px solid #2a2b2d; border-radius:10px;
+                        padding:8px 12px; margin-bottom:4px;'>
+                        <div style='color:var(--accent); font-size:0.78rem; font-weight:600;'>{doc['id']}</div>
+                        <div style='color:#f0eee9; font-size:0.88rem; margin-top:2px;'>{doc['title']}</div>
+                    </div>""",
+                    unsafe_allow_html=True,
+                )
+                pdf_bytes = get_pdf_bytes(doc["source_file"]) if doc.get("source_file") else None
+                if pdf_bytes:
+                    st.download_button(
+                        "📄 פתח PDF מקורי",
+                        data=pdf_bytes,
+                        file_name=doc["source_file"],
+                        mime="application/pdf",
+                        key=f"pdf_{doc['id']}",
+                        use_container_width=True,
+                    )
+        else:
+            st.caption("אין פקודות טעונות")
     st.markdown("---")
 
     st.markdown("### 🕘 שיחות אחרונות")
