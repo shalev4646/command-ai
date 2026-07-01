@@ -145,32 +145,36 @@ div[data-testid="stButton"] > button:active {{
 .stTextInput > div > div > input::placeholder {{ color: var(--text-dim); }}
 
 /* ── Chat input — sticky at the bottom for one-handed typing ──
-   stChatInput itself (not just the textarea) is styled as the pill: the
-   textarea has a lot of built-in wrapper padding, so theming only the
-   textarea left an oversized, awkward box around a small dark pill. */
+   stChatInput is the real pill: several unnamed Streamlit wrapper divs
+   inside it carry their own light-theme background/border, which showed
+   up as a lighter box nested inside our dark pill. Blanket-clear every
+   descendant first, then re-apply the pill look on stChatInput alone and
+   the accent circle on the submit button (later rules win the tie). */
 [data-testid="stBottom"] {{
-    background-color: var(--bg) !important;
-    border-top: 1px solid var(--border);
+    background: radial-gradient(ellipse 100% 100% at 50% 100%, var(--accent-soft) 0%, var(--bg) 65%) !important;
 }}
 [data-testid="stBottomBlockContainer"] {{
     max-width: 480px;
     margin: 0 auto;
-    padding: 0.6rem 1rem 1rem 1rem !important;
+    padding: 1.1rem 1rem 1rem 1rem !important;
+}}
+[data-testid="stChatInput"] * {{
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
 }}
 [data-testid="stChatInput"] {{
     background-color: var(--bg-card) !important;
     border: 1px solid var(--border) !important;
-    border-radius: 22px !important;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.35) !important;
+    border-radius: 30px !important;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.4) !important;
     align-items: center !important;
+    transition: border-color 0.15s ease;
 }}
 [data-testid="stChatInput"]:focus-within {{
     border-color: var(--accent) !important;
 }}
 [data-testid="stChatInputTextArea"] {{
-    background-color: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
     color: var(--text) !important;
     font-size: 1rem !important;
 }}
