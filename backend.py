@@ -130,12 +130,12 @@ def get_suggested_questions() -> list[str]:
 
 def ensure_pdfs_ingested(pdf_dir: Path | None = None) -> list[str]:
     """Scan pdf_dir for PDFs and ingest any that don't have a JSON yet. Returns newly ingested names."""
-    from ingestion.pdf_to_json import ingest
-
     if pdf_dir is None:
         pdf_dir = Path(__file__).parent / "pdf-ldf_law"
     if not pdf_dir.exists():
         return []
+
+    from ingestion.pdf_to_json import ingest
 
     json_dir = Path(__file__).parent / "storage" / "json_store"
     # Collect source_file values from existing JSONs

@@ -4,7 +4,6 @@ import sys
 from pathlib import Path
 
 import fitz  # PyMuPDF
-import pdfplumber
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
