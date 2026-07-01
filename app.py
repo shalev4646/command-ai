@@ -230,6 +230,23 @@ div[data-testid="stButton"] > button:active {{
     font-weight: 600;
 }}
 
+/* ── Loaded-document card (title/id + inline PDF button) ──
+   st.container(border=True) has no stable test-id of its own in this
+   Streamlit build (it's just another stVerticalBlock), so it's given a
+   `key` and targeted here via the resulting st-key-doccard_* class. */
+[class*="st-key-doccard_"] {{
+    background-color: #1c1d1f !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 10px !important;
+    margin-bottom: 6px !important;
+}}
+[class*="st-key-doccard_"] div[data-testid="stDownloadButton"] > button {{
+    min-height: 34px !important;
+    padding: 4px !important;
+    margin-bottom: 0 !important;
+    font-size: 1rem !important;
+}}
+
 /* ── Caption / small text ── */
 .stCaption, small {{ color: var(--text-dim) !important; font-size: 0.82rem !important; }}
 
@@ -307,25 +324,26 @@ with st.sidebar:
     docs = get_loaded_docs_info()
     with st.expander(f"📋 פקודות טעונות ({len(docs)})", expanded=False):
         if docs:
-            for doc in docs:
-                st.markdown(
-                    f"""<div style='background:#1c1d1f; border:1px solid #2a2b2d; border-radius:10px;
-                        padding:8px 12px; margin-bottom:4px;'>
-                        <div style='color:var(--accent); font-size:0.78rem; font-weight:600;'>{doc['id']}</div>
-                        <div style='color:#f0eee9; font-size:0.88rem; margin-top:2px;'>{doc['title']}</div>
-                    </div>""",
-                    unsafe_allow_html=True,
-                )
-                pdf_bytes = get_pdf_bytes(doc["source_file"]) if doc.get("source_file") else None
-                if pdf_bytes:
-                    st.download_button(
-                        "📄 פתח PDF מקורי",
-                        data=pdf_bytes,
-                        file_name=doc["source_file"],
-                        mime="application/pdf",
-                        key=f"pdf_{doc['id']}",
-                        use_container_width=True,
-                    )
+            for i, doc in enumerate(docs):
+                with st.container(border=True, key=f"doccard_{i}"):
+                    info_col, btn_col = st.columns([5, 1])
+                    with info_col:
+                        st.markdown(
+                            f"<div style='color:var(--accent); font-size:0.78rem; font-weight:600;'>{doc['id']}</div>"
+                            f"<div style='color:#f0eee9; font-size:0.88rem; margin-top:2px;'>{doc['title']}</div>",
+                            unsafe_allow_html=True,
+                        )
+                    with btn_col:
+                        pdf_bytes = get_pdf_bytes(doc["source_file"]) if doc.get("source_file") else None
+                        if pdf_bytes:
+                            st.download_button(
+                                "📄 פתח",
+                                data=pdf_bytes,
+                                file_name=doc["source_file"],
+                                mime="application/pdf",
+                                key=f"pdf_{doc['id']}",
+                                use_container_width=True,
+                            )
         else:
             st.caption("אין פקודות טעונות")
     st.markdown("---")
