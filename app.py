@@ -162,7 +162,17 @@ div[data-testid="stButton"] > button:active {{
 }}
 [data-testid="stChatInputSubmitButton"] {{
     background-color: var(--accent) !important;
-    border-radius: 12px !important;
+    border-radius: 50% !important;
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+}}
+[data-testid="stChatInputSubmitButton"]:hover {{
+    background-color: var(--accent-hover) !important;
 }}
 
 /* ── Chat messages — user vs assistant visually distinct ── */
