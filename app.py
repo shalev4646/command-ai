@@ -33,11 +33,17 @@ if "role" not in st.session_state:
 if "conversation_history" not in st.session_state:
     st.session_state.conversation_history = []
 
-# ── Theme: olive for soldiers, gold for commanders ──
-IS_COMMANDER = st.session_state.role == "commander"
-ACCENT = "#c9a227" if IS_COMMANDER else "#7c8f52"
-ACCENT_HOVER = "#e0bc3d" if IS_COMMANDER else "#96ab68"
-ACCENT_SOFT = "rgba(201,162,39,0.14)" if IS_COMMANDER else "rgba(124,143,82,0.14)"
+# ── Theme + label per role: olive for soldiers, gold for commanders, steel-blue for reserve ──
+ROLE_META = {
+    "soldier": {"label": "חייל", "accent": "#7c8f52", "accent_hover": "#96ab68", "accent_soft": "rgba(124,143,82,0.14)"},
+    "commander": {"label": "מפקד", "accent": "#c9a227", "accent_hover": "#e0bc3d", "accent_soft": "rgba(201,162,39,0.14)"},
+    "reserve": {"label": "מילואים", "accent": "#4a7a96", "accent_hover": "#5f95b3", "accent_soft": "rgba(74,122,150,0.14)"},
+}
+role_meta = ROLE_META.get(st.session_state.role, ROLE_META["soldier"])
+role_label = role_meta["label"]
+ACCENT = role_meta["accent"]
+ACCENT_HOVER = role_meta["accent_hover"]
+ACCENT_SOFT = role_meta["accent_soft"]
 
 st.markdown(f"""
 <style>
@@ -124,13 +130,15 @@ div[data-testid="stButton"] > button:active {{
 
 /* ── Entry screen role buttons ── */
 .st-key-role_soldier button,
-.st-key-role_commander button {{
+.st-key-role_commander button,
+.st-key-role_reserve button {{
     min-height: 88px !important;
     font-size: 1.15rem !important;
     background: linear-gradient(180deg, #1c1d1f 0%, #17181a 100%) !important;
 }}
 .st-key-role_soldier button {{ border-color: #4c5738 !important; }}
 .st-key-role_commander button {{ border-color: #6b5a17 !important; }}
+.st-key-role_reserve button {{ border-color: #2f5266 !important; }}
 
 /* ── Search / text input ── */
 .stTextInput > div > div > input {{
@@ -267,19 +275,19 @@ if st.session_state.role is None:
     )
 
     st.markdown("<br>", unsafe_allow_html=True)
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🪖 כניסת חיילים", key="role_soldier", use_container_width=True):
-            st.session_state.role = "soldier"
-            st.rerun()
-    with col2:
-        if st.button("⭐ כניסת מפקדים", key="role_commander", use_container_width=True):
-            st.session_state.role = "commander"
-            st.rerun()
+    if st.button("🪖 כניסת חיילים (חובה / סדיר)", key="role_soldier", use_container_width=True):
+        st.session_state.role = "soldier"
+        st.rerun()
+    if st.button("⭐ כניסת מפקדים (קבע)", key="role_commander", use_container_width=True):
+        st.session_state.role = "commander"
+        st.rerun()
+    if st.button("🎖️ כניסת מילואים", key="role_reserve", use_container_width=True):
+        st.session_state.role = "reserve"
+        st.rerun()
     st.stop()
 
 if "suggested" not in st.session_state:
-    all_q = get_suggested_questions()
+    all_q = get_suggested_questions(role=st.session_state.role)
     st.session_state.suggested = random.sample(all_q, min(4, len(all_q)))
 
 
@@ -315,13 +323,12 @@ def handle_question(question: str):
 
 # ── Sidebar ──
 with st.sidebar:
-    role_label = "מפקד" if IS_COMMANDER else "חייל"
     st.caption(f"מחובר כ-{role_label}")
     if st.button("🔄 החלף תפקיד", key="switch_role"):
         st.session_state.role = None
         st.rerun()
     st.markdown("---")
-    docs = get_loaded_docs_info()
+    docs = get_loaded_docs_info(role=st.session_state.role)
     with st.expander(f"📋 פקודות טעונות ({len(docs)})", expanded=False):
         if docs:
             for i, doc in enumerate(docs):
@@ -404,5 +411,5 @@ if prompt := st.chat_input("שאל שאלה על פקודות..."):
     handle_question(prompt)
     st.rerun()
 
-doc_count = len(get_loaded_docs_info())
-st.caption(f"CommandAI · {doc_count} פקודות טעונות · v2.3")
+doc_count = len(get_loaded_docs_info(role=st.session_state.role))
+st.caption(f"CommandAI · {doc_count} פקודות טעונות · v2.4")

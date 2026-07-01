@@ -11,5 +11,10 @@
     "י",
     "ל",
     "ו"
+  ],
+  "roles": [
+    "soldier",
+    "commander",
+    "reserve"
   ]
 }

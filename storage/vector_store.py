@@ -157,7 +157,12 @@ def index_all_documents(json_dir: Path | None = None) -> int:
     return total
 
 
-def retrieve(query: str, n_results: int = 10, max_per_doc: int = 4) -> list[dict]:
+def retrieve(
+    query: str,
+    n_results: int = 10,
+    max_per_doc: int = 4,
+    doc_ids: list[str] | None = None,
+) -> list[dict]:
     """Return the globally most relevant chunks, capped per document.
 
     Previously this queried each document separately with a *minimum*
@@ -169,16 +174,25 @@ def retrieve(query: str, n_results: int = 10, max_per_doc: int = 4) -> list[dict
     one global query and capping the *maximum* per document instead lets a
     genuinely relevant document dominate, while still giving other
     documents a chance if they score well on a broader question.
+
+    `doc_ids`, if given, restricts the search to that set of documents —
+    used to scope retrieval to whatever's relevant for the active role
+    (soldier/commander/reserve).
     """
     col = _get_collection()
     count = col.count()
     if count == 0:
         return []
+    if doc_ids is not None and not doc_ids:
+        return []
+
+    where = {"doc_id": {"$in": doc_ids}} if doc_ids is not None else None
 
     try:
         results = col.query(
             query_texts=[query],
             n_results=min(count, n_results * 4),
+            where=where,
             include=["documents", "metadatas", "distances"],
         )
     except Exception:
