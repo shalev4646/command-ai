@@ -152,6 +152,7 @@ div[data-testid="stButton"] > button:active {{
    the accent circle on the submit button (later rules win the tie). */
 [data-testid="stBottom"] {{
     background: radial-gradient(ellipse 100% 100% at 50% 100%, var(--accent-soft) 0%, var(--bg) 65%) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
 }}
 [data-testid="stBottomBlockContainer"] {{
     max-width: 480px;
