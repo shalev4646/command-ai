@@ -1,0 +1,4 @@
+{
+  "_comment": "דריסת סיווג ידנית. מפתח = שם קובץ ה-PDF המקורי (source_file), ערך = הסיווג שייכפה במקום הסיווג האוטומטי של ה-LLM. ערכי roles חוקיים: soldier, commander, reserve. מפתחות שמתחילים בקו תחתון הם תיעוד ומתעלמים מהם.",
+  "_example-usage.pdf": { "roles": ["commander"] }
+}

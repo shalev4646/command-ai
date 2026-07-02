@@ -3,7 +3,7 @@ import traceback
 import streamlit as st
 
 try:
-    from backend import get_ai_response, get_loaded_docs_info, get_pdf_bytes, ensure_pdfs_ingested, get_suggested_questions
+    from backend import get_ai_response, get_loaded_docs_info, get_pdf_bytes, ensure_pdfs_ingested, get_suggested_questions, warm_index
 except Exception:
     st.set_page_config(page_title="CommandAI - Error", layout="wide")
     st.error("שגיאה בטעינת המערכת (import של backend נכשל):")
@@ -13,6 +13,9 @@ except Exception:
 @st.cache_resource(show_spinner=False)
 def _startup_ingest():
     ensure_pdfs_ingested()
+    # build the vector index (model download + embedding) at boot, so the
+    # first user question doesn't stall behind it
+    warm_index()
 
 _startup_ingest()
 
@@ -306,6 +309,7 @@ def archive_current_conversation():
     st.session_state.conversation_history.insert(0, {
         "title": first_user_msg[:40],
         "messages": st.session_state.messages.copy(),
+        "role": st.session_state.role,
     })
     st.session_state.conversation_history = st.session_state.conversation_history[:10]
 
@@ -325,7 +329,11 @@ def handle_question(question: str):
 with st.sidebar:
     st.caption(f"מחובר כ-{role_label}")
     if st.button("🔄 החלף תפקיד", key="switch_role"):
+        archive_current_conversation()
         st.session_state.role = None
+        st.session_state.messages = []
+        st.session_state.pending_question = None
+        st.session_state.pop("suggested", None)
         st.rerun()
     st.markdown("---")
     docs = get_loaded_docs_info(role=st.session_state.role)
@@ -356,8 +364,14 @@ with st.sidebar:
     st.markdown("---")
 
     st.markdown("### 🕘 שיחות אחרונות")
-    if st.session_state.conversation_history:
-        for i, conv in enumerate(st.session_state.conversation_history):
+    # only this role's conversations: restoring a chat that ran under another
+    # role's system prompt would mix personas/doc scopes in one thread
+    role_history = [
+        (i, conv) for i, conv in enumerate(st.session_state.conversation_history)
+        if conv.get("role") == st.session_state.role
+    ]
+    if role_history:
+        for i, conv in role_history:
             if st.button(f"💬 {conv['title']}", key=f"hist_{i}", use_container_width=True):
                 st.session_state.messages = conv["messages"].copy()
                 st.rerun()

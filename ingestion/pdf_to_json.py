@@ -7,6 +7,9 @@ import fitz  # PyMuPDF
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from common import ROLES, safe_print
+
 load_dotenv(Path(__file__).parent.parent / ".env")
 
 client = Anthropic()
@@ -53,7 +56,7 @@ _ANALYSIS_TOOL = {
             "questions": {"type": "array", "items": {"type": "string"}},
             "roles": {
                 "type": "array",
-                "items": {"type": "string", "enum": ["soldier", "commander", "reserve"]},
+                "items": {"type": "string", "enum": list(ROLES)},
                 "description": "Audiences this document applies to. Include all three for a general-purpose order.",
             },
         },
@@ -100,7 +103,7 @@ def extract_metadata(text: str) -> dict:
     }
 
 
-_VALID_ROLES = {"soldier", "commander", "reserve"}
+_VALID_ROLES = set(ROLES)
 
 
 def analyze_document(text: str) -> dict:
@@ -139,6 +142,9 @@ def ingest(pdf_path: str) -> Path:
     meta["source_file"] = pdf.name
     analysis = analyze_document(text)
     meta["suggested_questions"] = analysis["questions"]
+    # The LLM's original classification is stored as-is; manual overrides from
+    # metadata_override.json are applied at read time (backend.load_documents),
+    # so removing an override entry later reverts the document cleanly.
     meta["roles"] = analysis["roles"]
     out_path = out_dir / f"{slug}.json"
     out_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -151,9 +157,39 @@ def ingest(pdf_path: str) -> Path:
     return out_path
 
 
+def ingest_folder(pdf_dir: str | Path, skip: set[str] | None = None) -> list[str]:
+    """Ingest every PDF in a folder, fault-tolerantly: a failure on one file
+    (API error, corrupt PDF, empty text) is logged and skipped so the rest of
+    the batch still gets processed. `skip` is a set of PDF filenames to leave
+    alone (already-ingested files). Returns names of successfully ingested PDFs."""
+    pdf_dir = Path(pdf_dir)
+    done: list[str] = []
+    failed: list[str] = []
+    pdfs = [p for p in sorted(pdf_dir.glob("*.pdf")) if not skip or p.name not in skip]
+    for i, pdf in enumerate(pdfs, 1):
+        safe_print(f"[{i}/{len(pdfs)}] מעבד: {pdf.name}")
+        try:
+            ingest(str(pdf))
+            done.append(pdf.name)
+        except Exception as e:
+            failed.append(pdf.name)
+            safe_print(f"  שגיאה בעיבוד {pdf.name} — מדלג וממשיך: {type(e).__name__}: {e}")
+    if pdfs:
+        safe_print(f"הסתיים: {len(done)} הצליחו, {len(failed)} נכשלו" + (f" ({', '.join(failed)})" if failed else ""))
+    return done
+
+
 if __name__ == "__main__":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
     if len(sys.argv) < 2:
-        print("Usage: python pdf_to_json.py <path_to_pdf>")
+        print("Usage: python pdf_to_json.py <path_to_pdf_or_folder>")
         sys.exit(1)
-    result = ingest(sys.argv[1])
-    print(f"Saved: {result}")
+    target = Path(sys.argv[1])
+    if target.is_dir():
+        ingest_folder(target)
+    else:
+        result = ingest(sys.argv[1])
+        print(f"Saved: {result}")

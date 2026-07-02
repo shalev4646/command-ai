@@ -4,3 +4,4 @@ __pycache__/
 *.pyc
 storage/chroma_db/
 New Text Document.txt
+.claude/

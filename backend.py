@@ -5,6 +5,8 @@ from pathlib import Path
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
+from common import ROLES
+from metadata_overrides import apply_overrides
 from storage.vector_store import retrieve
 
 load_dotenv(Path(__file__).parent / ".env")
@@ -74,7 +76,7 @@ SYSTEM_PROMPTS = {
     "reserve": SYSTEM_PROMPT_RESERVE,
 }
 
-ALL_ROLES = ("soldier", "commander", "reserve")
+ALL_ROLES = ROLES
 
 
 def load_documents() -> list[dict]:
@@ -82,7 +84,7 @@ def load_documents() -> list[dict]:
     docs = []
     for f in sorted(json_dir.glob("*.json")):
         try:
-            docs.append(json.loads(f.read_text(encoding="utf-8")))
+            docs.append(apply_overrides(json.loads(f.read_text(encoding="utf-8"))))
         except Exception:
             pass
     return docs
@@ -98,9 +100,19 @@ def _docs_for_role(role: str | None) -> list[dict]:
     return [d for d in docs if role in (d.get("roles") or ALL_ROLES)]
 
 
-def _build_rag_context(question: str, role: str) -> str:
+def retrieve_for_role(question: str, role: str) -> list[dict]:
+    """Retrieve the chunks relevant to `question`, scoped to `role`'s documents.
+
+    The single retrieval entry point for both production (_build_rag_context)
+    and eval.py — so the sanity check always exercises the same pipeline the
+    app uses.
+    """
     doc_ids = [d["document_id"] for d in _docs_for_role(role) if d.get("document_id")]
-    chunks = retrieve(question, n_results=10, doc_ids=doc_ids)
+    return retrieve(question, n_results=10, doc_ids=doc_ids)
+
+
+def _build_rag_context(question: str, role: str) -> str:
+    chunks = retrieve_for_role(question, role)
     if not chunks:
         return "אין מסמכים טעונים במערכת."
     parts = []
@@ -176,7 +188,7 @@ def ensure_pdfs_ingested(pdf_dir: Path | None = None) -> list[str]:
     if not pdf_dir.exists():
         return []
 
-    from ingestion.pdf_to_json import ingest
+    from ingestion.pdf_to_json import ingest_folder
 
     json_dir = Path(__file__).parent / "storage" / "json_store"
     # Collect source_file values from existing JSONs
@@ -189,17 +201,13 @@ def ensure_pdfs_ingested(pdf_dir: Path | None = None) -> list[str]:
         except Exception:
             pass
 
-    newly_ingested = []
-    for pdf in sorted(pdf_dir.glob("*.pdf")):
-        if pdf.name not in ingested_files:
-            try:
-                ingest(str(pdf))
-                newly_ingested.append(pdf.name)
-                import sys
-                sys.stdout.buffer.write(f"[CommandAI] ingested: {pdf.name}\n".encode("utf-8"))
-                sys.stdout.buffer.flush()
-            except Exception as e:
-                import sys
-                sys.stdout.buffer.write(f"[CommandAI] error ingesting {pdf.name}: {e}\n".encode("utf-8", errors="replace"))
-                sys.stdout.buffer.flush()
-    return newly_ingested
+    # the per-file fault tolerance (log, skip, continue) lives in ingest_folder
+    return ingest_folder(pdf_dir, skip=ingested_files)
+
+
+def warm_index() -> int:
+    """Eagerly build the in-memory vector index (embedding-model download +
+    chunk embedding). Called at app startup so the one-time cost lands at boot
+    instead of inside the first user's question. Returns the chunk count."""
+    from storage.vector_store import get_index_stats
+    return get_index_stats()["total_chunks"]

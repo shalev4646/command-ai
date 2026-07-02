@@ -2,7 +2,8 @@ import json
 from pathlib import Path
 
 import chromadb
-from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2
+import numpy as np
+from chromadb import Documents, EmbeddingFunction, Embeddings
 
 _COLLECTION = "idf_orders"
 _CHUNK_WORDS = 600
@@ -12,13 +13,68 @@ _client: chromadb.ClientAPI | None = None
 _collection: chromadb.Collection | None = None
 
 
+class MultilingualMiniLM(EmbeddingFunction):
+    """Hebrew-capable embeddings via paraphrase-multilingual-MiniLM-L12-v2.
+
+    Runs the quantized (quint8, ~120MB) ONNX export directly with
+    onnxruntime + tokenizers — both already pulled in by chromadb — so no
+    PyTorch / sentence-transformers dependency is added. The English-only
+    all-MiniLM-L6-v2 default scored noticeably worse on Hebrew retrieval.
+    """
+
+    _REPO = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    _BATCH = 16
+
+    def __init__(self):
+        from huggingface_hub import hf_hub_download
+        from tokenizers import Tokenizer
+        import onnxruntime as ort
+
+        model_path = hf_hub_download(self._REPO, "onnx/model_quint8_avx2.onnx")
+        tok_path = hf_hub_download(self._REPO, "tokenizer.json")
+        self._tokenizer = Tokenizer.from_file(tok_path)
+        self._tokenizer.enable_truncation(max_length=512)
+        self._tokenizer.enable_padding()
+        self._session = ort.InferenceSession(model_path, providers=["CPUExecutionProvider"])
+        self._input_names = {i.name for i in self._session.get_inputs()}
+
+    @staticmethod
+    def name() -> str:
+        return "multilingual-minilm-l12-v2-quint8"
+
+    def get_config(self) -> dict:
+        return {}
+
+    @staticmethod
+    def build_from_config(config: dict) -> "MultilingualMiniLM":
+        return MultilingualMiniLM()
+
+    def _embed_batch(self, texts: list[str]) -> np.ndarray:
+        encs = self._tokenizer.encode_batch(texts)
+        input_ids = np.array([e.ids for e in encs], dtype=np.int64)
+        attention_mask = np.array([e.attention_mask for e in encs], dtype=np.int64)
+        feed = {"input_ids": input_ids, "attention_mask": attention_mask}
+        if "token_type_ids" in self._input_names:
+            feed["token_type_ids"] = np.zeros_like(input_ids)
+        hidden = self._session.run(None, feed)[0]  # [batch, seq, dim]
+        mask = attention_mask[..., None].astype(np.float32)
+        emb = (hidden * mask).sum(axis=1) / np.clip(mask.sum(axis=1), 1e-9, None)
+        return emb / np.clip(np.linalg.norm(emb, axis=1, keepdims=True), 1e-9, None)
+
+    def __call__(self, input: Documents) -> Embeddings:
+        out: list[list[float]] = []
+        for i in range(0, len(input), self._BATCH):
+            out.extend(self._embed_batch(list(input[i:i + self._BATCH])).tolist())
+        return out
+
+
 def _get_collection() -> chromadb.Collection:
     global _client, _collection
     if _collection is None:
         _client = chromadb.EphemeralClient()
         _collection = _client.get_or_create_collection(
             name=_COLLECTION,
-            embedding_function=ONNXMiniLM_L6_V2(),
+            embedding_function=MultilingualMiniLM(),
             metadata={"hnsw:space": "cosine"},
         )
         index_all_documents()
