@@ -122,13 +122,19 @@ header {{ visibility: hidden; }}
     height: 44px !important;
 }}
 /* pin the open-drawer toggle at the top start corner (right, in RTL),
-   above the sticky header */
+   above the sticky header, and draw it as a hamburger (3 bars) per the
+   design instead of Streamlit's arrow icon */
 [data-testid="stExpandSidebarButton"] {{
     position: fixed !important;
     top: 10px !important;
     inset-inline-start: 12px !important;
     z-index: 110 !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='12'%3E%3Crect width='16' height='2' y='0' rx='1' fill='%23ECEDE6'/%3E%3Crect width='16' height='2' y='5' rx='1' fill='%23ECEDE6'/%3E%3Crect width='16' height='2' y='10' rx='1' fill='%23ECEDE6'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
 }}
+[data-testid="stExpandSidebarButton"] svg,
+[data-testid="stExpandSidebarButton"] span {{ display: none !important; }}
 [data-testid="stExpandSidebarButton"]:hover,
 [data-testid="stSidebarCollapseButton"]:hover {{ background-color: var(--surface-hover) !important; }}
 [data-testid="stExpandSidebarButton"] svg,
@@ -373,6 +379,11 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
 [data-testid="stSidebar"] div[data-testid="stButton"] > button {{
     border-radius: 12px; padding: 13px 16px; font-weight: 600;
 }}
+/* switch-role: olive ⇄ icon at the far (left) end, per the design */
+.st-key-switch_role button {{ display: flex; align-items: center; }}
+.st-key-switch_role button::after {{
+    content: "⇄"; color: var(--accent); font-size: 16px; margin-inline-start: auto;
+}}
 .cai-drawer-role {{ font: 400 12.5px Heebo, sans-serif; color: var(--text-dim); margin-bottom: 10px; }}
 .cai-drawer-section {{
     display: flex; align-items: center; gap: 8px;
@@ -515,7 +526,7 @@ def handle_question(question: str):
 # ── Sidebar (drawer) ──
 with st.sidebar:
     st.markdown(f"<div class='cai-drawer-role'>מחובר כ־{role_label}</div>", unsafe_allow_html=True)
-    if st.button("⇄ החלף תפקיד", key="switch_role", use_container_width=True):
+    if st.button("החלף תפקיד", key="switch_role", use_container_width=True):
         archive_current_conversation()
         st.session_state.role = None
         st.session_state.messages = []
