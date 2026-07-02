@@ -315,14 +315,24 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     background-color: var(--bg);
     border-left: 1px solid rgba(236,237,230,.1);
 }}
-/* Streamlit's collapse animation assumes LTR (translateX(-100%)); under RTL
-   it leaves a squeezed sliver of the drawer on screen — hide it fully, and
-   keep the expanded drawer from being drag-resized into an unreadable strip */
+/* Streamlit's slide animation breaks under RTL: its max-width/transform
+   transitions get stuck mid-flight, freezing the drawer as a 1px sliver.
+   Kill the transitions and pin each state explicitly — closed is fully
+   hidden, open is full-width. */
+[data-testid="stSidebar"] {{ transition: none !important; }}
 [data-testid="stSidebar"][aria-expanded="false"] {{
     visibility: hidden !important;
     border: none !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
 }}
 [data-testid="stSidebar"][aria-expanded="true"] {{
+    visibility: visible !important;
+    transform: none !important;
+    min-width: 280px !important;
+    max-width: 340px !important;
+}}
+[data-testid="stSidebar"][aria-expanded="true"] > div {{
     min-width: 280px !important;
 }}
 [data-testid="stSidebar"] * {{ text-align: right; }}
