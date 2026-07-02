@@ -351,13 +351,9 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
    rendered as a fixed overlay drawer from the right (78vw, max 340px —
    per the design spec), so no flex math can ever squeeze it again. */
 [data-testid="stSidebar"] {{ transition: none !important; }}
-[data-testid="stSidebar"][aria-expanded="false"] {{
-    visibility: hidden !important;
-    border: none !important;
-    min-width: 0 !important;
-    max-width: 0 !important;
-}}
-[data-testid="stSidebar"][aria-expanded="true"] {{
+/* open (or aria attribute missing — Streamlit's mobile mode drops it):
+   fixed overlay from the right, out of the flex flow entirely */
+[data-testid="stSidebar"]:not([aria-expanded="false"]) {{
     position: fixed !important;
     top: 0 !important; bottom: 0 !important;
     right: 0 !important; left: auto !important;
@@ -371,10 +367,16 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     border-left: 1px solid rgba(236,237,230,.1) !important;
     box-shadow: -12px 0 40px rgba(0,0,0,.45);
 }}
-[data-testid="stSidebar"][aria-expanded="true"] > div {{
+[data-testid="stSidebar"]:not([aria-expanded="false"]) > div {{
     width: 100% !important;
     min-width: 0 !important;
 }}
+/* explicitly collapsed */
+[data-testid="stSidebar"][aria-expanded="false"] {{ display: none !important; }}
+/* collapsed on builds that drop the aria attribute: the hamburger
+   (expand) button only exists while the drawer is closed, so its mere
+   presence means the sidebar must be fully hidden — no 25px sliver */
+body:has([data-testid="stExpandSidebarButton"]) [data-testid="stSidebar"] {{ display: none !important; }}
 [data-testid="stSidebar"] * {{ text-align: right; }}
 [data-testid="stSidebar"] div[data-testid="stButton"] > button {{
     border-radius: 12px; padding: 13px 16px; font-weight: 600;
