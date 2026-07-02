@@ -100,6 +100,10 @@ html, body, [data-testid="stApp"], [data-testid="stAppViewContainer"] {{
     background-color: var(--bg);
     color: var(--text);
 }}
+/* vertical gradient — dark at top, warming to olive toward the composer */
+[data-testid="stAppViewContainer"] {{
+    background: linear-gradient(180deg, #171A12 0%, #171A12 42%, #1C2114 68%, #242C18 88%, #2A3420 100%) fixed !important;
+}}
 [data-testid="stAppViewContainer"], [data-testid="stBottom"], [data-testid="stSidebar"] {{ direction: rtl; }}
 
 /* Hide Streamlit chrome, but keep the sidebar toggle (lives inside <header>) visible. */
@@ -114,8 +118,16 @@ header {{ visibility: hidden; }}
     background-color: var(--surface) !important;
     border: 1px solid var(--border) !important;
     border-radius: 10px !important;
-    width: 40px !important;
-    height: 40px !important;
+    width: 44px !important;
+    height: 44px !important;
+}}
+/* pin the open-drawer toggle at the top start corner (right, in RTL),
+   above the sticky header */
+[data-testid="stExpandSidebarButton"] {{
+    position: fixed !important;
+    top: 10px !important;
+    inset-inline-start: 12px !important;
+    z-index: 110 !important;
 }}
 [data-testid="stExpandSidebarButton"]:hover,
 [data-testid="stSidebarCollapseButton"]:hover {{ background-color: var(--surface-hover) !important; }}
@@ -228,10 +240,16 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     display: block; font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 2px;
 }}
 
-/* ── Chat header: wordmark + role pill ── */
+/* ── Chat header: sticky top bar, wordmark + role pill ──
+   padding-inline-start clears the fixed drawer-toggle button so the
+   wordmark never sits underneath it */
 .cai-header {{
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(23,26,18,.92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     display: flex; align-items: center; gap: 12px;
-    padding: 6px 0 14px; margin-bottom: 4px;
+    padding: 14px 52px 14px 0; margin-bottom: 4px;
     border-bottom: 1px solid rgba(236,237,230,.1);
     animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both;
 }}
@@ -243,8 +261,8 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     border-radius: 99px; padding: 5px 12px;
 }}
 
-/* ── Chat home greeting ── */
-.cai-greet {{ font: 400 28px 'Suez One', serif; color: var(--text); margin: 16vh 0 2px;
+/* ── Chat home greeting — top-anchored, suggestions right under it ── */
+.cai-greet {{ font: 400 28px 'Suez One', serif; color: var(--text); margin: 20px 0 2px;
     animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .08s; }}
 .cai-greet-sub {{ font: 400 13px Heebo, sans-serif; color: var(--text-dim); margin-bottom: 12px;
     animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .16s; }}
@@ -256,7 +274,12 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
 .st-key-sug_3 button {{ animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .48s; }}
 
 /* ── Composer — pill bar + circular olive send ── */
-[data-testid="stBottom"] {{ background: var(--bg) !important; padding-bottom: env(safe-area-inset-bottom, 0px); }}
+/* same fixed gradient as the app container, so the pinned composer strip
+   continues the backdrop seamlessly while masking content scrolling below */
+[data-testid="stBottom"] {{
+    background: linear-gradient(180deg, #171A12 0%, #171A12 42%, #1C2114 68%, #242C18 88%, #2A3420 100%) fixed !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}}
 [data-testid="stBottomBlockContainer"] {{
     max-width: 430px; margin: 0 auto; padding: 0.9rem 18px 0.4rem 18px !important;
 }}
@@ -316,9 +339,11 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     border-left: 1px solid rgba(236,237,230,.1);
 }}
 /* Streamlit's slide animation breaks under RTL: its max-width/transform
-   transitions get stuck mid-flight, freezing the drawer as a 1px sliver.
-   Kill the transitions and pin each state explicitly — closed is fully
-   hidden, open is full-width. */
+   transitions get stuck mid-flight, freezing the drawer as a squeezed
+   sliver of vertical text. Kill the transitions and pin each state:
+   closed is fully hidden; open is taken out of the flex flow entirely and
+   rendered as a fixed overlay drawer from the right (78vw, max 340px —
+   per the design spec), so no flex math can ever squeeze it again. */
 [data-testid="stSidebar"] {{ transition: none !important; }}
 [data-testid="stSidebar"][aria-expanded="false"] {{
     visibility: hidden !important;
@@ -327,13 +352,22 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     max-width: 0 !important;
 }}
 [data-testid="stSidebar"][aria-expanded="true"] {{
-    visibility: visible !important;
-    transform: none !important;
-    min-width: 280px !important;
+    position: fixed !important;
+    top: 0 !important; bottom: 0 !important;
+    right: 0 !important; left: auto !important;
+    height: 100vh !important;
+    width: min(78vw, 340px) !important;
+    min-width: min(78vw, 340px) !important;
     max-width: 340px !important;
+    transform: none !important;
+    visibility: visible !important;
+    z-index: 999980 !important;
+    border-left: 1px solid rgba(236,237,230,.1) !important;
+    box-shadow: -12px 0 40px rgba(0,0,0,.45);
 }}
 [data-testid="stSidebar"][aria-expanded="true"] > div {{
-    min-width: 280px !important;
+    width: 100% !important;
+    min-width: 0 !important;
 }}
 [data-testid="stSidebar"] * {{ text-align: right; }}
 [data-testid="stSidebar"] div[data-testid="stButton"] > button {{
@@ -397,6 +431,12 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
 
 /* ── Spinner ── */
 .stSpinner > div {{ border-top-color: var(--accent) !important; }}
+
+/* ── Accessibility: honor prefers-reduced-motion — animations jump straight
+   to their end state (splash still ends offscreen thanks to fill:both) ── */
+@media (prefers-reduced-motion: reduce) {{
+    * {{ animation-duration: .01ms !important; animation-delay: 0s !important; }}
+}}
 </style>
 """, unsafe_allow_html=True)
 

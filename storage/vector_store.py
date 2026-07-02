@@ -30,8 +30,15 @@ class MultilingualMiniLM(EmbeddingFunction):
         from tokenizers import Tokenizer
         import onnxruntime as ort
 
-        model_path = hf_hub_download(self._REPO, "onnx/model_quint8_avx2.onnx")
-        tok_path = hf_hub_download(self._REPO, "tokenizer.json")
+        def _get(filename: str) -> str:
+            # cached copy first — never block startup on a network check
+            try:
+                return hf_hub_download(self._REPO, filename, local_files_only=True)
+            except Exception:
+                return hf_hub_download(self._REPO, filename)
+
+        model_path = _get("onnx/model_quint8_avx2.onnx")
+        tok_path = _get("tokenizer.json")
         self._tokenizer = Tokenizer.from_file(tok_path)
         self._tokenizer.enable_truncation(max_length=512)
         self._tokenizer.enable_padding()
