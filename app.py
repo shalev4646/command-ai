@@ -100,10 +100,23 @@ html, body, [data-testid="stApp"], [data-testid="stAppViewContainer"] {{
     background-color: var(--bg);
     color: var(--text);
 }}
-/* vertical gradient — dark at top, warming to olive toward the composer */
+/* vertical gradient — dark at top, warming to olive toward the composer.
+   NOTE: no `fixed` attachment — iOS Safari renders it black */
 [data-testid="stAppViewContainer"] {{
-    background: linear-gradient(180deg, #171A12 0%, #171A12 42%, #1C2114 68%, #242C18 88%, #2A3420 100%) fixed !important;
+    background-image: linear-gradient(180deg, #171A12 0%, #171A12 42%, #1C2114 68%, #242C18 88%, #2A3420 100%) !important;
+    background-size: 100% 100dvh !important;
+    background-attachment: scroll !important;
+    min-height: 100dvh;
 }}
+/* hide the scroll bar (shows as a dark strip on the left edge in RTL) */
+[data-testid="stAppViewContainer"], [data-testid="stMain"], body {{
+    scrollbar-width: none !important;
+}}
+[data-testid="stAppViewContainer"]::-webkit-scrollbar,
+[data-testid="stMain"]::-webkit-scrollbar,
+body::-webkit-scrollbar {{ display: none !important; width: 0 !important; }}
+/* hide Streamlit Cloud viewer badges (crown / avatar overlays) */
+[class*="viewerBadge"], [data-testid="stStatusWidget"] {{ display: none !important; }}
 [data-testid="stAppViewContainer"], [data-testid="stBottom"], [data-testid="stSidebar"] {{ direction: rtl; }}
 
 /* Hide Streamlit chrome, but keep the sidebar toggle (lives inside <header>) visible. */
@@ -280,10 +293,14 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
 .st-key-sug_3 button {{ animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .48s; }}
 
 /* ── Composer — pill bar + circular olive send ── */
-/* same fixed gradient as the app container, so the pinned composer strip
-   continues the backdrop seamlessly while masking content scrolling below */
+/* the pinned composer strip shows the BOTTOM slice of the same viewport-
+   sized gradient, continuing the backdrop seamlessly while masking content
+   scrolling below (no `fixed` attachment — broken on iOS Safari) */
 [data-testid="stBottom"] {{
-    background: linear-gradient(180deg, #171A12 0%, #171A12 42%, #1C2114 68%, #242C18 88%, #2A3420 100%) fixed !important;
+    background-color: #242C18 !important;
+    background-image: linear-gradient(180deg, #171A12 0%, #171A12 42%, #1C2114 68%, #242C18 88%, #2A3420 100%) !important;
+    background-size: 100% 100dvh !important;
+    background-position: bottom !important;
     padding-bottom: env(safe-area-inset-bottom, 0px);
 }}
 [data-testid="stBottomBlockContainer"] {{
@@ -335,9 +352,12 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     border-color: var(--accent-border);
 }}
 
-/* ── Section gaps ── */
-[data-testid="stVerticalBlock"] > div {{ margin-bottom: 0.2rem; }}
-.stMarkdown {{ margin-bottom: 0.2rem !important; }}
+/* ── Section gaps — Streamlit's default 16px block gap balloons the
+   card list; the design wants tight 10-12px rhythm (buttons carry their
+   own 12px margin) ── */
+[data-testid="stVerticalBlock"] {{ gap: 0 !important; }}
+[data-testid="stVerticalBlock"] > div {{ margin-bottom: 0.1rem; }}
+.stMarkdown {{ margin-bottom: 0.1rem !important; }}
 
 /* ── Sidebar (drawer) ── */
 [data-testid="stSidebar"] {{
@@ -357,7 +377,7 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     position: fixed !important;
     top: 0 !important; bottom: 0 !important;
     right: 0 !important; left: auto !important;
-    height: 100vh !important;
+    height: 100dvh !important;
     width: min(78vw, 340px) !important;
     min-width: min(78vw, 340px) !important;
     max-width: 340px !important;
@@ -381,8 +401,22 @@ body:has([data-testid="stExpandSidebarButton"]) [data-testid="stSidebar"] {{ dis
 [data-testid="stSidebar"] div[data-testid="stButton"] > button {{
     border-radius: 12px; padding: 13px 16px; font-weight: 600;
 }}
-/* switch-role: olive ⇄ icon at the far (left) end, per the design */
-.st-key-switch_role button {{ display: flex; align-items: center; }}
+/* compact drawer chrome: small 34px close button, tight top padding,
+   content pinned so "+ שיחה חדשה" sits at the drawer bottom */
+[data-testid="stSidebarHeader"] {{ padding: 12px 16px 0 !important; }}
+[data-testid="stSidebarCollapseButton"] {{ width: 34px !important; height: 34px !important; border-radius: 9px !important; }}
+[data-testid="stSidebarUserContent"] {{ padding: 6px 20px 24px !important; }}
+[data-testid="stSidebarUserContent"] > div > [data-testid="stVerticalBlock"] {{
+    min-height: calc(100dvh - 110px);
+}}
+.st-key-new_chat {{ margin-top: auto !important; }}
+[data-testid="stSidebar"] [data-testid="stLayoutWrapper"] {{
+    background: transparent !important; border: none !important;
+}}
+[data-testid="stSidebar"] hr {{ margin: 14px 0 !important; }}
+
+/* switch-role: right-aligned label, olive ⇄ icon at the far (left) end */
+.st-key-switch_role button {{ display: flex; align-items: center; justify-content: flex-start; }}
 .st-key-switch_role button::after {{
     content: "⇄"; color: var(--accent); font-size: 16px; margin-inline-start: auto;
 }}

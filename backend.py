@@ -175,7 +175,11 @@ def get_suggested_questions(role: str = "soldier") -> list[str]:
     """
     all_questions: list[str] = []
     for doc in _docs_for_role(role):
-        all_questions.extend(doc.get("suggested_questions") or [])
+        qs = doc.get("suggested_questions")
+        if not isinstance(qs, list):
+            continue
+        # ingestion once stored a broken char-split list; keep only real questions
+        all_questions.extend(q for q in qs if isinstance(q, str) and len(q.strip()) >= 12)
     if not all_questions:
         all_questions = _DEFAULT_QUESTIONS.get(role, _DEFAULT_QUESTIONS["soldier"])
     return all_questions
