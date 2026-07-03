@@ -633,6 +633,31 @@ body:has([data-testid="stExpandSidebarButton"]) [data-testid="stSidebar"] {{ dis
 </style>
 """, unsafe_allow_html=True)
 
+# ── Remove the Streamlit Cloud viewer badges (crown pill / creator avatar)
+# on every screen. Their class hashes change each platform build, so CSS
+# selectors rot; instead: every badge links to streamlit.io/streamlit.app,
+# which the app itself never does — hide any body-level subtree containing
+# such a link, and keep watching since the platform mounts them late. ──
+import streamlit.components.v1 as _components
+
+_components.html(
+    """<script>
+    const doc = window.parent.document;
+    const killBadges = () => {
+        doc.querySelectorAll('a[href*="streamlit.io"], a[href*="streamlit.app"]').forEach(a => {
+            let n = a;
+            while (n.parentElement && n.parentElement !== doc.body) n = n.parentElement;
+            if (n.parentElement === doc.body && !n.querySelector('[data-testid="stApp"]')) {
+                n.style.setProperty('display', 'none', 'important');
+            }
+        });
+    };
+    killBadges();
+    setInterval(killBadges, 1000);
+    </script>""",
+    height=0,
+)
+
 # ── Entry / role gate ──
 if st.session_state.role is None:
     splash_html = (
