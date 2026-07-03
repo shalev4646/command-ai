@@ -59,6 +59,9 @@ ACCENT_HOVER = role_meta["accent_hover"]
 ACCENT_SOFT = role_meta["soft"]
 ACCENT_BORDER = role_meta["border"]
 
+# chat screen needs room under the fixed header band; entry has no header
+MAIN_TOP_PADDING = "12px" if st.session_state.role is None else "80px"
+
 # Splash shows once per app launch, only over the entry screen
 splash_active = st.session_state.role is None and not st.session_state.get("splash_shown")
 st.session_state.splash_shown = True
@@ -134,13 +137,13 @@ header {{ visibility: hidden; }}
     width: 44px !important;
     height: 44px !important;
 }}
-/* pin the open-drawer toggle at the top start corner (right, in RTL),
-   above the sticky header, and draw it as a hamburger (3 bars) per the
-   design instead of Streamlit's arrow icon */
+/* the hamburger lives INSIDE the fixed header band: same 430px column,
+   vertically centered in the 64px bar, above it in z-order; drawn as 3
+   bars per the design instead of Streamlit's arrow icon */
 [data-testid="stExpandSidebarButton"] {{
     position: fixed !important;
     top: 10px !important;
-    inset-inline-start: 12px !important;
+    inset-inline-start: calc(max(0px, (100vw - 430px) / 2) + 12px) !important;
     z-index: 110 !important;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='12'%3E%3Crect width='16' height='2' y='0' rx='1' fill='%23ECEDE6'/%3E%3Crect width='16' height='2' y='5' rx='1' fill='%23ECEDE6'/%3E%3Crect width='16' height='2' y='10' rx='1' fill='%23ECEDE6'/%3E%3C/svg%3E") !important;
     background-repeat: no-repeat !important;
@@ -156,7 +159,7 @@ header {{ visibility: hidden; }}
 /* ── Main container — mobile-first column, max 430px ── */
 [data-testid="stMainBlockContainer"], .main .block-container {{
     max-width: 430px;
-    padding: 0.6rem 22px 7rem 22px !important;
+    padding: {MAIN_TOP_PADDING} 22px 7rem 22px !important;
     margin: 0 auto;
 }}
 
@@ -259,18 +262,21 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     display: block; font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 2px;
 }}
 
-/* ── Chat header: sticky top bar, wordmark + role pill ──
-   padding-inline-start clears the fixed drawer-toggle button so the
-   wordmark never sits underneath it */
+/* ── Chat header: FIXED top bar (sticky can't work here — Streamlit wraps
+   the markdown in a container exactly as tall as the header, leaving it no
+   room to stick, so it scrolled away). Full-width fixed band; side paddings
+   center the content on the 430px column and clear the hamburger. ── */
 .cai-header {{
-    position: sticky; top: 0; z-index: 100;
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    height: 64px; box-sizing: border-box;
     background: rgba(23,26,18,.92);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     display: flex; align-items: center; gap: 12px;
-    padding: 14px 52px 14px 0; margin-bottom: 4px;
+    padding: 0 calc(max(0px, (100vw - 430px) / 2) + 68px) 0 calc(max(0px, (100vw - 430px) / 2) + 22px);
     border-bottom: 1px solid rgba(236,237,230,.1);
-    animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both;
+    /* no entrance animation: a transform on a fixed element re-anchors it
+       and Streamlit can freeze the animation at its from-state (top: 18px) */
 }}
 .cai-wordmark {{ font: 400 19px 'Suez One', serif; color: var(--text); }}
 .cai-pill {{
