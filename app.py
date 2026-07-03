@@ -546,7 +546,18 @@ body:has([data-testid="stExpandSidebarButton"]) [data-testid="stSidebar"] {{ dis
 [data-testid="stExpander"] summary {{ color: var(--text) !important; font: 500 14.5px Heebo, sans-serif !important; padding: 10px 4px !important; }}
 [data-testid="stExpander"] summary:hover {{ color: var(--accent) !important; }}
 [data-testid="stExpander"] summary svg {{ fill: rgba(236,237,230,.4) !important; }}
-[data-testid="stExpanderDetails"] {{ padding: 0 !important; }}
+/* only the orders list scrolls (capped like the design), not the drawer */
+[data-testid="stExpanderDetails"] {{
+    padding: 0 !important;
+    max-height: 300px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(236,237,230,.25) transparent;
+}}
+[data-testid="stExpanderDetails"]::-webkit-scrollbar {{ width: 5px; }}
+[data-testid="stExpanderDetails"]::-webkit-scrollbar-thumb {{
+    background: rgba(236,237,230,.25); border-radius: 3px;
+}}
 
 /* ── Loaded orders: each title IS the tap target that opens its PDF —
    styled as a flat list line (olive right rule, dim text), not a button ── */
@@ -572,11 +583,30 @@ body:has([data-testid="stExpandSidebarButton"]) [data-testid="stSidebar"] {{ dis
     background: transparent !important;
 }}
 [data-testid="stSidebar"] [data-testid="stDownloadButton"] > button:active {{ transform: none !important; }}
+/* force the inner label wrappers to full width and right alignment —
+   Streamlit nests an anonymous div+span that shrink-wrap and center the
+   label; stretch every layer so the title hugs the right edge */
+[data-testid="stSidebar"] [data-testid="stDownloadButton"] > button > div,
+[data-testid="stSidebar"] [data-testid="stDownloadButton"] > button span {{
+    justify-content: flex-start !important;
+    width: 100% !important;
+    min-width: 0 !important;
+}}
+[data-testid="stSidebar"] [data-testid="stDownloadButton"] > button [data-testid="stMarkdownContainer"] {{
+    margin: 0 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    direction: rtl;
+    text-align: right !important;
+}}
 [data-testid="stSidebar"] [data-testid="stDownloadButton"] > button p {{
     font: 400 13px Heebo, sans-serif !important;
     color: inherit !important;
     text-align: right !important;
     margin: 0 !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }}
 
 /* ── Caption / small text ── */
