@@ -104,11 +104,14 @@ html, body, [data-testid="stApp"], [data-testid="stAppViewContainer"] {{
     color: var(--text);
 }}
 /* vertical gradient — dark at top, warming to olive toward the composer.
-   NOTE: no `fixed` attachment — iOS Safari renders it black */
+   NOTE: no `fixed` attachment — iOS Safari renders it black; vh fallback
+   first for devices without dvh support */
 [data-testid="stAppViewContainer"] {{
     background-image: linear-gradient(180deg, #171A12 0%, #171A12 42%, #1C2114 68%, #242C18 88%, #2A3420 100%) !important;
+    background-size: 100% 100vh !important;
     background-size: 100% 100dvh !important;
     background-attachment: scroll !important;
+    min-height: 100vh;
     min-height: 100dvh;
 }}
 /* hide the scroll bar (shows as a dark strip on the left edge in RTL) */
@@ -143,7 +146,7 @@ header {{ visibility: hidden; }}
 [data-testid="stExpandSidebarButton"] {{
     position: fixed !important;
     top: 10px !important;
-    inset-inline-start: calc(max(0px, (100vw - 430px) / 2) + 12px) !important;
+    inset-inline-start: 12px !important;
     z-index: 110 !important;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='12'%3E%3Crect width='16' height='2' y='0' rx='1' fill='%23ECEDE6'/%3E%3Crect width='16' height='2' y='5' rx='1' fill='%23ECEDE6'/%3E%3Crect width='16' height='2' y='10' rx='1' fill='%23ECEDE6'/%3E%3C/svg%3E") !important;
     background-repeat: no-repeat !important;
@@ -158,7 +161,7 @@ header {{ visibility: hidden; }}
 
 /* ── Main container — mobile-first column, max 430px ── */
 [data-testid="stMainBlockContainer"], .main .block-container {{
-    max-width: 430px;
+    max-width: 560px;
     padding: {MAIN_TOP_PADDING} 22px 7rem 22px !important;
     margin: 0 auto;
 }}
@@ -273,7 +276,7 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     display: flex; align-items: center; gap: 12px;
-    padding: 0 calc(max(0px, (100vw - 430px) / 2) + 68px) 0 calc(max(0px, (100vw - 430px) / 2) + 22px);
+    padding: 0 68px 0 22px;
     border-bottom: 1px solid rgba(236,237,230,.1);
     /* no entrance animation: a transform on a fixed element re-anchors it
        and Streamlit can freeze the animation at its from-state (top: 18px) */
@@ -286,10 +289,12 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     border-radius: 99px; padding: 5px 12px;
 }}
 
-/* ── Chat home greeting — top-anchored, suggestions right under it ── */
+/* ── Chat home greeting — top-anchored and centered, per the reference ── */
 .cai-greet {{ font: 400 28px 'Suez One', serif; color: var(--text); margin: 20px 0 2px;
+    text-align: center;
     animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .08s; }}
 .cai-greet-sub {{ font: 400 13px Heebo, sans-serif; color: var(--text-dim); margin-bottom: 12px;
+    text-align: center;
     animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .16s; }}
 
 /* suggestion cards stagger */
@@ -301,16 +306,24 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
 /* ── Composer — pill bar + circular olive send ── */
 /* the pinned composer strip shows the BOTTOM slice of the same viewport-
    sized gradient, continuing the backdrop seamlessly while masking content
-   scrolling below (no `fixed` attachment — broken on iOS Safari) */
+   scrolling below (no `fixed` attachment — broken on iOS Safari; vh
+   fallback first for devices without dvh) */
 [data-testid="stBottom"] {{
     background-color: #242C18 !important;
     background-image: linear-gradient(180deg, #171A12 0%, #171A12 42%, #1C2114 68%, #242C18 88%, #2A3420 100%) !important;
+    background-size: 100% 100vh !important;
     background-size: 100% 100dvh !important;
     background-position: bottom !important;
     padding-bottom: env(safe-area-inset-bottom, 0px);
 }}
+/* the inner wrappers must not paint their own (near-black) theme color
+   over the gradient strip */
+[data-testid="stBottom"] > div,
 [data-testid="stBottomBlockContainer"] {{
-    max-width: 430px; margin: 0 auto; padding: 0.9rem 18px 0.4rem 18px !important;
+    background: transparent !important;
+}}
+[data-testid="stBottomBlockContainer"] {{
+    max-width: 560px; margin: 0 auto; padding: 0.9rem 18px 0.4rem 18px !important;
 }}
 [data-testid="stChatInput"] * {{
     background-color: transparent !important; border: none !important; box-shadow: none !important;
