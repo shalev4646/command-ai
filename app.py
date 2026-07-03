@@ -357,6 +357,79 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     background-color: var(--accent-soft);
     border-color: var(--accent-border);
 }}
+/* avatars: recolor Streamlit's red/orange squares to theme tones */
+[data-testid="stChatMessage"] [data-testid^="stChatMessageAvatar"] {{
+    background-color: var(--accent-soft) !important;
+    border: 1px solid var(--accent-border) !important;
+    color: var(--accent) !important;
+}}
+[data-testid="stChatMessage"] [data-testid^="stChatMessageAvatar"] svg {{
+    fill: var(--accent) !important;
+}}
+
+/* ── Hebrew (RTL) typography inside answers: right-aligned flow, modest
+   heading sizes, bullets/numbers on the right, RTL tables and quotes ── */
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] {{
+    direction: rtl;
+    text-align: right;
+}}
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] p {{
+    font-size: 15px !important;
+    line-height: 1.65 !important;
+    text-align: right;
+}}
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] h1,
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] h2,
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] h3,
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] h4 {{
+    font-family: Heebo, sans-serif !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    color: var(--text) !important;
+    text-align: right !important;
+    margin: 14px 0 6px !important;
+    padding: 0 !important;
+}}
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] ul,
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] ol {{
+    direction: rtl;
+    text-align: right;
+    padding-right: 1.3rem !important;
+    padding-left: 0 !important;
+    margin-right: 0 !important;
+}}
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] li {{
+    text-align: right;
+    font-size: 15px;
+    line-height: 1.65;
+    margin-bottom: 2px;
+}}
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] table {{
+    direction: rtl;
+    text-align: right;
+    border-collapse: collapse;
+    margin: 8px 0;
+}}
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] th,
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] td {{
+    text-align: right !important;
+    border: 1px solid var(--border) !important;
+    padding: 6px 10px !important;
+}}
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] blockquote {{
+    border-right: 3px solid var(--accent-border) !important;
+    border-left: none !important;
+    margin: 8px 0 8px auto !important;
+    padding: 2px 12px 2px 0 !important;
+    color: var(--text-sec);
+}}
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] hr {{
+    border-color: var(--border) !important;
+    margin: 12px 0 !important;
+}}
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] strong {{
+    color: var(--text);
+}}
 
 /* ── Section gaps — Streamlit's default 16px block gap balloons the
    card list; the design wants tight 10-12px rhythm (buttons carry their
