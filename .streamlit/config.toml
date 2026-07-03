@@ -1,0 +1,9 @@
+# Pin the dark olive theme regardless of the device's light/dark mode —
+# without this, iPhones in light mode render Streamlit's light theme
+# (dark text) under our dark backgrounds and the text is unreadable.
+[theme]
+base = "dark"
+primaryColor = "#99A26B"
+backgroundColor = "#171A12"
+secondaryBackgroundColor = "#21261A"
+textColor = "#ECEDE6"

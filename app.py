@@ -121,8 +121,18 @@ html, body, [data-testid="stApp"], [data-testid="stAppViewContainer"] {{
 [data-testid="stAppViewContainer"]::-webkit-scrollbar,
 [data-testid="stMain"]::-webkit-scrollbar,
 body::-webkit-scrollbar {{ display: none !important; width: 0 !important; }}
-/* hide Streamlit Cloud viewer badges (crown / avatar overlays) */
-[class*="viewerBadge"], [data-testid="stStatusWidget"] {{ display: none !important; }}
+/* hide Streamlit Cloud viewer badges — the crown "hosted with Streamlit"
+   pill and the creator-avatar bubble injected at the bottom corner (their
+   class hashes vary by build, so match every known naming scheme) */
+[class*="viewerBadge"],
+[class*="_viewerBadge"],
+[class*="_profileContainer"],
+[class*="_profilePreview"],
+[class*="_profileImage"],
+[data-testid="appCreatorAvatar"],
+[data-testid="stStatusWidget"],
+a[href*="streamlit.io/cloud"],
+a[href*="share.streamlit.io"] {{ display: none !important; }}
 [data-testid="stAppViewContainer"], [data-testid="stBottom"], [data-testid="stSidebar"] {{ direction: rtl; }}
 
 /* Hide Streamlit chrome, but keep the sidebar toggle (lives inside <header>) visible. */
@@ -648,12 +658,15 @@ if st.session_state.role is None:
 
     if st.button("**כניסת חיילים**  \nחובה / סדיר", key="role_soldier", use_container_width=True):
         st.session_state.role = "soldier"
+        st.session_state.close_drawer = True
         st.rerun()
     if st.button("**כניסת מפקדים**  \nקבע", key="role_commander", use_container_width=True):
         st.session_state.role = "commander"
+        st.session_state.close_drawer = True
         st.rerun()
     if st.button("**כניסת מילואים**  \nמערך המילואים", key="role_reserve", use_container_width=True):
         st.session_state.role = "reserve"
+        st.session_state.close_drawer = True
         st.rerun()
 
     st.markdown("<div class='cai-entry-footer'>בלמ\"ס · לשימוש פנימי בלבד</div>", unsafe_allow_html=True)
@@ -798,3 +811,26 @@ if st.session_state.pending_question:
 if prompt := st.chat_input("שאל על פקודה..."):
     handle_question(prompt)
     st.rerun()
+
+# ── Streamlit auto-opens a sidebar the first time it mounts mid-session,
+# so picking a role landed users inside the drawer instead of the chat.
+# Right after the role gate, click the collapse button once it appears. ──
+if st.session_state.pop("close_drawer", False):
+    import streamlit.components.v1 as components
+    components.html(
+        """<script>
+        const doc = window.parent.document;
+        let tries = 30;
+        const tick = setInterval(() => {
+            const sb = doc.querySelector('[data-testid="stSidebar"]');
+            const isOpen = sb && sb.getAttribute('aria-expanded') !== 'false'
+                && getComputedStyle(sb).display !== 'none';
+            const btn = doc.querySelector('[data-testid="stSidebarCollapseButton"] button')
+                     || doc.querySelector('[data-testid="stSidebarCollapseButton"]');
+            if (isOpen && btn) { btn.click(); clearInterval(tick); }
+            else if (sb && !isOpen) { clearInterval(tick); }
+            if (--tries <= 0) clearInterval(tick);
+        }, 100);
+        </script>""",
+        height=0,
+    )
