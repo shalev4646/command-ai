@@ -495,7 +495,7 @@ body:has([data-testid="stExpandSidebarButton"]) [data-testid="stSidebar"] {{ dis
 }}
 /* compact drawer chrome: small 34px close button, tight top padding,
    content pinned so "+ שיחה חדשה" sits at the drawer bottom */
-[data-testid="stSidebarHeader"] {{ padding: 12px 16px 0 !important; }}
+[data-testid="stSidebarHeader"] {{ padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px 0 !important; }}
 [data-testid="stSidebarCollapseButton"] {{ width: 34px !important; height: 34px !important; border-radius: 9px !important; }}
 [data-testid="stSidebarUserContent"] {{ padding: 6px 20px 24px !important; }}
 [data-testid="stSidebarUserContent"] > div > [data-testid="stVerticalBlock"] {{
@@ -532,37 +532,51 @@ body:has([data-testid="stExpandSidebarButton"]) [data-testid="stSidebar"] {{ dis
 .st-key-new_chat button:hover {{ background-color: var(--accent-hover) !important; }}
 .st-key-new_chat button p {{ color: #171A12 !important; font-weight: 700 !important; text-align: center !important; }}
 
-/* ── Expander (loaded orders) — flat row with count ── */
-[data-testid="stExpander"] {{
+/* ── Expander (loaded orders) — flat row with count, no theme boxes ── */
+[data-testid="stExpander"],
+[data-testid="stExpander"] details,
+[data-testid="stExpander"] summary,
+[data-testid="stExpanderDetails"] {{
     background-color: transparent !important;
+    background: transparent !important;
     border: none !important;
     border-radius: 0 !important;
+    box-shadow: none !important;
 }}
 [data-testid="stExpander"] summary {{ color: var(--text) !important; font: 500 14.5px Heebo, sans-serif !important; padding: 10px 4px !important; }}
 [data-testid="stExpander"] summary:hover {{ color: var(--accent) !important; }}
+[data-testid="stExpander"] summary svg {{ fill: rgba(236,237,230,.4) !important; }}
+[data-testid="stExpanderDetails"] {{ padding: 0 !important; }}
 
-/* ── Loaded-order cards: olive right-border list items + inline PDF button ── */
-[class*="st-key-doccard_"] {{
-    background-color: transparent !important;
+/* ── Loaded orders: each title IS the tap target that opens its PDF —
+   styled as a flat list line (olive right rule, dim text), not a button ── */
+[data-testid="stSidebar"] [data-testid="stDownloadButton"] > button {{
+    background: transparent !important;
     border: none !important;
     border-right: 2px solid var(--accent-border) !important;
     border-radius: 0 !important;
+    box-shadow: none !important;
+    color: rgba(236,237,230,.65) !important;
+    font: 400 13px Heebo, sans-serif !important;
+    text-align: right !important;
+    justify-content: flex-start !important;
+    padding: 7px 10px !important;
     margin: 0 8px 2px 0 !important;
-    padding: 2px 10px !important;
+    min-height: 0 !important;
+    width: calc(100% - 8px);
+    transition: color .15s ease, border-color .15s ease;
 }}
-[class*="st-key-doccard_"] div[data-testid="stDownloadButton"] > button {{
-    min-height: 30px !important;
-    background-color: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    padding: 2px 6px !important;
-    margin-bottom: 0 !important;
-    font-size: 0.85rem !important;
-    width: 100%;
+[data-testid="stSidebar"] [data-testid="stDownloadButton"] > button:hover {{
+    color: var(--text) !important;
+    border-right-color: var(--accent) !important;
+    background: transparent !important;
 }}
-[class*="st-key-doccard_"] div[data-testid="stDownloadButton"] > button:hover {{
-    background-color: var(--surface-hover); border-color: var(--accent-border);
+[data-testid="stSidebar"] [data-testid="stDownloadButton"] > button:active {{ transform: none !important; }}
+[data-testid="stSidebar"] [data-testid="stDownloadButton"] > button p {{
+    font: 400 13px Heebo, sans-serif !important;
+    color: inherit !important;
+    text-align: right !important;
+    margin: 0 !important;
 }}
 
 /* ── Caption / small text ── */
@@ -665,26 +679,26 @@ with st.sidebar:
     docs = get_loaded_docs_info(role=st.session_state.role)
     with st.expander(f"פקודות טעונות ({len(docs)})", expanded=False):
         if docs:
-            for i, doc in enumerate(docs):
-                with st.container(border=True, key=f"doccard_{i}"):
-                    info_col, btn_col = st.columns([5, 1])
-                    with info_col:
-                        st.markdown(
-                            f"<div style='color:var(--accent); font-size:0.75rem; font-weight:600;'>{doc['id']}</div>"
-                            f"<div style='color:var(--text); font-size:0.85rem; margin-top:2px;'>{doc['title']}</div>",
-                            unsafe_allow_html=True,
-                        )
-                    with btn_col:
-                        pdf_bytes = get_pdf_bytes(doc["source_file"]) if doc.get("source_file") else None
-                        if pdf_bytes:
-                            st.download_button(
-                                "📄",
-                                data=pdf_bytes,
-                                file_name=doc["source_file"],
-                                mime="application/pdf",
-                                key=f"pdf_{doc['id']}",
-                                use_container_width=True,
-                            )
+            # each title is itself the tap target that opens the order's PDF
+            # (styled as a flat list line, not a button — see the CSS above)
+            for doc in docs:
+                pdf_bytes = get_pdf_bytes(doc["source_file"]) if doc.get("source_file") else None
+                if pdf_bytes:
+                    st.download_button(
+                        doc["title"],
+                        data=pdf_bytes,
+                        file_name=doc["source_file"],
+                        mime="application/pdf",
+                        key=f"pdf_{doc['id']}",
+                        use_container_width=True,
+                    )
+                else:
+                    st.markdown(
+                        f"<div style='font:400 13px Heebo,sans-serif; color:rgba(236,237,230,.65);"
+                        f" padding:7px 10px; border-right:2px solid var(--accent-border); margin:0 8px 2px 0;'>"
+                        f"{doc['title']}</div>",
+                        unsafe_allow_html=True,
+                    )
         else:
             st.caption("אין פקודות טעונות")
     st.markdown("---")
