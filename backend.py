@@ -13,6 +13,12 @@ load_dotenv(Path(__file__).parent / ".env")
 
 client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", "").strip())
 
+# Hard cap on how many retrieved chunks are stitched into the prompt. Kept
+# deliberately small: the top few clauses carry the answer, and every extra
+# chunk inflates prompt tokens (cost + latency) and erodes the per-request
+# rate-limit budget when many soldiers query at once.
+MAX_CONTEXT_CHUNKS = 5
+
 _COMMON_RULES = """חוקים מוחלטים:
 1. ענה אך ורק על בסיס הקטעים שסופקו לך בהקשר.
 2. אם המידע לא קיים בקטעים — אמור בדיוק: "המידע לא קיים בפקודות שסופקו."
@@ -108,7 +114,7 @@ def retrieve_for_role(question: str, role: str) -> list[dict]:
     app uses.
     """
     doc_ids = [d["document_id"] for d in _docs_for_role(role) if d.get("document_id")]
-    return retrieve(question, n_results=10, doc_ids=doc_ids)
+    return retrieve(question, n_results=MAX_CONTEXT_CHUNKS, doc_ids=doc_ids)
 
 
 def _build_rag_context(question: str, role: str) -> str:

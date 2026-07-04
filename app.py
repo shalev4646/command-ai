@@ -1,6 +1,8 @@
+import json
 import random
 import traceback
 import streamlit as st
+import streamlit.components.v1 as components
 
 try:
     from backend import get_ai_response, get_loaded_docs_info, get_pdf_bytes, ensure_pdfs_ingested, get_suggested_questions, warm_index
@@ -362,9 +364,10 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
 [data-testid="stChatInputSubmitButton"] svg {{ fill: #171A12 !important; }}
 /* disclaimer under the composer */
 [data-testid="stBottomBlockContainer"]::after {{
-    content: "המידע אינו מחליף ייעוץ משפטי מוסמך";
+    content: "כלי עזר מבוסס בינה מלאכותית — אינו ייעוץ משפטי או פקודה מחייבת. בכל סתירה, פקודות מטכ״ל הרשמיות הן הקובעות.";
     display: block; text-align: center; margin-top: 8px;
-    font: 400 10.5px Heebo, sans-serif; color: rgba(236,237,230,.3);
+    line-height: 1.45; max-width: 460px; margin-inline: auto;
+    font: 400 10.5px Heebo, sans-serif; color: rgba(236,237,230,.5);
 }}
 
 /* ── Chat messages ── */
@@ -638,9 +641,7 @@ body:has([data-testid="stExpandSidebarButton"]) [data-testid="stSidebar"] {{ dis
 # selectors rot; instead: every badge links to streamlit.io/streamlit.app,
 # which the app itself never does — hide any body-level subtree containing
 # such a link, and keep watching since the platform mounts them late. ──
-import streamlit.components.v1 as _components
-
-_components.html(
+components.html(
     """<script>
     const doc = window.parent.document;
     const killBadges = () => {
@@ -801,6 +802,58 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+def _answer_actions(content: str) -> None:
+    """Copy-to-clipboard + share-to-WhatsApp row under an assistant answer.
+
+    Rendered as a components.html iframe, so styles are inlined (the app's
+    CSS can't reach in). Clipboard uses the async API with a textarea +
+    execCommand fallback — navigator.clipboard is unavailable in non-secure
+    or permission-restricted iframes (and flaky on iOS Safari).
+    """
+    payload = json.dumps(content + "\n\n— CommandAI")
+    components.html(
+        f"""
+        <style>
+        body {{ margin:0; direction:rtl; }}
+        .row {{ display:flex; gap:8px; justify-content:flex-start;
+                font-family:Heebo,sans-serif; }}
+        .act {{ display:inline-flex; align-items:center; gap:5px;
+                background:transparent; color:rgba(236,237,230,.55);
+                border:1px solid rgba(236,237,230,.16); border-radius:99px;
+                padding:3px 11px; font:400 11.5px Heebo,sans-serif;
+                cursor:pointer; text-decoration:none;
+                transition:color .15s,border-color .15s; }}
+        .act:hover {{ color:{ACCENT}; border-color:{ACCENT}; }}
+        </style>
+        <div class="row">
+          <button class="act" id="copy">⧉ העתק תשובה</button>
+          <a class="act" id="wa" target="_blank" rel="noopener">✆ שתף בוואטסאפ</a>
+        </div>
+        <script>
+        const text = {payload};
+        document.getElementById("wa").href =
+            "https://wa.me/?text=" + encodeURIComponent(text);
+        const btn = document.getElementById("copy");
+        btn.addEventListener("click", async () => {{
+            let ok = false;
+            try {{ await navigator.clipboard.writeText(text); ok = true; }}
+            catch (e) {{
+                const ta = document.createElement("textarea");
+                ta.value = text; document.body.appendChild(ta);
+                ta.select();
+                try {{ ok = document.execCommand("copy"); }} catch (e2) {{}}
+                ta.remove();
+            }}
+            const prev = btn.textContent;
+            btn.textContent = ok ? "✓ הועתק" : "ההעתקה נכשלה";
+            setTimeout(() => {{ btn.textContent = prev; }}, 1600);
+        }});
+        </script>
+        """,
+        height=34,
+    )
+
+
 # ── Conversation ──
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
@@ -813,6 +866,8 @@ for msg in st.session_state.messages:
             elif "מותר" in content:
                 st.markdown("✓ **מותר**")
         st.markdown(content)
+        if msg["role"] == "assistant":
+            _answer_actions(content)
 
 # ── Greeting + suggested questions (only when no conversation yet) ──
 if not st.session_state.messages:
@@ -841,7 +896,6 @@ if prompt := st.chat_input("שאל על פקודה..."):
 # so picking a role landed users inside the drawer instead of the chat.
 # Right after the role gate, click the collapse button once it appears. ──
 if st.session_state.pop("close_drawer", False):
-    import streamlit.components.v1 as components
     components.html(
         """<script>
         const doc = window.parent.document;

@@ -1,4 +1,5 @@
 import json
+import math
 from pathlib import Path
 
 import chromadb
@@ -261,28 +262,118 @@ def retrieve(
     except Exception:
         return []
 
-    chunks = []
-    per_doc_count: dict[str, int] = {}
-    for doc_text, meta, dist in zip(
-        results["documents"][0],
-        results["metadatas"][0],
-        results["distances"][0],
-    ):
-        doc_id = meta.get("doc_id")
-        if per_doc_count.get(doc_id, 0) >= max_per_doc:
-            continue
-        per_doc_count[doc_id] = per_doc_count.get(doc_id, 0) + 1
-        chunks.append({
+    candidates = [
+        {
             "text": doc_text,
-            "doc_id": doc_id,
+            "doc_id": meta.get("doc_id"),
             "title": meta.get("title"),
             "section": meta.get("section"),
             "clause": meta.get("clause"),
             "score": round(1 - dist, 3),
-        })
+        }
+        for doc_text, meta, dist in zip(
+            results["documents"][0],
+            results["metadatas"][0],
+            results["distances"][0],
+        )
+    ]
 
-    chunks.sort(key=lambda x: x["score"], reverse=True)
-    return chunks[:n_results]
+    _lexical_rerank(query, candidates)
+
+    chunks = []
+    per_doc_count: dict[str, int] = {}
+    for c in sorted(candidates, key=lambda x: x["score"], reverse=True):
+        doc_id = c["doc_id"]
+        if per_doc_count.get(doc_id, 0) >= max_per_doc:
+            continue
+        per_doc_count[doc_id] = per_doc_count.get(doc_id, 0) + 1
+        chunks.append(c)
+
+    return _stitch_adjacent_chunks(chunks[:n_results])
+
+
+# Hebrew single-letter prefixes (ה,ו,ב,ל,מ,כ,ש) that glue onto content words —
+# stripped from query terms so "בריתוק" still matches a chunk containing "ריתוק".
+_HEB_PREFIXES = "הובלמכש"
+_LEXICAL_WEIGHT = 0.25
+
+
+def _lexical_rerank(query: str, candidates: list[dict]) -> None:
+    """Blend a lexical-overlap bonus into each candidate's vector score.
+
+    Pure vector retrieval dilutes rare, decisive terms (e.g. "ריתוק משקי")
+    inside 600-word chunks, so the one document that actually answers the
+    question can rank below generically-similar chunks. Each query term is
+    weighted by its rarity *within the candidate pool* (a poor man's IDF —
+    a term found in only one candidate is near-decisive, one found in all
+    of them says nothing), and candidates containing the rare terms get a
+    proportional boost of up to _LEXICAL_WEIGHT. Mutates scores in place.
+    """
+    terms = []
+    for w in query.split():
+        w = w.strip("?.,:;!\"'()[]")
+        while len(w) > 3 and w[0] in _HEB_PREFIXES:
+            w = w[1:]
+        if len(w) >= 3:
+            terms.append(w)
+    if not terms or not candidates:
+        return
+
+    n = len(candidates)
+    matches = {t: [t in c["text"] for c in candidates] for t in terms}
+    idf = {t: math.log(1 + n / (1 + sum(matches[t]))) for t in terms}
+    total = sum(idf.values())
+    if total <= 0:
+        return
+    for i, c in enumerate(candidates):
+        overlap = sum(idf[t] for t in terms if matches[t][i])
+        c["score"] = round(c["score"] + _LEXICAL_WEIGHT * overlap / total, 3)
+
+
+def _stitch_adjacent_chunks(chunks: list[dict]) -> list[dict]:
+    """Merge consecutive raw-text chunks of the same document into one block.
+
+    Raw-text docs are split into overlapping word windows (600 words, 100
+    shared with the next window). When retrieval picks neighbouring windows
+    — common when one document squarely answers the question — sending them
+    separately both duplicates the 100-word overlap and hands the model a
+    clause split mid-sentence across two context blocks. Stitching restores
+    the continuous passage and drops the duplicated words.
+
+    Window k starts at word k*(CHUNK-OVERLAP), so chunk k+1 only ever adds
+    its words beyond the first OVERLAP (empty when the doc ended inside
+    chunk k) — merging is exact, not heuristic.
+    """
+    out: list[dict] = []
+    by_pos: dict[tuple, dict] = {}
+    for c in chunks:
+        sec = c.get("section") or ""
+        if not sec.startswith("chunk"):
+            out.append(c)  # structured clause/annex chunk — leave as is
+            continue
+        try:
+            by_pos[(c["doc_id"], int(c["clause"]))] = c
+        except (ValueError, TypeError):
+            out.append(c)
+    for (doc_id, pos), c in sorted(by_pos.items()):
+        prev = by_pos.get((doc_id, pos - 1))
+        if prev and prev.get("_merged_into") is not None:
+            target = prev["_merged_into"]
+            # chunk text is "{title}\n{body}" — append body minus the overlap
+            body_words = c["text"].split("\n", 1)[-1].split()
+            extra = body_words[_OVERLAP_WORDS:]
+            if extra:
+                target["text"] += " " + " ".join(extra)
+            target["clause"] = f"{target['clause'].split('–')[0]}–{pos}"
+            target["score"] = max(target["score"], c["score"])
+            c["_merged_into"] = target
+        else:
+            c["_merged_into"] = c
+            out.append(c)
+    for c in out:
+        c.pop("_merged_into", None)
+    out.sort(key=lambda x: x["score"], reverse=True)
+    return out
 
 
 def get_index_stats() -> dict:
