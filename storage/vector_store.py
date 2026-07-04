@@ -1,3 +1,4 @@
+import hashlib
 import json
 import math
 from pathlib import Path
@@ -7,11 +8,18 @@ import numpy as np
 from chromadb import Documents, EmbeddingFunction, Embeddings
 
 _COLLECTION = "idf_orders"
-_CHUNK_WORDS = 600
-_OVERLAP_WORDS = 100
+# Small windows so a single clause dominates its chunk's embedding — with
+# 600-word chunks, mean-pooling diluted the one clause a question targets
+# below the noise floor (the clubs order scored 0.11 cosine against a
+# question about clubs). Adjacent chunks are stitched back together after
+# retrieval, so answer context doesn't shrink with the window.
+_CHUNK_WORDS = 180
+_OVERLAP_WORDS = 40
 
 _client: chromadb.ClientAPI | None = None
 _collection: chromadb.Collection | None = None
+_ef: "MultilingualMiniLM | None" = None
+_corpus: list[dict] | None = None  # every chunk with its stored embedding
 
 
 class MultilingualMiniLM(EmbeddingFunction):
@@ -76,17 +84,113 @@ class MultilingualMiniLM(EmbeddingFunction):
         return out
 
 
+def _get_ef() -> MultilingualMiniLM:
+    """Single shared embedding function — the ONNX session is ~120MB, so it
+    must never be instantiated twice (collection + query paths share it)."""
+    global _ef
+    if _ef is None:
+        _ef = MultilingualMiniLM()
+    return _ef
+
+
+# ── Precomputed-embedding cache ──────────────────────────────────────────
+# Embedding the corpus at every boot took ~2 minutes of ONNX inference —
+# long enough to trip platform health checks on Streamlit Cloud. Chunk
+# vectors are content-addressed (sha1 of chunk text) and committed to the
+# repo, so a deploy boots by loading this file instead of re-embedding;
+# only genuinely new/changed chunks (or queries) touch the model. Stale or
+# missing entries degrade to on-the-fly embedding, never to wrong vectors.
+_EMB_CACHE_PATH = Path(__file__).parent / "embedding_cache.npz"
+_emb_cache: dict[str, np.ndarray] | None = None
+_emb_cache_dirty = False
+
+
+def _text_key(text: str) -> str:
+    return hashlib.sha1(text.encode("utf-8")).hexdigest()
+
+
+def _get_emb_cache() -> dict[str, np.ndarray]:
+    global _emb_cache
+    if _emb_cache is None:
+        _emb_cache = {}
+        if _EMB_CACHE_PATH.exists():
+            try:
+                data = np.load(_EMB_CACHE_PATH)
+                keys = [k.decode() if isinstance(k, bytes) else str(k) for k in data["keys"]]
+                _emb_cache = dict(zip(keys, data["vectors"].astype(np.float32)))
+            except Exception:
+                _emb_cache = {}
+    return _emb_cache
+
+
+def _save_emb_cache() -> None:
+    global _emb_cache_dirty
+    if not _emb_cache_dirty or not _emb_cache:
+        return
+    try:
+        keys = np.array(list(_emb_cache.keys()))
+        vectors = np.stack(list(_emb_cache.values()))
+        np.savez_compressed(_EMB_CACHE_PATH, keys=keys, vectors=vectors)
+        _emb_cache_dirty = False
+    except Exception:
+        pass  # cache is an optimization; failing to persist it must not break indexing
+
+
+def _embed_cached(texts: list[str]) -> list[list[float]]:
+    """Embeddings for texts, from the cache where possible."""
+    global _emb_cache_dirty
+    cache = _get_emb_cache()
+    missing = [i for i, t in enumerate(texts) if _text_key(t) not in cache]
+    if missing:
+        fresh = _get_ef()([texts[i] for i in missing])
+        for i, vec in zip(missing, fresh):
+            cache[_text_key(texts[i])] = np.asarray(vec, dtype=np.float32)
+        _emb_cache_dirty = True
+        _save_emb_cache()
+    return [cache[_text_key(t)].tolist() for t in texts]
+
+
 def _get_collection() -> chromadb.Collection:
     global _client, _collection
     if _collection is None:
         _client = chromadb.EphemeralClient()
+        # No embedding_function on purpose: every upsert passes explicit
+        # embeddings and queries never go through col.query (retrieve() scans
+        # the corpus itself), while an attached custom EF makes chroma rebuild
+        # it — a fresh ~1.6s ONNX session load — on every single upsert call
+        # (~50s across 16 documents at boot).
         _collection = _client.get_or_create_collection(
             name=_COLLECTION,
-            embedding_function=MultilingualMiniLM(),
+            embedding_function=None,
             metadata={"hnsw:space": "cosine"},
         )
         index_all_documents()
     return _collection
+
+
+def _get_corpus() -> list[dict]:
+    """All indexed chunks with their stored embeddings, cached in memory.
+
+    The corpus is small (~a hundred chunks), so retrieval scores every chunk
+    directly instead of going through an ANN candidate pool — see retrieve().
+    Invalidated by index_document() on upsert.
+    """
+    global _corpus
+    if _corpus is None:
+        col = _get_collection()
+        got = col.get(include=["documents", "metadatas", "embeddings"])
+        _corpus = [
+            {
+                "text": doc,
+                "doc_id": meta.get("doc_id"),
+                "title": meta.get("title"),
+                "section": meta.get("section"),
+                "clause": meta.get("clause"),
+                "embedding": np.asarray(emb, dtype=np.float32),
+            }
+            for doc, meta, emb in zip(got["documents"], got["metadatas"], got["embeddings"])
+        ]
+    return _corpus
 
 
 def _split_raw_text(text: str, doc_id: str, title: str) -> list[dict]:
@@ -113,23 +217,23 @@ def _split_raw_text(text: str, doc_id: str, title: str) -> list[dict]:
 
 def index_document(doc: dict) -> int:
     """Index all clauses from a document. Returns number of chunks added."""
+    global _corpus
+    _corpus = None  # upserts invalidate the in-memory corpus cache
     col = _get_collection()
     doc_id = doc.get("document_id", "unknown")
     title = doc.get("title", "")
 
-    # Fallback: if no structured sections but raw_text exists, chunk it directly
-    if not doc.get("sections") and not doc.get("annex_exceptions") and doc.get("raw_text"):
-        chunks = _split_raw_text(doc["raw_text"], doc_id, title)
-        if not chunks:
-            return 0
-        col.upsert(
-            ids=[c["id"] for c in chunks],
-            documents=[c["text"] for c in chunks],
-            metadatas=[{k: v for k, v in c.items() if k not in ("id", "text")} for c in chunks],
-        )
-        return len(chunks)
-
     ids, texts, metas = [], [], []
+
+    # raw_text and structured sections are indexed side by side: a mostly-raw
+    # document can still carry hand-structured clauses for content that raw
+    # extraction mangles (e.g. the PM-33.0302 punishment-authority tables,
+    # whose PDF table text survives only as scrambled RTL fragments).
+    if doc.get("raw_text"):
+        for c in _split_raw_text(doc["raw_text"], doc_id, title):
+            ids.append(c["id"])
+            texts.append(c["text"])
+            metas.append({k: v for k, v in c.items() if k not in ("id", "text")})
 
     for section in doc.get("sections", []):
         section_title = section.get("title", section.get("id", ""))
@@ -204,7 +308,7 @@ def index_document(doc: dict) -> int:
         return 0
 
     # upsert so re-indexing is idempotent
-    col.upsert(ids=ids, documents=texts, metadatas=metas)
+    col.upsert(ids=ids, documents=texts, metadatas=metas, embeddings=_embed_cached(texts))
     return len(ids)
 
 
@@ -229,53 +333,44 @@ def retrieve(
 ) -> list[dict]:
     """Return the globally most relevant chunks, capped per document.
 
-    Previously this queried each document separately with a *minimum*
-    chunks-per-document floor, so an irrelevant document would still force
-    its way into the results and crowd out a highly relevant one that just
-    happened to have more chunks (e.g. a query squarely about disciplinary
-    punishments would only get 2 of that document's 22 chunks, with the
-    rest of the budget spent on unrelated leave/sleep-hours chunks). Doing
-    one global query and capping the *maximum* per document instead lets a
-    genuinely relevant document dominate, while still giving other
-    documents a chance if they score well on a broader question.
+    Scores *every* chunk in the corpus (dense cosine + lexical bonus) rather
+    than reranking an ANN candidate pool. With ~a hundred chunks a full scan
+    is microseconds, and it removes a whole failure class: a document whose
+    embedding ranks below the pool cutoff was unrescuable no matter how
+    strong its lexical match (e.g. the clubs order ranked >40th on vector
+    similarity for a question literally about clubs — mean-pooling a
+    332-word chunk dilutes the one clause the question targets).
 
     `doc_ids`, if given, restricts the search to that set of documents —
     used to scope retrieval to whatever's relevant for the active role
     (soldier/commander/reserve).
     """
-    col = _get_collection()
-    count = col.count()
-    if count == 0:
-        return []
     if doc_ids is not None and not doc_ids:
         return []
 
-    where = {"doc_id": {"$in": doc_ids}} if doc_ids is not None else None
+    corpus = _get_corpus()
+    if doc_ids is not None:
+        allowed = set(doc_ids)
+        corpus = [c for c in corpus if c["doc_id"] in allowed]
+    if not corpus:
+        return []
 
     try:
-        results = col.query(
-            query_texts=[query],
-            n_results=min(count, n_results * 4),
-            where=where,
-            include=["documents", "metadatas", "distances"],
-        )
+        query_emb = np.asarray(_get_ef()([query])[0], dtype=np.float32)
     except Exception:
         return []
 
+    # embeddings are L2-normalized by the model, so dot product == cosine
     candidates = [
         {
-            "text": doc_text,
-            "doc_id": meta.get("doc_id"),
-            "title": meta.get("title"),
-            "section": meta.get("section"),
-            "clause": meta.get("clause"),
-            "score": round(1 - dist, 3),
+            "text": c["text"],
+            "doc_id": c["doc_id"],
+            "title": c["title"],
+            "section": c["section"],
+            "clause": c["clause"],
+            "score": round(float(c["embedding"] @ query_emb), 3),
         }
-        for doc_text, meta, dist in zip(
-            results["documents"][0],
-            results["metadatas"][0],
-            results["distances"][0],
-        )
+        for c in corpus
     ]
 
     _lexical_rerank(query, candidates)
@@ -289,13 +384,37 @@ def retrieve(
         per_doc_count[doc_id] = per_doc_count.get(doc_id, 0) + 1
         chunks.append(c)
 
-    return _stitch_adjacent_chunks(chunks[:n_results])
+    return _stitch_adjacent_chunks(_expand_neighbors(chunks[:n_results], corpus))
 
 
 # Hebrew single-letter prefixes (ה,ו,ב,ל,מ,כ,ש) that glue onto content words —
 # stripped from query terms so "בריתוק" still matches a chunk containing "ריתוק".
 _HEB_PREFIXES = "הובלמכש"
 _LEXICAL_WEIGHT = 0.25
+# final-form letters fold to their medial form so "זמן" matches "זמני"
+_FINALS = str.maketrans("םןץףך", "מנצפכ")
+
+
+def _term_variants(word: str) -> set[str]:
+    """Match-forms for one query word: progressively prefix-stripped, plus
+    light suffix stemming (ה/ת and ים/ות) so construct-state and plural
+    forms still hit — "הפתיחה" must match "פתיחת המועדון". Prefix stripping
+    keeps every intermediate form (not just the shortest), so over-stripping
+    into the root ("המועדון" → "עדון") can't *lose* the real form."""
+    word = word.strip("?.,:;!\"'()[]").translate(_FINALS)
+    if len(word) < 3:
+        return set()
+    variants = {word}
+    p = word
+    while len(p) > 3 and p[0] in _HEB_PREFIXES:
+        p = p[1:]
+        variants.add(p)
+    for v in list(variants):
+        if len(v) > 4 and v[-1] in "הת":
+            variants.add(v[:-1])
+        if len(v) > 5 and v[-2:] in ("ים", "ות"):
+            variants.add(v[:-2])
+    return variants
 
 
 def _lexical_rerank(query: str, candidates: list[dict]) -> None:
@@ -304,37 +423,89 @@ def _lexical_rerank(query: str, candidates: list[dict]) -> None:
     Pure vector retrieval dilutes rare, decisive terms (e.g. "ריתוק משקי")
     inside 600-word chunks, so the one document that actually answers the
     question can rank below generically-similar chunks. Each query term is
-    weighted by its rarity *within the candidate pool* (a poor man's IDF —
-    a term found in only one candidate is near-decisive, one found in all
+    weighted by its rarity across the scored chunks (a poor man's IDF —
+    a term found in only one chunk is near-decisive, one found in all
     of them says nothing), and candidates containing the rare terms get a
     proportional boost of up to _LEXICAL_WEIGHT. Mutates scores in place.
     """
-    terms = []
-    for w in query.split():
-        w = w.strip("?.,:;!\"'()[]")
-        while len(w) > 3 and w[0] in _HEB_PREFIXES:
-            w = w[1:]
-        if len(w) >= 3:
-            terms.append(w)
+    terms = [v for v in (_term_variants(w) for w in query.split()) if v]
     if not terms or not candidates:
         return
 
     n = len(candidates)
-    matches = {t: [t in c["text"] for c in candidates] for t in terms}
-    idf = {t: math.log(1 + n / (1 + sum(matches[t]))) for t in terms}
-    total = sum(idf.values())
+    texts = [c["text"].translate(_FINALS) for c in candidates]
+    matches = [
+        [any(v in text for v in variants) for text in texts]
+        for variants in terms
+    ]
+    idf = [math.log(1 + n / (1 + sum(m))) for m in matches]
+    total = sum(idf)
     if total <= 0:
         return
     for i, c in enumerate(candidates):
-        overlap = sum(idf[t] for t in terms if matches[t][i])
+        overlap = sum(w for w, m in zip(idf, matches) if m[i])
         c["score"] = round(c["score"] + _LEXICAL_WEIGHT * overlap / total, 3)
+
+
+def _expand_neighbors(chunks: list[dict], corpus: list[dict], top_k: int = 2) -> list[dict]:
+    """Pull in the immediate neighbours (pos±1) of the top_k ranked chunks.
+
+    Small retrieval windows make embeddings sharp but mean the clause that
+    answers the question can sit one window over from the one that matched
+    (the clubs order: its short tail chunk ranked #1 while the opening-hours
+    clause lived in the adjacent, noisier chunk). Since stitching merges
+    consecutive chunks anyway, adding a hit's direct neighbours restores the
+    surrounding context at a known, small token cost (≤2 windows per hit).
+    Neighbours inherit a score just under their anchor so stitching keeps
+    the block's rank.
+    """
+    present = {
+        (c["doc_id"], c["clause"])
+        for c in chunks
+        if (c.get("section") or "").startswith("chunk")
+    }
+    # only raw-text windows are valid neighbours: a structured clause of the
+    # same document can share the same (doc_id, clause) numbering (e.g. the
+    # PM-33.0302 annex rows are numbered 1..14, colliding with window
+    # positions 1..14) and must not be injected as "adjacent" context
+    by_key = {
+        (c["doc_id"], c["clause"]): c
+        for c in corpus
+        if (c.get("section") or "").startswith("chunk")
+    }
+    out = list(chunks)
+    for anchor in chunks[:top_k]:
+        sec = anchor.get("section") or ""
+        if not sec.startswith("chunk"):
+            continue
+        try:
+            pos = int(anchor["clause"])
+        except (ValueError, TypeError):
+            continue
+        for npos in (pos - 1, pos + 1):
+            key = (anchor["doc_id"], str(npos))
+            if npos < 0 or key in present:
+                continue
+            n = by_key.get(key)
+            if n is None:
+                continue
+            present.add(key)
+            out.append({
+                "text": n["text"],
+                "doc_id": n["doc_id"],
+                "title": n["title"],
+                "section": n["section"],
+                "clause": n["clause"],
+                "score": round(anchor["score"] - 0.001, 3),
+            })
+    return out
 
 
 def _stitch_adjacent_chunks(chunks: list[dict]) -> list[dict]:
     """Merge consecutive raw-text chunks of the same document into one block.
 
-    Raw-text docs are split into overlapping word windows (600 words, 100
-    shared with the next window). When retrieval picks neighbouring windows
+    Raw-text docs are split into overlapping word windows (_CHUNK_WORDS long,
+    _OVERLAP_WORDS shared with the next). When retrieval picks neighbouring windows
     — common when one document squarely answers the question — sending them
     separately both duplicates the 100-word overlap and hands the model a
     clause split mid-sentence across two context blocks. Stitching restores
