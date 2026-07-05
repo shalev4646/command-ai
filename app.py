@@ -638,19 +638,45 @@ body:has([data-testid="stExpandSidebarButton"]) [data-testid="stSidebar"] {{ dis
 
 # ── Remove the Streamlit Cloud viewer badges (crown pill / creator avatar)
 # on every screen. Their class hashes change each platform build, so CSS
-# selectors rot; instead: every badge links to streamlit.io/streamlit.app,
-# which the app itself never does — hide any body-level subtree containing
-# such a link, and keep watching since the platform mounts them late. ──
+# selectors rot. Four independent detection layers, because the platform
+# has moved the badge between plain DOM, shadow DOM and iframes across
+# builds: (1) links to streamlit.io/streamlit.app — the app itself never
+# renders those; (2) the same links inside shadow roots, where neither CSS
+# nor a plain querySelectorAll reaches, so the shadow *host* is hidden;
+# (3) platform iframes (ours are srcdoc-only and have no external src);
+# (4) positional last resort — any small fixed box glued to the viewport's
+# bottom corner mounted directly on <body>, where the app mounts nothing. ──
 components.html(
     """<script>
     const doc = window.parent.document;
-    const killBadges = () => {
-        doc.querySelectorAll('a[href*="streamlit.io"], a[href*="streamlit.app"]').forEach(a => {
-            let n = a;
+    const win = window.parent;
+    const HIDE = el => el && el.style && el.style.setProperty('display', 'none', 'important');
+    const BADGE_SEL = 'a[href*="streamlit.io"], a[href*="streamlit.app"], [class*="viewerBadge"], [class*="profileContainer"], [class*="profilePreview"]';
+    const sweep = root => {
+        root.querySelectorAll(BADGE_SEL).forEach(el => {
+            HIDE(el);
+            // also hide its body-level container, unless that would take the app down with it
+            let n = el;
             while (n.parentElement && n.parentElement !== doc.body) n = n.parentElement;
-            if (n.parentElement === doc.body && !n.querySelector('[data-testid="stApp"]')) {
-                n.style.setProperty('display', 'none', 'important');
+            if (n.parentElement === doc.body && !n.querySelector('[data-testid="stApp"]')) HIDE(n);
+        });
+        root.querySelectorAll('iframe[src*="streamlit.io"], iframe[src*="share.streamlit"]').forEach(HIDE);
+        root.querySelectorAll('*').forEach(el => {
+            if (!el.shadowRoot) return;
+            if (el.shadowRoot.querySelector(BADGE_SEL) && !el.querySelector('[data-testid="stApp"]')) {
+                HIDE(el);
+            } else {
+                sweep(el.shadowRoot);
             }
+        });
+    };
+    const killBadges = () => {
+        sweep(doc);
+        Array.from(doc.body.children).forEach(el => {
+            if (el.querySelector && el.querySelector('[data-testid="stApp"]')) return;
+            if (win.getComputedStyle(el).position !== 'fixed') return;
+            const r = el.getBoundingClientRect();
+            if (r.height > 0 && r.height < 140 && r.width < 300 && win.innerHeight - r.bottom < 60) HIDE(el);
         });
     };
     killBadges();
