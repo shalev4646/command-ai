@@ -3,6 +3,7 @@ import random
 import traceback
 import streamlit as st
 import streamlit.components.v1 as components
+from anthropic import APIConnectionError, APITimeoutError
 
 try:
     from backend import get_ai_answer, get_loaded_docs_info, get_pdf_bytes, ensure_pdfs_ingested, get_suggested_questions, sync_static_pdfs, warm_index
@@ -754,12 +755,32 @@ def archive_current_conversation():
 
 def handle_question(question: str):
     st.session_state.messages.append({"role": "user", "content": question})
+    # error notices are UI-only — replaying them as LLM history would just
+    # confuse the model
     history = [
         {"role": m["role"], "content": m["content"]}
         for m in st.session_state.messages[:-1]
+        if not m.get("error")
     ]
     with st.spinner("מחפש בפקודות..."):
-        result = get_ai_answer(question, history, role=st.session_state.role)
+        try:
+            result = get_ai_answer(question, history, role=st.session_state.role)
+        except (APIConnectionError, APITimeoutError):
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": "⚠️ **אין כרגע חיבור לשירות.**\n\n"
+                           "בדוק את החיבור לאינטרנט ושלח את השאלה שוב בעוד רגע.",
+                "error": True,
+            })
+            return
+        except Exception:
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": "⚠️ **אירעה שגיאה זמנית בעיבוד השאלה.**\n\n"
+                           "נסה לשלוח אותה שוב.",
+                "error": True,
+            })
+            return
     st.session_state.messages.append({
         "role": "assistant",
         "content": result["text"],
@@ -910,7 +931,7 @@ def _answer_actions(content: str, sources: list[dict] | None = None) -> None:
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         content = msg["content"]
-        if msg["role"] == "assistant":
+        if msg["role"] == "assistant" and not msg.get("error"):
             if "מותר בתנאים" in content:
                 st.markdown("⚠ **מותר בתנאים**")
             elif "אסור" in content:
@@ -918,7 +939,7 @@ for msg in st.session_state.messages:
             elif "מותר" in content:
                 st.markdown("✓ **מותר**")
         st.markdown(content)
-        if msg["role"] == "assistant":
+        if msg["role"] == "assistant" and not msg.get("error"):
             _answer_actions(content, msg.get("sources"))
 
 # ── Greeting + suggested questions (only when no conversation yet) ──
