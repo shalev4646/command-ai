@@ -1,3 +1,8 @@
+# Serve the source-order PDFs at /app/static/<file>.pdf so the "open PDF"
+# action under each answer can link straight to the browser's PDF viewer.
+[server]
+enableStaticServing = true
+
 # Pin the dark olive theme regardless of the device's light/dark mode —
 # without this, iPhones in light mode render Streamlit's light theme
 # (dark text) under our dark backgrounds and the text is unreadable.

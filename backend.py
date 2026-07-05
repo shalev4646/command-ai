@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 from pathlib import Path
 
 from anthropic import Anthropic
@@ -117,8 +118,7 @@ def retrieve_for_role(question: str, role: str) -> list[dict]:
     return retrieve(question, n_results=MAX_CONTEXT_CHUNKS, doc_ids=doc_ids)
 
 
-def _build_rag_context(question: str, role: str) -> str:
-    chunks = retrieve_for_role(question, role)
+def _context_from_chunks(chunks: list[dict]) -> str:
     if not chunks:
         return "אין מסמכים טעונים במערכת."
     parts = []
@@ -127,8 +127,40 @@ def _build_rag_context(question: str, role: str) -> str:
     return "\n\n---\n\n".join(parts)
 
 
-def get_ai_response(question: str, history: list[dict] | None = None, role: str = "soldier") -> str:
-    context = _build_rag_context(question, role)
+def _sources_from_chunks(chunks: list[dict]) -> list[dict]:
+    """The distinct orders behind an answer, in retrieval-rank order.
+
+    Only orders whose original PDF is actually on disk are returned — the
+    UI links each source straight to its PDF, and a dead link is worse
+    than no link.
+    """
+    pdf_dir = Path(__file__).parent / "pdf-ldf_law"
+    by_id = {d["document_id"]: d for d in load_documents() if d.get("document_id")}
+    sources, seen = [], set()
+    for c in chunks:
+        doc_id = c["doc_id"]
+        if doc_id in seen:
+            continue
+        seen.add(doc_id)
+        doc = by_id.get(doc_id)
+        source_file = (doc or {}).get("source_file")
+        if source_file and (pdf_dir / source_file).exists():
+            sources.append({
+                "doc_id": doc_id,
+                "title": doc.get("title", c.get("title", "")),
+                "source_file": source_file,
+            })
+    return sources
+
+
+def get_ai_answer(question: str, history: list[dict] | None = None, role: str = "soldier") -> dict:
+    """Answer a question and report which orders the answer drew on.
+
+    Returns {"text": <answer>, "sources": [{doc_id, title, source_file}...]},
+    sources ranked by retrieval relevance (best first).
+    """
+    chunks = retrieve_for_role(question, role)
+    context = _context_from_chunks(chunks)
     system_prompt = SYSTEM_PROMPTS.get(role, SYSTEM_PROMPT_SOLDIER)
 
     messages = list(history or [])
@@ -140,7 +172,11 @@ def get_ai_response(question: str, history: list[dict] | None = None, role: str 
         system=system_prompt + f"\n\nקטעים רלוונטיים מהפקודות:\n{context}",
         messages=messages,
     )
-    return response.content[0].text
+    return {"text": response.content[0].text, "sources": _sources_from_chunks(chunks)}
+
+
+def get_ai_response(question: str, history: list[dict] | None = None, role: str = "soldier") -> str:
+    return get_ai_answer(question, history, role)["text"]
 
 
 def get_pdf_bytes(source_file: str) -> bytes | None:
@@ -213,6 +249,24 @@ def ensure_pdfs_ingested(pdf_dir: Path | None = None) -> list[str]:
 
     # the per-file fault tolerance (log, skip, continue) lives in ingest_folder
     return ingest_folder(pdf_dir, skip=ingested_files)
+
+
+def sync_static_pdfs() -> int:
+    """Mirror the source PDFs into ./static for Streamlit's static serving.
+
+    enableStaticServing only exposes files under <app>/static, and the repo
+    keeps the PDFs in pdf-ldf_law/ — so they're copied (not committed twice)
+    at boot. Returns how many files were copied/refreshed."""
+    base = Path(__file__).parent
+    static_dir = base / "static"
+    static_dir.mkdir(exist_ok=True)
+    copied = 0
+    for pdf in (base / "pdf-ldf_law").glob("*.pdf"):
+        dest = static_dir / pdf.name
+        if not dest.exists() or dest.stat().st_size != pdf.stat().st_size:
+            shutil.copyfile(pdf, dest)
+            copied += 1
+    return copied
 
 
 def warm_index() -> int:

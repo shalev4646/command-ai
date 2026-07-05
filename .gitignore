@@ -3,5 +3,9 @@ venv/
 __pycache__/
 *.pyc
 storage/chroma_db/
+# runtime mirror of pdf-ldf_law for static serving — only the placeholder
+# is committed, so the folder exists when the server boots and mounts /static
+static/*
+!static/.gitkeep
 New Text Document.txt
 .claude/

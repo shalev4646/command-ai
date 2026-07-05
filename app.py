@@ -5,7 +5,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 try:
-    from backend import get_ai_response, get_loaded_docs_info, get_pdf_bytes, ensure_pdfs_ingested, get_suggested_questions, warm_index
+    from backend import get_ai_answer, get_loaded_docs_info, get_pdf_bytes, ensure_pdfs_ingested, get_suggested_questions, sync_static_pdfs, warm_index
 except Exception:
     st.set_page_config(page_title="CommandAI - Error", layout="wide")
     st.error("שגיאה בטעינת המערכת (import של backend נכשל):")
@@ -15,6 +15,9 @@ except Exception:
 @st.cache_resource(show_spinner=False)
 def _startup_ingest():
     ensure_pdfs_ingested()
+    # expose the source PDFs at /app/static/<file>.pdf for the per-answer
+    # "open PDF" action (enableStaticServing only serves from ./static)
+    sync_static_pdfs()
     # build the vector index (model download + embedding) at boot, so the
     # first user question doesn't stall behind it
     warm_index()
@@ -756,8 +759,12 @@ def handle_question(question: str):
         for m in st.session_state.messages[:-1]
     ]
     with st.spinner("מחפש בפקודות..."):
-        answer = get_ai_response(question, history, role=st.session_state.role)
-    st.session_state.messages.append({"role": "assistant", "content": answer})
+        result = get_ai_answer(question, history, role=st.session_state.role)
+    st.session_state.messages.append({
+        "role": "assistant",
+        "content": result["text"],
+        "sources": result["sources"],
+    })
 
 
 # ── Sidebar (drawer) ──
@@ -828,15 +835,27 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-def _answer_actions(content: str) -> None:
-    """Copy-to-clipboard + share-to-WhatsApp row under an assistant answer.
+def _answer_actions(content: str, sources: list[dict] | None = None) -> None:
+    """Copy-to-clipboard + share-to-WhatsApp + open-source-PDF row under an
+    assistant answer.
 
     Rendered as a components.html iframe, so styles are inlined (the app's
     CSS can't reach in). Clipboard uses the async API with a textarea +
     execCommand fallback — navigator.clipboard is unavailable in non-secure
     or permission-restricted iframes (and flaky on iOS Safari).
+
+    The PDF action links to the top-ranked source order, served from
+    /app/static (see sync_static_pdfs). Built as an absolute URL off the
+    *parent* origin — inside a srcdoc iframe, a relative href resolves
+    against about:srcdoc and goes nowhere.
     """
     payload = json.dumps(content + "\n\n— CommandAI")
+    primary = (sources or [None])[0]
+    pdf_btn = ""
+    if primary:
+        title = primary["title"].replace('"', "&quot;")
+        pdf_btn = f'<a class="act" id="pdf" target="_blank" rel="noopener" title="{title}">⎙ פתח PDF</a>'
+    pdf_file = json.dumps(primary["source_file"] if primary else None)
     components.html(
         f"""
         <style>
@@ -847,18 +866,25 @@ def _answer_actions(content: str) -> None:
                 background:transparent; color:rgba(236,237,230,.55);
                 border:1px solid rgba(236,237,230,.16); border-radius:99px;
                 padding:3px 11px; font:400 11.5px Heebo,sans-serif;
-                cursor:pointer; text-decoration:none;
+                cursor:pointer; text-decoration:none; white-space:nowrap;
                 transition:color .15s,border-color .15s; }}
         .act:hover {{ color:{ACCENT}; border-color:{ACCENT}; }}
         </style>
         <div class="row">
           <button class="act" id="copy">⧉ העתק תשובה</button>
           <a class="act" id="wa" target="_blank" rel="noopener">✆ שתף בוואטסאפ</a>
+          {pdf_btn}
         </div>
         <script>
         const text = {payload};
         document.getElementById("wa").href =
             "https://wa.me/?text=" + encodeURIComponent(text);
+        const pdfFile = {pdf_file};
+        const pdfEl = document.getElementById("pdf");
+        if (pdfEl && pdfFile) {{
+            pdfEl.href = window.parent.location.origin +
+                "/app/static/" + encodeURIComponent(pdfFile);
+        }}
         const btn = document.getElementById("copy");
         btn.addEventListener("click", async () => {{
             let ok = false;
@@ -893,7 +919,7 @@ for msg in st.session_state.messages:
                 st.markdown("✓ **מותר**")
         st.markdown(content)
         if msg["role"] == "assistant":
-            _answer_actions(content)
+            _answer_actions(content, msg.get("sources"))
 
 # ── Greeting + suggested questions (only when no conversation yet) ──
 if not st.session_state.messages:
