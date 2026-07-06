@@ -6,7 +6,7 @@ import streamlit.components.v1 as components
 from anthropic import APIConnectionError, APITimeoutError
 
 try:
-    from backend import get_ai_answer, get_loaded_docs_info, get_pdf_bytes, ensure_pdfs_ingested, get_suggested_questions, sync_static_pdfs, warm_index
+    from backend import stream_ai_answer, get_loaded_docs_info, get_pdf_bytes, ensure_pdfs_ingested, get_suggested_questions, sync_static_pdfs, warm_index
 except Exception:
     st.set_page_config(page_title="CommandAI - Error", layout="wide")
     st.error("שגיאה בטעינת המערכת (import של backend נכשל):")
@@ -762,29 +762,37 @@ def handle_question(question: str):
         for m in st.session_state.messages[:-1]
         if not m.get("error")
     ]
-    with st.spinner("מחפש בפקודות..."):
-        try:
-            result = get_ai_answer(question, history, role=st.session_state.role)
-        except (APIConnectionError, APITimeoutError):
-            st.session_state.messages.append({
-                "role": "assistant",
-                "content": "⚠️ **אין כרגע חיבור לשירות.**\n\n"
-                           "בדוק את החיבור לאינטרנט ושלח את השאלה שוב בעוד רגע.",
-                "error": True,
-            })
-            return
-        except Exception:
-            st.session_state.messages.append({
-                "role": "assistant",
-                "content": "⚠️ **אירעה שגיאה זמנית בעיבוד השאלה.**\n\n"
-                           "נסה לשלוח אותה שוב.",
-                "error": True,
-            })
-            return
+    # The conversation loop already rendered without this turn, so draw the
+    # user bubble now and stream the answer into a live assistant bubble;
+    # the rerun that follows re-renders both from session state (adding the
+    # verdict badge + actions row).
+    with st.chat_message("user"):
+        st.markdown(question)
+    try:
+        with st.spinner("מחפש בפקודות..."):
+            text_gen, sources = stream_ai_answer(question, history, role=st.session_state.role)
+        with st.chat_message("assistant"):
+            text = st.write_stream(text_gen)
+    except (APIConnectionError, APITimeoutError):
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": "⚠️ **אין כרגע חיבור לשירות.**\n\n"
+                       "בדוק את החיבור לאינטרנט ושלח את השאלה שוב בעוד רגע.",
+            "error": True,
+        })
+        return
+    except Exception:
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": "⚠️ **אירעה שגיאה זמנית בעיבוד השאלה.**\n\n"
+                       "נסה לשלוח אותה שוב.",
+            "error": True,
+        })
+        return
     st.session_state.messages.append({
         "role": "assistant",
-        "content": result["text"],
-        "sources": result["sources"],
+        "content": text,
+        "sources": sources,
     })
 
 

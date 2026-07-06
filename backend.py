@@ -14,6 +14,12 @@ load_dotenv(Path(__file__).parent / ".env")
 
 client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", "").strip())
 
+MODEL = "claude-opus-4-8"
+# Ceiling for thinking + answer combined. Adaptive thinking spends a few
+# thousand tokens on table/legal reasoning before the ~1K-token structured
+# answer; streaming means the large cap carries no HTTP-timeout risk.
+MAX_OUTPUT_TOKENS = 8000
+
 # Hard cap on how many retrieved chunks are stitched into the prompt. Kept
 # deliberately small: the top few clauses carry the answer, and every extra
 # chunk inflates prompt tokens (cost + latency) and erodes the per-request
@@ -153,11 +159,16 @@ def _sources_from_chunks(chunks: list[dict]) -> list[dict]:
     return sources
 
 
-def get_ai_answer(question: str, history: list[dict] | None = None, role: str = "soldier") -> dict:
-    """Answer a question and report which orders the answer drew on.
+def stream_ai_answer(question: str, history: list[dict] | None = None, role: str = "soldier"):
+    """Answer a question as a live stream.
 
-    Returns {"text": <answer>, "sources": [{doc_id, title, source_file}...]},
-    sources ranked by retrieval relevance (best first).
+    Returns (text_generator, sources): the generator yields answer-text deltas
+    as the model produces them (UI renders them via st.write_stream), and
+    sources — the distinct orders behind the answer, ranked by retrieval
+    relevance — are computed up front from the retrieved chunks so the UI has
+    them the moment the stream finishes. Adaptive thinking runs before the
+    first text token (its deltas are not yielded), so the stream starts after
+    a short reasoning pause.
     """
     chunks = retrieve_for_role(question, role)
     context = _context_from_chunks(chunks)
@@ -166,13 +177,27 @@ def get_ai_answer(question: str, history: list[dict] | None = None, role: str = 
     messages = list(history or [])
     messages.append({"role": "user", "content": question})
 
-    response = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=1024,
-        system=system_prompt + f"\n\nקטעים רלוונטיים מהפקודות:\n{context}",
-        messages=messages,
-    )
-    return {"text": response.content[0].text, "sources": _sources_from_chunks(chunks)}
+    def _gen():
+        with client.messages.stream(
+            model=MODEL,
+            max_tokens=MAX_OUTPUT_TOKENS,
+            thinking={"type": "adaptive"},
+            system=system_prompt + f"\n\nקטעים רלוונטיים מהפקודות:\n{context}",
+            messages=messages,
+        ) as stream:
+            yield from stream.text_stream
+
+    return _gen(), _sources_from_chunks(chunks)
+
+
+def get_ai_answer(question: str, history: list[dict] | None = None, role: str = "soldier") -> dict:
+    """Non-streaming variant of stream_ai_answer — same pipeline, whole answer.
+
+    Returns {"text": <answer>, "sources": [{doc_id, title, source_file}...]}.
+    Used by eval.py, so the sanity check exercises the exact production path.
+    """
+    text_gen, sources = stream_ai_answer(question, history, role)
+    return {"text": "".join(text_gen), "sources": sources}
 
 
 def get_ai_response(question: str, history: list[dict] | None = None, role: str = "soldier") -> str:
