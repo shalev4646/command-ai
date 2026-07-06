@@ -72,12 +72,28 @@ def _get_tool_input(response) -> dict:
     return {}
 
 
+# A full Hebrew order page carries ~1,500-2,500 chars of text. Well below
+# that, the PDF is a scan with a partial text layer — ingesting it silently
+# produces a document that *looks* loaded but can't answer questions about
+# its missing sections (33.0111 shipped that way: the reporting-duty clauses
+# existed only in the page images). Fail loudly; recover the text manually
+# (order page on the IDF site / page-image reading) before ingesting.
+MIN_CHARS_PER_PAGE = 900
+
+
 def extract_text(pdf_path: Path) -> str:
     """Extract text using PyMuPDF (handles Hebrew RTL correctly)."""
     doc = fitz.open(str(pdf_path))
     pages = [page.get_text() for page in doc]
+    n_pages = len(doc)
     doc.close()
-    return "\n\n".join(p for p in pages if p.strip())
+    text = "\n\n".join(p for p in pages if p.strip())
+    if n_pages and len(text) // n_pages < MIN_CHARS_PER_PAGE:
+        raise ValueError(
+            f"חילוץ טקסט דליל ({len(text)} תווים ב-{n_pages} עמודים — "
+            f"כנראה PDF סרוק עם שכבת טקסט חלקית); יש לשחזר את הטקסט ידנית"
+        )
+    return text
 
 
 def extract_metadata(text: str) -> dict:

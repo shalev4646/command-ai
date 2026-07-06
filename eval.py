@@ -58,6 +58,10 @@ GOLDEN = [
     ("commander", "האם מותר לערוך חיפוש בחפצים האישיים של חייל?", "PM-33.0309"),
     ("soldier",   "מה עושים אם חייל נפגע מהטרדה מינית ביחידה?", "33.0145"),
     ("reserve",   "איך סטודנט יכול לדחות שירות מילואים בגלל תקופת מבחנים?", "31.0603"),
+    # regression: the July-2025 33.0111 PDF is a scan with a partial text
+    # layer — the reporting-duty clauses were recovered from the order's
+    # page on the IDF site (2026-07-06)
+    ("soldier",   "מי צריך לדווח למצ\"ח על חייל החשוד בשימוש בסמים?", "33.0111"),
 ]
 
 SMOKE = [
