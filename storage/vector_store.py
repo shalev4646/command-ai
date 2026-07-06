@@ -293,7 +293,23 @@ def _index_document_locked(doc: dict, save_cache: bool) -> int:
     # 31.0703 travel order) or tiny (the 77-word Passover amendment). They
     # carry no answer content, so retrieve() only uses them to boost the
     # document's real chunks and never returns them as context.
-    for i, q in enumerate(doc.get("suggested_questions") or []):
+    # Two storage formats: legacy flat list, or {role: [questions]} (all
+    # roles' questions are anchors — role scoping happens via doc_ids).
+    # `anchor_questions` are extra retrieval-only anchors that never appear
+    # in the UI — phrasing bridges kept when the display questions were
+    # rewritten per-role (the golden gate caught their loss).
+    sq = doc.get("suggested_questions")
+    flat, seen = [], set()
+    if isinstance(sq, dict):
+        role_lists = [qs for qs in sq.values() if isinstance(qs, list)]
+    else:
+        role_lists = [sq or []]
+    for qs in role_lists + [doc.get("anchor_questions") or []]:
+        for q in qs:
+            if isinstance(q, str) and q not in seen:
+                seen.add(q)
+                flat.append(q)
+    for i, q in enumerate(flat):
         if not isinstance(q, str) or len(q.strip()) < 12:
             continue
         ids.append(f"{doc_id}__sq{i}")

@@ -243,6 +243,11 @@ def get_suggested_questions(role: str = "soldier") -> list[str]:
     all_questions: list[str] = []
     for doc in _docs_for_role(role):
         qs = doc.get("suggested_questions")
+        # per-role format: {role: [questions]} — show each audience only the
+        # questions written for it (a soldier gets "כמה מגיע לי", a commander
+        # gets authority-style questions on the same order)
+        if isinstance(qs, dict):
+            qs = qs.get(role)
         if not isinstance(qs, list):
             continue
         # ingestion once stored a broken char-split list; keep only real questions
