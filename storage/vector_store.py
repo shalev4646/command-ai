@@ -287,6 +287,25 @@ def _index_document_locked(doc: dict, save_cache: bool) -> int:
                 "tags": ",".join(clause.get("tags", [])),
             })
 
+    # Suggested questions are indexed as retrieval *anchors* only: a user
+    # question phrased like one of them gives a sharp question-to-question
+    # match even when the document's extracted text is RTL-mangled (the
+    # 31.0703 travel order) or tiny (the 77-word Passover amendment). They
+    # carry no answer content, so retrieve() only uses them to boost the
+    # document's real chunks and never returns them as context.
+    for i, q in enumerate(doc.get("suggested_questions") or []):
+        if not isinstance(q, str) or len(q.strip()) < 12:
+            continue
+        ids.append(f"{doc_id}__sq{i}")
+        texts.append(f"{title}\n{q.strip()}")
+        metas.append({
+            "doc_id": doc_id,
+            "title": title,
+            "section": "sq",
+            "clause": str(i),
+            "tags": "",
+        })
+
     for annex in doc.get("annex_exceptions", []):
         category = annex.get("category", annex.get("case", "")).strip()
         annex_id = str(annex.get("id", ""))
@@ -411,6 +430,27 @@ def retrieve(
     ]
 
     _lexical_rerank(query, candidates)
+
+    # Fold suggested-question anchors into their document's real chunks: a
+    # strong question-to-question match lifts the doc's best real chunk to
+    # the anchor's rank, and the anchor itself is dropped — it carries no
+    # answer content, so it must never be handed to the LLM as context.
+    sq_best: dict[str, float] = {}
+    best_real: dict[str, dict] = {}
+    real_candidates = []
+    for c in candidates:
+        if c["section"] == "sq":
+            sq_best[c["doc_id"]] = max(sq_best.get(c["doc_id"], -1.0), c["score"])
+        else:
+            real_candidates.append(c)
+            cur = best_real.get(c["doc_id"])
+            if cur is None or c["score"] > cur["score"]:
+                best_real[c["doc_id"]] = c
+    candidates = real_candidates
+    for doc_id, anchor_score in sq_best.items():
+        best = best_real.get(doc_id)
+        if best is not None and anchor_score > best["score"]:
+            best["score"] = anchor_score
 
     chunks = []
     per_doc_count: dict[str, int] = {}
