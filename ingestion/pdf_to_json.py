@@ -106,6 +106,19 @@ def extract_metadata(text: str) -> dict:
 _VALID_ROLES = set(ROLES)
 
 
+def _split_stringified_list(s: str) -> list[str]:
+    """Recover a list the model serialized as one string, tolerating the
+    unescaped Hebrew-acronym quotes that make it invalid JSON."""
+    try:
+        parsed = json.loads(s)
+        if isinstance(parsed, list):
+            return [q for q in parsed if isinstance(q, str)]
+    except Exception:
+        pass
+    parts = re.split(r'"\s*,\s*"', s.strip().strip("[]").strip().strip('"'))
+    return [p.strip().strip('"') for p in parts if p.strip()]
+
+
 def analyze_document(text: str) -> dict:
     """Ask the model for suggested questions and which roles (soldier/commander/
     reserve) this document is relevant to, in a single call."""
@@ -118,9 +131,16 @@ def analyze_document(text: str) -> dict:
     )
     result = _get_tool_input(response)
     questions = result.get("questions", [])
+    # the model occasionally returns the array serialized as one string —
+    # iterating it then char-splits into garbage ("[", "\"", "א", ...).
+    # json.loads alone isn't enough: Hebrew acronyms (ולת"ם, צה"ל) embed
+    # unescaped quotes that break it, so fall back to splitting on the
+    # quote-comma-quote element boundary, which acronyms never produce.
+    if isinstance(questions, str):
+        questions = _split_stringified_list(questions)
     roles = result.get("roles", [])
     return {
-        "questions": [q for q in questions if isinstance(q, str) and q.strip()][:6],
+        "questions": [q for q in questions if isinstance(q, str) and len(q.strip()) >= 12][:6],
         "roles": [r for r in roles if r in _VALID_ROLES] or list(_VALID_ROLES),
     }
 
