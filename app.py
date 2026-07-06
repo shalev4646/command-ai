@@ -652,37 +652,52 @@ body:has([data-testid="stExpandSidebarButton"]) [data-testid="stSidebar"] {{ dis
 # bottom corner mounted directly on <body>, where the app mounts nothing. ──
 components.html(
     """<script>
-    const doc = window.parent.document;
-    const win = window.parent;
+    // On Streamlit Cloud the app itself runs inside an iframe of a platform
+    // shell page (same *.streamlit.app origin), and the viewer badges are
+    // mounted on the SHELL document — one level above window.parent. Sweep
+    // every same-origin ancestor document up to window.top; local runs have
+    // parent === top, so this collapses to the old single-document behavior.
     const HIDE = el => el && el.style && el.style.setProperty('display', 'none', 'important');
     const BADGE_SEL = 'a[href*="streamlit.io"], a[href*="streamlit.app"], [class*="viewerBadge"], [class*="profileContainer"], [class*="profilePreview"]';
-    const sweep = root => {
+    const contexts = [];
+    let w = window.parent;
+    for (let hops = 0; hops < 5; hops++) {
+        try { if (w.document && w.document.body) contexts.push(w); } catch (e) { break; } // cross-origin: stop
+        if (w === w.parent) break;
+        w = w.parent;
+    }
+    const sweep = (root, win) => {
+        const doc = win.document;
         root.querySelectorAll(BADGE_SEL).forEach(el => {
             HIDE(el);
             // also hide its body-level container, unless that would take the app down with it
             let n = el;
             while (n.parentElement && n.parentElement !== doc.body) n = n.parentElement;
-            if (n.parentElement === doc.body && !n.querySelector('[data-testid="stApp"]')) HIDE(n);
+            if (n.parentElement === doc.body && !n.querySelector('[data-testid="stApp"]') && !n.querySelector('iframe')) HIDE(n);
         });
         root.querySelectorAll('iframe[src*="streamlit.io"], iframe[src*="share.streamlit"]').forEach(HIDE);
         root.querySelectorAll('*').forEach(el => {
             if (!el.shadowRoot) return;
-            if (el.shadowRoot.querySelector(BADGE_SEL) && !el.querySelector('[data-testid="stApp"]')) {
+            if (el.shadowRoot.querySelector(BADGE_SEL) && !el.querySelector('[data-testid="stApp"]') && !el.querySelector('iframe')) {
                 HIDE(el);
             } else {
-                sweep(el.shadowRoot);
+                sweep(el.shadowRoot, win);
             }
         });
     };
-    const killBadges = () => {
-        sweep(doc);
+    const killBadges = () => contexts.forEach(win => {
+        const doc = win.document;
+        sweep(doc, win);
+        // positional last resort: small fixed boxes glued to the bottom
+        // corner, mounted on <body>. Never touch anything that contains the
+        // app (stApp locally, the app iframe on the platform shell).
         Array.from(doc.body.children).forEach(el => {
-            if (el.querySelector && el.querySelector('[data-testid="stApp"]')) return;
+            if (el.querySelector && (el.querySelector('[data-testid="stApp"]') || el.querySelector('iframe'))) return;
             if (win.getComputedStyle(el).position !== 'fixed') return;
             const r = el.getBoundingClientRect();
             if (r.height > 0 && r.height < 140 && r.width < 300 && win.innerHeight - r.bottom < 60) HIDE(el);
         });
-    };
+    });
     killBadges();
     setInterval(killBadges, 1000);
     </script>""",
