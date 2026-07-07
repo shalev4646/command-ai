@@ -25,6 +25,14 @@ def _startup_ingest():
 
 _startup_ingest()
 
+# cache_resource lives for the whole process, but on Streamlit Cloud the
+# process outlives git pulls — orders added by a later push never reached
+# ./static, so their "פתח PDF" button 404'd. Re-syncing once per session is
+# ~40 stat calls; copies happen only for new/changed files.
+if "static_synced" not in st.session_state:
+    sync_static_pdfs()
+    st.session_state.static_synced = True
+
 st.set_page_config(
     page_title="CommandAI",
     page_icon="🛡️",
@@ -904,9 +912,13 @@ def _answer_actions(content: str, sources: list[dict] | None = None) -> None:
     or permission-restricted iframes (and flaky on iOS Safari).
 
     The PDF action links to the top-ranked source order, served from
-    /app/static (see sync_static_pdfs). Built as an absolute URL off the
-    *parent* origin — inside a srcdoc iframe, a relative href resolves
-    against about:srcdoc and goes nowhere.
+    app/static under the APP FRAME's base path (see sync_static_pdfs).
+    Inside a srcdoc iframe a relative href resolves against about:srcdoc,
+    and origin alone is wrong on Streamlit Cloud — there the app runs in a
+    platform-shell iframe at /~/+/, and <origin>/app/static/... hits the
+    shell (which answers every path with its own HTML). So the URL is built
+    from the parent frame's origin + directory path, which is correct both
+    locally (/) and behind the shell (/~/+/).
     """
     payload = json.dumps(content + "\n\n— CommandAI")
     primary = (sources or [None])[0]
@@ -919,7 +931,7 @@ def _answer_actions(content: str, sources: list[dict] | None = None) -> None:
         f"""
         <style>
         body {{ margin:0; direction:rtl; }}
-        .row {{ display:flex; gap:8px; justify-content:flex-start;
+        .row {{ display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-start;
                 font-family:Heebo,sans-serif; }}
         .act {{ display:inline-flex; align-items:center; gap:5px;
                 background:transparent; color:rgba(236,237,230,.55);
@@ -941,8 +953,11 @@ def _answer_actions(content: str, sources: list[dict] | None = None) -> None:
         const pdfFile = {pdf_file};
         const pdfEl = document.getElementById("pdf");
         if (pdfEl && pdfFile) {{
-            pdfEl.href = window.parent.location.origin +
-                "/app/static/" + encodeURIComponent(pdfFile);
+            // base = the app frame's directory ("/" locally, "/~/+/" behind
+            // the Streamlit Cloud shell) — origin alone would hit the shell
+            const loc = window.parent.location;
+            const dir = loc.pathname.endsWith("/") ? loc.pathname : loc.pathname + "/";
+            pdfEl.href = loc.origin + dir + "app/static/" + encodeURIComponent(pdfFile);
         }}
         const btn = document.getElementById("copy");
         btn.addEventListener("click", async () => {{
