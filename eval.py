@@ -74,6 +74,10 @@ GOLDEN = [
     ("commander", "האם המשפחה שלי זכאית לטיפול שיניים דרך הצבא?", "36.0511"),
     ("soldier",   "אילו תנאים מיוחדים יש לחייל חרדי בצבא?", "31.0901"),
     ("commander", "מה ההבדל בין שירות קבע לקבע מובהק?", "3.0501"),
+    # regression: the 36.0413 definitions chunk is RTL-mangled and never
+    # ranked — the service-connection question answered "not found" until
+    # key-facts sections were added (2026-07-07)
+    ("commander", "האם מחלה שלא קשורה לשירות מזכה בחופשת מחלה?", "36.0413"),
 ]
 
 SMOKE = [
