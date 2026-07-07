@@ -6,7 +6,7 @@ import streamlit.components.v1 as components
 from anthropic import APIConnectionError, APITimeoutError
 
 try:
-    from backend import stream_ai_answer, get_loaded_docs_info, get_pdf_bytes, ensure_pdfs_ingested, get_suggested_questions, sync_static_pdfs, warm_index
+    from backend import stream_ai_answer, get_loaded_docs_info, get_pdf_bytes, ensure_pdfs_ingested, get_suggested_questions, sync_static_pdfs, warm_index, DEFAULT_QUESTIONS
 except Exception:
     st.set_page_config(page_title="CommandAI - Error", layout="wide")
     st.error("שגיאה בטעינת המערכת (import של backend נכשל):")
@@ -745,7 +745,11 @@ if st.session_state.role is None:
 
 if "suggested" not in st.session_state:
     all_q = get_suggested_questions(role=st.session_state.role)
-    st.session_state.suggested = random.sample(all_q, min(4, len(all_q)))
+    if all_q:
+        st.session_state.suggested = random.sample(all_q, min(4, len(all_q)))
+# an empty pool (documents mid-load during a redeploy) is NOT cached — show
+# generic defaults for this run and retry the real pool on the next rerun
+suggested_questions = st.session_state.get("suggested") or DEFAULT_QUESTIONS.get(st.session_state.role, DEFAULT_QUESTIONS["soldier"])
 
 
 def queue_question(q: str):
@@ -972,7 +976,7 @@ if not st.session_state.messages:
         f"<div class='cai-greet-sub'>שאלות נפוצות מהפקודות הטעונות ({len(docs)})</div>",
         unsafe_allow_html=True,
     )
-    for i, q in enumerate(st.session_state.suggested):
+    for i, q in enumerate(suggested_questions):
         if st.button(q, key=f"sug_{i}", use_container_width=True):
             queue_question(q)
 

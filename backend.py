@@ -225,7 +225,9 @@ def get_loaded_docs_info(role: str | None = None) -> list[dict]:
     ]
 
 
-_DEFAULT_QUESTIONS = {
+# Shown by the UI only when the real pool is momentarily empty (documents
+# still loading during a redeploy); never cached into the session.
+DEFAULT_QUESTIONS = {
     "soldier": ["מה זכויותיי כחייל?", "האם מגיע לי שינה מספקת?", "מה העונש על עבירה משמעתית?"],
     "commander": ["אילו עונשים מוסמך מפקד להטיל בדין משמעתי?", "מה חובות הדיווח שלי כמפקד?"],
     "reserve": ["אילו תגמולים מגיעים לי כחייל מילואים?", "מה זכויותיי כחייל מילואים?"],
@@ -252,8 +254,9 @@ def get_suggested_questions(role: str = "soldier") -> list[str]:
             continue
         # ingestion once stored a broken char-split list; keep only real questions
         all_questions.extend(q for q in qs if isinstance(q, str) and len(q.strip()) >= 12)
-    if not all_questions:
-        all_questions = _DEFAULT_QUESTIONS.get(role, _DEFAULT_QUESTIONS["soldier"])
+    # may be empty (e.g. documents still loading during a redeploy) — the UI
+    # shows generic defaults for that run WITHOUT caching them, so the real
+    # pool is retried on the next rerun
     return all_questions
 
 
