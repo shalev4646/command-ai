@@ -634,6 +634,32 @@ body:has([data-testid="stExpandSidebarButton"]) [data-testid="stSidebar"] {{ dis
     text-overflow: ellipsis;
 }}
 
+/* ── Per-answer open-PDF: pill matching the copy/WhatsApp actions row ── */
+[data-testid="stChatMessage"] [data-testid="stDownloadButton"] > button {{
+    background: transparent !important;
+    color: rgba(236,237,230,.55) !important;
+    border: 1px solid rgba(236,237,230,.16) !important;
+    border-radius: 99px !important;
+    padding: 2px 12px !important;
+    min-height: 0 !important;
+    width: auto !important;
+    transition: color .15s ease, border-color .15s ease;
+}}
+[data-testid="stChatMessage"] [data-testid="stDownloadButton"] > button:hover {{
+    color: var(--accent) !important;
+    border-color: var(--accent) !important;
+    background: transparent !important;
+}}
+[data-testid="stChatMessage"] [data-testid="stDownloadButton"] > button p {{
+    font: 400 11.5px Heebo, sans-serif !important;
+    color: inherit !important;
+    margin: 0 !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 78vw;
+}}
+
 /* ── Caption / small text ── */
 .stCaption, small {{ color: var(--text-faint) !important; font-size: 0.8rem !important; }}
 
@@ -903,30 +929,21 @@ st.markdown(
 )
 
 def _answer_actions(content: str, sources: list[dict] | None = None) -> None:
-    """Copy-to-clipboard + share-to-WhatsApp + open-source-PDF row under an
-    assistant answer.
+    """Copy-to-clipboard + share-to-WhatsApp row under an assistant answer.
 
     Rendered as a components.html iframe, so styles are inlined (the app's
     CSS can't reach in). Clipboard uses the async API with a textarea +
     execCommand fallback — navigator.clipboard is unavailable in non-secure
     or permission-restricted iframes (and flaky on iOS Safari).
 
-    The PDF action links to the top-ranked source order, served from
-    app/static under the APP FRAME's base path (see sync_static_pdfs).
-    Inside a srcdoc iframe a relative href resolves against about:srcdoc,
-    and origin alone is wrong on Streamlit Cloud — there the app runs in a
-    platform-shell iframe at /~/+/, and <origin>/app/static/... hits the
-    shell (which answers every path with its own HTML). So the URL is built
-    from the parent frame's origin + directory path, which is correct both
-    locally (/) and behind the shell (/~/+/).
+    The open-PDF action is NOT here: an iframe link needs the /app/static
+    route, which never served on Streamlit Cloud (the platform shell answers
+    every path of the public origin with its own HTML, and ./static on the
+    inner origin stayed empty across boots). The PDF is offered instead as a
+    st.download_button next to this row — same mechanism as the sidebar PDF
+    buttons, streams the bytes over the app protocol, works everywhere.
     """
     payload = json.dumps(content + "\n\n— CommandAI")
-    primary = (sources or [None])[0]
-    pdf_btn = ""
-    if primary:
-        title = primary["title"].replace('"', "&quot;")
-        pdf_btn = f'<a class="act" id="pdf" target="_blank" rel="noopener" title="{title}">⎙ פתח PDF</a>'
-    pdf_file = json.dumps(primary["source_file"] if primary else None)
     components.html(
         f"""
         <style>
@@ -944,21 +961,11 @@ def _answer_actions(content: str, sources: list[dict] | None = None) -> None:
         <div class="row">
           <button class="act" id="copy">⧉ העתק תשובה</button>
           <a class="act" id="wa" target="_blank" rel="noopener">✆ שתף בוואטסאפ</a>
-          {pdf_btn}
         </div>
         <script>
         const text = {payload};
         document.getElementById("wa").href =
             "https://wa.me/?text=" + encodeURIComponent(text);
-        const pdfFile = {pdf_file};
-        const pdfEl = document.getElementById("pdf");
-        if (pdfEl && pdfFile) {{
-            // base = the app frame's directory ("/" locally, "/~/+/" behind
-            // the Streamlit Cloud shell) — origin alone would hit the shell
-            const loc = window.parent.location;
-            const dir = loc.pathname.endsWith("/") ? loc.pathname : loc.pathname + "/";
-            pdfEl.href = loc.origin + dir + "app/static/" + encodeURIComponent(pdfFile);
-        }}
         const btn = document.getElementById("copy");
         btn.addEventListener("click", async () => {{
             let ok = false;
@@ -981,7 +988,7 @@ def _answer_actions(content: str, sources: list[dict] | None = None) -> None:
 
 
 # ── Conversation ──
-for msg in st.session_state.messages:
+for msg_i, msg in enumerate(st.session_state.messages):
     with st.chat_message(msg["role"]):
         content = msg["content"]
         if msg["role"] == "assistant" and not msg.get("error"):
@@ -994,6 +1001,20 @@ for msg in st.session_state.messages:
         st.markdown(content)
         if msg["role"] == "assistant" and not msg.get("error"):
             _answer_actions(content, msg.get("sources"))
+            # open-PDF as a native download button: streams the file over the
+            # app protocol, so it works identically locally and behind the
+            # Streamlit Cloud shell (unlike static-route links)
+            primary = (msg.get("sources") or [None])[0]
+            if primary and primary.get("source_file"):
+                pdf_bytes = get_pdf_bytes(primary["source_file"])
+                if pdf_bytes:
+                    st.download_button(
+                        f"⎙ פתח PDF — {primary['title']}",
+                        data=pdf_bytes,
+                        file_name=primary["source_file"],
+                        mime="application/pdf",
+                        key=f"pdfmsg_{msg_i}",
+                    )
 
 # ── Greeting + suggested questions (only when no conversation yet) ──
 if not st.session_state.messages:
