@@ -634,32 +634,6 @@ body:has([data-testid="stExpandSidebarButton"]) [data-testid="stSidebar"] {{ dis
     text-overflow: ellipsis;
 }}
 
-/* ── Per-answer open-PDF: pill matching the copy/WhatsApp actions row ── */
-[data-testid="stChatMessage"] [data-testid="stDownloadButton"] > button {{
-    background: transparent !important;
-    color: rgba(236,237,230,.55) !important;
-    border: 1px solid rgba(236,237,230,.16) !important;
-    border-radius: 99px !important;
-    padding: 2px 12px !important;
-    min-height: 0 !important;
-    width: auto !important;
-    transition: color .15s ease, border-color .15s ease;
-}}
-[data-testid="stChatMessage"] [data-testid="stDownloadButton"] > button:hover {{
-    color: var(--accent) !important;
-    border-color: var(--accent) !important;
-    background: transparent !important;
-}}
-[data-testid="stChatMessage"] [data-testid="stDownloadButton"] > button p {{
-    font: 400 11.5px Heebo, sans-serif !important;
-    color: inherit !important;
-    margin: 0 !important;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 78vw;
-}}
-
 /* ── Caption / small text ── */
 .stCaption, small {{ color: var(--text-faint) !important; font-size: 0.8rem !important; }}
 
@@ -928,22 +902,52 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-def _answer_actions(content: str, sources: list[dict] | None = None) -> None:
-    """Copy-to-clipboard + share-to-WhatsApp row under an assistant answer.
+def _pdf_media_url(source_file: str, coord: str) -> str | None:
+    """Register the order's PDF with Streamlit's media file manager and
+    return its serving URL (e.g. /media/<hash>.pdf).
+
+    This is the channel st.download_button itself uses — served over the
+    app's own protocol with Content-Type application/pdf, so a plain link
+    to it OPENS in the browser's viewer instead of downloading, and it
+    works identically locally and behind the Streamlit Cloud shell (unlike
+    /app/static, which never served there). The manager dedups by content
+    hash; `coord` keeps the entry alive for this element across reruns.
+    """
+    data = get_pdf_bytes(source_file)
+    if not data:
+        return None
+    try:
+        from streamlit.runtime import get_instance
+        # no file_name: (a) it's part of the content-hash id, so this entry
+        # never collides with the sidebar download_button's DOWNLOADABLE
+        # registration of the same bytes, and (b) nameless MEDIA entries are
+        # served without Content-Disposition — the browser opens the PDF
+        # inline instead of downloading it
+        return get_instance().media_file_mgr.add(data, "application/pdf", coord)
+    except Exception:
+        return None
+
+
+def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[str, str] | None = None) -> None:
+    """Copy-to-clipboard + share-to-WhatsApp + open-PDF row under an
+    assistant answer. `pdf` is (media_url, title) from _pdf_media_url.
 
     Rendered as a components.html iframe, so styles are inlined (the app's
     CSS can't reach in). Clipboard uses the async API with a textarea +
     execCommand fallback — navigator.clipboard is unavailable in non-secure
     or permission-restricted iframes (and flaky on iOS Safari).
 
-    The open-PDF action is NOT here: an iframe link needs the /app/static
-    route, which never served on Streamlit Cloud (the platform shell answers
-    every path of the public origin with its own HTML, and ./static on the
-    inner origin stayed empty across boots). The PDF is offered instead as a
-    st.download_button next to this row — same mechanism as the sidebar PDF
-    buttons, streams the bytes over the app protocol, works everywhere.
+    The PDF href must be resolved against the PARENT frame's directory: a
+    relative href inside a srcdoc iframe resolves against about:srcdoc, and
+    the app frame's base differs between local (/) and the Streamlit Cloud
+    shell (/~/+/).
     """
     payload = json.dumps(content + "\n\n— CommandAI")
+    pdf_btn = ""
+    if pdf:
+        title = pdf[1].replace('"', "&quot;")
+        pdf_btn = f'<a class="act" id="pdf" target="_blank" rel="noopener" title="{title}">⎙ פתח PDF</a>'
+    pdf_url = json.dumps(pdf[0] if pdf else None)
     components.html(
         f"""
         <style>
@@ -961,11 +965,20 @@ def _answer_actions(content: str, sources: list[dict] | None = None) -> None:
         <div class="row">
           <button class="act" id="copy">⧉ העתק תשובה</button>
           <a class="act" id="wa" target="_blank" rel="noopener">✆ שתף בוואטסאפ</a>
+          {pdf_btn}
         </div>
         <script>
         const text = {payload};
         document.getElementById("wa").href =
             "https://wa.me/?text=" + encodeURIComponent(text);
+        const pdfUrl = {pdf_url};
+        const pdfEl = document.getElementById("pdf");
+        if (pdfEl && pdfUrl) {{
+            // parent dir: "/" locally, "/~/+/" behind the cloud shell
+            const loc = window.parent.location;
+            const dir = loc.pathname.endsWith("/") ? loc.pathname : loc.pathname + "/";
+            pdfEl.href = loc.origin + dir + pdfUrl.replace(/^\\//, "");
+        }}
         const btn = document.getElementById("copy");
         btn.addEventListener("click", async () => {{
             let ok = false;
@@ -1000,21 +1013,13 @@ for msg_i, msg in enumerate(st.session_state.messages):
                 st.markdown("✓ **מותר**")
         st.markdown(content)
         if msg["role"] == "assistant" and not msg.get("error"):
-            _answer_actions(content, msg.get("sources"))
-            # open-PDF as a native download button: streams the file over the
-            # app protocol, so it works identically locally and behind the
-            # Streamlit Cloud shell (unlike static-route links)
+            pdf = None
             primary = (msg.get("sources") or [None])[0]
             if primary and primary.get("source_file"):
-                pdf_bytes = get_pdf_bytes(primary["source_file"])
-                if pdf_bytes:
-                    st.download_button(
-                        f"⎙ פתח PDF — {primary['title']}",
-                        data=pdf_bytes,
-                        file_name=primary["source_file"],
-                        mime="application/pdf",
-                        key=f"pdfmsg_{msg_i}",
-                    )
+                url = _pdf_media_url(primary["source_file"], f"pdfmsg_{msg_i}")
+                if url:
+                    pdf = (url, primary["title"])
+            _answer_actions(content, msg.get("sources"), pdf)
 
 # ── Greeting + suggested questions (only when no conversation yet) ──
 if not st.session_state.messages:
