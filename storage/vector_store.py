@@ -402,8 +402,18 @@ def retrieve(
     n_results: int = 10,
     max_per_doc: int = 4,
     doc_ids: list[str] | None = None,
+    top_doc_depth: int = 3,
 ) -> list[dict]:
     """Return the globally most relevant chunks, capped per document.
+
+    `top_doc_depth` guarantees the LEADING document that many of its own
+    best chunks within the n_results budget. Without it, a long order that
+    clearly wins the ranking often lands a single chunk while other
+    documents' anchor-lifted best chunks fill the rest — and the one chunk
+    is frequently the wrong part of the right order (a punishment table
+    when the question is about attendance). Repeated "right doc, wrong
+    chunk" failures (33.0111 reporting, 36.0413 sick leave, 33.0302
+    no-show) all trace to this.
 
     Scores *every* chunk in the corpus (dense cosine + lexical bonus) rather
     than reranking an ANN candidate pool. With ~a hundred chunks a full scan
@@ -477,7 +487,24 @@ def retrieve(
         per_doc_count[doc_id] = per_doc_count.get(doc_id, 0) + 1
         chunks.append(c)
 
-    return _stitch_adjacent_chunks(_expand_neighbors(chunks[:n_results], corpus))
+    selected = chunks[:n_results]
+    # winner depth: swap the lowest-ranked chunks of OTHER docs for the
+    # leading doc's next-best chunks until it holds top_doc_depth slots
+    if selected and top_doc_depth > 1:
+        lead = selected[0]["doc_id"]
+        lead_extras = [c for c in chunks[n_results:] if c["doc_id"] == lead]
+        need = min(top_doc_depth, max_per_doc) - sum(1 for c in selected if c["doc_id"] == lead)
+        for extra in lead_extras[:max(0, need)]:
+            for i in range(len(selected) - 1, -1, -1):
+                if selected[i]["doc_id"] != lead:
+                    selected.pop(i)
+                    selected.append(extra)
+                    break
+            else:
+                break
+        selected.sort(key=lambda x: x["score"], reverse=True)
+
+    return _stitch_adjacent_chunks(_expand_neighbors(selected, corpus))
 
 
 # Hebrew single-letter prefixes (ה,ו,ב,ל,מ,כ,ש) that glue onto content words —

@@ -29,8 +29,9 @@ REWRITE_MODEL = "claude-haiku-4-5-20251001"
 # Hard cap on how many retrieved chunks are stitched into the prompt. Kept
 # deliberately small: the top few clauses carry the answer, and every extra
 # chunk inflates prompt tokens (cost + latency) and erodes the per-request
-# rate-limit budget when many soldiers query at once.
-MAX_CONTEXT_CHUNKS = 5
+# rate-limit budget when many soldiers query at once. 6 leaves room for the
+# leading order's guaranteed depth (top_doc_depth=3) plus 3 other orders.
+MAX_CONTEXT_CHUNKS = 6
 
 _COMMON_RULES = """חוקים מוחלטים:
 1. ענה אך ורק על בסיס הקטעים שסופקו לך בהקשר.

@@ -80,6 +80,10 @@ GOLDEN = [
     ("commander", "האם מחלה שלא קשורה לשירות מזכה בחופשת מחלה?", "36.0413"),
     # batch 3 (2026-07-07)
     ("soldier",   "האם חייבים להשתתף במסדר בוקר וכמה פעמים בשבוע יש כזה?", "PM-33.0202"),
+    # regression: "right doc, wrong chunk" — the no-show question retrieved
+    # only a punishment-table chunk until top_doc_depth + the attendance
+    # key-facts section (2026-07-07)
+    ("soldier",   "מה קורה אם לא מגיעים לדיון משמעתי שזומנתי אליו?", "PM-33.0302"),
     ("commander", "האם יום גיבוש ליחידה יורד לחיילים מימי החופשה?", "05.104"),
     ("soldier",   "מה אסור לי להעלות לאינסטגרם או לטיקטוק בזמן השירות?", "PM-33.0161"),
     ("commander", "מה עושים כשחייל ביחידה מאיים לפגוע בעצמו?", "33.0219"),
