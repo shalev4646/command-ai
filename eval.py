@@ -8,7 +8,9 @@
 1. סט זהב (GOLDEN) — ~20 שאלות שמכסות את כל הפקודות הטעונות; לכל שאלה
    נבדק שהפקודה הנכונה מופיעה בין 3 הקטעים המובילים שנשלפו. רץ בלי LLM,
    בחינם, ולכן משמש שער לפני כל שינוי (מודל, קליטת פקודות, כוונון rerank).
-2. עשן LLM (SMOKE) — 3 שאלות שעוברות את כל הצינור כולל המודל, להדפסה
+2. שאלות המשך (FOLLOWUP) — תרחישי שיחה שבהם שאלת ההמשך חסרת הקשר;
+   נבדק ששכתוב השאילתה (Haiku) מחזיר את הפקודה הנכונה לטופ-3.
+3. עשן LLM (SMOKE) — 3 שאלות שעוברות את כל הצינור כולל המודל, להדפסה
    ידנית של איכות התשובה.
 
 יציאה עם קוד 1 אם שאלה כלשהי נכשלה — מתאים כבדיקת תקינות לפני git push.
@@ -80,6 +82,20 @@ SMOKE = [
     ("reserve", "אילו תגמולים מגיעים לחייל מילואים על שירות פעיל?"),
 ]
 
+# (role, history, follow-up, expected_doc_id) — the rewrite must fold the
+# conversation context back into the query so the right order ranks top-3.
+# Runs in the LLM layer (the rewrite itself is a Haiku call), not --no-llm.
+FOLLOWUP = [
+    ("reserve",
+     [{"role": "user", "content": "כמה שעות שינה רצופות מגיעות לחייל?"},
+      {"role": "assistant", "content": "**תשובה:** חייל זכאי ל-7 שעות שינה רצופות בין 22:00 ל-06:00. **מקור:** [PM-33.0213] סעיפים 6, 8."}],
+     "ומה לגבי חייל מילואים?", "PM-33.0213"),
+    ("soldier",
+     [{"role": "user", "content": "כמה ימי חופשה שנתית מגיעים לחייל בשירות חובה?"},
+      {"role": "assistant", "content": "**תשובה:** חייל בשירות חובה זכאי ל-18 ימי חופשה שנתית. **מקור:** [PM-35.0402] סעיף 4."}],
+     "ומי מאשר אותה?", "PM-35.0402"),
+]
+
 TOP_K = 3
 
 
@@ -104,6 +120,35 @@ def run_golden() -> int:
             print(f"✓ [{role}] {question}")
         else:
             print(f"✗ [{role}] {question}")
+            print(f"    ציפינו {expected}, קיבלנו: {top_docs[:TOP_K]}")
+            failures += 1
+    return failures
+
+
+def run_followup() -> int:
+    from backend import _standalone_question
+
+    failures = 0
+    print("=" * 70)
+    print(f"שאלות המשך — {len(FOLLOWUP)} תרחישים (שכתוב + אחזור בטופ-{TOP_K})")
+    print("=" * 70)
+    for role, history, question, expected in FOLLOWUP:
+        try:
+            rewritten = _standalone_question(question, history)
+            chunks = retrieve_for_role(rewritten, role)
+            top_docs = []
+            for c in chunks:
+                if c["doc_id"] not in top_docs:
+                    top_docs.append(c["doc_id"])
+            ok = expected in top_docs[:TOP_K]
+        except Exception as e:
+            print(f"✗ [{role}] {question}\n    !! שגיאה: {type(e).__name__}: {e}")
+            failures += 1
+            continue
+        if ok:
+            print(f"✓ [{role}] {question}  ←  {rewritten}")
+        else:
+            print(f"✗ [{role}] {question}  ←  {rewritten}")
             print(f"    ציפינו {expected}, קיבלנו: {top_docs[:TOP_K]}")
             failures += 1
     return failures
@@ -137,6 +182,7 @@ def run_smoke() -> int:
 def main() -> int:
     failures = run_golden()
     if "--no-llm" not in sys.argv:
+        failures += run_followup()
         failures += run_smoke()
 
     print("=" * 70)

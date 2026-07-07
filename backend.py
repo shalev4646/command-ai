@@ -20,6 +20,12 @@ MODEL = "claude-opus-4-8"
 # answer; streaming means the large cap carries no HTTP-timeout risk.
 MAX_OUTPUT_TOKENS = 8000
 
+# Follow-up query rewriting runs on Haiku: it fires before every retrieval
+# in an ongoing conversation, so it must be fast and cheap (~0.2s, well
+# under a tenth of a cent), and turning chat context into a standalone
+# search query is well within its reach.
+REWRITE_MODEL = "claude-haiku-4-5-20251001"
+
 # Hard cap on how many retrieved chunks are stitched into the prompt. Kept
 # deliberately small: the top few clauses carry the answer, and every extra
 # chunk inflates prompt tokens (cost + latency) and erodes the per-request
@@ -124,6 +130,72 @@ def retrieve_for_role(question: str, role: str) -> list[dict]:
     return retrieve(question, n_results=MAX_CONTEXT_CHUNKS, doc_ids=doc_ids)
 
 
+_REWRITE_PROMPT = """לפניך קטע משיחה בין משתמש לעוזר לפקודות מטכ"ל, ואחריו שאלת ההמשך האחרונה של המשתמש.
+שכתב את שאלת ההמשך לשאלה עצמאית ומלאה, שאפשר לחפש איתה בפקודות בלי לראות את השיחה.
+
+כללים:
+1. אם השאלה האחרונה כבר עומדת בפני עצמה — החזר אותה כלשונה, ללא שינוי.
+2. השלם מהשיחה רק את מה שחסר (הנושא, האוכלוסייה, הפקודה שמדובר בה) — אל תמציא פרטים.
+3. שמור על שאלה קצרה וטבעית, כפי שמשתמש היה מנסח אותה.
+
+השיחה עד כה:
+{convo}
+
+שאלת ההמשך: {question}"""
+
+_REWRITE_TOOL = {
+    "name": "save_search_query",
+    "description": "Save the standalone, self-contained version of the user's follow-up question.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "standalone_question": {"type": "string", "description": "השאלה המשוכתבת, עצמאית ומובנת ללא הקשר השיחה"},
+        },
+        "required": ["standalone_question"],
+    },
+}
+
+
+def _standalone_question(question: str, history: list[dict] | None) -> str:
+    """Make a follow-up question searchable on its own.
+
+    Retrieval sees only one query string, so "ומה לגבי מילואים?" after a
+    sleep-hours exchange finds nothing. Given conversation history, Haiku
+    folds the missing context back in ("כמה שעות שינה מגיעות לחייל
+    מילואים?"); self-contained questions are returned as-is. Used for
+    RETRIEVAL ONLY — the answering model still gets the original question
+    with the full history. Any failure falls back to the raw question.
+    """
+    if not history:
+        return question
+    lines = []
+    for m in history[-6:]:  # last 3 exchanges carry the referent
+        label = "משתמש" if m.get("role") == "user" else "עוזר"
+        content = str(m.get("content", ""))
+        if len(content) > 400:
+            content = content[:400] + "…"
+        lines.append(f"{label}: {content}")
+    try:
+        response = client.messages.create(
+            model=REWRITE_MODEL,
+            max_tokens=200,
+            tools=[_REWRITE_TOOL],
+            tool_choice={"type": "tool", "name": "save_search_query"},
+            messages=[{
+                "role": "user",
+                "content": _REWRITE_PROMPT.format(convo="\n".join(lines), question=question),
+            }],
+        )
+        for block in response.content:
+            if block.type == "tool_use":
+                rewritten = str(block.input.get("standalone_question", "")).strip()
+                if rewritten:
+                    return rewritten
+    except Exception:
+        pass  # retrieval on the raw question is degraded, not broken
+    return question
+
+
 def _context_from_chunks(chunks: list[dict]) -> str:
     if not chunks:
         return "אין מסמכים טעונים במערכת."
@@ -170,7 +242,10 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
     first text token (its deltas are not yielded), so the stream starts after
     a short reasoning pause.
     """
-    chunks = retrieve_for_role(question, role)
+    # follow-ups ("ומה לגבי מילואים?") are unsearchable on their own —
+    # retrieve with a standalone rewrite, but answer the original question
+    search_query = _standalone_question(question, history)
+    chunks = retrieve_for_role(search_query, role)
     context = _context_from_chunks(chunks)
     system_prompt = SYSTEM_PROMPTS.get(role, SYSTEM_PROMPT_SOLDIER)
 
