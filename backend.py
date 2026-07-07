@@ -225,13 +225,10 @@ def get_loaded_docs_info(role: str | None = None) -> list[dict]:
     ]
 
 
-# Shown by the UI only when the real pool is momentarily empty (documents
-# still loading during a redeploy); never cached into the session.
-DEFAULT_QUESTIONS = {
-    "soldier": ["מה זכויותיי כחייל?", "האם מגיע לי שינה מספקת?", "מה העונש על עבירה משמעתית?"],
-    "commander": ["אילו עונשים מוסמך מפקד להטיל בדין משמעתי?", "מה חובות הדיווח שלי כמפקד?"],
-    "reserve": ["אילו תגמולים מגיעים לי כחייל מילואים?", "מה זכויותיי כחייל מילואים?"],
-}
+# The UI-facing fallback questions live in app.py (_FALLBACK_QUESTIONS) —
+# deliberately NOT exported from here: Streamlit Cloud can re-execute app.py
+# against a backend module cached from a previous build, and importing a
+# newly-added backend name from app.py crashes the boot with ImportError.
 
 
 def get_suggested_questions(role: str = "soldier") -> list[str]:

@@ -6,7 +6,7 @@ import streamlit.components.v1 as components
 from anthropic import APIConnectionError, APITimeoutError
 
 try:
-    from backend import stream_ai_answer, get_loaded_docs_info, get_pdf_bytes, ensure_pdfs_ingested, get_suggested_questions, sync_static_pdfs, warm_index, DEFAULT_QUESTIONS
+    from backend import stream_ai_answer, get_loaded_docs_info, get_pdf_bytes, ensure_pdfs_ingested, get_suggested_questions, sync_static_pdfs, warm_index
 except Exception:
     st.set_page_config(page_title="CommandAI - Error", layout="wide")
     st.error("שגיאה בטעינת המערכת (import של backend נכשל):")
@@ -743,13 +743,24 @@ if st.session_state.role is None:
     st.markdown("<div class='cai-entry-footer'>בלמ\"ס · לשימוש פנימי בלבד</div>", unsafe_allow_html=True)
     st.stop()
 
+# UI-only fallback for the moment the question pool is empty (documents
+# still loading during a redeploy). Defined here, not imported from backend:
+# Streamlit Cloud can re-execute app.py against a backend module still
+# cached from the previous build, so importing a newly-added name from
+# backend crashes the whole boot with ImportError.
+_FALLBACK_QUESTIONS = {
+    "soldier": ["מה זכויותיי כחייל?", "האם מגיע לי שינה מספקת?", "מה העונש על עבירה משמעתית?"],
+    "commander": ["אילו עונשים מוסמך מפקד להטיל בדין משמעתי?", "מה חובות הדיווח שלי כמפקד?"],
+    "reserve": ["אילו תגמולים מגיעים לי כחייל מילואים?", "מה זכויותיי כחייל מילואים?"],
+}
+
 if "suggested" not in st.session_state:
     all_q = get_suggested_questions(role=st.session_state.role)
-    if all_q:
+    # older backend builds return the generic defaults instead of an empty
+    # pool — treat both as "no real pool yet" and don't cache
+    if all_q and all_q != _FALLBACK_QUESTIONS.get(st.session_state.role):
         st.session_state.suggested = random.sample(all_q, min(4, len(all_q)))
-# an empty pool (documents mid-load during a redeploy) is NOT cached — show
-# generic defaults for this run and retry the real pool on the next rerun
-suggested_questions = st.session_state.get("suggested") or DEFAULT_QUESTIONS.get(st.session_state.role, DEFAULT_QUESTIONS["soldier"])
+suggested_questions = st.session_state.get("suggested") or _FALLBACK_QUESTIONS.get(st.session_state.role, _FALLBACK_QUESTIONS["soldier"])
 
 
 def queue_question(q: str):
