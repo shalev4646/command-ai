@@ -322,6 +322,8 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
                 "output_tokens": usage.output_tokens,
                 "cache_creation_input_tokens": getattr(usage, "cache_creation_input_tokens", 0) or 0,
                 "cache_read_input_tokens": getattr(usage, "cache_read_input_tokens", 0) or 0,
+                # the rewritten retrieval query rides along for the metrics log
+                "search_query": search_query if search_query != question else "",
             }
 
     return _gen(), _sources_from_chunks(chunks), user_content

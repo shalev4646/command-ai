@@ -1,12 +1,17 @@
 import html
 import json
 import random
+import time
 import traceback
+import uuid
 import streamlit as st
 import streamlit.components.v1 as components
 from anthropic import APIConnectionError, APITimeoutError
 
+import metrics
+
 try:
+    import backend
     from backend import stream_ai_answer, get_loaded_docs_info, get_pdf_bytes, ensure_pdfs_ingested, get_suggested_questions, warm_index
 except Exception:
     st.set_page_config(page_title="CommandAI - Error", layout="wide")
@@ -46,6 +51,76 @@ if "role" not in st.session_state:
     st.session_state.role = None
 if "conversation_history" not in st.session_state:
     st.session_state.conversation_history = []
+if "session_id" not in st.session_state:
+    # anonymous per-tab id — keys the daily usage quota and the metrics log
+    st.session_state.session_id = metrics.new_session_id()
+
+
+def _secret(name: str, default: str = "") -> str:
+    """st.secrets.get that tolerates a missing secrets.toml entirely."""
+    try:
+        return st.secrets.get(name, default)
+    except Exception:
+        return default
+
+
+def _render_admin():
+    """Hidden ops dashboard — open the app with ?admin=1 (password-gated)."""
+    st.title("📊 CommandAI — דשבורד מנהל")
+    pw = _secret("admin_password")
+    if not pw:
+        st.error("כדי להשתמש בדשבורד, הגדר admin_password ב-secrets של האפליקציה.")
+        return
+    if not st.session_state.get("admin_ok"):
+        entered = st.text_input("סיסמת מנהל", type="password")
+        if entered and entered == pw:
+            st.session_state.admin_ok = True
+            st.rerun()
+        elif entered:
+            st.error("סיסמה שגויה")
+        return
+
+    d = metrics.dashboard_data()
+    c1, c2, c3 = st.columns(3)
+    c1.metric("שאלות היום", f"{d['global_count']} / {d['global_limit']}")
+    c2.metric("משתמשים היום", d["sessions_today"])
+    recent_cost = sum(q["cost_usd"] for q in d["questions"])
+    c3.metric("עלות מצטברת (מאז אתחול)", f"${recent_cost:.2f}")
+
+    sheets_label = {
+        "ok": "✅ מחובר — כל שאלה ומשוב נשמרים בגיליון",
+        "error": f"⚠️ שגיאת חיבור: {d['sheets_error']}",
+        "not_configured": "❌ לא מוגדר — הנתונים נשמרים רק בזיכרון עד האתחול הבא",
+    }[d["sheets_status"]]
+    st.caption(f"Google Sheets: {sheets_label}")
+    if d["sheet_url"]:
+        st.markdown(f"🔗 [פתח את הגיליון המלא (כל ההיסטוריה)]({d['sheet_url']})")
+    st.caption(f"מכסות: {d['user_limit']} שאלות ליום למשתמש, {d['global_limit']} ליום לכולם. "
+               "הטבלאות למטה מציגות את הפעילות מאז האתחול האחרון של השרת; "
+               "ההיסטוריה המלאה נשמרת בגיליון.")
+
+    st.subheader(f"👎/👍 משובים ({len(d['feedback'])})")
+    if d["feedback"]:
+        st.dataframe(d["feedback"], use_container_width=True)
+    else:
+        st.caption("אין עדיין משובים.")
+
+    st.subheader(f"שאלות אחרונות ({len(d['questions'])})")
+    if d["questions"]:
+        st.dataframe(d["questions"], use_container_width=True)
+    else:
+        st.caption("אין עדיין שאלות.")
+
+    st.download_button(
+        "⬇️ הורד הכל (JSON)",
+        json.dumps(d, ensure_ascii=False, indent=1, default=str),
+        "commandai_metrics.json",
+    )
+
+
+if st.query_params.get("admin") == "1":
+    _render_admin()
+    st.stop()
 
 # ── Design tokens (from design_handoff_commandai) ──
 # Dark-olive theme; role accents: soldier olive, commander tan, reserve blue.
@@ -779,7 +854,26 @@ def archive_current_conversation():
     st.session_state.conversation_history = st.session_state.conversation_history[:10]
 
 
+_QUOTA_NOTICES = {
+    "user": "🕐 **הגעת למכסת השאלות היומית שלך.**\n\n"
+            "המכסה מתאפסת מחר. בינתיים אפשר להמשיך לעיין בפקודות המלאות "
+            "ובחיפוש שבתפריט הצד — הם ללא הגבלה.",
+    "global": "🕐 **המכסה היומית של המערכת נוצלה במלואה.**\n\n"
+              "חזרו מחר! בינתיים אפשר להמשיך לעיין בפקודות המלאות ובחיפוש "
+              "שבתפריט הצד — הם ללא הגבלה.",
+}
+
+
 def handle_question(question: str):
+    quota = metrics.reserve(st.session_state.session_id)
+    if quota != "ok":
+        st.session_state.messages.append({"role": "user", "content": question})
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": _QUOTA_NOTICES[quota],
+            "error": True,  # UI-only, never replayed as LLM history
+        })
+        return
     user_msg = {"role": "user", "content": question}
     st.session_state.messages.append(user_msg)
     # error notices are UI-only — replaying them as LLM history would just
@@ -798,6 +892,7 @@ def handle_question(question: str):
     # verdict badge + actions row).
     with st.chat_message("user"):
         st.markdown(question)
+    t0 = time.time()
     try:
         with st.spinner("מחפש בפקודות..."):
             result = stream_ai_answer(question, history, role=st.session_state.role)
@@ -810,6 +905,7 @@ def handle_question(question: str):
         with st.chat_message("assistant"):
             text = st.write_stream(text_gen)
     except (APIConnectionError, APITimeoutError):
+        metrics.refund(st.session_state.session_id)  # failures don't burn quota
         st.session_state.messages.append({
             "role": "assistant",
             "content": "⚠️ **אין כרגע חיבור לשירות.**\n\n"
@@ -818,6 +914,7 @@ def handle_question(question: str):
         })
         return
     except Exception:
+        metrics.refund(st.session_state.session_id)
         st.session_state.messages.append({
             "role": "assistant",
             "content": "⚠️ **אירעה שגיאה זמנית בעיבוד השאלה.**\n\n"
@@ -830,6 +927,17 @@ def handle_question(question: str):
         "content": text,
         "sources": sources,
     })
+    metrics.log_question(
+        session_id=st.session_state.session_id,
+        role=st.session_state.role or "",
+        question=question,
+        answer=text,
+        sources=sources,
+        # getattr: a stale cached backend from a previous cloud build may
+        # predate last_usage (see deploy note in backend.py)
+        usage=getattr(backend, "last_usage", None),
+        latency_s=time.time() - t0,
+    )
 
 
 def _pdf_media_url(source_file: str, coord: str) -> str | None:
@@ -1049,6 +1157,14 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
     )
 
 
+def _question_for(msg_i: int) -> str:
+    """The user question that produced the answer at index msg_i."""
+    for m in reversed(st.session_state.messages[:msg_i]):
+        if m["role"] == "user":
+            return m["content"]
+    return ""
+
+
 # ── Conversation ──
 for msg_i, msg in enumerate(st.session_state.messages):
     with st.chat_message(msg["role"]):
@@ -1069,6 +1185,40 @@ for msg_i, msg in enumerate(st.session_state.messages):
                 if url:
                     pdf = (url, primary["title"])
             _answer_actions(content, msg.get("sources"), pdf)
+            # feedback keyed by a per-message id, NOT by position: widget
+            # state lives in session_state by key, and positional keys leak
+            # a previous conversation's thumb onto a new answer after clear
+            mid = msg.setdefault("id", uuid.uuid4().hex[:8])
+            fb = st.feedback("thumbs", key=f"fb_{mid}")
+            if fb is not None and msg.get("fb_value") != fb:
+                msg["fb_value"] = fb
+                metrics.log_feedback(
+                    session_id=st.session_state.session_id,
+                    role=st.session_state.role or "",
+                    verdict="up" if fb == 1 else "down",
+                    question=_question_for(msg_i),
+                    answer=content,
+                    sources=msg.get("sources"),
+                )
+            if msg.get("fb_value") == 0 and not msg.get("fb_comment_sent"):
+                fb_col, send_col = st.columns([4, 1])
+                fb_comment = fb_col.text_input(
+                    "מה היה חסר או שגוי?", key=f"fbc_{mid}",
+                    label_visibility="collapsed",
+                    placeholder="מה היה חסר או שגוי? (לא חובה)",
+                )
+                if send_col.button("שלח", key=f"fbs_{mid}") and fb_comment.strip():
+                    metrics.log_feedback(
+                        session_id=st.session_state.session_id,
+                        role=st.session_state.role or "",
+                        verdict="comment",
+                        question=_question_for(msg_i),
+                        answer=content,
+                        sources=msg.get("sources"),
+                        comment=fb_comment.strip(),
+                    )
+                    msg["fb_comment_sent"] = True
+                    st.rerun()
 
 # ── Greeting + suggested questions (only when no conversation yet) ──
 if not st.session_state.messages:
