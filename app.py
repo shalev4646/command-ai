@@ -1,3 +1,4 @@
+import html
 import json
 import random
 import traceback
@@ -6,7 +7,7 @@ import streamlit.components.v1 as components
 from anthropic import APIConnectionError, APITimeoutError
 
 try:
-    from backend import stream_ai_answer, get_loaded_docs_info, get_pdf_bytes, ensure_pdfs_ingested, get_suggested_questions, sync_static_pdfs, warm_index
+    from backend import stream_ai_answer, get_loaded_docs_info, get_pdf_bytes, ensure_pdfs_ingested, get_suggested_questions, warm_index
 except Exception:
     st.set_page_config(page_title="CommandAI - Error", layout="wide")
     st.error("שגיאה בטעינת המערכת (import של backend נכשל):")
@@ -16,22 +17,18 @@ except Exception:
 @st.cache_resource(show_spinner=False)
 def _startup_ingest():
     ensure_pdfs_ingested()
-    # expose the source PDFs at /app/static/<file>.pdf for the per-answer
-    # "open PDF" action (enableStaticServing only serves from ./static)
-    sync_static_pdfs()
     # build the vector index (model download + embedding) at boot, so the
     # first user question doesn't stall behind it
     warm_index()
 
 _startup_ingest()
 
-# cache_resource lives for the whole process, but on Streamlit Cloud the
-# process outlives git pulls — orders added by a later push never reached
-# ./static, so their "פתח PDF" button 404'd. Re-syncing once per session is
-# ~40 stat calls; copies happen only for new/changed files.
-if "static_synced" not in st.session_state:
-    sync_static_pdfs()
-    st.session_state.static_synced = True
+# PDF bytes are re-read on every rerun to keep their media-manager entries
+# alive (see _pdf_media_url); cache the disk reads — ~40 multi-hundred-KB
+# files per rerun otherwise. ttl bounds staleness: on Streamlit Cloud the
+# process outlives git pulls, and a cache keyed only by filename would serve
+# an order's OLD bytes forever after its PDF is updated in place.
+_pdf_bytes_cached = st.cache_data(show_spinner=False, ttl=3600)(get_pdf_bytes)
 
 st.set_page_config(
     page_title="CommandAI",
@@ -584,54 +581,45 @@ body:has([data-testid="stExpandSidebarButton"]) [data-testid="stSidebar"] {{ dis
     background: rgba(236,237,230,.25); border-radius: 3px;
 }}
 
-/* ── Loaded orders: each title IS the tap target that opens its PDF —
-   styled as a flat list line (olive right rule, dim text), not a button ── */
-[data-testid="stSidebar"] [data-testid="stDownloadButton"] > button {{
-    background: transparent !important;
-    border: none !important;
-    border-right: 2px solid var(--accent-border) !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
+/* ── Loaded orders: each title IS the tap target that opens its PDF
+   inline — styled as a flat list line (olive right rule, dim text) ── */
+.cai-order-link {{
+    display: block;
+    border-right: 2px solid var(--accent-border);
     color: rgba(236,237,230,.65) !important;
-    font: 400 13px Heebo, sans-serif !important;
-    text-align: right !important;
-    justify-content: flex-start !important;
-    padding: 7px 10px !important;
-    margin: 0 8px 2px 0 !important;
-    min-height: 0 !important;
-    width: calc(100% - 8px);
-    transition: color .15s ease, border-color .15s ease;
-}}
-[data-testid="stSidebar"] [data-testid="stDownloadButton"] > button:hover {{
-    color: var(--text) !important;
-    border-right-color: var(--accent) !important;
-    background: transparent !important;
-}}
-[data-testid="stSidebar"] [data-testid="stDownloadButton"] > button:active {{ transform: none !important; }}
-/* force the inner label wrappers to full width and right alignment —
-   Streamlit nests an anonymous div+span that shrink-wrap and center the
-   label; stretch every layer so the title hugs the right edge */
-[data-testid="stSidebar"] [data-testid="stDownloadButton"] > button > div,
-[data-testid="stSidebar"] [data-testid="stDownloadButton"] > button span {{
-    justify-content: flex-start !important;
-    width: 100% !important;
-    min-width: 0 !important;
-}}
-[data-testid="stSidebar"] [data-testid="stDownloadButton"] > button [data-testid="stMarkdownContainer"] {{
-    margin: 0 !important;
-    width: 100% !important;
-    min-width: 0 !important;
+    font: 400 13px Heebo, sans-serif;
+    text-align: right;
+    text-decoration: none !important;
+    padding: 7px 10px;
+    margin: 0 8px 2px 0;
     direction: rtl;
-    text-align: right !important;
-}}
-[data-testid="stSidebar"] [data-testid="stDownloadButton"] > button p {{
-    font: 400 13px Heebo, sans-serif !important;
-    color: inherit !important;
-    text-align: right !important;
-    margin: 0 !important;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    transition: color .15s ease, border-color .15s ease;
+}}
+a.cai-order-link:hover {{
+    color: var(--text) !important;
+    border-right-color: var(--accent);
+}}
+/* orders search field — surface pill matching the drawer's dark theme */
+[data-testid="stSidebar"] [data-testid="stTextInput"] {{ margin: 4px 8px 8px 0; }}
+[data-testid="stSidebar"] [data-testid="stTextInput"] div[data-baseweb="input"],
+[data-testid="stSidebar"] [data-testid="stTextInput"] div[data-baseweb="base-input"] {{
+    background-color: var(--surface) !important;
+    border: 1px solid var(--border-strong) !important;
+    border-radius: 10px !important;
+}}
+[data-testid="stSidebar"] [data-testid="stTextInput"] div[data-baseweb="base-input"] {{ border: none !important; }}
+[data-testid="stSidebar"] [data-testid="stTextInput"] input {{
+    background-color: transparent !important;
+    color: var(--text) !important;
+    font: 400 13px Heebo, sans-serif !important;
+    direction: rtl;
+    padding: 8px 12px !important;
+}}
+[data-testid="stSidebar"] [data-testid="stTextInput"] input::placeholder {{
+    color: rgba(236,237,230,.4) !important;
 }}
 
 /* ── Caption / small text ── */
@@ -834,6 +822,54 @@ def handle_question(question: str):
     })
 
 
+def _pdf_media_url(source_file: str, coord: str) -> str | None:
+    """Register the order's PDF with Streamlit's media file manager and
+    return its serving URL (e.g. /media/<hash>.pdf).
+
+    This is the channel st.download_button itself uses — served over the
+    app's own protocol with Content-Type application/pdf, so a plain link
+    to it OPENS in the browser's viewer instead of downloading, and it
+    works identically locally and behind the Streamlit Cloud shell (unlike
+    /app/static, which never served there). The manager dedups by content
+    hash; `coord` keeps the entry alive for this element across reruns.
+    """
+    data = _pdf_bytes_cached(source_file)
+    if not data:
+        return None
+    try:
+        from streamlit.runtime import get_instance
+        # no file_name: (a) it's part of the content-hash id, so this entry
+        # never collides with a DOWNLOADABLE registration of the same bytes,
+        # and (b) nameless MEDIA entries are served without
+        # Content-Disposition — the browser opens the PDF inline instead of
+        # downloading it
+        return get_instance().media_file_mgr.add(data, "application/pdf", coord)
+    except Exception:
+        return None
+
+
+def _search_norm(s: str) -> str:
+    """Normalize a string for the orders search: Hebrew gershayim/geresh fold
+    to ASCII quotes (mobile keyboards emit ״/׳ while titles store ") and
+    Latin text is case-folded."""
+    return s.replace("״", "\"").replace("׳", "'").strip().casefold()
+
+
+def _order_link(title: str, url: str | None) -> str:
+    """One order line for the sidebar list. When the PDF is on disk the
+    title itself is the tap target that opens it INLINE in a new tab.
+
+    The href is relative on purpose: the app document sits at "/" locally
+    but at "/~/+/" inside the Streamlit Cloud shell, and a relative
+    "media/..." resolves correctly against both.
+    """
+    safe_title = html.escape(title)
+    if url:
+        return (f"<a class='cai-order-link' href='{url.lstrip('/')}'"
+                f" target='_blank' rel='noopener'>{safe_title}</a>")
+    return f"<div class='cai-order-link'>{safe_title}</div>"
+
+
 # ── Sidebar (drawer) ──
 with st.sidebar:
     st.markdown(f"<div class='cai-drawer-role'>מחובר כ־{role_label}</div>", unsafe_allow_html=True)
@@ -843,31 +879,40 @@ with st.sidebar:
         st.session_state.messages = []
         st.session_state.pending_question = None
         st.session_state.pop("suggested", None)
+        # a stale search would silently filter the next role's orders list
+        st.session_state.pop("orders_search", None)
         st.rerun()
     st.markdown("---")
     docs = get_loaded_docs_info(role=st.session_state.role)
-    with st.expander(f"פקודות טעונות ({len(docs)})", expanded=False):
+    with st.expander(f"פקודות מטכ\"ל במערכת ({len(docs)})", expanded=False):
         if docs:
+            search = _search_norm(st.text_input(
+                "חיפוש פקודה",
+                key="orders_search",
+                label_visibility="collapsed",
+                placeholder="🔎 חיפוש פקודה...",
+            ))
+            # media URLs are registered for ALL docs, filtered or not: a
+            # media-manager entry whose coord isn't re-registered during a
+            # rerun is purged at that rerun's end — filtering registration
+            # would 404 a PDF the user already opened in another tab
+            rows = [
+                (doc, _pdf_media_url(doc["source_file"], f"pdfside_{doc['id']}")
+                 if doc.get("source_file") else None)
+                for doc in docs
+            ]
+            shown = [
+                (doc, url) for doc, url in rows
+                if not search
+                or search in _search_norm(doc["title"])
+                or search in _search_norm(str(doc["id"]))
+            ]
+            if not shown:
+                st.caption("לא נמצאו פקודות מתאימות")
             # each title is itself the tap target that opens the order's PDF
-            # (styled as a flat list line, not a button — see the CSS above)
-            for doc in docs:
-                pdf_bytes = get_pdf_bytes(doc["source_file"]) if doc.get("source_file") else None
-                if pdf_bytes:
-                    st.download_button(
-                        doc["title"],
-                        data=pdf_bytes,
-                        file_name=doc["source_file"],
-                        mime="application/pdf",
-                        key=f"pdf_{doc['id']}",
-                        use_container_width=True,
-                    )
-                else:
-                    st.markdown(
-                        f"<div style='font:400 13px Heebo,sans-serif; color:rgba(236,237,230,.65);"
-                        f" padding:7px 10px; border-right:2px solid var(--accent-border); margin:0 8px 2px 0;'>"
-                        f"{doc['title']}</div>",
-                        unsafe_allow_html=True,
-                    )
+            # inline (styled as a flat list line, not a button — CSS above)
+            for doc, url in shown:
+                st.markdown(_order_link(doc["title"], url), unsafe_allow_html=True)
         else:
             st.caption("אין פקודות טעונות")
     st.markdown("---")
@@ -902,32 +947,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-def _pdf_media_url(source_file: str, coord: str) -> str | None:
-    """Register the order's PDF with Streamlit's media file manager and
-    return its serving URL (e.g. /media/<hash>.pdf).
-
-    This is the channel st.download_button itself uses — served over the
-    app's own protocol with Content-Type application/pdf, so a plain link
-    to it OPENS in the browser's viewer instead of downloading, and it
-    works identically locally and behind the Streamlit Cloud shell (unlike
-    /app/static, which never served there). The manager dedups by content
-    hash; `coord` keeps the entry alive for this element across reruns.
-    """
-    data = get_pdf_bytes(source_file)
-    if not data:
-        return None
-    try:
-        from streamlit.runtime import get_instance
-        # no file_name: (a) it's part of the content-hash id, so this entry
-        # never collides with the sidebar download_button's DOWNLOADABLE
-        # registration of the same bytes, and (b) nameless MEDIA entries are
-        # served without Content-Disposition — the browser opens the PDF
-        # inline instead of downloading it
-        return get_instance().media_file_mgr.add(data, "application/pdf", coord)
-    except Exception:
-        return None
-
-
 def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[str, str] | None = None) -> None:
     """Copy-to-clipboard + share-to-WhatsApp + open-PDF row under an
     assistant answer. `pdf` is (media_url, title) from _pdf_media_url.
@@ -945,12 +964,16 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
     payload = json.dumps(content + "\n\n— CommandAI")
     pdf_btn = ""
     if pdf:
-        title = pdf[1].replace('"', "&quot;")
+        title = html.escape(pdf[1], quote=True)
         pdf_btn = f'<a class="act" id="pdf" target="_blank" rel="noopener" title="{title}">⎙ פתח PDF</a>'
     pdf_url = json.dumps(pdf[0] if pdf else None)
     components.html(
         f"""
         <style>
+        /* text-size-adjust: iOS Safari inflates small text inside iframes,
+           blowing the pills up until the row wraps and the last pill (פתח
+           PDF) is clipped by the fixed iframe height */
+        html, body {{ -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }}
         body {{ margin:0; direction:rtl; }}
         .row {{ display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-start;
                 font-family:Heebo,sans-serif; }}
@@ -994,6 +1017,22 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
             btn.textContent = ok ? "✓ הועתק" : "ההעתקה נכשלה";
             setTimeout(() => {{ btn.textContent = prev; }}, 1600);
         }});
+        // If the pills wrap (narrow phones, late font swap), grow the iframe
+        // to fit — otherwise the second row is clipped and the PDF pill
+        // disappears. A ResizeObserver on the row itself catches every
+        // layout change (viewport resize, webfont load, copy-button text
+        // swap), not just window resizes. srcdoc iframes are same-origin,
+        // so frameElement is reachable.
+        const row = document.querySelector(".row");
+        const fitHeight = () => {{
+            try {{
+                const h = Math.ceil(row.getBoundingClientRect().height) + 4;
+                window.frameElement.style.height = Math.max(34, h) + "px";
+            }} catch (e) {{}}
+        }};
+        fitHeight();
+        try {{ new ResizeObserver(fitHeight).observe(row); }}
+        catch (e) {{ window.addEventListener("resize", fitHeight); }}
         </script>
         """,
         height=34,
@@ -1025,7 +1064,7 @@ for msg_i, msg in enumerate(st.session_state.messages):
 if not st.session_state.messages:
     st.markdown(
         f"<div class='cai-greet'>במה אפשר לעזור?</div>"
-        f"<div class='cai-greet-sub'>שאלות נפוצות מהפקודות הטעונות ({len(docs)})</div>",
+        f"<div class='cai-greet-sub'>שאלות נפוצות מפקודות המטכ\"ל במערכת ({len(docs)})</div>",
         unsafe_allow_html=True,
     )
     for i, q in enumerate(suggested_questions):

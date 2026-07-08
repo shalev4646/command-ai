@@ -402,7 +402,7 @@ def retrieve(
     n_results: int = 10,
     max_per_doc: int = 4,
     doc_ids: list[str] | None = None,
-    top_doc_depth: int = 3,
+    top_doc_depth: int = 4,
 ) -> list[dict]:
     """Return the globally most relevant chunks, capped per document.
 

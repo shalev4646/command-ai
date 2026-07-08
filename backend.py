@@ -1,6 +1,5 @@
 import json
 import os
-import shutil
 from pathlib import Path
 
 from anthropic import Anthropic
@@ -29,9 +28,11 @@ REWRITE_MODEL = "claude-haiku-4-5-20251001"
 # Hard cap on how many retrieved chunks are stitched into the prompt. Kept
 # deliberately small: the top few clauses carry the answer, and every extra
 # chunk inflates prompt tokens (cost + latency) and erodes the per-request
-# rate-limit budget when many soldiers query at once. 6 leaves room for the
-# leading order's guaranteed depth (top_doc_depth=3) plus 3 other orders.
-MAX_CONTEXT_CHUNKS = 6
+# rate-limit budget when many soldiers query at once. 8 leaves room for the
+# leading order's guaranteed depth (top_doc_depth=4) plus 4 other orders —
+# raised from 6 when the key-facts clauses added per order started crowding
+# the basic raw-text content out of the leading order's slots.
+MAX_CONTEXT_CHUNKS = 8
 
 _COMMON_RULES = """חוקים מוחלטים:
 1. ענה אך ורק על בסיס הקטעים שסופקו לך בהקשר.
@@ -355,24 +356,6 @@ def ensure_pdfs_ingested(pdf_dir: Path | None = None) -> list[str]:
 
     # the per-file fault tolerance (log, skip, continue) lives in ingest_folder
     return ingest_folder(pdf_dir, skip=ingested_files)
-
-
-def sync_static_pdfs() -> int:
-    """Mirror the source PDFs into ./static for Streamlit's static serving.
-
-    enableStaticServing only exposes files under <app>/static, and the repo
-    keeps the PDFs in pdf-ldf_law/ — so they're copied (not committed twice)
-    at boot. Returns how many files were copied/refreshed."""
-    base = Path(__file__).parent
-    static_dir = base / "static"
-    static_dir.mkdir(exist_ok=True)
-    copied = 0
-    for pdf in (base / "pdf-ldf_law").glob("*.pdf"):
-        dest = static_dir / pdf.name
-        if not dest.exists() or dest.stat().st_size != pdf.stat().st_size:
-            shutil.copyfile(pdf, dest)
-            copied += 1
-    return copied
 
 
 def warm_index() -> int:
