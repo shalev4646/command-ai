@@ -780,11 +780,15 @@ def archive_current_conversation():
 
 
 def handle_question(question: str):
-    st.session_state.messages.append({"role": "user", "content": question})
+    user_msg = {"role": "user", "content": question}
+    st.session_state.messages.append(user_msg)
     # error notices are UI-only — replaying them as LLM history would just
-    # confuse the model
+    # confuse the model. User turns replay the exact content that was sent
+    # to the API (question + retrieved context, kept in api_content), so
+    # follow-up requests share a byte-identical prefix and hit the prompt
+    # cache; the bare question stays in "content" for display.
     history = [
-        {"role": m["role"], "content": m["content"]}
+        {"role": m["role"], "content": m.get("api_content", m["content"])}
         for m in st.session_state.messages[:-1]
         if not m.get("error")
     ]
@@ -796,7 +800,13 @@ def handle_question(question: str):
         st.markdown(question)
     try:
         with st.spinner("מחפש בפקודות..."):
-            text_gen, sources = stream_ai_answer(question, history, role=st.session_state.role)
+            result = stream_ai_answer(question, history, role=st.session_state.role)
+            text_gen, sources = result[0], result[1]
+            # Streamlit Cloud can pair a fresh app.py with a backend module
+            # cached from a previous build (see note in backend.py) — older
+            # builds returned 2 items and no sent-content
+            if len(result) > 2:
+                user_msg["api_content"] = result[2]
         with st.chat_message("assistant"):
             text = st.write_stream(text_gen)
     except (APIConnectionError, APITimeoutError):

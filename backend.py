@@ -34,6 +34,24 @@ REWRITE_MODEL = "claude-haiku-4-5-20251001"
 # the basic raw-text content out of the leading order's slots.
 MAX_CONTEXT_CHUNKS = 8
 
+# Header that marks the retrieved-context section inside a user turn. The
+# context rides in the user message (not the system prompt) so the system
+# prompt and past turns stay byte-identical across a conversation — the
+# stable prefix the API's prompt cache needs.
+_CONTEXT_HEADER = "קטעים רלוונטיים מהפקודות:"
+
+# History trimming happens in whole-exchange jumps, not as a rolling cap:
+# a window that slides every turn changes the request prefix every turn and
+# never hits the prompt cache. Dropping 3 exchanges at a time once 6 have
+# accumulated costs one cache miss every 3 turns instead of every turn.
+_HISTORY_MAX = 12   # messages (6 exchanges) before a trim
+_HISTORY_DROP = 6   # messages (3 exchanges) dropped per trim
+
+# Usage of the most recent answer call — lets eval/scripts confirm the
+# prompt cache is working (cache_creation_input_tokens > 0 on turn 2,
+# cache_read_input_tokens > 0 on later follow-ups within the 5-min TTL).
+last_usage: dict | None = None
+
 _COMMON_RULES = """חוקים מוחלטים:
 1. ענה אך ורק על בסיס הקטעים שסופקו לך בהקשר.
 2. אם המידע לא קיים בקטעים — אמור בדיוק: "המידע לא קיים בפקודות שסופקו."
@@ -173,7 +191,9 @@ def _standalone_question(question: str, history: list[dict] | None) -> str:
     lines = []
     for m in history[-6:]:  # last 3 exchanges carry the referent
         label = "משתמש" if m.get("role") == "user" else "עוזר"
-        content = str(m.get("content", ""))
+        # history user turns carry their retrieval context (see
+        # stream_ai_answer) — the rewrite only needs the question itself
+        content = str(m.get("content", "")).split(f"\n\n{_CONTEXT_HEADER}")[0]
         if len(content) > 400:
             content = content[:400] + "…"
         lines.append(f"{label}: {content}")
@@ -236,13 +256,18 @@ def _sources_from_chunks(chunks: list[dict]) -> list[dict]:
 def stream_ai_answer(question: str, history: list[dict] | None = None, role: str = "soldier"):
     """Answer a question as a live stream.
 
-    Returns (text_generator, sources): the generator yields answer-text deltas
-    as the model produces them (UI renders them via st.write_stream), and
-    sources — the distinct orders behind the answer, ranked by retrieval
-    relevance — are computed up front from the retrieved chunks so the UI has
-    them the moment the stream finishes. Adaptive thinking runs before the
-    first text token (its deltas are not yielded), so the stream starts after
-    a short reasoning pause.
+    Returns (text_generator, sources, sent_user_content): the generator yields
+    answer-text deltas as the model produces them (UI renders them via
+    st.write_stream), sources — the distinct orders behind the answer, ranked
+    by retrieval relevance — are computed up front from the retrieved chunks
+    so the UI has them the moment the stream finishes, and sent_user_content
+    is the exact user-turn text sent to the API (question + retrieved
+    context). Callers that keep a conversation going must replay
+    sent_user_content — not the bare question — as that turn's history
+    content, so follow-up requests share a byte-identical prefix and hit the
+    prompt cache. Adaptive thinking runs before the first text token (its
+    deltas are not yielded), so the stream starts after a short reasoning
+    pause.
     """
     # follow-ups ("ומה לגבי מילואים?") are unsearchable on their own —
     # retrieve with a standalone rewrite, but answer the original question
@@ -251,20 +276,55 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
     context = _context_from_chunks(chunks)
     system_prompt = SYSTEM_PROMPTS.get(role, SYSTEM_PROMPT_SOLDIER)
 
-    messages = list(history or [])
-    messages.append({"role": "user", "content": question})
+    past = [
+        {"role": m["role"], "content": m["content"]}
+        for m in (history or [])
+    ]
+    while len(past) > _HISTORY_MAX:
+        past = past[_HISTORY_DROP:]
+
+    user_content = f"{question}\n\n{_CONTEXT_HEADER}\n{context}"
+
+    # Two cache breakpoints (prefix caching, 5-min TTL): the static role
+    # prompt, and everything up to the end of history. Turn 1 is below the
+    # model's 4096-token cacheable minimum and gains nothing; from turn 2 the
+    # context-bearing history pushes the prefix past it, and follow-ups read
+    # the cached span at 0.1x input price.
+    system_blocks = [{
+        "type": "text",
+        "text": system_prompt,
+        "cache_control": {"type": "ephemeral"},
+    }]
+    if past:
+        past[-1] = {
+            "role": past[-1]["role"],
+            "content": [{
+                "type": "text",
+                "text": str(past[-1]["content"]),
+                "cache_control": {"type": "ephemeral"},
+            }],
+        }
+    messages = past + [{"role": "user", "content": user_content}]
 
     def _gen():
+        global last_usage
         with client.messages.stream(
             model=MODEL,
             max_tokens=MAX_OUTPUT_TOKENS,
             thinking={"type": "adaptive"},
-            system=system_prompt + f"\n\nקטעים רלוונטיים מהפקודות:\n{context}",
+            system=system_blocks,
             messages=messages,
         ) as stream:
             yield from stream.text_stream
+            usage = stream.get_final_message().usage
+            last_usage = {
+                "input_tokens": usage.input_tokens,
+                "output_tokens": usage.output_tokens,
+                "cache_creation_input_tokens": getattr(usage, "cache_creation_input_tokens", 0) or 0,
+                "cache_read_input_tokens": getattr(usage, "cache_read_input_tokens", 0) or 0,
+            }
 
-    return _gen(), _sources_from_chunks(chunks)
+    return _gen(), _sources_from_chunks(chunks), user_content
 
 
 def get_ai_answer(question: str, history: list[dict] | None = None, role: str = "soldier") -> dict:
@@ -273,7 +333,7 @@ def get_ai_answer(question: str, history: list[dict] | None = None, role: str = 
     Returns {"text": <answer>, "sources": [{doc_id, title, source_file}...]}.
     Used by eval.py, so the sanity check exercises the exact production path.
     """
-    text_gen, sources = stream_ai_answer(question, history, role)
+    text_gen, sources, _ = stream_ai_answer(question, history, role)
     return {"text": "".join(text_gen), "sources": sources}
 
 
