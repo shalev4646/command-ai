@@ -8,9 +8,14 @@
 1. סט זהב (GOLDEN) — ~20 שאלות שמכסות את כל הפקודות הטעונות; לכל שאלה
    נבדק שהפקודה הנכונה מופיעה בין 3 הקטעים המובילים שנשלפו. רץ בלי LLM,
    בחינם, ולכן משמש שער לפני כל שינוי (מודל, קליטת פקודות, כוונון rerank).
-2. שאלות המשך (FOLLOWUP) — תרחישי שיחה שבהם שאלת ההמשך חסרת הקשר;
+2. שאלות "מלוכלכות" (DIRTY) — אותם נושאים בניסוח של חייל אמיתי: סלנג,
+   שגיאות כתיב, שאלות קצרות ומעורפלות. רץ בלי LLM כמו סט הזהב.
+3. שאלות המשך (FOLLOWUP) — תרחישי שיחה שבהם שאלת ההמשך חסרת הקשר;
    נבדק ששכתוב השאילתה (Haiku) מחזיר את הפקודה הנכונה לטופ-3.
-3. עשן LLM (SMOKE) — 3 שאלות שעוברות את כל הצינור כולל המודל, להדפסה
+4. מחוץ למאגר (NOSCOPE) — שאלות שאין להן תשובה בפקודות הטעונות; נבדק
+   שהמודל עונה "המידע לא קיים בפקודות שסופקו" ולא ממציא מקור. עולה כסף
+   (קריאת Opus מלאה לכל שאלה), לכן מדולג עם --no-llm.
+5. עשן LLM (SMOKE) — 3 שאלות שעוברות את כל הצינור כולל המודל, להדפסה
    ידנית של איכות התשובה.
 
 יציאה עם קוד 1 אם שאלה כלשהי נכשלה — מתאים כבדיקת תקינות לפני git push.
@@ -97,6 +102,58 @@ GOLDEN = [
     ("commander", "אילו עבודות מותר לבצע ביחידה בשבת?", "PM-34.0101"),
 ]
 
+# (role, question, expected_doc_id) — same contract as GOLDEN, but phrased the
+# way soldiers actually type: slang (סדירניק, לחטוף, סופש), typos (חפשה, חול),
+# and short/vague questions with almost no lexical overlap with the order title.
+DIRTY = [
+    ("soldier",   "כמה ימי חופש מגיעים לסדירניק בשנה?", "PM-35.0402"),
+    ("soldier",   "כמה ימי חפשה שנתית מגיעים לי?", "PM-35.0402"),
+    ("soldier",   "המפקד מעיר אותנו אחרי 4 שעות שינה, זה בסדר?", "PM-33.0213"),
+    ("soldier",   "מתי מותר להעיר חייל באמצע הלילה?", "PM-33.0213"),
+    ("soldier",   "כמה מחבוש אפשר לחטוף על משפט בצבא?", "PM-33.0302"),
+    ("soldier",   "מותר להעלות סטורי מהבסיס לאינסטגרם?", "PM-33.0161"),
+    ("soldier",   "אפשר לנסוע הביתה עם הנשק בסופש?", "2.0101"),
+    ("soldier",   "חבר שלי לא חזר מחופשה כבר שבוע, הוא נחשב עריק?", "31.0513"),
+    ("soldier",   "המפקד דופק אותי כל הזמן, למי אפשר להתלונן עליו?", "33.0336"),
+    ("soldier",   "כמה כסף מקבל חייל סדיר בחודש?", "35.0201"),
+    ("soldier",   "ההורים שלי במצב כלכלי קשה, הצבא יכול לעזור להם?", "35.0210"),
+    ("soldier",   "איפה בכלל מותר לעשן בבסיס?", "PM-33.0137"),
+    ("soldier",   "יורדים עליי על התספורת, מה בכלל מותר?", "33-05-01"),
+    ("soldier",   "מותר עגיל בצבא?", "33-05-01"),
+    ("commander", "חייל שלי מאיים שיפגע בעצמו, מה אני עושה?", "33.0219"),
+    ("reserve",   "מילואימניק צריך להגיד לצבא לפני שהוא טס לחול?", "31.0703"),
+    ("reserve",   "כמה כסף מקבלים על מילואים חוץ מהמשכורת?", "013.3"),
+]
+
+# (role, question) — questions whose answer is NOT in any ingested order
+# (civil law, courses, medical profile, equipment charging). The pipeline
+# still retrieves the nearest chunks, so these are hallucination bait: the
+# pass condition is an honest refusal, not an answer.
+NOSCOPE = [
+    ("soldier",   "מה תנאי הקבלה לקורס טיס?"),
+    ("soldier",   "איך אני יכול להוריד פרופיל רפואי?"),
+    ("soldier",   "מה גובה הפיקדון והמענק שמקבלים אחרי השחרור?"),
+    ("soldier",   "אילו הטבות מגיעות לחייל משוחרר בלימודים אקדמיים?"),
+    ("commander", "מה הנוהל לחיוב חייל על אובדן ציוד צבאי?"),
+    ("reserve",   "כמה ימי מילואים מותר לקרוא לי בשנה לפי החוק?"),
+]
+
+# The sentence the system prompt mandates for missing information. When it
+# appears verbatim the refusal is unambiguous, and a **מקור:** block after it
+# is context ("here is what I *do* have"), not fabrication.
+_MANDATED_REFUSAL = "המידע לא קיים בפקודות שסופקו"
+
+# Looser rewordings, accepted only when the answer cites no source: a mixed
+# answer ("לא מצאתי סעיף מדויק, אבל לפי...") that goes on to cite a **מקור:**
+# is a fabrication and must fail.
+_REFUSAL_MARKERS = (
+    "לא קיים בפקודות",
+    "אין בפקודות",
+    "לא מצאתי",
+    "לא נמצא בפקודות",
+    "אינו מופיע בפקודות",
+)
+
 SMOKE = [
     ("soldier", "מהן שעות השינה המינימליות המגיעות לחייל?"),
     ("commander", "אילו עונשים מוסמך מפקד להטיל בדין משמעתי?"),
@@ -120,12 +177,12 @@ FOLLOWUP = [
 TOP_K = 3
 
 
-def run_golden() -> int:
+def _run_retrieval_set(name: str, cases: list) -> int:
     failures = 0
     print("=" * 70)
-    print(f"סט זהב — {len(GOLDEN)} שאלות אחזור (הפקודה הנכונה בטופ-{TOP_K})")
+    print(f"{name} — {len(cases)} שאלות אחזור (הפקודה הנכונה בטופ-{TOP_K})")
     print("=" * 70)
-    for role, question, expected in GOLDEN:
+    for role, question, expected in cases:
         try:
             chunks = retrieve_for_role(question, role)
             top_docs = []
@@ -142,6 +199,40 @@ def run_golden() -> int:
         else:
             print(f"✗ [{role}] {question}")
             print(f"    ציפינו {expected}, קיבלנו: {top_docs[:TOP_K]}")
+            failures += 1
+    return failures
+
+
+def run_golden() -> int:
+    return _run_retrieval_set("סט זהב", GOLDEN)
+
+
+def run_dirty() -> int:
+    return _run_retrieval_set("שאלות מלוכלכות", DIRTY)
+
+
+def run_noscope() -> int:
+    failures = 0
+    print("=" * 70)
+    print(f"מחוץ למאגר — {len(NOSCOPE)} שאלות (מצופה סירוב כן, לא תשובה מומצאת)")
+    print("=" * 70)
+    for role, question in NOSCOPE:
+        try:
+            answer = get_ai_response(question, role=role)
+        except Exception as e:
+            print(f"✗ [{role}] {question}\n    !! שגיאה: {type(e).__name__}: {e}")
+            failures += 1
+            continue
+        refused_soft = any(m in answer for m in _REFUSAL_MARKERS)
+        cited = "**מקור:**" in answer
+        ok = _MANDATED_REFUSAL in answer or (refused_soft and not cited)
+        if ok:
+            print(f"✓ [{role}] {question}")
+        else:
+            print(f"✗ [{role}] {question}")
+            snippet = " ".join(answer.split())[:220]
+            reason = "סירב חלקית אבל ציטט מקור" if refused_soft else "ענה במקום לסרב"
+            print(f"    המודל {reason}: {snippet}")
             failures += 1
     return failures
 
@@ -202,8 +293,10 @@ def run_smoke() -> int:
 
 def main() -> int:
     failures = run_golden()
+    failures += run_dirty()
     if "--no-llm" not in sys.argv:
         failures += run_followup()
+        failures += run_noscope()
         failures += run_smoke()
 
     print("=" * 70)
