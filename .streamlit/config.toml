@@ -6,9 +6,21 @@ enableStaticServing = true
 # Pin the dark olive theme regardless of the device's light/dark mode —
 # without this, iPhones in light mode render Streamlit's light theme
 # (dark text) under our dark backgrounds and the text is unreadable.
+#
+# backgroundColor is the SPLASH olive on purpose: Streamlit paints the whole
+# loading screen with it from the moment the websocket delivers the config
+# until the script's first render — so the wait matches the splash curtain
+# instead of flashing a generic dark placeholder (verified on 1.58: the
+# frontend caches only preset NAMES in localStorage, so this is the only
+# themable loading phase). The app itself never shows this color — app.py
+# CSS forces the dark backdrop on every visible surface (and _render_admin
+# injects its own dark override).
 [theme]
 base = "dark"
 primaryColor = "#99A26B"
-backgroundColor = "#171A12"
+backgroundColor = "#99A26B"
 secondaryBackgroundColor = "#21261A"
 textColor = "#ECEDE6"
+# dataframe headers default to a mix of backgroundColor (now olive) — keep
+# the admin tables' header row on the dark surface color instead
+dataframeHeaderBackgroundColor = "#21261A"
