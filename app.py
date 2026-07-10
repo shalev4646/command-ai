@@ -8,7 +8,7 @@ import traceback
 import uuid
 import streamlit as st
 import streamlit.components.v1 as components
-from anthropic import APIConnectionError, APITimeoutError
+from anthropic import APIConnectionError, APITimeoutError, BadRequestError
 
 import metrics
 
@@ -981,6 +981,18 @@ def handle_question(question: str):
                        "בדוק את החיבור לאינטרנט ושלח את השאלה שוב בעוד רגע.",
             "error": True,
         })
+        return
+    except BadRequestError as e:
+        # the monthly console spend limit returns a 400 with this exact
+        # phrasing (hit live 2026-07-10); "try again" would gaslight the
+        # user into resending a question that cannot succeed
+        metrics.refund(st.session_state.session_id)
+        if "usage limits" in str(e):
+            msg = ("⏸️ **המערכת בהשהיה זמנית עקב מגבלת שימוש.**\n\n"
+                   "זו לא תקלה אצלך ואין טעם לשלוח שוב עכשיו — נסה שוב מחר.")
+        else:
+            msg = "⚠️ **אירעה שגיאה זמנית בעיבוד השאלה.**\n\nנסה לשלוח אותה שוב."
+        st.session_state.messages.append({"role": "assistant", "content": msg, "error": True})
         return
     except Exception:
         metrics.refund(st.session_state.session_id)
