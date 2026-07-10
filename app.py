@@ -1,4 +1,5 @@
 import html
+import itertools
 import json
 import random
 import re
@@ -928,9 +929,9 @@ def handle_question(question: str):
         if not m.get("error")
     ]
     # The conversation loop already rendered without this turn, so draw the
-    # user bubble now and stream the answer into a live assistant bubble;
-    # the rerun that follows re-renders both from session state (adding the
-    # verdict chip + actions row).
+    # user bubble now and stream the answer into a live assistant bubble
+    # (chip-first, via _stream_answer); the rerun that follows re-renders
+    # both from session state (adding the actions row).
     with st.chat_message("user"):
         st.markdown(question)
     t0 = time.time()
@@ -944,7 +945,7 @@ def handle_question(question: str):
             if len(result) > 2:
                 user_msg["api_content"] = result[2]
         with st.chat_message("assistant"):
-            text = st.write_stream(text_gen)
+            text = _stream_answer(text_gen)
     except (APIConnectionError, APITimeoutError):
         metrics.refund(st.session_state.session_id)  # failures don't burn quota
         st.session_state.messages.append({
@@ -1108,47 +1109,81 @@ st.markdown(
 
 _VERDICT_RE = re.compile(r"^\s*\*\*פסיקה:\*\*\s*(.+?)\s*$", re.MULTILINE)
 _REFUSAL_SENTENCE = "המידע לא קיים בפקודות שסופקו"  # mandated verbatim by _COMMON_RULES
+# Only these read as a verdict. The model sometimes opens the ruling line
+# with a TOPIC ("בנוגע למסדר בוקר — ייתכן שאתה פטור...") — chipping that
+# fragment produced a meaningless green badge on the pilot phone check
+# (2026-07-10), so anything off this list keeps the line as body text.
+_VERDICT_TERM_RE = re.compile(
+    r"^(?:לא\s+)?"
+    r"(?:מותר|אסור|מוסמך|רשאי|זכאי|פטור|חייב|ניתן|אפשר|מגיע(?:\s+ל[ךי])?)"
+    r"(?:\s+(?:בתנאים|חלקית))?$"
+)
 
 
 def _verdict_chip(content: str) -> tuple[str | None, str]:
     """(chip_html, display_body) for an assistant answer.
 
     The system prompt mandates a `**פסיקה:** ...` line on ruling questions;
-    it becomes a colored chip and is dropped from the displayed body (the
-    copy/share payload keeps the original text). Matching is anchored to
-    that line only — a factual answer that merely mentions "אסור" mid-
-    sentence must not get a badge. Honest refusals (the mandated sentence)
-    get a neutral chip so "no answer" reads as designed behavior.
+    when its leading segment is a recognized verdict term it becomes a
+    colored chip and the line is dropped from the displayed body (the
+    copy/share payload keeps the original text). Compound or free-form
+    ruling lines stay in the body untouched — a wrong chip is worse than
+    no chip. Honest refusals (the mandated sentence near the top) get a
+    neutral chip so "no answer" reads as designed behavior.
     """
     m = _VERDICT_RE.search(content)
-    if not m:
-        # neutral chip only when the refusal IS the answer (sentence at the
-        # top) — substantive answers often END with the same sentence as an
-        # honest scope caveat, and those must not be labeled "not found"
-        idx = content.find(_REFUSAL_SENTENCE)
-        if 0 <= idx < 120:
-            return '<span class="verdict-chip verdict-none">ⓘ לא נמצא במאגר</span>', content
-        return None, content
-    # The model often appends the explanation to the same line ("מותר
-    # בתנאים — עישון אסור במקומות ציבוריים..."): the chip carries only the
-    # verdict term, the remainder returns to the body as its opening line.
-    # ./: split only before whitespace, so סעיף 3.4 or 14:30 stay whole.
-    parts = re.split(r"\s*(?:—|–| - |[.:](?=\s))\s*", m.group(1).strip("* "), maxsplit=1)
-    verdict = parts[0].strip("* .")
-    rest = parts[1].strip("* ") if len(parts) > 1 else ""
-    words = verdict.split()
-    # negation must match the standalone word: לאשר/לאחר open with לא too
-    if "בתנאים" in verdict:
-        icon, cls = "⚠", "cond"
-    elif "אסור" in verdict or (words and words[0] in ("לא", "אין")):
-        icon, cls = "✗", "no"
-    else:
-        icon, cls = "✓", "yes"
-    if len(verdict) > 32:  # no separator and still a whole sentence
-        verdict = " ".join(verdict.split()[:4])
-    body = (content[: m.start()] + rest + content[m.end():]).strip()
-    chip = f'<span class="verdict-chip verdict-{cls}">{icon} {html.escape(verdict)}</span>'
-    return chip, body
+    if m:
+        # The model often appends the explanation to the same line ("מותר
+        # בתנאים — עישון אסור..."): the chip carries only the verdict term,
+        # the remainder returns to the body as its opening line.
+        # ./: split only before whitespace, so סעיף 3.4 or 14:30 stay whole.
+        parts = re.split(r"\s*(?:—|–| - |[.:](?=\s))\s*", m.group(1).strip("* "), maxsplit=1)
+        verdict = parts[0].strip("* .")
+        rest = parts[1].strip("* ") if len(parts) > 1 else ""
+        if _VERDICT_TERM_RE.match(verdict):
+            if "בתנאים" in verdict or "חלקית" in verdict:
+                icon, cls = "⚠", "cond"
+            elif verdict.startswith("לא") or "אסור" in verdict:
+                icon, cls = "✗", "no"
+            else:
+                icon, cls = "✓", "yes"
+            body = (content[: m.start()] + rest + content[m.end():]).strip()
+            chip = f'<span class="verdict-chip verdict-{cls}">{icon} {html.escape(verdict)}</span>'
+            return chip, body
+    # neutral chip only when the refusal IS the answer (sentence at the
+    # top, incl. after a short topic prefix like "לגבי סכום המענק — ") —
+    # substantive answers often carry the same sentence later, either as a
+    # trailing scope caveat or as the ruling for only PART of a compound
+    # question ("פטור בתנאים; ... — המידע לא קיים"), and those must not be
+    # labeled "not found". 80 chars covers marker + topic prefix; a real
+    # verdict before the sentence pushes it past that.
+    idx = content.find(_REFUSAL_SENTENCE)
+    if 0 <= idx < 80:
+        return '<span class="verdict-chip verdict-none">ⓘ לא נמצא במאגר</span>', content
+    return None, content
+
+
+def _stream_answer(text_gen) -> str:
+    """Render the live answer chip-first: hold the stream until the first
+    line is complete; when it is a recognizable **פסיקה:** line, draw the
+    chip immediately and stream only the body under it. Without this the
+    raw ruling line flashes mid-stream and then jumps into a chip on the
+    rerun (pilot phone feedback, 2026-07-10). Returns the FULL original
+    text — session state and the copy/share payload keep the ruling line.
+    """
+    it = iter(text_gen)
+    buf = ""
+    for chunk in it:
+        buf += chunk
+        if "\n" in buf or len(buf) > 400:
+            break
+    chip, lead = None, buf
+    if "\n" in buf:  # parse only a COMPLETE first line — a cut ruling line must not chip
+        chip, lead = _verdict_chip(buf)
+    if chip:
+        st.markdown(chip, unsafe_allow_html=True)
+    shown = st.write_stream(itertools.chain([lead], it)) or ""
+    return buf + shown[len(lead):]
 
 
 def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[str, str] | None = None) -> None:
