@@ -28,8 +28,6 @@ def _startup_ingest():
     # first user question doesn't stall behind it
     warm_index()
 
-_startup_ingest()
-
 # PDF bytes are re-read on every rerun to keep their media-manager entries
 # alive (see _pdf_media_url); cache the disk reads — ~40 multi-hundred-KB
 # files per rerun otherwise. ttl bounds staleness: on Streamlit Cloud the
@@ -56,6 +54,54 @@ if "conversation_history" not in st.session_state:
 if "session_id" not in st.session_state:
     # anonymous per-tab id — keys the daily usage quota and the metrics log
     st.session_state.session_id = metrics.new_session_id()
+
+# ── Boot splash — the very FIRST delta the browser receives ──
+# Rendered before _startup_ingest() so the branded curtain (logo on the
+# splash olive) covers the ENTIRE wait — cold-boot ingestion / model
+# download and the heavy CSS build below — instead of a blank themed page
+# (on a phone that blank stretch is most of what the user sees).
+# Self-contained on purpose: own font import and boot* keyframes. The 30s
+# fallback lift guarantees a mid-script exception can never leave the
+# curtain stuck; the main CSS block re-arms the lift under a DIFFERENT
+# animation name (curtainUp), which restarts the clock — so the curtain
+# holds until the entry screen has actually rendered, then lifts after the
+# standard 1.15s choreography.
+_is_admin = st.query_params.get("admin") == "1"
+splash_active = (not _is_admin
+                 and st.session_state.role is None
+                 and not st.session_state.get("splash_shown"))
+if not _is_admin:
+    st.session_state.splash_shown = True
+if splash_active:
+    st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Suez+One&display=swap');
+@keyframes bootEnterUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:none; } }
+@keyframes bootEnterScale { from { opacity:0; transform:scale(.6); } to { opacity:1; transform:none; } }
+@keyframes bootCurtainUp { from { transform:translateY(0); } to { transform:translateY(-101%); } }
+.cai-splash {
+    position: fixed; inset: 0; background: #99A26B; z-index: 999990;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+    animation: bootCurtainUp .65s cubic-bezier(.7,0,.3,1) both; animation-delay: 30s;
+    pointer-events: none;
+}
+.cai-splash-chev { display:flex; flex-direction:column; align-items:center;
+    animation: bootEnterScale .6s cubic-bezier(.2,.7,.2,1) both; animation-delay: .1s; }
+.cai-splash-chev span { display:block; width:26px; height:26px;
+    border-top:6px solid #171A12; border-left:6px solid #171A12; transform:rotate(45deg); }
+.cai-splash-chev span + span { border-color: rgba(23,26,18,.45); margin-top: -9px; }
+.cai-splash-title { font: 400 34px 'Suez One', serif; color: #171A12;
+    animation: bootEnterUp .6s cubic-bezier(.2,.7,.2,1) both; animation-delay: .3s; }
+.cai-splash-sub { font: 600 11px ui-monospace, Menlo, monospace; letter-spacing: 3px; color: rgba(23,26,18,.6);
+    animation: bootEnterUp .6s cubic-bezier(.2,.7,.2,1) both; animation-delay: .45s; }
+</style>
+<div class='cai-splash'>
+<div class='cai-splash-chev'><span></span><span></span></div>
+<div class='cai-splash-title'>CommandAI</div>
+<div class='cai-splash-sub'>מערכת פקודות · בלמ"ס</div>
+</div>""", unsafe_allow_html=True)
+
+_startup_ingest()
 
 
 def _secret(name: str, default: str = "") -> str:
@@ -140,7 +186,7 @@ def _render_admin():
     )
 
 
-if st.query_params.get("admin") == "1":
+if _is_admin:
     _render_admin()
     st.stop()
 
@@ -170,10 +216,9 @@ ACCENT_BORDER = role_meta["border"]
 # chat screen needs room under the fixed header band; entry has no header
 MAIN_TOP_PADDING = "12px" if st.session_state.role is None else "80px"
 
-# Splash shows once per app launch, only over the entry screen
-splash_active = st.session_state.role is None and not st.session_state.get("splash_shown")
-st.session_state.splash_shown = True
-# entry elements start their stagger after the splash curtain lifts
+# entry elements start their stagger after the boot splash curtain lifts
+# (splash_active is computed at the top of the script, where the splash
+# renders as the first delta)
 EHOLD = "1.35s" if splash_active else "0s"
 
 # CSS-drawn role icons (chevron / bars / diamond) as inline SVG tiles
@@ -284,22 +329,13 @@ header {{ visibility: hidden; }}
     margin: 0 auto;
 }}
 
-/* ── Splash (entry animation): olive curtain, holds then slides up ── */
+/* ── Splash re-arm: the boot curtain (first delta, top of script) has been
+   covering the whole load; this rule landing with the entry screen swaps
+   the animation NAME, which restarts the clock — hold 1.15s more, then
+   lift. Element/child styles live in the boot block. ── */
 .cai-splash {{
-    position: fixed; inset: 0; background: #99A26B; z-index: 999990;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
     animation: curtainUp .65s cubic-bezier(.7,0,.3,1) both; animation-delay: 1.15s;
-    pointer-events: none;
 }}
-.cai-splash-chev {{ display:flex; flex-direction:column; align-items:center;
-    animation: enterScale .6s cubic-bezier(.2,.7,.2,1) both; animation-delay: .1s; }}
-.cai-splash-chev span {{ display:block; width:26px; height:26px;
-    border-top:6px solid #171A12; border-left:6px solid #171A12; transform:rotate(45deg); }}
-.cai-splash-chev span + span {{ border-color: rgba(23,26,18,.45); margin-top: -9px; }}
-.cai-splash-title {{ font: 400 34px 'Suez One', serif; color: #171A12;
-    animation: enterUp .6s cubic-bezier(.2,.7,.2,1) both; animation-delay: .3s; }}
-.cai-splash-sub {{ font: 600 11px ui-monospace, Menlo, monospace; letter-spacing: 3px; color: rgba(23,26,18,.6);
-    animation: enterUp .6s cubic-bezier(.2,.7,.2,1) both; animation-delay: .45s; }}
 
 /* ── Entry screen header (staggers in after the splash lifts) ── */
 .cai-entry {{ text-align: center; padding-top: 7vh; }}
@@ -819,16 +855,7 @@ components.html(
 
 # ── Entry / role gate ──
 if st.session_state.role is None:
-    splash_html = (
-        "<div class='cai-splash'>"
-        "<div class='cai-splash-chev'><span></span><span></span></div>"
-        "<div class='cai-splash-title'>CommandAI</div>"
-        "<div class='cai-splash-sub'>מערכת פקודות · בלמ\"ס</div>"
-        "</div>"
-    ) if splash_active else ""
-
     st.markdown(
-        splash_html +
         "<div class='cai-entry'>"
         "<div class='cai-entry-classif'>מערכת פקודות · בלמ\"ס</div>"
         "<div class='cai-entry-chev'><span></span><span></span></div>"
