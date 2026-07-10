@@ -67,6 +67,14 @@ def _secret(name: str, default: str = "") -> str:
 
 def _render_admin():
     """Hidden ops dashboard — open the app with ?admin=1 (password-gated)."""
+    # the theme backgroundColor is the splash olive (it paints the loading
+    # skeleton — see config.toml); this page renders before the main CSS
+    # block, so force the dark backdrop here
+    st.markdown(
+        "<style>[data-testid='stAppViewContainer'], [data-testid='stHeader'],"
+        " body { background: #171A12 !important; }</style>",
+        unsafe_allow_html=True,
+    )
     st.title("📊 CommandAI — דשבורד מנהל")
     pw = _secret("admin_password")
     if not pw:
@@ -100,15 +108,27 @@ def _render_admin():
                "הטבלאות למטה מציגות את הפעילות מאז האתחול האחרון של השרת; "
                "ההיסטוריה המלאה נשמרת בגיליון.")
 
+    def _dark_dataframe(rows):
+        # st.dataframe paints cell backgrounds with theme.backgroundColor on
+        # a canvas (CSS can't reach it), which is now the splash olive — pin
+        # readable dark cells via a pandas Styler instead
+        import pandas as pd
+        st.dataframe(
+            pd.DataFrame(rows).style.set_properties(
+                **{"background-color": "#21261A", "color": "#ECEDE6"}
+            ),
+            use_container_width=True,
+        )
+
     st.subheader(f"👎/👍 משובים ({len(d['feedback'])})")
     if d["feedback"]:
-        st.dataframe(d["feedback"], use_container_width=True)
+        _dark_dataframe(d["feedback"])
     else:
         st.caption("אין עדיין משובים.")
 
     st.subheader(f"שאלות אחרונות ({len(d['questions'])})")
     if d["questions"]:
-        st.dataframe(d["questions"], use_container_width=True)
+        _dark_dataframe(d["questions"])
     else:
         st.caption("אין עדיין שאלות.")
 
@@ -1179,7 +1199,10 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
         </style>
         <div class="row">
           <button class="act" id="copy">⧉ העתק</button>
-          <a class="act" id="wa" target="_blank" rel="noopener">✆ <span class="xtra">שתף ב</span>וואטסאפ</a>
+          <!-- one wrapping span: the pill is inline-flex with gap, so bare
+               text + .xtra as separate flex items would put the 6px gap
+               INSIDE the word ("שתף ב וואטסאפ") -->
+          <a class="act" id="wa" target="_blank" rel="noopener"><span>✆ <span class="xtra">שתף ב</span>וואטסאפ</span></a>
           {pdf_btn}
         </div>
         <script>
