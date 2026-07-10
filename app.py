@@ -1,6 +1,7 @@
 import html
 import json
 import random
+import re
 import time
 import traceback
 import uuid
@@ -541,6 +542,26 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     color: var(--text);
 }}
 
+/* ── Verdict chip — the **פסיקה:** bottom line (מותר / אסור / מוסמך /
+   ...בתנאים) as a scannable pill at the top of the answer card, replacing
+   the raw line. Colors are desaturated to sit inside the olive theme. ── */
+.verdict-chip {{
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    direction: rtl;
+    border: 1px solid;
+    border-radius: 99px;
+    padding: 4px 13px;
+    font: 600 12.5px Heebo, sans-serif;
+    letter-spacing: .01em;
+    white-space: nowrap;
+}}
+.verdict-yes  {{ color:#A9C687; background:rgba(148,183,110,.13); border-color:rgba(148,183,110,.4); }}
+.verdict-cond {{ color:#D9B36A; background:rgba(217,179,106,.12); border-color:rgba(217,179,106,.4); }}
+.verdict-no   {{ color:#D68C77; background:rgba(208,124,102,.12); border-color:rgba(208,124,102,.4); }}
+.verdict-none {{ color:rgba(236,237,230,.6); background:rgba(236,237,230,.05); border-color:rgba(236,237,230,.2); }}
+
 /* ── Section gaps — Streamlit's default 16px block gap balloons the
    card list; the design wants tight 10-12px rhythm (buttons carry their
    own 12px margin) ── */
@@ -889,7 +910,7 @@ def handle_question(question: str):
     # The conversation loop already rendered without this turn, so draw the
     # user bubble now and stream the answer into a live assistant bubble;
     # the rerun that follows re-renders both from session state (adding the
-    # verdict badge + actions row).
+    # verdict chip + actions row).
     with st.chat_message("user"):
         st.markdown(question)
     t0 = time.time()
@@ -1065,6 +1086,51 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+_VERDICT_RE = re.compile(r"^\s*\*\*פסיקה:\*\*\s*(.+?)\s*$", re.MULTILINE)
+_REFUSAL_SENTENCE = "המידע לא קיים בפקודות שסופקו"  # mandated verbatim by _COMMON_RULES
+
+
+def _verdict_chip(content: str) -> tuple[str | None, str]:
+    """(chip_html, display_body) for an assistant answer.
+
+    The system prompt mandates a `**פסיקה:** ...` line on ruling questions;
+    it becomes a colored chip and is dropped from the displayed body (the
+    copy/share payload keeps the original text). Matching is anchored to
+    that line only — a factual answer that merely mentions "אסור" mid-
+    sentence must not get a badge. Honest refusals (the mandated sentence)
+    get a neutral chip so "no answer" reads as designed behavior.
+    """
+    m = _VERDICT_RE.search(content)
+    if not m:
+        # neutral chip only when the refusal IS the answer (sentence at the
+        # top) — substantive answers often END with the same sentence as an
+        # honest scope caveat, and those must not be labeled "not found"
+        idx = content.find(_REFUSAL_SENTENCE)
+        if 0 <= idx < 120:
+            return '<span class="verdict-chip verdict-none">ⓘ לא נמצא במאגר</span>', content
+        return None, content
+    # The model often appends the explanation to the same line ("מותר
+    # בתנאים — עישון אסור במקומות ציבוריים..."): the chip carries only the
+    # verdict term, the remainder returns to the body as its opening line.
+    # ./: split only before whitespace, so סעיף 3.4 or 14:30 stay whole.
+    parts = re.split(r"\s*(?:—|–| - |[.:](?=\s))\s*", m.group(1).strip("* "), maxsplit=1)
+    verdict = parts[0].strip("* .")
+    rest = parts[1].strip("* ") if len(parts) > 1 else ""
+    words = verdict.split()
+    # negation must match the standalone word: לאשר/לאחר open with לא too
+    if "בתנאים" in verdict:
+        icon, cls = "⚠", "cond"
+    elif "אסור" in verdict or (words and words[0] in ("לא", "אין")):
+        icon, cls = "✗", "no"
+    else:
+        icon, cls = "✓", "yes"
+    if len(verdict) > 32:  # no separator and still a whole sentence
+        verdict = " ".join(verdict.split()[:4])
+    body = (content[: m.start()] + rest + content[m.end():]).strip()
+    chip = f'<span class="verdict-chip verdict-{cls}">{icon} {html.escape(verdict)}</span>'
+    return chip, body
+
+
 def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[str, str] | None = None) -> None:
     """Copy-to-clipboard + share-to-WhatsApp + open-PDF row under an
     assistant answer. `pdf` is (media_url, title) from _pdf_media_url.
@@ -1095,17 +1161,25 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
         body {{ margin:0; direction:rtl; }}
         .row {{ display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-start;
                 font-family:Heebo,sans-serif; }}
-        .act {{ display:inline-flex; align-items:center; gap:5px;
-                background:transparent; color:rgba(236,237,230,.55);
-                border:1px solid rgba(236,237,230,.16); border-radius:99px;
-                padding:3px 11px; font:400 11.5px Heebo,sans-serif;
+        .act {{ display:inline-flex; align-items:center; gap:6px;
+                background:rgba(236,237,230,.05); color:rgba(236,237,230,.75);
+                border:1px solid rgba(236,237,230,.22); border-radius:99px;
+                padding:5px 13px; font:500 12px Heebo,sans-serif;
                 cursor:pointer; text-decoration:none; white-space:nowrap;
-                transition:color .15s,border-color .15s; }}
-        .act:hover {{ color:{ACCENT}; border-color:{ACCENT}; }}
+                transition:color .15s,border-color .15s,background .15s; }}
+        .act:hover {{ color:{ACCENT}; border-color:{ACCENT};
+                      background:rgba(236,237,230,.02); }}
+        /* keep all three pills on one row on narrow phones: tighten the
+           chrome and shorten שתף בוואטסאפ → וואטסאפ (the iframe is the
+           available width, so max-width tracks the chat column) */
+        @media (max-width: 290px) {{
+          .act {{ padding:5px 10px; }}
+          .xtra {{ display:none; }}
+        }}
         </style>
         <div class="row">
-          <button class="act" id="copy">⧉ העתק תשובה</button>
-          <a class="act" id="wa" target="_blank" rel="noopener">✆ שתף בוואטסאפ</a>
+          <button class="act" id="copy">⧉ העתק</button>
+          <a class="act" id="wa" target="_blank" rel="noopener">✆ <span class="xtra">שתף ב</span>וואטסאפ</a>
           {pdf_btn}
         </div>
         <script>
@@ -1145,7 +1219,7 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
         const fitHeight = () => {{
             try {{
                 const h = Math.ceil(row.getBoundingClientRect().height) + 4;
-                window.frameElement.style.height = Math.max(34, h) + "px";
+                window.frameElement.style.height = Math.max(38, h) + "px";
             }} catch (e) {{}}
         }};
         fitHeight();
@@ -1153,7 +1227,7 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
         catch (e) {{ window.addEventListener("resize", fitHeight); }}
         </script>
         """,
-        height=34,
+        height=38,
     )
 
 
@@ -1170,13 +1244,12 @@ for msg_i, msg in enumerate(st.session_state.messages):
     with st.chat_message(msg["role"]):
         content = msg["content"]
         if msg["role"] == "assistant" and not msg.get("error"):
-            if "מותר בתנאים" in content:
-                st.markdown("⚠ **מותר בתנאים**")
-            elif "אסור" in content:
-                st.markdown("✗ **אסור**")
-            elif "מותר" in content:
-                st.markdown("✓ **מותר**")
-        st.markdown(content)
+            chip, body = _verdict_chip(content)
+            if chip:
+                st.markdown(chip, unsafe_allow_html=True)
+            st.markdown(body)
+        else:
+            st.markdown(content)
         if msg["role"] == "assistant" and not msg.get("error"):
             pdf = None
             primary = (msg.get("sources") or [None])[0]
