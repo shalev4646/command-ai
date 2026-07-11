@@ -32,6 +32,13 @@ try:
 except Exception:
     def _verdict_clauses(_content):
         return []
+# Disciplinary-punishment-authority checker (grounded in PM-33.0302). Pure
+# data + lookup, ZERO LLM tokens — so it needs no quota. A missing module
+# (stale cloud build) just hides the sidebar button, same as letters above.
+try:
+    import punishment_authority as _pa
+except Exception:
+    _pa = None
 
 try:
     import backend
@@ -1120,6 +1127,127 @@ def _letters_dialog():
             st.caption("מעוגן בפקודות: " + " · ".join(s["title"] for s in srcs[:2]))
 
 
+# CSS is injected inside the dialog (scoped) rather than into the global
+# f-string style block — keeps the whole feature self-contained and avoids
+# touching that block's {{ }} escaping. :root tokens (--accent/--surface/...)
+# are global, so they resolve here too.
+_PA_CSS = """
+<style>
+.cai-pa-intro { direction: rtl; text-align: right; font: 400 12.5px/1.6 Heebo, sans-serif;
+    color: var(--text-sec); margin: 2px 0 10px; }
+.cai-pa-row { direction: rtl; display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; padding: 7px 2px; border-bottom: 1px solid var(--border); }
+.cai-pa-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cai-pa-pun { font: 500 13px Heebo, sans-serif; color: var(--text); }
+.cai-pa-clause { font: 500 10.5px Heebo, sans-serif; color: var(--text-faint); }
+.cai-pa-max { flex: 0 0 auto; border-radius: 8px; padding: 3px 11px; white-space: nowrap;
+    font: 600 12.5px Heebo, sans-serif; border: 1px solid; }
+.cai-pa-max.ok    { color:#A9C687; background:rgba(148,183,110,.13); border-color:rgba(148,183,110,.35); }
+.cai-pa-max.plain { color:var(--text-sec); background:rgba(236,237,230,.05); border-color:var(--border); }
+.cai-pa-max.no    { color:#D68C77; background:rgba(208,124,102,.10); border-color:rgba(208,124,102,.32); }
+.cai-pa-box { direction: rtl; text-align: right; border: 1px solid var(--border);
+    border-radius: 10px; padding: 11px 13px; margin-top: 14px; background: rgba(236,237,230,.03); }
+.cai-pa-box-title { font: 600 13px Heebo, sans-serif; color: var(--text); margin-bottom: 5px; }
+.cai-pa-box-body { font: 400 12.5px/1.65 Heebo, sans-serif; color: var(--text-sec); }
+.cai-pa-tag { display:inline-block; font: 500 10.5px Heebo, sans-serif; color: var(--text-faint);
+    margin-top: 5px; }
+.cai-pa-note li { font: 400 12px/1.6 Heebo, sans-serif; color: var(--text-dim); margin-bottom: 6px; }
+.cai-pa-disc { direction: rtl; text-align: right; font: 400 11.5px/1.6 Heebo, sans-serif;
+    color: var(--text-faint); border-top: 1px solid var(--border); padding-top: 11px; margin-top: 14px; }
+</style>
+"""
+
+
+@st.dialog("⚖️ בודק סמכות עונש משמעתי", width="large")
+def _punishment_dialog():
+    """Deterministic authority-of-punishment lookup, grounded in PM-33.0302.
+
+    Quasi-legal, so it is conservative BY DESIGN: it surfaces the order's own
+    caps with clause citations and never declares a punishment "illegal" — the
+    disclaimer routes an over-cap punishment to "check / consider an appeal".
+    Pure data lookup (punishment_authority.py), no Anthropic call, so it burns
+    NO quota — unlike the letters dialog it never touches metrics.reserve.
+    """
+    if not _pa:
+        return
+    st.markdown(_PA_CSS, unsafe_allow_html=True)
+    st.markdown(
+        "<div class='cai-pa-intro'>בחר את סוג קצין השיפוט כדי לראות אילו עונשים "
+        "מרביים הוא מוסמך להטיל בדין משמעתי, לפי פ\"מ 33.0302 — ואת נתיב הערר.</div>",
+        unsafe_allow_html=True,
+    )
+    options = _pa.officer_options()  # [(key, label)] junior -> senior
+    labels = dict(options)
+    key = st.selectbox(
+        "סוג קצין השיפוט",
+        [k for k, _ in options],
+        format_func=lambda k: labels[k],
+        key="pa_officer",
+    )
+    rec = _pa.authority_for(key)
+    if not rec:
+        st.info("לא נמצאו נתונים לסוג קצין השיפוט שנבחר.")
+        return
+
+    # caps table — each row: punishment + its clause tag, and the max as a
+    # colored pill (olive = an authorised cap, red-muted = "לא מוסמך", so a
+    # soldier can scan at a glance what this officer may and may not impose).
+    rows_html = []
+    for cap in rec["caps"]:
+        mx = cap["max"]
+        cls = "no" if mx == "לא מוסמך" else "plain" if mx == "מוסמך" else "ok"
+        rows_html.append(
+            "<div class='cai-pa-row'>"
+            "<div class='cai-pa-main'>"
+            f"<span class='cai-pa-pun'>{html.escape(cap['punishment'])}</span>"
+            f"<span class='cai-pa-clause'>לפי פ\"מ 33.0302 · {html.escape(cap['clause'])}</span>"
+            "</div>"
+            f"<span class='cai-pa-max {cls}'>{html.escape(mx)}</span>"
+            "</div>"
+        )
+    st.markdown("".join(rows_html), unsafe_allow_html=True)
+
+    # rank-specific footnote (e.g. only אל"ם may jail an officer/senior NCO)
+    if rec.get("note"):
+        st.markdown(
+            "<div class='cai-pa-box'><div class='cai-pa-box-body'>ℹ️ "
+            f"{html.escape(rec['note'])}</div></div>",
+            unsafe_allow_html=True,
+        )
+
+    # appeal path (ערר) — always shown; it's the soldier's recourse
+    appeal = _pa.APPEAL
+    st.markdown(
+        "<div class='cai-pa-box'>"
+        "<div class='cai-pa-box-title'>↩️ נתיב ערר</div>"
+        f"<div class='cai-pa-box-body'>{html.escape(appeal['text'])}</div>"
+        f"<span class='cai-pa-tag'>לפי פ\"מ 33.0302 · {html.escape(appeal['clause'])}</span>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+    # cross-cutting caveats that apply regardless of rank
+    notes = getattr(_pa, "GENERAL_NOTES", None)
+    if notes:
+        items = "".join(
+            f"<li>{html.escape(n['text'])} "
+            f"<span class='cai-pa-clause'>({html.escape(n['clause'])})</span></li>"
+            for n in notes
+        )
+        st.markdown(
+            "<div class='cai-pa-box'>"
+            "<div class='cai-pa-box-title'>נקודות נוספות מהפקודה</div>"
+            f"<ul class='cai-pa-note'>{items}</ul></div>",
+            unsafe_allow_html=True,
+        )
+
+    # conservative disclaimer — this is guidance, the order is binding
+    st.markdown(
+        f"<div class='cai-pa-disc'>⚠️ {html.escape(_pa.DISCLAIMER)}</div>",
+        unsafe_allow_html=True,
+    )
+
+
 def handle_question(question: str):
     quota = metrics.reserve(st.session_state.session_id)
     if quota != "ok":
@@ -1328,6 +1456,9 @@ with st.sidebar:
             st.caption("אין פקודות טעונות")
     if LETTER_TYPES and st.button("📄 מחולל מכתבים", key="open_letters", use_container_width=True):
         _letters_dialog()
+    # deterministic, zero-token, no quota — gated only on the module importing
+    if _pa and st.button("⚖️ בודק סמכות עונש", key="open_punishment", use_container_width=True):
+        _punishment_dialog()
     st.markdown("---")
 
     st.markdown("<div class='cai-drawer-section'><span class='dot'></span>שיחות אחרונות</div>", unsafe_allow_html=True)
