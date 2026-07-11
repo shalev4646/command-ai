@@ -14,13 +14,18 @@ from anthropic import APIConnectionError, APITimeoutError, BadRequestError
 import metrics
 from escalation_paths import path_for
 
-# letters is a sibling new module — a cached cloud build can pair a fresh
-# app.py with an older tree (see backend deploy note), so a missing module
-# hides the feature instead of crashing the app
+# letters/doc_dates are sibling new modules — a cached cloud build can pair
+# a fresh app.py with an older tree (see backend deploy note), so a missing
+# module hides its feature instead of crashing the app
 try:
     from letters import LETTER_TYPES, compose_letter
 except Exception:
     LETTER_TYPES = None
+try:
+    from doc_dates import badge as _doc_date_badge
+except Exception:
+    def _doc_date_badge(_id):
+        return None
 
 try:
     import backend
@@ -817,6 +822,14 @@ a.cai-order-link:hover {{
     color: var(--text) !important;
     border-right-color: var(--accent);
 }}
+/* freshness badge — the order's own version date, so "how current is
+   this?" is answered in the list itself */
+.cai-order-date {{
+    font: 400 10.5px Heebo, sans-serif;
+    color: rgba(236,237,230,.38);
+    margin-right: 6px;
+    white-space: nowrap;
+}}
 /* orders search field — surface pill matching the drawer's dark theme */
 [data-testid="stSidebar"] [data-testid="stTextInput"] {{ margin: 4px 8px 8px 0; }}
 [data-testid="stSidebar"] [data-testid="stTextInput"] div[data-baseweb="input"],
@@ -1185,19 +1198,22 @@ def _search_norm(s: str) -> str:
     return s.replace("״", "\"").replace("׳", "'").strip().casefold()
 
 
-def _order_link(title: str, url: str | None) -> str:
+def _order_link(title: str, url: str | None, date_badge: str | None = None) -> str:
     """One order line for the sidebar list. When the PDF is on disk the
     title itself is the tap target that opens it INLINE in a new tab.
 
     The href is relative on purpose: the app document sits at "/" locally
     but at "/~/+/" inside the Streamlit Cloud shell, and a relative
-    "media/..." resolves correctly against both.
+    "media/..." resolves correctly against both. `date_badge` is the
+    order's own version date (doc_dates.badge) — orders without a
+    confident date get no badge rather than a made-up one.
     """
     safe_title = html.escape(title)
+    tail = f"<span class='cai-order-date'>נוסח {date_badge}</span>" if date_badge else ""
     if url:
         return (f"<a class='cai-order-link' href='{url.lstrip('/')}'"
-                f" target='_blank' rel='noopener'>{safe_title}</a>")
-    return f"<div class='cai-order-link'>{safe_title}</div>"
+                f" target='_blank' rel='noopener'>{safe_title}{tail}</a>")
+    return f"<div class='cai-order-link'>{safe_title}{tail}</div>"
 
 
 # ── Sidebar (drawer) ──
@@ -1256,7 +1272,7 @@ with st.sidebar:
             # each title is itself the tap target that opens the order's PDF
             # inline (styled as a flat list line, not a button — CSS above)
             for doc, url in shown:
-                st.markdown(_order_link(doc["title"], url), unsafe_allow_html=True)
+                st.markdown(_order_link(doc["title"], url, _doc_date_badge(doc["id"])), unsafe_allow_html=True)
         else:
             st.caption("אין פקודות טעונות")
     if LETTER_TYPES and st.button("📄 מחולל מכתבים", key="open_letters", use_container_width=True):

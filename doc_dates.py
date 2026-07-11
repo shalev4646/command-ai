@@ -45,3 +45,23 @@ def display_date(document_id: str | None) -> str | None:
         return f"{d}.{m}.{y}"
     except ValueError:
         return None
+
+
+def badge(document_id: str | None) -> str | None:
+    """Badge text for the UI: "DD.MM.YYYY", or "MM.YYYY" when the source
+    marker only carried month precision (the builder tags those
+    ";month-precision" — showing an invented day would overstate what the
+    PDF actually says)."""
+    entry = _load().get(document_id or "")
+    if not isinstance(entry, dict):
+        return None
+    iso = entry.get("date")
+    if not (isinstance(iso, str) and iso):
+        return None
+    try:
+        y, m, d = iso.split("-")
+    except ValueError:
+        return None
+    if ";month-precision" in (entry.get("marker") or ""):
+        return f"{m}.{y}"
+    return f"{d}.{m}.{y}"
