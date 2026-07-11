@@ -32,13 +32,17 @@ try:
 except Exception:
     def _verdict_clauses(_content):
         return []
-# Disciplinary-punishment-authority checker (grounded in PM-33.0302). Pure
-# data + lookup, ZERO LLM tokens — so it needs no quota. A missing module
-# (stale cloud build) just hides the sidebar button, same as letters above.
+# Deterministic, order-cited lookup tools (no LLM, no quota). Defensive
+# imports like the sibling modules above: a stale cached cloud build pairing
+# a new app.py with an older tree just hides the tool's button.
 try:
     import punishment_authority as _pa
 except Exception:
     _pa = None
+try:
+    import entitlements
+except Exception:
+    entitlements = None
 
 try:
     import backend
@@ -1127,8 +1131,8 @@ def _letters_dialog():
             st.caption("מעוגן בפקודות: " + " · ".join(s["title"] for s in srcs[:2]))
 
 
-# CSS is injected inside the dialog (scoped) rather than into the global
-# f-string style block — keeps the whole feature self-contained and avoids
+# CSS is injected inside each dialog (scoped) rather than into the global
+# f-string style block — keeps each feature self-contained and avoids
 # touching that block's {{ }} escaping. :root tokens (--accent/--surface/...)
 # are global, so they resolve here too.
 _PA_CSS = """
@@ -1154,6 +1158,38 @@ _PA_CSS = """
 .cai-pa-note li { font: 400 12px/1.6 Heebo, sans-serif; color: var(--text-dim); margin-bottom: 6px; }
 .cai-pa-disc { direction: rtl; text-align: right; font: 400 11.5px/1.6 Heebo, sans-serif;
     color: var(--text-faint); border-top: 1px solid var(--border); padding-top: 11px; margin-top: 14px; }
+</style>
+"""
+
+# ── Entitlement calculator (deterministic, order-cited; no LLM, no quota) ──
+# Scoped dark-RTL styling for the result cards. The modal portals outside the
+# chat column, but --accent/--surface/--text are declared on :root in the main
+# CSS block, so they resolve here too (accent follows the active role).
+_ENT_CSS = """
+<style>
+.cai-ent-card {
+    background: var(--surface); border: 1px solid var(--border-strong);
+    border-right: 3px solid var(--accent); border-radius: 14px;
+    padding: 16px 18px; margin: 12px 0 6px; direction: rtl; text-align: right;
+}
+.cai-ent-value { font: 700 30px Heebo, sans-serif; color: var(--accent); line-height: 1.15; }
+.cai-ent-value.sm { font-size: 19px; }
+.cai-ent-sub { font: 500 13.5px Heebo, sans-serif; color: var(--text-sec); margin-top: 4px; }
+.cai-ent-h { font: 700 13px Heebo, sans-serif; color: var(--text); margin: 12px 0 4px; }
+.cai-ent-rows { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; }
+.cai-ent-row { display: flex; gap: 8px; font: 400 13.5px Heebo, sans-serif; }
+.cai-ent-row span { color: var(--text-dim); min-width: 84px; }
+.cai-ent-row b { color: var(--text); font-weight: 600; }
+.cai-ent-list { margin: 2px 8px 2px 0; padding-right: 18px; }
+.cai-ent-list li { font: 400 13px Heebo, sans-serif; color: var(--text); line-height: 1.6; }
+.cai-ent-note { font: 400 12px Heebo, sans-serif; color: var(--text-dim); line-height: 1.55; margin-top: 8px; }
+.cai-ent-cite {
+    display: inline-block; margin-top: 12px;
+    background: var(--accent-soft); border: 1px solid var(--accent-border);
+    border-radius: 8px; padding: 4px 11px;
+    font: 600 12px Heebo, sans-serif; color: var(--accent); direction: rtl;
+}
+.cai-ent-disc { font: 400 11px Heebo, sans-serif; color: var(--text-faint); line-height: 1.5; margin: 8px 2px 0; direction: rtl; text-align: right; }
 </style>
 """
 
@@ -1246,6 +1282,123 @@ def _punishment_dialog():
         f"<div class='cai-pa-disc'>⚠️ {html.escape(_pa.DISCLAIMER)}</div>",
         unsafe_allow_html=True,
     )
+
+
+def _ent_card(html_inner: str) -> None:
+    """Render one entitlement result card + the standing disclaimer."""
+    st.markdown(
+        f"<div class='cai-ent-card'>{html_inner}</div>"
+        f"<div class='cai-ent-disc'>⚠️ {html.escape(entitlements.DISCLAIMER)}</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def _ent_leave_ui() -> None:
+    """Calculator A — leave days (PM-35.0402), value + clause citation."""
+    cats = entitlements.leave_categories()
+    titles = dict(cats)
+    cat_key = st.selectbox(
+        "סוג החופשה", [k for k, _ in cats],
+        format_func=lambda k: titles[k], key="ent_leave_cat",
+    )
+    cases = entitlements.leave_cases(cat_key)
+    idx = 0
+    pick = entitlements.leave_pick_label(cat_key)
+    if pick:
+        idx = st.selectbox(
+            pick, list(range(len(cases))),
+            format_func=lambda i: cases[i]["label"], key=f"ent_leave_case_{cat_key}",
+        )
+    r = entitlements.leave_result(cat_key, idx)
+    note = (f"<div class='cai-ent-note'>{html.escape(r['note'])}</div>"
+            if r.get("note") else "")
+    _ent_card(
+        f"<div class='cai-ent-value'>{html.escape(r['days'])}</div>"
+        f"<div class='cai-ent-sub'>{html.escape(titles[cat_key])} · "
+        f"{html.escape(r['label'])}</div>"
+        f"<div class='cai-ent-rows'>"
+        f"<div class='cai-ent-row'><span>גורם מאשר</span><b>{html.escape(r['approver'])}</b></div>"
+        f"<div class='cai-ent-row'><span>סל הזכאות</span><b>{html.escape(r['account'])}</b></div>"
+        f"</div>{note}"
+        f"<div class='cai-ent-cite'>{html.escape(r['citation'])}</div>"
+    )
+
+
+def _ent_pay_ui() -> None:
+    """Calculator B — subsistence (35.0201) + family payments (35.0210).
+
+    Grounded: neither source states a flat shekel figure. 35.0201 gives a
+    structure (amount set by the CoS, CPI-updated); 35.0210 gives a percentage
+    table of a "basic wage" that tracks the average wage — surfaced as-is.
+    """
+    kind = st.selectbox(
+        "סוג התשלום", ["subsist", "family"],
+        format_func=lambda k: {
+            "subsist": 'דמי קיום חודשיים (פ"מ 35.0201)',
+            "family": 'תשלום למשפחת החייל (פ"מ 35.0210)',
+        }[k],
+        key="ent_pay_kind",
+    )
+    if kind == "subsist":
+        s = entitlements.subsistence_structure()
+        comps = "".join(f"<li>{html.escape(c)}</li>" for c in s["components"])
+        sups = "".join(f"<li>{html.escape(c)}</li>" for c in s["supplements"])
+        _ent_card(
+            f"<div class='cai-ent-value sm'>{html.escape(s['headline'])}</div>"
+            f"<div class='cai-ent-note'>{html.escape(s['how_set'])}</div>"
+            f"<div class='cai-ent-h'>רכיבי דמי הקיום</div>"
+            f"<ul class='cai-ent-list'>{comps}</ul>"
+            f"<div class='cai-ent-h'>תוספות כספיות</div>"
+            f"<ul class='cai-ent-list'>{sups}</ul>"
+            f"<div class='cai-ent-cite'>{html.escape(s['citation'])}</div>"
+        )
+        return
+    recips = entitlements.family_recipients()
+    rlabels = dict(recips)
+    rk = st.selectbox(
+        "מקבל התשלום", [k for k, _ in recips],
+        format_func=lambda k: rlabels[k], key="ent_fam_recip",
+    )
+    band, band_label = None, ""
+    if entitlements.family_needs_minors(rk):
+        bands = entitlements.FAMILY_MINOR_BANDS
+        blabels = dict(bands)
+        band = st.selectbox(
+            "מספר קטינים במשפחה", [k for k, _ in bands],
+            format_func=lambda k: blabels[k], key="ent_fam_band",
+        )
+        band_label = " · " + blabels[band]
+    p = entitlements.family_payment(rk, band)
+    _ent_card(
+        f"<div class='cai-ent-value'>{html.escape(p['percent'])}</div>"
+        f"<div class='cai-ent-sub'>מהשכר הבסיסי · {html.escape(p['label'])}"
+        f"{html.escape(band_label)}</div>"
+        f"<div class='cai-ent-note'>{html.escape(p['note'])}</div>"
+        f"<div class='cai-ent-note'>{html.escape(p['base_note'])}</div>"
+        f"<div class='cai-ent-note'>{html.escape(p['ceiling_note'])}</div>"
+        f"<div class='cai-ent-cite'>{html.escape(p['citation'])}</div>"
+    )
+
+
+@st.dialog("🧮 מחשבון זכאויות", width="large")
+def _entitlements_dialog():
+    """Deterministic entitlement lookup: exact leave-day counts and the
+    subsistence/family-payment structure, each value quoted to its clause.
+
+    No daily quota and NO Anthropic call — it only reads curated, order-cited
+    data from entitlements.py, so it can't burn budget or hallucinate a figure.
+    """
+    st.markdown(_ENT_CSS, unsafe_allow_html=True)
+    calc = st.radio(
+        "מה לחשב?", ["leave", "pay"],
+        format_func=lambda k: {"leave": "🗓️ ימי חופשה",
+                               "pay": "₪ דמי קיום / תשלומים למשפחה"}[k],
+        key="ent_calc", horizontal=True,
+    )
+    if calc == "leave":
+        _ent_leave_ui()
+    else:
+        _ent_pay_ui()
 
 
 def handle_question(question: str):
@@ -1456,9 +1609,11 @@ with st.sidebar:
             st.caption("אין פקודות טעונות")
     if LETTER_TYPES and st.button("📄 מחולל מכתבים", key="open_letters", use_container_width=True):
         _letters_dialog()
-    # deterministic, zero-token, no quota — gated only on the module importing
+    # deterministic tools, zero-token, no quota — each gated on its module
     if _pa and st.button("⚖️ בודק סמכות עונש", key="open_punishment", use_container_width=True):
         _punishment_dialog()
+    if entitlements and st.button("🧮 מחשבון זכאויות", key="open_entitlements", use_container_width=True):
+        _entitlements_dialog()
     st.markdown("---")
 
     st.markdown("<div class='cai-drawer-section'><span class='dot'></span>שיחות אחרונות</div>", unsafe_allow_html=True)
