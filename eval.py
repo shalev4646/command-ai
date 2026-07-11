@@ -404,6 +404,21 @@ def run_structural() -> int:
     vc_ok = all([c["cls"] for c in verdict.verdict_clauses(t)] == exp for t, exp in vc_cases)
     checks.append(("סיווג צבעי פסיקה (verdict.py)", vc_ok, ""))
 
+    # clause-image pipeline (fitz render + highlight + crop): a real answer's
+    # top source must produce non-trivial PNG bytes on its mapped page. Guards
+    # the whole "הצג סעיף מקור" feature — missing fitz, a moved PDF, or a
+    # render regression all fail here instead of only at click time.
+    img_ok = False
+    try:
+        chunks = retrieve_for_role("כמה שעות שינה רצופות מגיעות לחייל", "soldier")
+        src = backend._sources_from_chunks(chunks)[0]
+        pg = backend.page_for_clause(src["doc_id"], src["clause"])
+        png = backend.render_clause_image(src["source_file"], pg, src.get("highlight", ""))
+        img_ok = isinstance(png, (bytes, bytearray)) and png[:8] == b"\x89PNG\r\n\x1a\n" and len(png) > 5000
+    except Exception:
+        img_ok = False
+    checks.append(("תצוגת סעיף: render מחזיר PNG תקין", img_ok, ""))
+
     # THE cache contract: no profile == the exact historical user turn
     q, ctx = "שאלה לדוגמה", "הקשר לדוגמה"
     legacy = f"{q}\n\n{backend._CONTEXT_HEADER}\n{ctx}"
