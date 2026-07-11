@@ -31,7 +31,11 @@ _SYSTEM = """אתה מנסח מכתבים רשמיים עבור חיילי צה"
 """
 
 # letter_key -> UI + retrieval recipe. `query` feeds the regular RAG
-# retrieval so the draft cites the same orders the chatbot would.
+# retrieval so the draft cites the same orders the chatbot would. A field's
+# optional third element marks it CONTENT (True): its value joins the
+# retrieval query, so "סיבת הבקשה: אבל במשפחה" pulls the bereavement-leave
+# clauses, not just the type's generic ones. Personal fields (name, dates,
+# recipient) stay out — they only add embedding noise.
 LETTER_TYPES: dict[str, dict] = {
     "special_leave": {
         "title": "בקשת חופשה מיוחדת",
@@ -39,7 +43,7 @@ LETTER_TYPES: dict[str, dict] = {
         "fields": [
             ("שם מלא ודרגה", "טוראי ישראל ישראלי"),
             ("הנמען", "מפקד הפלוגה"),
-            ("סיבת הבקשה", "אירוע משפחתי / נסיבות אישיות"),
+            ("סיבת הבקשה", "אירוע משפחתי / נסיבות אישיות", True),
             ("התאריכים המבוקשים", "12-14.8.2026"),
         ],
     },
@@ -49,8 +53,8 @@ LETTER_TYPES: dict[str, dict] = {
         "fields": [
             ("שם מלא ודרגה", ""),
             ("מתי נערך הדין ובפני מי", ""),
-            ("מה נפסק", "ריתוק / מחבוש / קנס"),
-            ("נימוקי הערר", "עונש חמור מדי / נסיבות שלא נשקלו"),
+            ("מה נפסק", "ריתוק / מחבוש / קנס", True),
+            ("נימוקי הערר", "עונש חמור מדי / נסיבות שלא נשקלו", True),
         ],
     },
     "ombudsman_complaint": {
@@ -58,7 +62,7 @@ LETTER_TYPES: dict[str, dict] = {
         "query": "הגשת קבילה לנציב קבילות החיילים",
         "fields": [
             ("שם מלא ודרגה", ""),
-            ("נושא הקבילה", ""),
+            ("נושא הקבילה", "", True),
             ("מה נעשה עד כה ביחידה", "פניתי למפקד בתאריך..."),
         ],
     },
@@ -68,7 +72,7 @@ LETTER_TYPES: dict[str, dict] = {
         "fields": [
             ("שם מלא ודרגה", ""),
             ("בפני מי מבוקש הראיון", "מפקד הגדוד"),
-            ("נושא הראיון", ""),
+            ("נושא הראיון", "", True),
         ],
     },
     "reserve_deferral": {
@@ -77,10 +81,21 @@ LETTER_TYPES: dict[str, dict] = {
         "fields": [
             ("שם מלא ודרגה", ""),
             ("מועד הצו ומשך השירות", ""),
-            ("סיבת הדחייה", "לימודים / עבודה / נסיבות אישיות"),
+            ("סיבת הדחייה", "לימודים / עבודה / נסיבות אישיות", True),
         ],
     },
 }
+
+
+def _retrieval_query(lt: dict, details: dict[str, str]) -> str:
+    """The type's base query, enriched with the user's CONTENT-field values
+    (capped — a rambling reason field shouldn't drown the base query)."""
+    content_labels = {f[0] for f in lt["fields"] if len(f) > 2 and f[2]}
+    extra = " ".join(
+        v.strip() for k, v in details.items()
+        if k in content_labels and v and v.strip()
+    )[:120]
+    return f"{lt['query']} {extra}".strip()
 
 
 def compose_letter(letter_key: str, details: dict[str, str], role: str = "soldier") -> dict:
@@ -91,7 +106,7 @@ def compose_letter(letter_key: str, details: dict[str, str], role: str = "soldie
     existing source-link row under the draft.
     """
     lt = LETTER_TYPES[letter_key]
-    chunks = retrieve_for_role(lt["query"], role)
+    chunks = retrieve_for_role(_retrieval_query(lt, details), role)
     context = _context_from_chunks(chunks)
 
     filled = "\n".join(
@@ -117,4 +132,11 @@ def compose_letter(letter_key: str, details: dict[str, str], role: str = "soldie
         "cache_creation_input_tokens": getattr(msg.usage, "cache_creation_input_tokens", 0) or 0,
         "cache_read_input_tokens": getattr(msg.usage, "cache_read_input_tokens", 0) or 0,
     }
-    return {"text": msg.content[0].text, "sources": _sources_from_chunks(chunks), "usage": usage}
+    return {
+        "text": msg.content[0].text,
+        "sources": _sources_from_chunks(chunks),
+        "usage": usage,
+        # a draft cut mid-sentence by the token cap must say so — the UI
+        # warns instead of letting a half-letter pass as complete
+        "truncated": msg.stop_reason == "max_tokens",
+    }

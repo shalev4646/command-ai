@@ -1076,6 +1076,8 @@ def _letters_dialog():
     # a draft from another letter type stays hidden instead of masquerading
     # as the currently selected one
     if draft and draft.get("kind") == kind:
+        if draft.get("truncated"):
+            st.warning("✂️ הטיוטה נקטעה באמצע בגלל אורך — קצר את הפרטים ונסח שוב, או השלם את הסיום ידנית.")
         st.text_area("הטיוטה — קרא, השלם את החסר וערוך לפני הגשה", height=320, key="letter_edit")
         st.download_button(
             "⬇️ הורד כקובץ",

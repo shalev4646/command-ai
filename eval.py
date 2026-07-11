@@ -349,9 +349,14 @@ def run_structural() -> int:
     checks.append(("תאריכי נוסח: שנים הגיוניות", all(1948 <= y <= 2027 for y in years),
                    f"{sorted(set(years))[:4]}..."))
     import re as _re
-    bad_badges = [d for d in dated
-                  if not _re.fullmatch(r"(\d{2}\.)?\d{2}\.\d{4}", doc_dates.badge(d) or "")]
-    checks.append(("תגי תאריך בפורמט תקין", not bad_badges, f"{bad_badges[:3]}"))
+    # badge() is None below _MIN_BADGE_YEAR (old extractions understate
+    # freshness) and a well-formed date string from the threshold on
+    bad_badges = [
+        d for d in dated
+        if (int(doc_dates.date_for(d)[:4]) >= doc_dates._MIN_BADGE_YEAR)
+        != bool(_re.fullmatch(r"(\d{2}\.)?\d{2}\.\d{4}", doc_dates.badge(d) or ""))
+    ]
+    checks.append(("תגי תאריך: סף + פורמט עקביים", not bad_badges, f"{bad_badges[:3]}"))
 
     # escalation: total coverage, sane shapes, gating both-ways
     paths_ok = all(
@@ -366,13 +371,22 @@ def run_structural() -> int:
     checks.append(("גייטינג הרצועה: מציג/מסתיר/תמיד", gate_show and gate_hide and gate_always,
                    f"show={gate_show} hide={gate_hide} always={gate_always}"))
 
-    # letters: schema shape only (composing costs money)
+    # letters: schema shape only (composing costs money). Fields are
+    # (label, placeholder) or (label, placeholder, True) for content fields
+    # that feed the retrieval query; every type needs at least one.
     lt_ok = all(
         v.get("title") and v.get("query")
-        and v.get("fields") and all(len(f) == 2 for f in v["fields"])
+        and v.get("fields") and all(len(f) in (2, 3) for f in v["fields"])
+        and any(len(f) > 2 and f[2] for f in v["fields"])
         for v in letters.LETTER_TYPES.values()
     )
     checks.append(("סכימת סוגי המכתבים", lt_ok, f"{len(letters.LETTER_TYPES)} סוגים"))
+    lq = letters._retrieval_query(
+        letters.LETTER_TYPES["special_leave"],
+        {"שם מלא ודרגה": "טוראי ישראל ישראלי", "סיבת הבקשה": "אבל במשפחה"},
+    )
+    checks.append(("אחזור מכתב: סיבה נכנסת, שם לא",
+                   "אבל במשפחה" in lq and "ישראל ישראלי" not in lq, lq))
 
     # THE cache contract: no profile == the exact historical user turn
     q, ctx = "שאלה לדוגמה", "הקשר לדוגמה"

@@ -47,11 +47,23 @@ def display_date(document_id: str | None) -> str | None:
         return None
 
 
+# Badges render only for dates from this year on. The extraction records
+# the LATEST DEFENSIBLE date, and on old orders that is usually the base
+# publication or an ancient stamp while newer amendments exist unreadably
+# (corrupt digit CMaps, ambiguous reprint corners) — so an old badge
+# systematically UNDERSTATES freshness. "נוסח 03.1958" next to an answer
+# reads as "this data is 68 years stale" and burns the very trust the badge
+# exists to build. This corpus splits cleanly: 1958-2008 (the suspect
+# cluster) vs 2017+ (explicit modern amendment markers); no claim beats a
+# misleading one, same principle as the extraction's nulls.
+_MIN_BADGE_YEAR = 2010
+
+
 def badge(document_id: str | None) -> str | None:
     """Badge text for the UI: "DD.MM.YYYY", or "MM.YYYY" when the source
     marker only carried month precision (the builder tags those
     ";month-precision" — showing an invented day would overstate what the
-    PDF actually says)."""
+    PDF actually says). None for pre-_MIN_BADGE_YEAR dates — see above."""
     entry = _load().get(document_id or "")
     if not isinstance(entry, dict):
         return None
@@ -60,6 +72,8 @@ def badge(document_id: str | None) -> str | None:
         return None
     try:
         y, m, d = iso.split("-")
+        if int(y) < _MIN_BADGE_YEAR:
+            return None
     except ValueError:
         return None
     if ";month-precision" in (entry.get("marker") or ""):
