@@ -100,6 +100,19 @@ GOLDEN = [
     ("soldier",   "מותר לי להיכנס לחדר של הבנות ביחידה?", "PM-33.0207"),
     ("soldier",   "האם האוכל שמגישים בבסיס חייב להיות כשר?", "PM-34.0101"),
     ("commander", "אילו עבודות מותר לבצע ביחידה בשבת?", "PM-34.0101"),
+    # batch 5 (2026-07-11): abroad-during-service, private work, alcohol —
+    # ingested from the site's canonical HTML (the media PDFs are stale or
+    # digit-scrambled); release-leave key-facts added to the leave order
+    ("soldier",   "כמה ימים מותר לי לטוס לחו\"ל במהלך כל השירות הסדיר?", "31.0701"),
+    ("soldier",   "כמה זמן מראש מגישים בקשה לצאת לחו\"ל?", "31.0701"),
+    ("commander", "מה עושים עם חייל שטס לחו\"ל בלי אישור?", "31.0701"),
+    ("soldier",   "אני רוצה לעבוד במלצרות אחרי שעות הבסיס — זה מותר?", "33.0115"),
+    ("commander", "מי מוסמך לאשר לחייל חובה לעבוד בעבודה פרטית בגלל מצב כלכלי?", "33.0115"),
+    ("soldier",   "נתפסתי עם בקבוק וודקה בחדר בבסיס — מה בדיוק אסור?", "33.0220"),
+    ("commander", "האם מותר להגיש אלכוהול באירוע יחידתי ומי רשאי לאשר?", "33.0220"),
+    # regression: the release-leave annex table is RTL-mangled in raw_text —
+    # answered "not found" until the key-facts clauses (2026-07-11)
+    ("soldier",   "כמה ימי חופשת שחרור מקבלים לפני השחרור?", "PM-35.0402"),
 ]
 
 # (role, question, expected_doc_id) — same contract as GOLDEN, but phrased the
