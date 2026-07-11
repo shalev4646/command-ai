@@ -234,5 +234,17 @@ def dashboard_data() -> dict:
         }
 
 
+def recent_questions() -> list[dict]:
+    """Newest-first snapshot of the in-process question log (the dashboard ring
+    buffer, maxlen 200). Read-only, no API/network — feeds the home-screen
+    "popular questions" strip. Fail-soft: returns [] if state isn't ready."""
+    try:
+        s = _store()
+        with s["lock"]:
+            return list(s["questions"])
+    except Exception:
+        return []
+
+
 def new_session_id() -> str:
     return uuid.uuid4().hex[:12]
