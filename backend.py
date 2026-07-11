@@ -229,12 +229,37 @@ def _context_from_chunks(chunks: list[dict]) -> str:
     return "\n\n---\n\n".join(parts)
 
 
+def clause_key(section: str | None, clause: str | None) -> str | None:
+    """The key under which storage/clause_pages.json stores a chunk's page.
+
+    Bare clause strings collide across chunk kinds within one order: raw-text
+    window positions, key-facts clause numbers and annex row numbers all use
+    small integers (013.3 carries all three). So raw windows are keyed
+    "w<first-window>" (a stitched "2–4" range starts at window 2, which is
+    where the cited passage begins) and structured clauses are keyed
+    "<section>:<clause>". _build_clause_pages.py emits exactly these keys —
+    it must never drift from this function.
+    """
+    if not clause:
+        return None
+    if (section or "").startswith("chunk"):
+        return "w" + str(clause).split("–")[0]
+    return f"{section}:{clause}"
+
+
 def _sources_from_chunks(chunks: list[dict]) -> list[dict]:
     """The distinct orders behind an answer, in retrieval-rank order.
 
     Only orders whose original PDF is actually on disk are returned — the
     UI links each source straight to its PDF, and a dead link is worse
-    than no link.
+    than no link. "clause" is the clause_key of the order's highest-ranked
+    chunk WITH a known page, so the UI can deep-link the PDF to the cited
+    passage via page_for_clause: key-facts chunks are hand-written summaries
+    with no PDF location, and when one outranks the raw windows (they were
+    added precisely to win those rankings) the next-ranked window is still
+    the passage the answer drew on. When nothing resolves, the top chunk's
+    key is recorded anyway — the page lookup returns None, the link stays
+    page-less, and the metrics log still says which clause led.
     """
     pdf_dir = Path(__file__).parent / "pdf-ldf_law"
     by_id = {d["document_id"]: d for d in load_documents() if d.get("document_id")}
@@ -247,12 +272,55 @@ def _sources_from_chunks(chunks: list[dict]) -> list[dict]:
         doc = by_id.get(doc_id)
         source_file = (doc or {}).get("source_file")
         if source_file and (pdf_dir / source_file).exists():
+            clause = clause_key(c.get("section"), c.get("clause"))
+            for cc in chunks:
+                if cc["doc_id"] != doc_id:
+                    continue
+                key = clause_key(cc.get("section"), cc.get("clause"))
+                if page_for_clause(doc_id, key) is not None:
+                    clause = key
+                    break
             sources.append({
                 "doc_id": doc_id,
                 "title": doc.get("title", c.get("title", "")),
                 "source_file": source_file,
+                "clause": clause,
             })
     return sources
+
+
+# {doc_id: {clause_key: 1-based page}}, precomputed by _build_clause_pages.py
+# (which needs PyMuPDF and must be rerun after reingesting). Loaded once per
+# process — the file is a build artifact, not runtime state.
+_CLAUSE_PAGES_PATH = Path(__file__).parent / "storage" / "clause_pages.json"
+_clause_pages: dict | None = None
+
+
+def _get_clause_pages() -> dict:
+    global _clause_pages
+    if _clause_pages is None:
+        try:
+            _clause_pages = json.loads(_CLAUSE_PAGES_PATH.read_text(encoding="utf-8"))
+        except Exception:
+            # missing/corrupt file degrades to page-less PDF links, never errors
+            _clause_pages = {}
+    return _clause_pages
+
+
+def page_for_clause(doc_id: str | None, clause: str | None) -> int | None:
+    """1-based PDF page where a source's cited clause starts, or None.
+
+    `clause` is a clause_key (see _sources_from_chunks). None means "no page
+    known" — callers must fall back to the plain PDF link.
+    """
+    if not doc_id or not clause:
+        return None
+    try:
+        page = _get_clause_pages().get(str(doc_id), {}).get(str(clause))
+    except AttributeError:
+        # a hand-edited JSON with the wrong shape must not break rendering
+        return None
+    return page if isinstance(page, int) and page > 0 else None
 
 
 def _compose_user_content(question: str, context: str, profile: list[str] | None) -> str:
