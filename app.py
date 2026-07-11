@@ -53,6 +53,15 @@ except Exception:
     st.code(traceback.format_exc())
     st.stop()
 
+# Popular-questions strip helper. Guarded the same way as everything a stale
+# Streamlit Cloud build (app.py re-run against an older cached module set)
+# could be missing: if popular.py can't load, _top_questions stays None and
+# the home screen just renders the existing suggested questions unchanged.
+try:
+    from popular import top_questions as _top_questions
+except Exception:
+    _top_questions = None
+
 @st.cache_resource(show_spinner=False)
 def _startup_ingest():
     ensure_pdfs_ingested()
@@ -488,6 +497,23 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
 .st-key-sug_1 button {{ animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .32s; }}
 .st-key-sug_2 button {{ animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .4s; }}
 .st-key-sug_3 button {{ animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .48s; }}
+
+/* ── 🔥 הנשאלות השבוע — popular-questions strip. The buttons inherit the base
+   surface-card style (radius 14, olive border) so they read as the same pills
+   as the suggested cards; only the accent heading + an earlier stagger set the
+   group apart. Sits above the suggested cards on the home screen. ── */
+.cai-hot-head {{ font: 600 13px Heebo, sans-serif; color: var(--accent);
+    text-align: center; margin: 8px 0 10px; display: flex; gap: 7px;
+    align-items: center; justify-content: center;
+    animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .18s; }}
+.cai-hot-head::before, .cai-hot-head::after {{
+    content: ""; height: 1px; width: 26px; background: var(--accent-border); }}
+.st-key-hot_0 button, .st-key-hot_1 button, .st-key-hot_2 button, .st-key-hot_3 button {{
+    animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; }}
+.st-key-hot_0 button {{ animation-delay: .2s; }}
+.st-key-hot_1 button {{ animation-delay: .26s; }}
+.st-key-hot_2 button {{ animation-delay: .32s; }}
+.st-key-hot_3 button {{ animation-delay: .38s; }}
 
 /* ── Composer — pill bar + circular olive send ── */
 /* the pinned composer strip shows the BOTTOM slice of the same viewport-
@@ -2268,6 +2294,26 @@ if not st.session_state.messages:
         f"<div class='cai-greet-sub'>שאלות נפוצות מפקודות המטכ\"ל במערכת ({len(docs)})</div>",
         unsafe_allow_html=True,
     )
+    # 🔥 "הנשאלות השבוע": the most-asked real questions for this role, pulled
+    # from the metrics ring buffer and curated-filled on cold start. Rendered
+    # above the suggested cards, tapped the same way (queue_question → rerun).
+    # Defensive: a stale cloud build may lack the helper (guarded import at the
+    # top) — then, or on any error/empty result, the strip is skipped and the
+    # suggested questions below render exactly as before.
+    popular = []
+    if _top_questions is not None:
+        try:
+            popular = _top_questions(st.session_state.role, k=4)
+        except Exception:
+            popular = []
+    if popular:
+        st.markdown(
+            "<div class='cai-hot-head'>🔥 הנשאלות השבוע</div>",
+            unsafe_allow_html=True,
+        )
+        for i, q in enumerate(popular):
+            if st.button(q, key=f"hot_{i}", use_container_width=True):
+                queue_question(q)
     for i, q in enumerate(suggested_questions):
         if st.button(q, key=f"sug_{i}", use_container_width=True):
             queue_question(q)
