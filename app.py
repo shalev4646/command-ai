@@ -1298,9 +1298,11 @@ def _stream_answer(text_gen) -> str:
     return buf + shown[len(lead):]
 
 
-def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[str, str] | None = None) -> None:
-    """Copy-to-clipboard + share-to-WhatsApp + open-PDF row under an
-    assistant answer. `pdf` is (media_url, title) from _pdf_media_url.
+def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[str, str, int | None] | None = None) -> None:
+    """Copy-to-clipboard + share-to-WhatsApp + share-card + open-PDF row
+    under an assistant answer. `pdf` is (media_url, title, page) — the URL
+    from _pdf_media_url plus the 1-based page of the cited clause
+    (backend.page_for_clause; None keeps the plain PDF link).
 
     Rendered as a components.html iframe, so styles are inlined (the app's
     CSS can't reach in). Clipboard uses the async API with a textarea +
@@ -1311,6 +1313,11 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
     relative href inside a srcdoc iframe resolves against about:srcdoc, and
     the app frame's base differs between local (/) and the Streamlit Cloud
     shell (/~/+/).
+
+    The card pill draws the answer onto a 1000px-wide canvas (brand header,
+    the **פסיקה:** line boxed in the role accent, wrapped body, source
+    footer) and hands the PNG to the OS share sheet where files are
+    shareable; elsewhere it downloads. Canvas API only — no JS libs.
     """
     payload = json.dumps(content + "\n\n— CommandAI")
     pdf_btn = ""
@@ -1323,8 +1330,14 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
             f'<span>⎙ הצג PDF<span class="xtra"> מקור</span></span></a>'
         )
     pdf_url = json.dumps(pdf[0] if pdf else None)
+    pdf_page = json.dumps(pdf[2] if pdf else None)
+    src_title = json.dumps(pdf[1] if pdf else None)
     components.html(
         f"""
+        <!-- same Heebo/Suez One sheet the app imports: iframes don't inherit
+             the parent's fonts, and the share-card canvas needs both loaded
+             in THIS document -->
+        <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Suez+One&display=swap" rel="stylesheet">
         <style>
         /* text-size-adjust: iOS Safari inflates small text inside iframes,
            blowing the pills up until the row wraps and the last pill (פתח
@@ -1341,11 +1354,12 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
                 transition:color .15s,border-color .15s,background .15s; }}
         .act:hover {{ color:{ACCENT}; border-color:{ACCENT};
                       background:rgba(236,237,230,.02); }}
-        /* keep all three pills on one row on narrow phones: tighten the
-           chrome and shorten שלח בוואטסאפ → וואטסאפ, הצג PDF מקור → הצג PDF
-           (the iframe is the available width, so max-width tracks the chat
-           column) */
-        @media (max-width: 290px) {{
+        /* keep all four pills on one row on narrow phones: tighten the
+           chrome and shorten שלח בוואטסאפ → וואטסאפ, 🖼 כרטיס → 🖼,
+           הצג PDF מקור → הצג PDF (the iframe is the available width, so
+           max-width tracks the chat column; 380 — the card pill pushed the
+           four-pill overflow point well past the old 290) */
+        @media (max-width: 380px) {{
           .act {{ padding:5px 10px; }}
           .xtra {{ display:none; }}
         }}
@@ -1356,6 +1370,7 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
                text + .xtra as separate flex items would put the 6px gap
                INSIDE the word ("שתף ב וואטסאפ") -->
           <a class="act" id="wa" target="_blank" rel="noopener"><span>✆ <span class="xtra">שלח ב</span>וואטסאפ</span></a>
+          <button class="act" id="card"><span>🖼<span class="xtra"> כרטיס</span></span></button>
           {pdf_btn}
         </div>
         <script>
@@ -1363,12 +1378,17 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
         document.getElementById("wa").href =
             "https://wa.me/?text=" + encodeURIComponent(text);
         const pdfUrl = {pdf_url};
+        const pdfPage = {pdf_page};
         const pdfEl = document.getElementById("pdf");
         if (pdfEl && pdfUrl) {{
             // parent dir: "/" locally, "/~/+/" behind the cloud shell
             const loc = window.parent.location;
             const dir = loc.pathname.endsWith("/") ? loc.pathname : loc.pathname + "/";
-            pdfEl.href = loc.origin + dir + pdfUrl.replace(/^\\//, "");
+            // #page=N opens desktop/Android PDF viewers on the cited
+            // clause's page; iOS Safari ignores the fragment (page 1, same
+            // as before). No page — same href as always.
+            pdfEl.href = loc.origin + dir + pdfUrl.replace(/^\\//, "")
+                + (pdfPage ? "#page=" + pdfPage : "");
         }}
         const btn = document.getElementById("copy");
         btn.addEventListener("click", async () => {{
@@ -1384,6 +1404,180 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
             const prev = btn.textContent;
             btn.textContent = ok ? "✓ הועתק" : "ההעתקה נכשלה";
             setTimeout(() => {{ btn.textContent = prev; }}, 1600);
+        }});
+        // ── Share card: the answer drawn as a PNG (canvas API only) ──
+        const cardBtn = document.getElementById("card");
+        const srcTitle = {src_title};
+        const cardNote = (msg) => {{
+            // same feedback pattern as the copy pill; innerHTML — the label
+            // carries the .xtra span that textContent would flatten away
+            const prev = cardBtn.innerHTML;
+            cardBtn.textContent = msg;
+            setTimeout(() => {{ cardBtn.innerHTML = prev; }}, 1600);
+        }};
+        function rrect(c, x, y, w, h, r) {{
+            // ctx.roundRect is missing on pre-16 iOS Safari
+            c.beginPath();
+            c.moveTo(x + r, y);
+            c.arcTo(x + w, y, x + w, y + h, r);
+            c.arcTo(x + w, y + h, x, y + h, r);
+            c.arcTo(x, y + h, x, y, r);
+            c.arcTo(x, y, x + w, y, r);
+            c.closePath();
+        }}
+        async function cardFonts() {{
+            // the <link> above only DECLARES the faces — a face is fetched
+            // when the DOM uses it, and the canvas-only weights never are;
+            // fonts.load() forces them, failures fall back to sans-serif
+            try {{
+                await Promise.all([
+                    document.fonts.load('400 40px "Suez One"'),
+                    document.fonts.load("400 22px Heebo"),
+                    document.fonts.load("600 20px Heebo"),
+                    document.fonts.load("700 25px Heebo"),
+                ]);
+                await document.fonts.ready;
+            }} catch (e) {{}}
+        }}
+        function drawCard() {{
+            // palette mirrors the app CSS tokens (--bg/--surface gradient,
+            // --text, role accent) so the card reads as the app's own
+            const W = 1000, M = 64, xR = W - M, maxW = W - 2 * M;
+            const cv = document.createElement("canvas");
+            cv.width = W; cv.height = 8;
+            const ctx = cv.getContext("2d");
+            const FONTS = {{
+                brand: '400 40px "Suez One", serif',
+                tag: "400 20px Heebo, sans-serif",
+                verdict: "700 25px Heebo, sans-serif",
+                body: "400 22px Heebo, sans-serif",
+                src: "600 20px Heebo, sans-serif",
+                foot: "400 17px Heebo, sans-serif",
+            }};
+            const wrap = (t, mw) => {{
+                const out = [];
+                let cur = "";
+                for (const w of t.split(/\\s+/).filter(Boolean)) {{
+                    const cand = cur ? cur + " " + w : w;
+                    if (cur && ctx.measureText(cand).width > mw) {{ out.push(cur); cur = w; }}
+                    else cur = cand;
+                }}
+                if (cur) out.push(cur);
+                return out;
+            }};
+            // strip the share suffix + markdown chrome; bidi/zero-width
+            // marks break canvas run shaping (the chat renderer tolerates
+            // them, ctx.fillText less so)
+            const lines = text.replace(/\\n\\n— CommandAI$/, "")
+                .split("\\n")
+                .map((l) => l
+                    .replace(/[\\u200e\\u200f\\u200b\\ufeff\\u202a-\\u202e\\u2066-\\u2069]/g, "")
+                    .replace(/\\*\\*/g, "")
+                    .replace(/^#+\\s*/, "")
+                    .replace(/^\\s*[-*]\\s+/, "• ")
+                    .trim());
+            let verdict = null;
+            if (lines.length && lines[0].indexOf("פסיקה:") === 0) verdict = lines.shift();
+            ctx.font = FONTS.verdict;
+            const vLines = verdict ? wrap(verdict, maxW - 52) : [];
+            ctx.font = FONTS.body;
+            const body = [];
+            let nBody = 0, truncated = false;
+            for (const line of lines) {{
+                if (nBody >= 14) {{ truncated = truncated || !!line; continue; }}
+                if (!line) {{
+                    if (body.length && body[body.length - 1] !== "") body.push("");
+                    continue;
+                }}
+                for (const wl of wrap(line, maxW)) {{
+                    if (nBody >= 14) {{ truncated = true; break; }}
+                    body.push(wl); nBody++;
+                }}
+            }}
+            while (body.length && body[body.length - 1] === "") body.pop();
+            if (truncated && body.length) body[body.length - 1] += " …";
+            let title = srcTitle;
+            if (title) {{
+                ctx.font = FONTS.src;
+                while (title.length > 2 && ctx.measureText(title).width > maxW) title = title.slice(0, -1);
+                if (title !== srcTitle) title += "…";
+            }}
+            // vertical layout in baselines, then size the canvas to fit
+            const boxTop = 184;
+            const boxH = vLines.length ? vLines.length * 36 + 22 : 0;
+            let y = vLines.length ? boxTop + boxH + 56 : boxTop + 18;
+            const bodyPos = [];
+            for (const l of body) {{
+                if (l === "") {{ y += 14; continue; }}
+                bodyPos.push([l, y]); y += 35;
+            }}
+            if (bodyPos.length) y -= 35;
+            const sepY = y + 44;
+            let fy = sepY + 44;
+            const titleY = title ? fy : 0;
+            if (title) fy += 31;
+            const H = Math.ceil(fy + 50);
+            cv.height = H;  // resizing wipes ctx state — set styles below
+            const g = ctx.createLinearGradient(0, 0, 0, H);
+            g.addColorStop(0, "#171A12"); g.addColorStop(.42, "#171A12");
+            g.addColorStop(.68, "#1C2114"); g.addColorStop(.88, "#242C18");
+            g.addColorStop(1, "#2A3420");
+            ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+            ctx.strokeStyle = "rgba(236,237,230,.16)";
+            ctx.strokeRect(.5, .5, W - 1, H - 1);
+            ctx.direction = "rtl"; ctx.textAlign = "right";
+            ctx.fillStyle = "#ECEDE6"; ctx.font = FONTS.brand;
+            ctx.fillText("CommandAI", xR, 94);
+            ctx.fillStyle = "rgba(236,237,230,.62)"; ctx.font = FONTS.tag;
+            ctx.fillText("עוזר הפקודות של צה״ל", xR, 128);
+            ctx.fillStyle = "{ACCENT}";
+            ctx.fillRect(xR - 56, 146, 56, 3);
+            if (vLines.length) {{
+                rrect(ctx, M, boxTop, maxW, boxH, 14);
+                ctx.fillStyle = "{ACCENT_SOFT}"; ctx.fill();
+                ctx.strokeStyle = "{ACCENT_BORDER}"; ctx.stroke();
+                ctx.fillStyle = "{ACCENT}"; ctx.font = FONTS.verdict;
+                vLines.forEach((l, i) => ctx.fillText(l, xR - 26, boxTop + 33 + i * 36));
+            }}
+            ctx.fillStyle = "rgba(236,237,230,.88)"; ctx.font = FONTS.body;
+            for (const [l, ly] of bodyPos) ctx.fillText(l, xR, ly);
+            ctx.fillStyle = "rgba(236,237,230,.16)";
+            ctx.fillRect(M, sepY, maxW, 1);
+            if (title) {{
+                ctx.fillStyle = "rgba(236,237,230,.75)"; ctx.font = FONTS.src;
+                ctx.fillText(title, xR, titleY);
+            }}
+            ctx.fillStyle = "rgba(236,237,230,.5)"; ctx.font = FONTS.foot;
+            ctx.fillText("מבוסס על פקודות מטכ״ל · אינו ייעוץ משפטי", xR, fy);
+            return cv;
+        }}
+        function cardDownload(blob) {{
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = "commandai-card.png";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+            cardNote("✓ ירד — צרף בוואטסאפ");
+        }}
+        cardBtn.addEventListener("click", async () => {{
+            try {{
+                await cardFonts();
+                drawCard().toBlob((blob) => {{
+                    if (!blob) {{ cardNote("היצירה נכשלה"); return; }}
+                    const file = new File([blob], "commandai-card.png", {{ type: "image/png" }});
+                    if (navigator.canShare && navigator.canShare({{ files: [file] }})) {{
+                        // mobile share sheet (→ WhatsApp); a dismissed sheet
+                        // is a user choice, only real failures fall back
+                        navigator.share({{ files: [file] }}).catch((e) => {{
+                            if (!e || e.name !== "AbortError") cardDownload(blob);
+                        }});
+                    }} else {{
+                        cardDownload(blob);
+                    }}
+                }}, "image/png");
+            }} catch (e) {{ cardNote("היצירה נכשלה"); }}
         }});
         // If the pills wrap (narrow phones, late font swap), grow the iframe
         // to fit — otherwise the second row is clipped and the PDF pill
@@ -1432,7 +1626,14 @@ for msg_i, msg in enumerate(st.session_state.messages):
             if primary and primary.get("source_file"):
                 url = _pdf_media_url(primary["source_file"], f"pdfmsg_{msg_i}")
                 if url:
-                    pdf = (url, primary["title"])
+                    # page of the cited clause (clause_pages.json); None —
+                    # unknown clause, pre-deep-link sources, missing mapping
+                    # — keeps the plain PDF link exactly as before. getattr:
+                    # a stale cached backend from a previous cloud build may
+                    # predate page_for_clause (see last_usage above)
+                    _pfc = getattr(backend, "page_for_clause", None)
+                    page = _pfc(primary["doc_id"], primary.get("clause")) if _pfc else None
+                    pdf = (url, primary["title"], page)
             _answer_actions(content, msg.get("sources"), pdf)
             # feedback keyed by a per-message id, NOT by position: widget
             # state lives in session_state by key, and positional keys leak
