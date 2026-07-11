@@ -634,29 +634,36 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
 .verdict-no   {{ color:#D68C77; background:rgba(208,124,102,.12); border-color:rgba(208,124,102,.4); }}
 .verdict-none {{ color:rgba(236,237,230,.6); background:rgba(236,237,230,.05); border-color:rgba(236,237,230,.2); }}
 
-/* ── Escalation strip — "🧭 למי פונים" under an answer: the primary
-   source's referral chain as numbered pills (deterministic lookup, see
-   escalation_paths.py — general guidance, not part of the ruling). Pill
-   chrome matches the action row's .act pills so the two rows read as one
-   block. ── */
-.cai-escal {{ direction: rtl; text-align: right; margin: 8px 0 2px; }}
+/* ── Escalation strip — "למי פונים": one quiet line between the answer
+   body and the action pills (deterministic lookup, see escalation_paths.py
+   — general guidance, not part of the ruling). Label and chain share a
+   single NOWRAP row that scrolls horizontally — the old numbered pills
+   wrapped into a mess next to the wrapped action row on phones. ── */
+/* padding-bottom 26 = the theme's stMarkdownContainer margin-bottom:-16px
+   (every next element starts 16px INTO a markdown block — invisible under
+   plain text, but it swallowed this strip's note under the pills iframe)
+   + 10px of real breathing room. Padding, not margin: margins collapse
+   through the wrapper and lose to its !important rules. */
+.cai-escal {{ direction: rtl; text-align: right; margin: 10px 0 0; padding-bottom: 26px; }}
+.cai-escal-row {{
+    display: flex; align-items: center; gap: 7px;
+    flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
+}}
+.cai-escal-row::-webkit-scrollbar {{ display: none; }}
 .cai-escal-title {{
-    display: block; font: 600 12px Heebo, sans-serif;
-    color: var(--text-dim); margin-bottom: 6px;
+    font: 600 12px Heebo, sans-serif; color: var(--text-faint);
+    white-space: nowrap; flex: 0 0 auto;
 }}
-.cai-escal-steps {{ display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }}
 .cai-escal-step {{
-    display: inline-flex; align-items: center; gap: 6px;
-    background: rgba(236,237,230,.05); color: rgba(236,237,230,.75);
-    border: 1px solid rgba(236,237,230,.22); border-radius: 99px;
-    padding: 4px 12px; font: 500 12px Heebo, sans-serif; white-space: nowrap;
+    background: rgba(236,237,230,.06); color: rgba(236,237,230,.8);
+    border-radius: 8px; padding: 3px 10px; flex: 0 0 auto;
+    font: 500 12px Heebo, sans-serif; white-space: nowrap;
 }}
-.cai-escal-step b {{ color: var(--accent); font-weight: 700; }}
 /* the arrow points LEFT: in RTL flow the next step sits to the left */
-.cai-escal-sep {{ color: var(--text-faint); font-size: 12px; }}
+.cai-escal-sep {{ color: var(--text-faint); font-size: 11px; flex: 0 0 auto; }}
 .cai-escal-note {{
-    font: 400 11.5px Heebo, sans-serif; color: var(--text-faint);
-    margin-top: 6px; line-height: 1.5;
+    font: 400 11px Heebo, sans-serif; color: var(--text-faint);
+    margin-top: 5px; line-height: 1.5;
 }}
 
 /* ── Section gaps — Streamlit's default 16px block gap balloons the
@@ -1507,8 +1514,14 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
            PDF) is clipped by the fixed iframe height */
         html, body {{ -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }}
         body {{ margin:0; direction:rtl; }}
-        .row {{ display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-start;
-                font-family:Heebo,sans-serif; }}
+        /* one row, ALWAYS: wrapping used to rely on a ResizeObserver growing
+           the iframe, but Streamlit keeps the layout slot at the declared
+           height, so a wrapped second row painted OVER the content below
+           (user's phone, 2026-07-12). Overflow scrolls horizontally instead
+           — scrollbar hidden, pills clip at the edge as the affordance. */
+        .row {{ display:flex; flex-wrap:nowrap; gap:8px; justify-content:flex-start;
+                overflow-x:auto; scrollbar-width:none; font-family:Heebo,sans-serif; }}
+        .row::-webkit-scrollbar {{ display:none; }}
         .act {{ display:inline-flex; align-items:center; gap:6px;
                 background:rgba(236,237,230,.05); color:rgba(236,237,230,.75);
                 border:1px solid rgba(236,237,230,.22); border-radius:99px;
@@ -1517,12 +1530,12 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
                 transition:color .15s,border-color .15s,background .15s; }}
         .act:hover {{ color:{ACCENT}; border-color:{ACCENT};
                       background:rgba(236,237,230,.02); }}
-        /* keep all four pills on one row on narrow phones: tighten the
+        /* fit all four pills WITHOUT scrolling on phones: tighten the
            chrome and shorten שלח בוואטסאפ → וואטסאפ, 🖼 כרטיס → 🖼,
-           הצג PDF מקור → הצג PDF (the iframe is the available width, so
-           max-width tracks the chat column; 380 — the card pill pushed the
-           four-pill overflow point well past the old 290) */
-        @media (max-width: 380px) {{
+           הצג PDF מקור → הצג PDF. 480, not 380: the user's iPhone gave the
+           iframe ~390-430px, full labels overflowed and the row wrapped
+           into the strip below — shrink well before the overflow point. */
+        @media (max-width: 480px) {{
           .act {{ padding:5px 10px; }}
           .xtra {{ display:none; }}
         }}
@@ -1639,10 +1652,45 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
                     .replace(/^#+\\s*/, "")
                     .replace(/^\\s*[-*]\\s+/, "• ")
                     .trim());
-            let verdict = null;
-            if (lines.length && lines[0].indexOf("פסיקה:") === 0) verdict = lines.shift();
+            // verdict colors mirror the chat chip classes (.verdict-yes/
+            // cond/no): text, box fill, box border. A compound ruling
+            // ("אסור אם X; מותר אם Y") gets one clause per line, each in
+            // its own color — the chip refuses compounds, but on the card
+            // the split IS the honest rendering (user ask, 2026-07-12).
+            const VCOLORS = {{
+                yes:  ["#A9C687", "rgba(148,183,110,.12)", "rgba(148,183,110,.5)"],
+                cond: ["#D9B36A", "rgba(217,179,106,.11)", "rgba(217,179,106,.5)"],
+                no:   ["#D68C77", "rgba(208,124,102,.11)", "rgba(208,124,102,.5)"],
+                none: ["rgba(236,237,230,.75)", "rgba(236,237,230,.05)", "rgba(236,237,230,.28)"],
+                accent: ["{ACCENT}", "{ACCENT_SOFT}", "{ACCENT_BORDER}"],
+            }};
+            function vClass(s) {{
+                // mirrors _VERDICT_TERM_RE semantics: qualifier opening
+                // with בתנאים/חלקית → cond; leading לא or bare אסור → no;
+                // "לא אסור" double-negative and unrecognized openers →
+                // neutral accent (no false color). An OPPOSING verdict term
+                // later in the clause ("מותר או אסור — תלוי...") means the
+                // ruling is conditional — amber, not the head's color.
+                s = s.replace(/^פסיקה:\\s*/, "").trim();
+                if (/^לא נמצא/.test(s)) return "none";
+                const m = s.match(/^(לא\\s+)?(מותר|אסור|מוסמך|רשאי|זכאי|פטור|חייב|ניתן|אפשר|מגיע)(.*)$/);
+                if (!m) return "accent";
+                if (m[1] && m[2] === "אסור") return "accent";
+                const tail = (m[3] || "").trim();
+                let cls = (m[1] || m[2] === "אסור") ? "no" : "yes";
+                if (/^(בתנאים|חלקית)/.test(tail)) cls = "cond";
+                else if (cls === "yes" && /אסור/.test(tail)) cls = "cond";
+                else if (cls === "no" && /(מותר|רשאי|זכאי|מוסמך|פטור|מגיע)/.test(tail)) cls = "cond";
+                return cls;
+            }}
             ctx.font = FONTS.verdict;
-            const vLines = verdict ? wrap(verdict, maxW - 52) : [];
+            let vClauses = [];
+            if (lines.length && lines[0].indexOf("פסיקה:") === 0) {{
+                vClauses = lines.shift().split(";")
+                    .map((s) => s.trim()).filter(Boolean)
+                    .map((s) => ({{ cls: vClass(s), lines: wrap(s, maxW - 52) }}));
+            }}
+            const vLines = vClauses.reduce((n, c) => n + c.lines.length, 0);
             ctx.font = FONTS.body;
             const body = [];
             let nBody = 0, truncated = false;
@@ -1667,8 +1715,8 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
             }}
             // vertical layout in baselines, then size the canvas to fit
             const boxTop = 184;
-            const boxH = vLines.length ? vLines.length * 36 + 22 : 0;
-            let y = vLines.length ? boxTop + boxH + 56 : boxTop + 18;
+            const boxH = vLines ? vLines * 36 + 22 : 0;
+            let y = vLines ? boxTop + boxH + 56 : boxTop + 18;
             const bodyPos = [];
             for (const l of body) {{
                 if (l === "") {{ y += 14; continue; }}
@@ -1695,12 +1743,24 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
             ctx.fillText("עוזר הפקודות של צה״ל", xR, 128);
             ctx.fillStyle = "{ACCENT}";
             ctx.fillRect(xR - 56, 146, 56, 3);
-            if (vLines.length) {{
+            if (vLines) {{
+                // single clause: the box wears its verdict color like the
+                // chat chip; compound: neutral box, each clause's TEXT in
+                // its own color (a red box around a green מותר clause
+                // would misstate the ruling)
+                const boxC = vClauses.length === 1 ? VCOLORS[vClauses[0].cls] : VCOLORS.none;
                 rrect(ctx, M, boxTop, maxW, boxH, 14);
-                ctx.fillStyle = "{ACCENT_SOFT}"; ctx.fill();
-                ctx.strokeStyle = "{ACCENT_BORDER}"; ctx.stroke();
-                ctx.fillStyle = "{ACCENT}"; ctx.font = FONTS.verdict;
-                vLines.forEach((l, i) => ctx.fillText(l, xR - 26, boxTop + 33 + i * 36));
+                ctx.fillStyle = boxC[1]; ctx.fill();
+                ctx.strokeStyle = boxC[2]; ctx.stroke();
+                ctx.font = FONTS.verdict;
+                let vi = 0;
+                for (const c of vClauses) {{
+                    ctx.fillStyle = VCOLORS[c.cls][0];
+                    for (const l of c.lines) {{
+                        ctx.fillText(l, xR - 26, boxTop + 33 + vi * 36);
+                        vi++;
+                    }}
+                }}
             }}
             ctx.fillStyle = "rgba(236,237,230,.88)"; ctx.font = FONTS.body;
             for (const [l, ly] of bodyPos) ctx.fillText(l, xR, ly);
@@ -1765,8 +1825,9 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
 
 
 def _escalation_strip(sources: list[dict] | None) -> None:
-    """"🧭 למי פונים" — the primary (top-ranked) source's referral chain as
-    numbered pills under the answer, plus its note when one exists.
+    """"למי פונים" — the primary (top-ranked) source's referral chain as one
+    quiet inline row between the answer body and the action pills, plus its
+    note when one exists.
 
     A pure function of the message's sources: the chain is a deterministic
     document_id lookup (escalation_paths.path_for, zero LLM tokens, no
@@ -1778,15 +1839,17 @@ def _escalation_strip(sources: list[dict] | None) -> None:
         return
     path = path_for(sources[0].get("doc_id"))
     steps = "<span class='cai-escal-sep'>←</span>".join(
-        f"<span class='cai-escal-step'><b>{i}</b>{html.escape(step)}</span>"
-        for i, step in enumerate(path["steps"], start=1)
+        f"<span class='cai-escal-step'>{html.escape(step)}</span>"
+        for step in path["steps"]
     )
     note = path.get("note")
     note_html = f"<div class='cai-escal-note'>{html.escape(note)}</div>" if note else ""
     st.markdown(
         f"<div class='cai-escal'>"
+        f"<div class='cai-escal-row'>"
         f"<span class='cai-escal-title'>🧭 למי פונים</span>"
-        f"<div class='cai-escal-steps'>{steps}</div>"
+        f"{steps}"
+        f"</div>"
         f"{note_html}"
         f"</div>",
         unsafe_allow_html=True,
@@ -1826,12 +1889,14 @@ for msg_i, msg in enumerate(st.session_state.messages):
                     _pfc = getattr(backend, "page_for_clause", None)
                     page = _pfc(primary["doc_id"], primary.get("clause")) if _pfc else None
                     pdf = (url, primary["title"], page)
-            _answer_actions(content, msg.get("sources"), pdf)
             # the conversation loop is the one path that renders every
             # settled assistant message — a fresh stream is st.rerun()'d
             # into it immediately — so hooking here keeps the strip
-            # identical for live answers and history replays
+            # identical for live answers and history replays. Strip ABOVE
+            # the pills: it belongs to the answer's content, the pills are
+            # chrome (user feedback, 2026-07-12).
             _escalation_strip(msg.get("sources"))
+            _answer_actions(content, msg.get("sources"), pdf)
             # feedback keyed by a per-message id, NOT by position: widget
             # state lives in session_state by key, and positional keys leak
             # a previous conversation's thumb onto a new answer after clear
