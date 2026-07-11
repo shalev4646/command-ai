@@ -1146,16 +1146,41 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-_VERDICT_RE = re.compile(r"^\s*\*\*פסיקה:\*\*\s*(.+?)\s*$", re.MULTILINE)
+# Bidi/zero-width marks the model occasionally emits around RTL text; \s
+# matches none of them, so they must be tolerated explicitly wherever the
+# line or the verdict is anchored/stripped — else the chip silently vanishes.
+# LRM RLM ZWSP BOM, embedding/override controls, directional isolates.
+_BIDI_MARKS = "\u200e\u200f\u200b\ufeff\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069"
+# [^\S\n]*$ (not \s*$): the trailing-space eater must stop at the newline —
+# a greedy \s*$ swallows it, and the paragraph join below needs the remainder
+# to carry its own line breaks (partial stream buffers end ON the newline).
+_VERDICT_RE = re.compile(
+    r"^\s*[" + _BIDI_MARKS + r"]*\*\*פסיקה:\*\*\s*(.+?)[^\S\n]*$", re.MULTILINE
+)
 _REFUSAL_SENTENCE = "המידע לא קיים בפקודות שסופקו"  # mandated verbatim by _COMMON_RULES
-# Only these read as a verdict. The model sometimes opens the ruling line
-# with a TOPIC ("בנוגע למסדר בוקר — ייתכן שאתה פטור...") — chipping that
-# fragment produced a meaningless green badge on the pilot phone check
-# (2026-07-10), so anything off this list keeps the line as body text.
+# A verdict must OPEN with one of these terms. The model sometimes opens
+# the ruling line with a TOPIC ("בנוגע למסדר בוקר — ייתכן שאתה פטור...") —
+# chipping that fragment produced a meaningless green badge on the pilot
+# phone check (2026-07-10), so a non-term opener keeps the line as body
+# text. A short qualifier may follow the term ("אסור בתנועה רגלית",
+# pilot 2026-07-11). The qualifier bars ';' (a mid-list cut) and '*'
+# (markdown residue), and its cap keeps the chip badge-sized: .verdict-chip
+# is a nowrap pill with no max-width, and term+18 chars still fits the
+# 290px breakpoint — this cap IS the overflow guard.
 _VERDICT_TERM_RE = re.compile(
-    r"^(?:לא\s+)?"
-    r"(?:מותר|אסור|מוסמך|רשאי|זכאי|פטור|חייב|ניתן|אפשר|מגיע(?:\s+ל[ךי])?)"
-    r"(?:\s+(?:בתנאים|חלקית))?$"
+    r"^(?P<neg>לא\s+)?"
+    r"(?P<term>מותר|אסור|מוסמך|רשאי|זכאי|פטור|חייב|ניתן|אפשר|מגיע(?:\s+ל[ךי])?)"
+    r"(?P<qual>\s+[^;*]{1,18})?$"
+)
+# A qualifier that itself cites a verdict/ruling verb or a negation is a
+# COMPOUND ruling ("מותר אך אסור במדים", "ניתן צו האוסר...") — one color
+# would misstate it, so the line stays body text. Substring matching
+# over-catches Hebrew prefixed forms (ואסור, שמותר); the failure mode is
+# "no chip", the safe one. לא/אין are matched as words with ו/ש/כ/ב
+# prefixes — bare substrings would hit מלא, אלא, לאחר.
+_QUAL_CONFLICT_RE = re.compile(
+    r"מותר|אסור|אוסר|מתיר|מוסמך|רשאי|זכאי|פטור|חייב|ניתן|אפשר|מגיע"
+    r"|(?:^|\s)[ושכב]?(?:לא|אין)(?=\s|$)"
 )
 
 
@@ -1163,30 +1188,71 @@ def _verdict_chip(content: str) -> tuple[str | None, str]:
     """(chip_html, display_body) for an assistant answer.
 
     The system prompt mandates a `**פסיקה:** ...` line on ruling questions;
-    when its leading segment is a recognized verdict term it becomes a
-    colored chip and the line is dropped from the displayed body (the
-    copy/share payload keeps the original text). Compound or free-form
-    ruling lines stay in the body untouched — a wrong chip is worse than
-    no chip. Honest refusals (the mandated sentence near the top) get a
-    neutral chip so "no answer" reads as designed behavior.
+    when its leading clause opens with a recognized verdict term — bare
+    ("מותר") or with a short qualifier ("אסור בתנועה רגלית") — that clause
+    becomes a colored chip and leaves the displayed body (the copy/share
+    payload keeps the original text). Topic-led, compound (the qualifier
+    cites another verdict or a negation), or long free-form ruling lines
+    stay in the body untouched — a wrong chip is worse than no chip.
+    Honest refusals (the mandated sentence near the top) get a neutral
+    chip so "no answer" reads as designed behavior.
     """
     m = _VERDICT_RE.search(content)
     if m:
         # The model often appends the explanation to the same line ("מותר
-        # בתנאים — עישון אסור..."): the chip carries only the verdict term,
-        # the remainder returns to the body as its opening line.
-        # ./: split only before whitespace, so סעיף 3.4 or 14:30 stay whole.
-        parts = re.split(r"\s*(?:—|–| - |[.:](?=\s))\s*", m.group(1).strip("* "), maxsplit=1)
-        verdict = parts[0].strip("* .")
-        rest = parts[1].strip("* ") if len(parts) > 1 else ""
-        if _VERDICT_TERM_RE.match(verdict):
-            if "בתנאים" in verdict or "חלקית" in verdict:
+        # בתנאים — עישון אסור...", "אסור בתנועה רגלית; מותרת אוזניה..."):
+        # the chip carries only the verdict clause, the remainder returns
+        # to the body as its opening line.
+        # ./:/; split only before whitespace, so סעיף 3.4 or 14:30 stay
+        # whole; ־ only spaced, so חד־פעמי stays whole.
+        raw = m.group(1).strip("* " + _BIDI_MARKS)
+        parts = re.split(r"\s*(—|–| - | ־ |[.:;](?=\s))\s*", raw, maxsplit=1)
+        verdict = parts[0].strip("* ." + _BIDI_MARKS)
+        sep = parts[1] if len(parts) > 2 else ""
+        rest = parts[2].strip("* ") if len(parts) > 2 else ""
+        # a ';' whose remainder is not itself a ruling clause is a list cut
+        # mid-way ("אסור בשישי; שבת וחג") — chipping the first item would
+        # misstate the ruling, so the line stays whole (and unchipped: the
+        # qualifier charset bars ';').
+        if sep == ";" and not _QUAL_CONFLICT_RE.search(rest):
+            verdict, rest = raw.strip("* ." + _BIDI_MARKS), ""
+        mt = _VERDICT_TERM_RE.match(verdict)
+        qual = (mt.group("qual") or "").strip() if mt else ""
+        if mt and (
+            _QUAL_CONFLICT_RE.search(qual)                       # compound ruling
+            or (mt.group("neg") and mt.group("term") == "אסור")  # לא אסור — double negative, no honest single color
+            or (qual and mt.group("term") in ("ניתן", "אפשר") and not qual.startswith("ל"))  # ניתן צו... — passive verb, not the modal
+            # a BARE verdict against an alternate ';' clause ("אסור; מותר
+            # בתנאים") is compound — a flat chip would contradict the body's
+            # first words. A QUALIFIED verdict is scoped and honest next to
+            # it ("אסור בתנועה רגלית; מותרת אוזניה...").
+            or (not qual and sep == ";" and _QUAL_CONFLICT_RE.search(rest))
+        ):
+            mt = None
+        if mt:
+            # the ⚠ shape is the mandated "X בתנאים / X חלקית" (possibly
+            # continued: "בתנאים מסוימים"); בתנאים deeper in the qualifier
+            # is scope, not a conditional verdict ("אסור לנוע בתנאים קשים"
+            # is a plain אסור). Otherwise color follows the OPENING term.
+            if qual.startswith(("בתנאים", "חלקית")):
                 icon, cls = "⚠", "cond"
-            elif verdict.startswith("לא") or "אסור" in verdict:
+            elif mt.group("neg") or mt.group("term") == "אסור":
                 icon, cls = "✗", "no"
             else:
                 icon, cls = "✓", "yes"
-            body = (content[: m.start()] + rest + content[m.end():]).strip()
+            # rest becomes its own paragraph — joined with "\n\n" so a
+            # single-newline follow-up field (**מקור:** …) doesn't run into
+            # it mid-paragraph; the remainder's own leading newlines fold
+            # into the break, so the stream parse and the rerun parse render
+            # byte-identically. An EMPTY remainder means the ruling line is
+            # still streaming (or ends the message) — append nothing, the
+            # next chunk continues the clause seamlessly. lstrip, not strip:
+            # mid-stream the trailing break belongs ahead of the next chunk.
+            remainder = content[m.end():]
+            body = content[: m.start()] + rest
+            if remainder:
+                body += "\n\n" + remainder.lstrip("\n")
+            body = body.lstrip()
             chip = f'<span class="verdict-chip verdict-{cls}">{icon} {html.escape(verdict)}</span>'
             return chip, body
     # neutral chip only when the refusal IS the answer (sentence at the
@@ -1212,12 +1278,19 @@ def _stream_answer(text_gen) -> str:
     """
     it = iter(text_gen)
     buf = ""
+    ended = True
     for chunk in it:
         buf += chunk
         if "\n" in buf or len(buf) > 400:
+            ended = False
             break
     chip, lead = None, buf
-    if "\n" in buf:  # parse only a COMPLETE first line — a cut ruling line must not chip
+    # parse once the first line is DECIDED: a newline landed, the stream is
+    # already over, or the 400-char spill guard hit — past 400 the chip
+    # verdict cannot differ from the full-text rerun (either the clause
+    # separator already arrived, or the clause is far beyond the badge cap
+    # and both parses reject). A shorter mid-line cut must not chip.
+    if "\n" in buf or len(buf) > 400 or ended:
         chip, lead = _verdict_chip(buf)
     if chip:
         st.markdown(chip, unsafe_allow_html=True)
