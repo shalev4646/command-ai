@@ -14,6 +14,14 @@ from anthropic import APIConnectionError, APITimeoutError, BadRequestError
 import metrics
 from escalation_paths import path_for
 
+# letters is a sibling new module — a cached cloud build can pair a fresh
+# app.py with an older tree (see backend deploy note), so a missing module
+# hides the feature instead of crashing the app
+try:
+    from letters import LETTER_TYPES, compose_letter
+except Exception:
+    LETTER_TYPES = None
+
 try:
     import backend
     from backend import stream_ai_answer, get_loaded_docs_info, get_pdf_bytes, ensure_pdfs_ingested, get_suggested_questions, warm_index
@@ -744,6 +752,11 @@ body:has([data-testid="stExpandSidebarButton"]) [data-testid="stSidebar"] {{ dis
 }}
 .st-key-profile_statuses button[data-testid="stBaseButton-pillsActive"] p {{ color: var(--accent) !important; }}
 
+/* ── Letters dialog — the modal portals outside the chat column, so the
+   app-wide RTL/font treatment doesn't reach it ── */
+div[data-testid="stDialog"] > div {{ direction: rtl; }}
+div[data-testid="stDialog"] textarea {{ direction: rtl; font: 400 14px/1.7 Heebo, sans-serif !important; }}
+
 /* new-chat: solid olive, pinned look */
 .st-key-new_chat button {{
     background-color: var(--accent) !important;
@@ -982,6 +995,67 @@ _QUOTA_NOTICES = {
 }
 
 
+@st.dialog("📄 מחולל מכתבים", width="large")
+def _letters_dialog():
+    """Order-grounded formal-letter drafts (בקשת חופשה, ערר, קבילה...).
+
+    One generation burns one daily-quota unit — the same reserve/refund
+    contract as a chat question, so this flow cannot sidestep the global
+    budget. The draft lands in an editable textarea; the download button
+    exports whatever the user edited, not the raw model text.
+    """
+    kind = st.selectbox(
+        "סוג המכתב",
+        list(LETTER_TYPES),
+        format_func=lambda k: LETTER_TYPES[k]["title"],
+        key="letter_kind",
+    )
+    details = {}
+    for i, (label, placeholder) in enumerate(LETTER_TYPES[kind]["fields"]):
+        details[label] = st.text_input(
+            label, placeholder=placeholder or None, key=f"letter_{kind}_{i}"
+        )
+    if st.button("✍️ נסח טיוטה", key="letter_go", use_container_width=True):
+        quota = metrics.reserve(st.session_state.session_id)
+        if quota != "ok":
+            st.warning(_QUOTA_NOTICES[quota])
+        else:
+            try:
+                with st.spinner("מנסח טיוטה מעוגנת בפקודות..."):
+                    draft = compose_letter(kind, details, role=st.session_state.role)
+                st.session_state.letter_draft = {"kind": kind, **draft}
+                # seed the textarea's state BEFORE it is instantiated below
+                st.session_state.letter_edit = draft["text"]
+            except (APIConnectionError, APITimeoutError):
+                metrics.refund(st.session_state.session_id)
+                st.error("⚠️ אין כרגע חיבור לשירות. בדוק את החיבור ונסה שוב בעוד רגע.")
+            except BadRequestError as e:
+                metrics.refund(st.session_state.session_id)
+                # same monthly-spend-limit 400 as in handle_question
+                st.error("⏸️ המערכת בהשהיה זמנית עקב מגבלת שימוש — נסה שוב מחר."
+                         if "usage limits" in str(e)
+                         else "⚠️ אירעה שגיאה זמנית בניסוח. נסה לשלוח שוב.")
+            except Exception:
+                metrics.refund(st.session_state.session_id)
+                st.error("⚠️ אירעה שגיאה זמנית בניסוח. נסה לשלוח שוב.")
+    draft = st.session_state.get("letter_draft")
+    # a draft from another letter type stays hidden instead of masquerading
+    # as the currently selected one
+    if draft and draft.get("kind") == kind:
+        st.text_area("הטיוטה — קרא, השלם את החסר וערוך לפני הגשה", height=320, key="letter_edit")
+        st.download_button(
+            "⬇️ הורד כקובץ",
+            data=(st.session_state.get("letter_edit") or draft["text"]).encode("utf-8"),
+            file_name="commandai-letter.txt",
+            mime="text/plain",
+            use_container_width=True,
+            key="letter_dl",
+        )
+        srcs = draft.get("sources") or []
+        if srcs:
+            st.caption("מעוגן בפקודות: " + " · ".join(s["title"] for s in srcs[:2]))
+
+
 def handle_question(question: str):
     quota = metrics.reserve(st.session_state.session_id)
     if quota != "ok":
@@ -1185,6 +1259,8 @@ with st.sidebar:
                 st.markdown(_order_link(doc["title"], url), unsafe_allow_html=True)
         else:
             st.caption("אין פקודות טעונות")
+    if LETTER_TYPES and st.button("📄 מחולל מכתבים", key="open_letters", use_container_width=True):
+        _letters_dialog()
     st.markdown("---")
 
     st.markdown("<div class='cai-drawer-section'><span class='dot'></span>שיחות אחרונות</div>", unsafe_allow_html=True)
