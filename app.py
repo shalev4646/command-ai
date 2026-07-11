@@ -1,4 +1,5 @@
 import html
+import inspect
 import itertools
 import json
 import random
@@ -11,6 +12,7 @@ import streamlit.components.v1 as components
 from anthropic import APIConnectionError, APITimeoutError, BadRequestError
 
 import metrics
+from escalation_paths import path_for
 
 try:
     import backend
@@ -619,6 +621,31 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
 .verdict-no   {{ color:#D68C77; background:rgba(208,124,102,.12); border-color:rgba(208,124,102,.4); }}
 .verdict-none {{ color:rgba(236,237,230,.6); background:rgba(236,237,230,.05); border-color:rgba(236,237,230,.2); }}
 
+/* ── Escalation strip — "🧭 למי פונים" under an answer: the primary
+   source's referral chain as numbered pills (deterministic lookup, see
+   escalation_paths.py — general guidance, not part of the ruling). Pill
+   chrome matches the action row's .act pills so the two rows read as one
+   block. ── */
+.cai-escal {{ direction: rtl; text-align: right; margin: 8px 0 2px; }}
+.cai-escal-title {{
+    display: block; font: 600 12px Heebo, sans-serif;
+    color: var(--text-dim); margin-bottom: 6px;
+}}
+.cai-escal-steps {{ display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }}
+.cai-escal-step {{
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(236,237,230,.05); color: rgba(236,237,230,.75);
+    border: 1px solid rgba(236,237,230,.22); border-radius: 99px;
+    padding: 4px 12px; font: 500 12px Heebo, sans-serif; white-space: nowrap;
+}}
+.cai-escal-step b {{ color: var(--accent); font-weight: 700; }}
+/* the arrow points LEFT: in RTL flow the next step sits to the left */
+.cai-escal-sep {{ color: var(--text-faint); font-size: 12px; }}
+.cai-escal-note {{
+    font: 400 11.5px Heebo, sans-serif; color: var(--text-faint);
+    margin-top: 6px; line-height: 1.5;
+}}
+
 /* ── Section gaps — Streamlit's default 16px block gap balloons the
    card list; the design wants tight 10-12px rhythm (buttons carry their
    own 12px margin) ── */
@@ -694,6 +721,28 @@ body:has([data-testid="stExpandSidebarButton"]) [data-testid="stSidebar"] {{ dis
 }}
 .cai-drawer-section .dot {{ width: 13px; height: 13px; border: 1.5px solid var(--accent); border-radius: 50%; display: inline-block; }}
 [data-testid="stSidebar"] hr {{ border-color: rgba(236,237,230,.1) !important; margin: 20px 0 !important; }}
+
+/* ── Profile pills (התאמה אישית) — personal statuses that change
+   entitlements. Same outline-pill chrome as the answer action row;
+   selected = accent, so the active statuses read at a glance. ── */
+.cai-profile-label {{ font: 400 12.5px Heebo, sans-serif; color: var(--text-dim); margin: 2px 0 4px; }}
+.st-key-profile_statuses [data-testid="stPills"] {{ direction: rtl; gap: 6px; }}
+.st-key-profile_statuses button {{
+    background: rgba(236,237,230,.05) !important;
+    border: 1px solid rgba(236,237,230,.22) !important;
+    border-radius: 99px !important;
+    color: rgba(236,237,230,.75) !important;
+    min-height: 0 !important;
+    padding: 3px 12px !important;
+}}
+.st-key-profile_statuses button p {{ font: 500 12px Heebo, sans-serif !important; }}
+.st-key-profile_statuses button:hover {{ border-color: var(--accent) !important; color: var(--accent) !important; }}
+.st-key-profile_statuses button[data-testid="stBaseButton-pillsActive"] {{
+    background: var(--accent-soft) !important;
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+}}
+.st-key-profile_statuses button[data-testid="stBaseButton-pillsActive"] p {{ color: var(--accent) !important; }}
 
 /* new-chat: solid olive, pinned look */
 .st-key-new_chat button {{
@@ -962,9 +1011,17 @@ def handle_question(question: str):
     with st.chat_message("user"):
         st.markdown(question)
     t0 = time.time()
+    # a stale cached backend from a previous cloud build may predate the
+    # `profile` parameter (see deploy note in backend.py) — feature-detect
+    # instead of crashing every question until the process restarts
+    profile_kw = {}
+    if "profile" in inspect.signature(stream_ai_answer).parameters:
+        # empty selection -> None, so the composed user turn stays
+        # byte-identical to the pre-profile format (prompt-cache prefix)
+        profile_kw["profile"] = st.session_state.get("profile_statuses") or None
     try:
         with st.spinner("מחפש בפקודות..."):
-            result = stream_ai_answer(question, history, role=st.session_state.role)
+            result = stream_ai_answer(question, history, role=st.session_state.role, **profile_kw)
             text_gen, sources = result[0], result[1]
             # Streamlit Cloud can pair a fresh app.py with a backend module
             # cached from a previous build (see note in backend.py) — older
@@ -1081,6 +1138,20 @@ with st.sidebar:
         # a stale search would silently filter the next role's orders list
         st.session_state.pop("orders_search", None)
         st.rerun()
+    # personal statuses that change entitlements (lone soldier, new
+    # immigrant...). The widget key IS the persistence: st.pills keeps the
+    # selection list in session state under "profile_statuses" across
+    # reruns, and handle_question threads it into the API user turn only
+    # when non-empty (backend._compose_user_content) — so an empty
+    # selection keeps requests byte-identical to the pre-profile format.
+    st.markdown("<div class='cai-profile-label'>התאמה אישית</div>", unsafe_allow_html=True)
+    st.pills(
+        "התאמה אישית",
+        ["חייל בודד", "עולה חדש", "הורה לילדים", "נשוי/אה"],
+        selection_mode="multi",
+        key="profile_statuses",
+        label_visibility="collapsed",
+    )
     st.markdown("---")
     docs = get_loaded_docs_info(role=st.session_state.role)
     with st.expander(f"פקודות מטכ\"ל במערכת ({len(docs)})", expanded=False):
@@ -1407,6 +1478,35 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
     )
 
 
+def _escalation_strip(sources: list[dict] | None) -> None:
+    """"🧭 למי פונים" — the primary (top-ranked) source's referral chain as
+    numbered pills under the answer, plus its note when one exists.
+
+    A pure function of the message's sources: the chain is a deterministic
+    document_id lookup (escalation_paths.path_for, zero LLM tokens, no
+    session state), so the freshly-streamed answer and every history-replay
+    rerun render the identical strip. No sources — no strip: error notices
+    and PDF-less answers give the lookup nothing to anchor on.
+    """
+    if not sources:
+        return
+    path = path_for(sources[0].get("doc_id"))
+    steps = "<span class='cai-escal-sep'>←</span>".join(
+        f"<span class='cai-escal-step'><b>{i}</b>{html.escape(step)}</span>"
+        for i, step in enumerate(path["steps"], start=1)
+    )
+    note = path.get("note")
+    note_html = f"<div class='cai-escal-note'>{html.escape(note)}</div>" if note else ""
+    st.markdown(
+        f"<div class='cai-escal'>"
+        f"<span class='cai-escal-title'>🧭 למי פונים</span>"
+        f"<div class='cai-escal-steps'>{steps}</div>"
+        f"{note_html}"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+
+
 def _question_for(msg_i: int) -> str:
     """The user question that produced the answer at index msg_i."""
     for m in reversed(st.session_state.messages[:msg_i]):
@@ -1434,6 +1534,11 @@ for msg_i, msg in enumerate(st.session_state.messages):
                 if url:
                     pdf = (url, primary["title"])
             _answer_actions(content, msg.get("sources"), pdf)
+            # the conversation loop is the one path that renders every
+            # settled assistant message — a fresh stream is st.rerun()'d
+            # into it immediately — so hooking here keeps the strip
+            # identical for live answers and history replays
+            _escalation_strip(msg.get("sources"))
             # feedback keyed by a per-message id, NOT by position: widget
             # state lives in session_state by key, and positional keys leak
             # a previous conversation's thumb onto a new answer after clear

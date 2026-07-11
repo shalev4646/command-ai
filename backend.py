@@ -255,7 +255,29 @@ def _sources_from_chunks(chunks: list[dict]) -> list[dict]:
     return sources
 
 
-def stream_ai_answer(question: str, history: list[dict] | None = None, role: str = "soldier"):
+def _compose_user_content(question: str, context: str, profile: list[str] | None) -> str:
+    """Assemble the user-turn text sent to the API.
+
+    With no profile the result is BYTE-IDENTICAL to the historical
+    f"{question}\\n\\n{_CONTEXT_HEADER}\\n{context}" — replayed history turns
+    (the prompt-cache prefix) and the eval gates were built against that
+    exact shape, so the default path must never drift. A non-empty profile
+    adds one parenthetical line between the question and the context header;
+    its trailing clause keeps the model from dragging an irrelevant status
+    into every answer.
+    """
+    if not profile:
+        return f"{question}\n\n{_CONTEXT_HEADER}\n{context}"
+    return (
+        f"{question}\n\n"
+        f"(מעמד אישי של השואל: {', '.join(profile)}. "
+        f"התחשב בו רק אם הוא רלוונטי לשאלה.)\n\n"
+        f"{_CONTEXT_HEADER}\n{context}"
+    )
+
+
+def stream_ai_answer(question: str, history: list[dict] | None = None, role: str = "soldier",
+                     profile: list[str] | None = None):
     """Answer a question as a live stream.
 
     Returns (text_generator, sources, sent_user_content): the generator yields
@@ -267,9 +289,11 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
     context). Callers that keep a conversation going must replay
     sent_user_content — not the bare question — as that turn's history
     content, so follow-up requests share a byte-identical prefix and hit the
-    prompt cache. Adaptive thinking runs before the first text token (its
-    deltas are not yielded), so the stream starts after a short reasoning
-    pause.
+    prompt cache. `profile` is the asker's personal statuses (חייל בודד,
+    נשוי/אה...) — folded into the user turn only when non-empty (see
+    _compose_user_content). Adaptive thinking runs before the first text
+    token (its deltas are not yielded), so the stream starts after a short
+    reasoning pause.
     """
     # follow-ups ("ומה לגבי מילואים?") are unsearchable on their own —
     # retrieve with a standalone rewrite, but answer the original question
@@ -285,7 +309,7 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
     while len(past) > _HISTORY_MAX:
         past = past[_HISTORY_DROP:]
 
-    user_content = f"{question}\n\n{_CONTEXT_HEADER}\n{context}"
+    user_content = _compose_user_content(question, context, profile)
 
     # Two cache breakpoints (prefix caching, 5-min TTL): the static role
     # prompt, and everything up to the end of history. Turn 1 is below the
@@ -331,13 +355,16 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
     return _gen(), _sources_from_chunks(chunks), user_content
 
 
-def get_ai_answer(question: str, history: list[dict] | None = None, role: str = "soldier") -> dict:
+def get_ai_answer(question: str, history: list[dict] | None = None, role: str = "soldier",
+                  profile: list[str] | None = None) -> dict:
     """Non-streaming variant of stream_ai_answer — same pipeline, whole answer.
 
     Returns {"text": <answer>, "sources": [{doc_id, title, source_file}...]}.
-    Used by eval.py, so the sanity check exercises the exact production path.
+    Used by eval.py (always without `profile`, so its answers keep the exact
+    historical user-turn shape), and the sanity check exercises the exact
+    production path.
     """
-    text_gen, sources, _ = stream_ai_answer(question, history, role)
+    text_gen, sources, _ = stream_ai_answer(question, history, role, profile)
     return {"text": "".join(text_gen), "sources": sources}
 
 
