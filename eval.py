@@ -388,6 +388,22 @@ def run_structural() -> int:
     checks.append(("אחזור מכתב: סיבה נכנסת, שם לא",
                    "אבל במשפחה" in lq and "ישראל ישראלי" not in lq, lq))
 
+    # verdict-colour classifier (verdict.py) — the single source shared with
+    # the share card; assert the colour rules the card relies on
+    import verdict
+    vc_cases = [
+        ("**פסיקה:** מותר", ["yes"]),
+        ("**פסיקה:** אסור בתנועה רגלית", ["no"]),
+        ("**פסיקה:** מותר בתנאים מסוימים", ["cond"]),
+        ("**פסיקה:** מותר או אסור — תלוי", ["cond"]),      # opposing term → conditional
+        ("**פסיקה:** לא אסור", ["accent"]),                # double negative → neutral
+        ("**פסיקה:** לא נמצא במאגר", ["none"]),
+        ("**פסיקה:** אסור אם א-ג; מותר אם ד", ["no", "yes"]),  # compound split
+        ("אין כאן פסיקה", []),
+    ]
+    vc_ok = all([c["cls"] for c in verdict.verdict_clauses(t)] == exp for t, exp in vc_cases)
+    checks.append(("סיווג צבעי פסיקה (verdict.py)", vc_ok, ""))
+
     # THE cache contract: no profile == the exact historical user turn
     q, ctx = "שאלה לדוגמה", "הקשר לדוגמה"
     legacy = f"{q}\n\n{backend._CONTEXT_HEADER}\n{ctx}"

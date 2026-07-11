@@ -27,6 +27,11 @@ try:
 except Exception:
     def _doc_date_badge(_id):
         return None
+try:
+    from verdict import verdict_clauses as _verdict_clauses
+except Exception:
+    def _verdict_clauses(_content):
+        return []
 
 try:
     import backend
@@ -1525,6 +1530,9 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
     """
     payload = json.dumps(content + "\n\n— CommandAI")
     src_title = json.dumps(pdf[1] if pdf else None)
+    # verdict clauses classified in Python (verdict.py) — the SINGLE source
+    # of the card's colours; the card JS no longer classifies, only draws
+    vclauses = json.dumps(_verdict_clauses(content))
     components.html(
         f"""
         <!-- same Heebo/Suez One sheet the app imports: iframes don't inherit
@@ -1592,6 +1600,7 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
         // ── Share card: the answer drawn as a PNG (canvas API only) ──
         const cardBtn = document.getElementById("card");
         const srcTitle = {src_title};
+        const VCLAUSES = {vclauses};
         const cardNote = (msg) => {{
             // same feedback pattern as the copy pill; innerHTML — the label
             // carries the .xtra span that textContent would flatten away
@@ -1660,11 +1669,11 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
                     .replace(/^#+\\s*/, "")
                     .replace(/^\\s*[-*]\\s+/, "• ")
                     .trim());
-            // verdict colors mirror the chat chip classes (.verdict-yes/
-            // cond/no): text, box fill, box border. A compound ruling
-            // ("אסור אם X; מותר אם Y") gets one clause per line, each in
-            // its own color — the chip refuses compounds, but on the card
-            // the split IS the honest rendering (user ask, 2026-07-12).
+            // verdict colors: text, box fill, box border — keyed to the
+            // classes Python assigned (VCLAUSES, from verdict.py). The card
+            // does NOT classify; it wraps + draws. A compound ruling
+            // ("אסור אם X; מותר אם Y") arrives pre-split, one colored clause
+            // per part.
             const VCOLORS = {{
                 yes:  ["#A9C687", "rgba(148,183,110,.12)", "rgba(148,183,110,.5)"],
                 cond: ["#D9B36A", "rgba(217,179,106,.11)", "rgba(217,179,106,.5)"],
@@ -1672,32 +1681,11 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
                 none: ["rgba(236,237,230,.75)", "rgba(236,237,230,.05)", "rgba(236,237,230,.28)"],
                 accent: ["{ACCENT}", "{ACCENT_SOFT}", "{ACCENT_BORDER}"],
             }};
-            function vClass(s) {{
-                // mirrors _VERDICT_TERM_RE semantics: qualifier opening
-                // with בתנאים/חלקית → cond; leading לא or bare אסור → no;
-                // "לא אסור" double-negative and unrecognized openers →
-                // neutral accent (no false color). An OPPOSING verdict term
-                // later in the clause ("מותר או אסור — תלוי...") means the
-                // ruling is conditional — amber, not the head's color.
-                s = s.replace(/^פסיקה:\\s*/, "").trim();
-                if (/^לא נמצא/.test(s)) return "none";
-                const m = s.match(/^(לא\\s+)?(מותר|אסור|מוסמך|רשאי|זכאי|פטור|חייב|ניתן|אפשר|מגיע)(.*)$/);
-                if (!m) return "accent";
-                if (m[1] && m[2] === "אסור") return "accent";
-                const tail = (m[3] || "").trim();
-                let cls = (m[1] || m[2] === "אסור") ? "no" : "yes";
-                if (/^(בתנאים|חלקית)/.test(tail)) cls = "cond";
-                else if (cls === "yes" && /אסור/.test(tail)) cls = "cond";
-                else if (cls === "no" && /(מותר|רשאי|זכאי|מוסמך|פטור|מגיע)/.test(tail)) cls = "cond";
-                return cls;
-            }}
             ctx.font = FONTS.verdict;
-            let vClauses = [];
-            if (lines.length && lines[0].indexOf("פסיקה:") === 0) {{
-                vClauses = lines.shift().split(";")
-                    .map((s) => s.trim()).filter(Boolean)
-                    .map((s) => ({{ cls: vClass(s), lines: wrap(s, maxW - 52) }}));
-            }}
+            // drop the ruling line from the body — Python already parsed it
+            // into VCLAUSES; the card must not print it twice
+            if (lines.length && lines[0].indexOf("פסיקה:") === 0) lines.shift();
+            const vClauses = VCLAUSES.map((c) => ({{ cls: c.cls, lines: wrap(c.text, maxW - 52) }}));
             const vLines = vClauses.reduce((n, c) => n + c.lines.length, 0);
             ctx.font = FONTS.body;
             const body = [];
