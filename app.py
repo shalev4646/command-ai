@@ -667,6 +667,29 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     margin-top: 5px; line-height: 1.5;
 }}
 
+/* ── "הצג סעיף מקור" button — native (opens the in-app clause dialog, so
+   it can reach Python, unlike the iframe pills). Styled to read as the
+   trust/verify CTA: solid-ish outline, sits just under the answer. ── */
+[class*="st-key-src_"] {{ margin: 2px 0 4px; }}
+[class*="st-key-src_"] button {{
+    background: var(--accent-soft) !important;
+    border: 1px solid var(--accent) !important;
+    color: var(--accent) !important;
+    border-radius: 99px !important;
+    min-height: 0 !important; width: auto !important;
+    padding: 4px 15px !important;
+}}
+[class*="st-key-src_"] button p {{ font: 600 12.5px Heebo, sans-serif !important; }}
+[class*="st-key-src_"] button:hover {{ background: var(--accent) !important; color: #171A12 !important; }}
+[class*="st-key-src_"] button:hover p {{ color: #171A12 !important; }}
+/* full-order link inside the clause dialog */
+.cai-full-pdf {{
+    display: inline-block; margin-top: 10px;
+    font: 500 13px Heebo, sans-serif; color: var(--text-dim) !important;
+    text-decoration: none !important;
+}}
+.cai-full-pdf:hover {{ color: var(--accent) !important; }}
+
 /* ── Section gaps — Streamlit's default 16px block gap balloons the
    card list; the design wants tight 10-12px rhythm (buttons carry their
    own 12px margin) ── */
@@ -1485,20 +1508,15 @@ def _stream_answer(text_gen) -> str:
 
 
 def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[str, str, int | None] | None = None) -> None:
-    """Copy-to-clipboard + share-to-WhatsApp + share-card + open-PDF row
-    under an assistant answer. `pdf` is (media_url, title, page) — the URL
-    from _pdf_media_url plus the 1-based page of the cited clause
-    (backend.page_for_clause; None keeps the plain PDF link).
+    """Copy-to-clipboard + share-to-WhatsApp + share-card row under an
+    assistant answer. `pdf` is (media_url, title, page) — used now only for
+    the card's source-title footer; the cited-source view moved to a native
+    button + in-app dialog (an iframe pill could only open a lost PDF tab).
 
     Rendered as a components.html iframe, so styles are inlined (the app's
     CSS can't reach in). Clipboard uses the async API with a textarea +
     execCommand fallback — navigator.clipboard is unavailable in non-secure
     or permission-restricted iframes (and flaky on iOS Safari).
-
-    The PDF href must be resolved against the PARENT frame's directory: a
-    relative href inside a srcdoc iframe resolves against about:srcdoc, and
-    the app frame's base differs between local (/) and the Streamlit Cloud
-    shell (/~/+/).
 
     The card pill draws the answer onto a 1000px-wide canvas (brand header,
     the **פסיקה:** line boxed in the role accent, wrapped body, source
@@ -1506,17 +1524,6 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
     shareable; elsewhere it downloads. Canvas API only — no JS libs.
     """
     payload = json.dumps(content + "\n\n— CommandAI")
-    pdf_btn = ""
-    if pdf:
-        title = html.escape(pdf[1], quote=True)
-        # one wrapping span, same reason as the WhatsApp pill below; מקור
-        # hides on narrow phones so the row stays single-line
-        pdf_btn = (
-            f'<a class="act" id="pdf" target="_blank" rel="noopener" title="{title}">'
-            f'<span>⎙ הצג PDF<span class="xtra"> מקור</span></span></a>'
-        )
-    pdf_url = json.dumps(pdf[0] if pdf else None)
-    pdf_page = json.dumps(pdf[2] if pdf else None)
     src_title = json.dumps(pdf[1] if pdf else None)
     components.html(
         f"""
@@ -1546,11 +1553,10 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
                 transition:color .15s,border-color .15s,background .15s; }}
         .act:hover {{ color:{ACCENT}; border-color:{ACCENT};
                       background:rgba(236,237,230,.02); }}
-        /* fit all four pills WITHOUT scrolling on phones: tighten the
-           chrome and shorten שלח בוואטסאפ → וואטסאפ, 🖼 כרטיס → 🖼,
-           הצג PDF מקור → הצג PDF. 480, not 380: the user's iPhone gave the
-           iframe ~390-430px, full labels overflowed and the row wrapped
-           into the strip below — shrink well before the overflow point. */
+        /* fit all pills WITHOUT scrolling on phones: tighten the chrome and
+           shorten שלח בוואטסאפ → וואטסאפ, 🖼 כרטיס → 🖼. 480, not 380: the
+           user's iPhone gave the iframe ~390-430px and full labels
+           overflowed — shrink well before the overflow point. */
         @media (max-width: 480px) {{
           .act {{ padding:5px 10px; }}
           .xtra {{ display:none; }}
@@ -1563,25 +1569,11 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
                INSIDE the word ("שתף ב וואטסאפ") -->
           <a class="act" id="wa" target="_blank" rel="noopener"><span>✆ <span class="xtra">שלח ב</span>וואטסאפ</span></a>
           <button class="act" id="card"><span>🖼<span class="xtra"> כרטיס</span></span></button>
-          {pdf_btn}
         </div>
         <script>
         const text = {payload};
         document.getElementById("wa").href =
             "https://wa.me/?text=" + encodeURIComponent(text);
-        const pdfUrl = {pdf_url};
-        const pdfPage = {pdf_page};
-        const pdfEl = document.getElementById("pdf");
-        if (pdfEl && pdfUrl) {{
-            // parent dir: "/" locally, "/~/+/" behind the cloud shell
-            const loc = window.parent.location;
-            const dir = loc.pathname.endsWith("/") ? loc.pathname : loc.pathname + "/";
-            // #page=N opens desktop/Android PDF viewers on the cited
-            // clause's page; iOS Safari ignores the fragment (page 1, same
-            // as before). No page — same href as always.
-            pdfEl.href = loc.origin + dir + pdfUrl.replace(/^\\//, "")
-                + (pdfPage ? "#page=" + pdfPage : "");
-        }}
         const btn = document.getElementById("copy");
         btn.addEventListener("click", async () => {{
             let ok = false;
@@ -1879,6 +1871,38 @@ def _escalation_strip(sources: list[dict] | None, question: str = "") -> None:
     )
 
 
+@st.cache_data(show_spinner="טוען את הסעיף...", ttl=3600, max_entries=64)
+def _clause_image(source_file: str, page: int, highlight: str):
+    """PNG of the cited clause's page, highlighted (backend.render_clause_image,
+    cached — the render is deterministic and free). getattr: a stale cached
+    cloud backend may predate the function; then None → the dialog shows only
+    the full-PDF link."""
+    fn = getattr(backend, "render_clause_image", None)
+    return fn(source_file, page, highlight) if fn else None
+
+
+@st.dialog("📄 סעיף המקור", width="large")
+def _clause_dialog(primary: dict, page: int | None, full_href: str | None) -> None:
+    """Show the cited clause INSIDE the app: the order's page rendered with
+    the passage highlighted, so a soldier verifies the source without a lost
+    PDF tab and returns to the chat by closing the dialog (state intact).
+    The full order stays one tap away for those who want the whole document.
+    """
+    title = primary.get("title", "")
+    st.caption(title + (f" · עמוד {page}" if page else ""))
+    img = _clause_image(primary.get("source_file"), page, primary.get("highlight", "")) if page else None
+    if img:
+        st.image(img, use_container_width=True)
+    elif not full_href:
+        st.info("לא נמצאה תצוגת סעיף לפקודה זו.")
+    if full_href:
+        st.markdown(
+            f"<a class='cai-full-pdf' href='{full_href}' target='_blank' rel='noopener'>"
+            f"⎙ פתח את הפקודה המלאה (PDF)</a>",
+            unsafe_allow_html=True,
+        )
+
+
 def _question_for(msg_i: int) -> str:
     """The user question that produced the answer at index msg_i."""
     for m in reversed(st.session_state.messages[:msg_i]):
@@ -1900,25 +1924,33 @@ for msg_i, msg in enumerate(st.session_state.messages):
             st.markdown(content)
         if msg["role"] == "assistant" and not msg.get("error"):
             pdf = None
+            full_href = None
+            page = None
             primary = (msg.get("sources") or [None])[0]
             if primary and primary.get("source_file"):
                 url = _pdf_media_url(primary["source_file"], f"pdfmsg_{msg_i}")
                 if url:
                     # page of the cited clause (clause_pages.json); None —
-                    # unknown clause, pre-deep-link sources, missing mapping
-                    # — keeps the plain PDF link exactly as before. getattr:
-                    # a stale cached backend from a previous cloud build may
-                    # predate page_for_clause (see last_usage above)
+                    # unknown clause, pre-deep-link sources, missing mapping.
+                    # getattr: a stale cached backend from a previous cloud
+                    # build may predate page_for_clause (see last_usage above)
                     _pfc = getattr(backend, "page_for_clause", None)
                     page = _pfc(primary["doc_id"], primary.get("clause")) if _pfc else None
                     pdf = (url, primary["title"], page)
+                    # full-order link for the dialog: relative media href
+                    # (resolves against the app base local + cloud), + #page
+                    # for desktop/Android viewers (iOS ignores it — the
+                    # in-app highlighted image is the iOS answer)
+                    full_href = url.lstrip("/") + (f"#page={page}" if page else "")
             # the conversation loop is the one path that renders every
             # settled assistant message — a fresh stream is st.rerun()'d
-            # into it immediately — so hooking here keeps the strip
-            # identical for live answers and history replays. Strip ABOVE
-            # the pills: it belongs to the answer's content, the pills are
-            # chrome (user feedback, 2026-07-12).
+            # into it immediately — so hooking here keeps everything
+            # identical for live answers and history replays. Order: strip
+            # (answer content) → source button + share pills (chrome).
             _escalation_strip(msg.get("sources"), _question_for(msg_i))
+            if primary and primary.get("source_file"):
+                if st.button("📄 הצג סעיף מקור", key=f"src_{msg_i}"):
+                    _clause_dialog(primary, page, full_href)
             _answer_actions(content, msg.get("sources"), pdf)
             # feedback keyed by a per-message id, NOT by position: widget
             # state lives in session_state by key, and positional keys leak

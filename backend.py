@@ -273,20 +273,113 @@ def _sources_from_chunks(chunks: list[dict]) -> list[dict]:
         source_file = (doc or {}).get("source_file")
         if source_file and (pdf_dir / source_file).exists():
             clause = clause_key(c.get("section"), c.get("clause"))
+            # `highlight` is the text of the chunk we deep-link to, so the UI
+            # can mark that exact passage on the rendered page. It rides the
+            # SAME chunk that resolved to a page (a raw-text window whose
+            # text is extracted from the PDF, so page.search_for can find
+            # it) — not a key-facts summary, which has no PDF text to match.
+            highlight = c.get("text", "")
             for cc in chunks:
                 if cc["doc_id"] != doc_id:
                     continue
                 key = clause_key(cc.get("section"), cc.get("clause"))
                 if page_for_clause(doc_id, key) is not None:
                     clause = key
+                    highlight = cc.get("text", "")
                     break
             sources.append({
                 "doc_id": doc_id,
                 "title": doc.get("title", c.get("title", "")),
                 "source_file": source_file,
                 "clause": clause,
+                "highlight": highlight[:160],
             })
     return sources
+
+
+def render_clause_image(source_file: str, page: int, highlight: str = "") -> bytes | None:
+    """A PNG of the cited clause's PDF page, with the passage highlighted.
+
+    Shown INSIDE the app (a dialog), so a soldier sees the exact clause
+    marked without leaving for a lost PDF tab and without any reliance on
+    the viewer honouring #page (iOS Safari does not). `page` is 1-based;
+    `highlight` is the cited chunk's text — matched on the page with
+    fitz.search_for and marked, then the image is cropped to a readable band
+    around the marks. Never raises: any failure returns None and the caller
+    falls back to the full-PDF link.
+    """
+    if not source_file or not page:
+        return None
+    try:
+        import fitz  # already a dependency (ingestion/pdf_to_json.py)
+
+        pdf_path = Path(__file__).parent / "pdf-ldf_law" / source_file
+        if not pdf_path.exists():
+            return None
+        doc = fitz.open(str(pdf_path))
+        try:
+            idx = page - 1
+            if idx < 0 or idx >= doc.page_count:
+                return None
+            pg = doc[idx]
+            # Locate the passage by short content phrases, not one long
+            # string: these orders are laid out in tables and their text
+            # layer is often broken (RTL-scrambled digits, injected spaces,
+            # boilerplate duplicated many times), so a long exact match never
+            # lands. Instead, search 3-word phrases and find the horizontal
+            # BAND where the most DISTINCT phrases co-locate — that band is
+            # the cited passage. Weighting by distinct phrases (not raw hit
+            # count) beats the running-header trap: a title duplicated 20×
+            # in the text layer is ONE phrase, while the real passage draws
+            # hits from many different phrases.
+            import re as _re
+            from collections import defaultdict
+
+            words = _re.findall(r'[֐-׿0-9"׳״\':]+', highlight or "")
+            BAND = 42
+            band_phrases: dict = defaultdict(set)   # band index -> {phrase idx}
+            band_rects: dict = defaultdict(list)
+            pidx = 0
+            for i in range(0, max(1, len(words) - 2), 3):
+                phrase = " ".join(words[i:i + 3])
+                if len(phrase) >= 9:
+                    for r in pg.search_for(phrase):
+                        b = int(r.y0 // BAND)
+                        band_phrases[b].add(pidx)
+                        band_rects[b].append(r)
+                    pidx += 1
+
+            rects: list = []
+            if band_phrases:
+                # anchor = band with the most distinct phrases (ties: more
+                # rects), then keep the marks in a window around it
+                anchor = max(band_phrases, key=lambda b: (len(band_phrases[b]), len(band_rects[b])))
+                # a real passage draws >=2 distinct phrases; a lone match is
+                # too weak to trust as a location — show the whole page then
+                if len(band_phrases[anchor]) >= 2:
+                    lo, hi = (anchor - 3) * BAND, (anchor + 4) * BAND
+                    for b, rs in band_rects.items():
+                        if lo <= b * BAND <= hi:
+                            rects.extend(rs)
+
+            for r in rects:
+                pg.add_highlight_annot(r)
+            zoom = 2.2
+            mat = fitz.Matrix(zoom, zoom)
+            ph = pg.rect.height
+            if rects:
+                top, bot = min(r.y0 for r in rects), max(r.y1 for r in rects)
+                clip = fitz.Rect(
+                    0, max(0, top - 95),
+                    pg.rect.width, min(ph, bot + 150),
+                )
+                return pg.get_pixmap(matrix=mat, clip=clip).tobytes("png")
+            # no confident location — the correct full page, viewer can zoom
+            return pg.get_pixmap(matrix=mat).tobytes("png")
+        finally:
+            doc.close()
+    except Exception:
+        return None
 
 
 # {doc_id: {clause_key: 1-based page}}, precomputed by _build_clause_pages.py
