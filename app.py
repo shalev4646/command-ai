@@ -12,6 +12,7 @@ import streamlit.components.v1 as components
 from anthropic import APIConnectionError, APITimeoutError, BadRequestError
 
 import metrics
+import escalation_paths
 from escalation_paths import path_for
 
 # letters/doc_dates are sibling new modules — a cached cloud build can pair
@@ -1041,11 +1042,24 @@ def _letters_dialog():
             st.warning(_QUOTA_NOTICES[quota])
         else:
             try:
+                t0 = time.time()
                 with st.spinner("מנסח טיוטה מעוגנת בפקודות..."):
                     draft = compose_letter(kind, details, role=st.session_state.role)
                 st.session_state.letter_draft = {"kind": kind, **draft}
                 # seed the textarea's state BEFORE it is instantiated below
                 st.session_state.letter_edit = draft["text"]
+                # letters burn the same quota as questions — log them the
+                # same way too (the "[מכתב]" prefix separates them in the
+                # sheet), or the pilot's usage/cost picture undercounts
+                metrics.log_question(
+                    session_id=st.session_state.session_id,
+                    role=st.session_state.role or "",
+                    question=f"[מכתב] {LETTER_TYPES[kind]['title']}",
+                    answer=draft["text"],
+                    sources=draft.get("sources"),
+                    usage=draft.get("usage"),
+                    latency_s=time.time() - t0,
+                )
             except (APIConnectionError, APITimeoutError):
                 metrics.refund(st.session_state.session_id)
                 st.error("⚠️ אין כרגע חיבור לשירות. בדוק את החיבור ונסה שוב בעוד רגע.")
@@ -1824,20 +1838,27 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
     )
 
 
-def _escalation_strip(sources: list[dict] | None) -> None:
+def _escalation_strip(sources: list[dict] | None, question: str = "") -> None:
     """"למי פונים" — the primary (top-ranked) source's referral chain as one
     quiet inline row between the answer body and the action pills, plus its
     note when one exists.
 
-    A pure function of the message's sources: the chain is a deterministic
-    document_id lookup (escalation_paths.path_for, zero LLM tokens, no
-    session state), so the freshly-streamed answer and every history-replay
-    rerun render the identical strip. No sources — no strip: error notices
-    and PDF-less answers give the lookup nothing to anchor on.
+    A pure function of the message's sources + question: the chain is a
+    deterministic document_id lookup (escalation_paths.path_for, zero LLM
+    tokens, no session state), so the freshly-streamed answer and every
+    history-replay rerun render the identical strip. No sources — no strip;
+    and a pure information question gets no strip either (relevant_for):
+    the chain earns its place only when there's something to pursue.
     """
     if not sources:
         return
-    path = path_for(sources[0].get("doc_id"))
+    doc_id = sources[0].get("doc_id")
+    # getattr: a stale cached cloud build may pair a fresh app.py with the
+    # pre-gating module (see the backend deploy note) — then show, as before
+    rel = getattr(escalation_paths, "relevant_for", None)
+    if rel is not None and not rel(question, doc_id):
+        return
+    path = path_for(doc_id)
     steps = "<span class='cai-escal-sep'>←</span>".join(
         f"<span class='cai-escal-step'>{html.escape(step)}</span>"
         for step in path["steps"]
@@ -1895,7 +1916,7 @@ for msg_i, msg in enumerate(st.session_state.messages):
             # identical for live answers and history replays. Strip ABOVE
             # the pills: it belongs to the answer's content, the pills are
             # chrome (user feedback, 2026-07-12).
-            _escalation_strip(msg.get("sources"))
+            _escalation_strip(msg.get("sources"), _question_for(msg_i))
             _answer_actions(content, msg.get("sources"), pdf)
             # feedback keyed by a per-message id, NOT by position: widget
             # state lives in session_state by key, and positional keys leak

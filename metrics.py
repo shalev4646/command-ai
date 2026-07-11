@@ -23,7 +23,10 @@ import streamlit as st
 
 # ── מכסות (נבחרו 2026-07-09: תקרת תקציב ~27$/חודש בניצול מלא) ──
 USER_DAILY_LIMIT = 5     # שאלות ליום לכל session (טאב דפדפן; אין auth)
-GLOBAL_DAILY_LIMIT = 25  # שאלות ליום לכל האפליקציה — השומר האמיתי על התקציב
+# שאלות ליום לכל האפליקציה — השומר האמיתי על התקציב. 50: פיילוט של ~10
+# משתמשים × 5 שאלות, והמכסה משותפת גם למחולל המכתבים (reserve זהה);
+# תרחיש קצה של יום מלא ≈ $2 — בתוך תקציב $20/חודש לשימוש אמיתי.
+GLOBAL_DAILY_LIMIT = 50
 
 # Opus 4.8 pricing, $/MTok — for the per-question cost estimate in the log
 _PRICE_IN, _PRICE_OUT = 5.0, 25.0

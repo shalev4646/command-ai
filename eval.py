@@ -17,6 +17,9 @@
    (קריאת Opus מלאה לכל שאלה), לכן מדולג עם --no-llm.
 5. עשן LLM (SMOKE) — 3 שאלות שעוברות את כל הצינור כולל המודל, להדפסה
    ידנית של איכות התשובה.
+6. מבני (STRUCTURAL) — שלמות שכבות הדאטה של פיצ'רי ה-UI: מיפוי סעיף→עמוד,
+   תאריכי נוסח, מסלולי "למי פונים", סכימת המכתבים, וזהות-בייטים של תוכן
+   המשתמש כשאין פרופיל (שומר הקאש). רץ בחינם, בלי LLM.
 
 יציאה עם קוד 1 אם שאלה כלשהי נכשלה — מתאים כבדיקת תקינות לפני git push.
 """
@@ -304,8 +307,97 @@ def run_smoke() -> int:
     return failures
 
 
+def run_structural() -> int:
+    """Free integrity gate for the UI features' data layers — the things a
+    reingest or a hand edit can silently break: clause-page mappings, doc
+    dates, escalation coverage, the letters schema, and the byte-identity
+    of the no-profile user turn (the prompt-cache/eval contract)."""
+    import backend
+    import doc_dates
+    import escalation_paths
+    import letters
+
+    failures = 0
+    checks: list[tuple[str, bool, str]] = []
+    docs = backend.load_documents()
+    doc_ids = [d.get("document_id") for d in docs if d.get("document_id")]
+
+    # clause_pages.json: loads, covers a healthy share of docs, and every
+    # mapped page is a positive int reachable through page_for_clause
+    pages = backend._get_clause_pages()
+    n_pages = sum(len(v) for v in pages.values())
+    checks.append(("clause_pages נטען ולא ריק", bool(pages) and n_pages > 500,
+                   f"{len(pages)} מסמכים, {n_pages} מיפויים"))
+    bad_pages = [
+        (d, c) for d, m in pages.items() for c, p in m.items()
+        if not (isinstance(p, int) and p > 0)
+    ]
+    checks.append(("כל עמוד ממופה הוא int חיובי", not bad_pages, f"{bad_pages[:3]}"))
+    sample_ok = all(
+        backend.page_for_clause(d, next(iter(m))) is not None
+        for d, m in list(pages.items())[:5] if m
+    )
+    checks.append(("page_for_clause מחזיר עמוד למדגם", sample_ok, "5 מסמכים ראשונים"))
+    checks.append(("page_for_clause בטוח לקלט חסר",
+                   backend.page_for_clause(None, None) is None
+                   and backend.page_for_clause("אין-כזה", "w1") is None, ""))
+
+    # doc_dates: parses, plausible years, badge formats
+    dated = [d for d in doc_ids if doc_dates.date_for(d)]
+    years = [int(doc_dates.date_for(d)[:4]) for d in dated]
+    checks.append(("תאריכי נוסח: כיסוי סביר", len(dated) >= 25, f"{len(dated)}/{len(doc_ids)}"))
+    checks.append(("תאריכי נוסח: שנים הגיוניות", all(1948 <= y <= 2027 for y in years),
+                   f"{sorted(set(years))[:4]}..."))
+    import re as _re
+    bad_badges = [d for d in dated
+                  if not _re.fullmatch(r"(\d{2}\.)?\d{2}\.\d{4}", doc_dates.badge(d) or "")]
+    checks.append(("תגי תאריך בפורמט תקין", not bad_badges, f"{bad_badges[:3]}"))
+
+    # escalation: total coverage, sane shapes, gating both-ways
+    paths_ok = all(
+        (p := escalation_paths.path_for(d)) and p.get("steps")
+        and 1 <= len(p["steps"]) <= 5 and all(isinstance(s, str) and s for s in p["steps"])
+        for d in doc_ids + ["מזהה-שלא-קיים"]
+    )
+    checks.append(("מסלול פנייה תקין לכל פקודה (+fallback)", paths_ok, f"{len(doc_ids)} מזהים"))
+    gate_show = escalation_paths.relevant_for("מגיע לי יום חופשה ולא מאשרים", "PM-35.0402")
+    gate_hide = not escalation_paths.relevant_for("מותר להכניס נרגילה לבסיס?", "PM-33.0137")
+    gate_always = escalation_paths.relevant_for("מה קורה אם לא מגיעים לדיון?", "PM-33.0302")
+    checks.append(("גייטינג הרצועה: מציג/מסתיר/תמיד", gate_show and gate_hide and gate_always,
+                   f"show={gate_show} hide={gate_hide} always={gate_always}"))
+
+    # letters: schema shape only (composing costs money)
+    lt_ok = all(
+        v.get("title") and v.get("query")
+        and v.get("fields") and all(len(f) == 2 for f in v["fields"])
+        for v in letters.LETTER_TYPES.values()
+    )
+    checks.append(("סכימת סוגי המכתבים", lt_ok, f"{len(letters.LETTER_TYPES)} סוגים"))
+
+    # THE cache contract: no profile == the exact historical user turn
+    q, ctx = "שאלה לדוגמה", "הקשר לדוגמה"
+    legacy = f"{q}\n\n{backend._CONTEXT_HEADER}\n{ctx}"
+    checks.append(("זהות-בייטים של תוכן משתמש בלי פרופיל",
+                   backend._compose_user_content(q, ctx, None).encode() == legacy.encode()
+                   and backend._compose_user_content(q, ctx, []).encode() == legacy.encode(), ""))
+    with_p = backend._compose_user_content(q, ctx, ["חייל בודד"])
+    checks.append(("שורת פרופיל נכנסת בין השאלה להקשר",
+                   with_p.startswith(q) and "חייל בודד" in with_p
+                   and with_p.endswith(f"{backend._CONTEXT_HEADER}\n{ctx}"), ""))
+
+    print("=" * 70)
+    print(f"בדיקות מבניות — {len(checks)} בדיקות (שכבות דאטה של פיצ'רי UI)")
+    print("=" * 70)
+    for name, ok, detail in checks:
+        print(f"{'✓' if ok else '✗'} {name}" + (f"  ({detail})" if detail and not ok else ""))
+        if not ok:
+            failures += 1
+    return failures
+
+
 def main() -> int:
-    failures = run_golden()
+    failures = run_structural()
+    failures += run_golden()
     failures += run_dirty()
     if "--no-llm" not in sys.argv:
         failures += run_followup()

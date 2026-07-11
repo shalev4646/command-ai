@@ -10,6 +10,7 @@ document_id values stored in storage/json_store (backend.load_documents);
 an id without a curated entry — including any future ingestion — falls back
 to DEFAULT_PATH, so coverage can never silently gap.
 """
+import re
 
 
 def _path(steps: list[str], note: str | None = None) -> dict:
@@ -138,3 +139,52 @@ def path_for(doc_id: str) -> dict:
     never has to special-case a freshly ingested order.
     """
     return PATHS.get(doc_id, DEFAULT_PATH)
+
+
+# Orders whose whole subject IS the referral path — complaints, distress,
+# harassment, discipline/arrest: the chain renders on every question about
+# them, trigger words or not (a soldier reading about a summons should see
+# the defense-counsel step even if he only asked "what happens if...").
+_ALWAYS_SHOW = {
+    '33.0336',      # נציב קבילות
+    '33.0219',      # מצוקה נפשית
+    '33.0145',      # הטרדה מינית
+    'PM-33.0302',   # דין משמעתי
+    'PM-33.0309',   # מעצר וחיפושים
+    '30.33',        # חנינה
+    '33.0111',      # סמים / חקירת מצ"ח
+    'PM-33.0352',   # מניעת חופשה (עונשית)
+}
+
+# A question earns the strip when the asker has something to PURSUE: an
+# entitlement to claim, a request to file, a refusal/denial to challenge, a
+# punishment to appeal, or an authority question ("המפקד יכול...?"). Plain
+# information questions ("מותר להכניס נרגילה לבסיס?") stay clean — the
+# chain under them is noise. NOTE the singular "מגיע ל[י/נו/ו/ה]" pattern:
+# a bare "מגיע" would false-positive on "לא מגיעים לדיון".
+_TRIGGERS = re.compile("|".join((
+    r"מגיע(?:ה|ות)?\s+ל(?:י|נו|ו|ה)\b",             # entitlement claims
+    r"זכא|זכות|זכויות",
+    r"איך\s+(?:מבקש|מגיש|פונ|מערער)",                # how do I file/appeal
+    r"להגיש|לבקש|לערער|בקשת|טופס",
+    r"מסרב|סירב|לא\s+(?:נותנ|מאשר|משלמ|מקבל)|שלל|נשלל|שולל|מונע|מעכב|עיכב|ביטלו?\s+את|דחו\s+את",
+    r"(?:מפקד|מ״פ|מ\"פ|קצין)[^.?!]{0,12}(?:יכול|רשאי|מוסמכ)",  # authority challenge
+    r"מותר\s+ל(?:מפקד|ו|הם)",
+    r"עונש|נענש|ריתוק|מחבוש|קנס|ערר|דין\s+משמעתי|זימון|שפט",
+    r"קביל|תלונ|להתלונן|נציב",
+    r"מצוקה|קב\"ן|קבן",
+    r"הורידו\s+לי|חייבו\s+אותי|לא\s+שילמו",
+)))
+
+
+def relevant_for(question: str, doc_id: str) -> bool:
+    """Should the "למי פונים" strip render for this question+source?
+
+    Deterministic like everything in this module: always-show orders pass
+    unconditionally; otherwise the QUESTION must carry a pursue-signal
+    (claim / request / refusal / appeal / authority). Default is hidden —
+    the strip has to earn its place under an answer.
+    """
+    if doc_id in _ALWAYS_SHOW:
+        return True
+    return bool(_TRIGGERS.search(question or ""))

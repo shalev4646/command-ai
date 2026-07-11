@@ -109,4 +109,12 @@ def compose_letter(letter_key: str, details: dict[str, str], role: str = "soldie
         system=_SYSTEM,
         messages=[{"role": "user", "content": user_content}],
     )
-    return {"text": msg.content[0].text, "sources": _sources_from_chunks(chunks)}
+    # same usage shape as backend.last_usage, so metrics.log_question can
+    # log a letter row (and its cost) exactly like a chat question
+    usage = {
+        "input_tokens": msg.usage.input_tokens,
+        "output_tokens": msg.usage.output_tokens,
+        "cache_creation_input_tokens": getattr(msg.usage, "cache_creation_input_tokens", 0) or 0,
+        "cache_read_input_tokens": getattr(msg.usage, "cache_read_input_tokens", 0) or 0,
+    }
+    return {"text": msg.content[0].text, "sources": _sources_from_chunks(chunks), "usage": usage}
