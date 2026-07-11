@@ -1316,7 +1316,12 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
     pdf_btn = ""
     if pdf:
         title = html.escape(pdf[1], quote=True)
-        pdf_btn = f'<a class="act" id="pdf" target="_blank" rel="noopener" title="{title}">⎙ פתח PDF</a>'
+        # one wrapping span, same reason as the WhatsApp pill below; מקור
+        # hides on narrow phones so the row stays single-line
+        pdf_btn = (
+            f'<a class="act" id="pdf" target="_blank" rel="noopener" title="{title}">'
+            f'<span>⎙ הצג PDF<span class="xtra"> מקור</span></span></a>'
+        )
     pdf_url = json.dumps(pdf[0] if pdf else None)
     components.html(
         f"""
@@ -1337,8 +1342,9 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
         .act:hover {{ color:{ACCENT}; border-color:{ACCENT};
                       background:rgba(236,237,230,.02); }}
         /* keep all three pills on one row on narrow phones: tighten the
-           chrome and shorten שתף בוואטסאפ → וואטסאפ (the iframe is the
-           available width, so max-width tracks the chat column) */
+           chrome and shorten שלח בוואטסאפ → וואטסאפ, הצג PDF מקור → הצג PDF
+           (the iframe is the available width, so max-width tracks the chat
+           column) */
         @media (max-width: 290px) {{
           .act {{ padding:5px 10px; }}
           .xtra {{ display:none; }}
@@ -1349,7 +1355,7 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
           <!-- one wrapping span: the pill is inline-flex with gap, so bare
                text + .xtra as separate flex items would put the 6px gap
                INSIDE the word ("שתף ב וואטסאפ") -->
-          <a class="act" id="wa" target="_blank" rel="noopener"><span>✆ <span class="xtra">שתף ב</span>וואטסאפ</span></a>
+          <a class="act" id="wa" target="_blank" rel="noopener"><span>✆ <span class="xtra">שלח ב</span>וואטסאפ</span></a>
           {pdf_btn}
         </div>
         <script>
