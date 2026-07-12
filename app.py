@@ -1384,12 +1384,12 @@ div[data-testid="stDialog"] .stDownloadButton button {
     padding: 11px !important;
 }
 div[data-testid="stDialog"] .st-key-letter_go button {
-    background: linear-gradient(180deg, var(--accent-hover), var(--accent)) !important;
-    border: none !important; box-shadow: 0 2px 10px -3px var(--accent-border) !important;
+    background: var(--accent-soft) !important;
+    border: 1px solid var(--accent-border) !important; box-shadow: none !important;
 }
-div[data-testid="stDialog"] .st-key-letter_go button p { color: #171A12 !important; font-weight: 700 !important; }
+div[data-testid="stDialog"] .st-key-letter_go button p { color: var(--accent-bright) !important; font-weight: 700 !important; }
 div[data-testid="stDialog"] .st-key-letter_go button:hover {
-    background: linear-gradient(180deg, var(--accent-bright), var(--accent-hover)) !important;
+    background: var(--accent-soft) !important; border-color: var(--accent) !important;
 }
 div[data-testid="stDialog"] .stDownloadButton button {
     background: transparent !important; border: 1px solid var(--accent-border) !important;
