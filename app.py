@@ -1263,11 +1263,16 @@ div[data-testid="stDialog"] > div {
     box-shadow: 0 -1px 0 rgba(255,255,255,.05) inset,
                 0 30px 60px -18px rgba(0,0,0,.65) !important;
 }
-/* hide Streamlit's native dialog title (emoji h2) — we inject our own header */
-div[data-testid="stDialog"] h2 { display: none !important; }
-/* native close button -> premium 34px circle, pinned to the far (left) end */
+/* Streamlit renders the dialog title as a <p> in a markdown bar (NOT an <h2>) —
+   it's the modal's first child. Hide that whole bar; we inject our own header in
+   the body. The close button is a SEPARATE absolutely-positioned element (sibling
+   of the bar), so hiding the bar keeps it. */
+div[data-testid="stDialog"] [role="dialog"] > div:first-child { display: none !important; }
+/* native close button -> premium 34px circle, pinned to the top-left corner */
 div[data-testid="stDialog"] button[aria-label="Close"],
 div[data-testid="stDialog"] [data-testid="stDialogCloseButton"] {
+    position: absolute !important; top: 20px !important; left: 20px !important; right: auto !important;
+    z-index: 6;
     width: 34px !important; height: 34px !important; border-radius: 50% !important;
     background: rgba(236,237,230,.06) !important;
     border: 1px solid rgba(236,237,230,.12) !important;
