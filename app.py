@@ -1,5 +1,6 @@
 import html
 import inspect
+from pathlib import Path
 import itertools
 import json
 import random
@@ -724,6 +725,11 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
 [class*="st-key-src_"] button p {{ font: 600 12.5px Heebo, sans-serif !important; }}
 [class*="st-key-src_"] button:hover {{ background: var(--accent) !important; color: #171A12 !important; }}
 [class*="st-key-src_"] button:hover p {{ color: #171A12 !important; }}
+/* install-as-app hint (drawer expander) */
+.cai-install-hint {{
+    font: 400 12px/1.8 Heebo, sans-serif; color: var(--text-dim);
+    direction: rtl; text-align: right;
+}}
 /* full-order link inside the clause dialog */
 .cai-full-pdf {{
     display: inline-block; margin-top: 10px;
@@ -1001,6 +1007,101 @@ components.html(
     height=0,
 )
 
+
+# ── PWA: home-screen metadata (icon, standalone, manifest) ──
+@st.cache_data(show_spinner=False)
+def _icon_bytes(name: str) -> bytes | None:
+    # branding/, not static/ — static/* is gitignored (runtime PDF mirror),
+    # and an icon that never reaches the cloud breaks A2HS silently
+    try:
+        return (Path(__file__).parent / "branding" / "icons" / name).read_bytes()
+    except Exception:
+        return None
+
+
+def _pwa_assets() -> dict | None:
+    """Register the PWA assets (icons + web-app manifest) with the media
+    file manager and return their URLs. Called EVERY rerun — entries whose
+    coord isn't re-registered are purged at the rerun's end (same rule as
+    the PDFs). The manifest's icon srcs are the icons' BASENAMES: manifest
+    and icons are served from the same /media/ directory, so relative
+    resolution works identically locally and behind the cloud shell (whose
+    app base path differs). Media ids are content hashes, so the URLs — and
+    therefore the manifest bytes — are stable across reruns.
+    """
+    try:
+        from streamlit.runtime import get_instance
+        mgr = get_instance().media_file_mgr
+        urls = {}
+        for size in (180, 192, 512):
+            data = _icon_bytes(f"icon-{size}.png")
+            if not data:
+                return None
+            urls[size] = mgr.add(data, "image/png", f"pwa_icon_{size}")
+        manifest = {
+            "name": "CommandAI — עוזר הפקודות של צה\"ל",
+            "short_name": "CommandAI",
+            "lang": "he",
+            "dir": "rtl",
+            "start_url": "/",
+            "scope": "/",
+            "display": "standalone",
+            "background_color": "#99A26B",  # the boot-splash olive
+            "theme_color": "#171A12",
+            "icons": [
+                {"src": urls[192].rsplit("/", 1)[-1], "sizes": "192x192",
+                 "type": "image/png", "purpose": "any maskable"},
+                {"src": urls[512].rsplit("/", 1)[-1], "sizes": "512x512",
+                 "type": "image/png", "purpose": "any maskable"},
+            ],
+        }
+        data = json.dumps(manifest, ensure_ascii=False).encode("utf-8")
+        urls["manifest"] = mgr.add(data, "application/json", "pwa_manifest")
+        return urls
+    except Exception:
+        return None
+
+
+_pwa = _pwa_assets()
+if _pwa:
+    # "Add to Home Screen" reads metadata off the TOP document (on the cloud
+    # the app lives inside the platform shell, same-origin) — inject there,
+    # like the badge watchdog above. Media URLs are app-frame relative, so
+    # they're resolved against the app frame's directory (this component's
+    # parent), which differs local (/) vs cloud shell (/~/+/). Idempotent by
+    # element id — the top document survives Streamlit reruns.
+    components.html(
+        f"""
+        <script>
+        (function () {{
+            var icon180 = {json.dumps(_pwa[180])};
+            var manifest = {json.dumps(_pwa["manifest"])};
+            try {{
+                var doc = window.top.document;
+                if (doc.getElementById("cai-pwa-manifest")) return;
+                var loc = window.parent.location;
+                var dir = loc.pathname.endsWith("/") ? loc.pathname : loc.pathname + "/";
+                var base = loc.origin + dir;
+                var abs = function (u) {{ return base + String(u).replace(/^\\//, ""); }};
+                var add = function (tag, attrs) {{
+                    var el = doc.createElement(tag);
+                    for (var k in attrs) el.setAttribute(k, attrs[k]);
+                    doc.head.appendChild(el);
+                }};
+                add("link", {{ id: "cai-pwa-manifest", rel: "manifest", href: abs(manifest) }});
+                add("link", {{ rel: "apple-touch-icon", sizes: "180x180", href: abs(icon180) }});
+                add("meta", {{ name: "apple-mobile-web-app-capable", content: "yes" }});
+                add("meta", {{ name: "mobile-web-app-capable", content: "yes" }});
+                add("meta", {{ name: "apple-mobile-web-app-status-bar-style", content: "black" }});
+                add("meta", {{ name: "apple-mobile-web-app-title", content: "CommandAI" }});
+                add("meta", {{ name: "theme-color", content: "#171A12" }});
+            }} catch (e) {{}}
+        }})();
+        </script>
+        """,
+        height=0,
+    )
+
 # ── Entry / role gate ──
 if st.session_state.role is None:
     st.markdown(
@@ -1097,7 +1198,10 @@ def _letters_dialog():
         key="letter_kind",
     )
     details = {}
-    for i, (label, placeholder) in enumerate(LETTER_TYPES[kind]["fields"]):
+    # fields are (label, placeholder) or (label, placeholder, is_content) —
+    # the 3rd element is a retrieval hint used by letters.py, ignored here
+    for i, field in enumerate(LETTER_TYPES[kind]["fields"]):
+        label, placeholder = field[0], field[1]
         details[label] = st.text_input(
             label, placeholder=placeholder or None, key=f"letter_{kind}_{i}"
         )
@@ -1640,6 +1744,18 @@ with st.sidebar:
         _punishment_dialog()
     if entitlements and st.button("🧮 מחשבון זכאויות", key="open_entitlements", use_container_width=True):
         _entitlements_dialog()
+    # A2HS is a browser gesture we can't trigger — the hint tells pilot
+    # users where it hides. The PWA head metadata (icon, standalone) is
+    # already injected, so the result actually looks like an app.
+    with st.expander("📲 להתקנה כאפליקציה"):
+        st.markdown(
+            "<div class='cai-install-hint'>"
+            "<b>אייפון:</b> בספארי — כפתור השיתוף ⬆️ ואז «הוסף למסך הבית».<br>"
+            "<b>אנדרואיד:</b> בכרום — תפריט ⋮ ואז «הוספה למסך הבית».<br>"
+            "האפליקציה תיפתח במסך מלא, עם אייקון CommandAI."
+            "</div>",
+            unsafe_allow_html=True,
+        )
     st.markdown("---")
 
     st.markdown("<div class='cai-drawer-section'><span class='dot'></span>שיחות אחרונות</div>", unsafe_allow_html=True)

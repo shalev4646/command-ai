@@ -419,6 +419,15 @@ def run_structural() -> int:
         img_ok = False
     checks.append(("תצוגת סעיף: render מחזיר PNG תקין", img_ok, ""))
 
+    # PWA icons committed to the repo — the head injection + manifest serve
+    # them; a deleted/corrupt icon breaks Add-to-Home-Screen silently
+    icons_ok = all(
+        (p := Path(__file__).parent / "branding" / "icons" / f"icon-{n}.png").exists()
+        and p.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+        for n in (180, 192, 512)
+    )
+    checks.append(("אייקוני PWA קיימים ותקינים", icons_ok, ""))
+
     # THE cache contract: no profile == the exact historical user turn
     q, ctx = "שאלה לדוגמה", "הקשר לדוגמה"
     legacy = f"{q}\n\n{backend._CONTEXT_HEADER}\n{ctx}"
