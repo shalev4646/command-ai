@@ -1384,15 +1384,47 @@ div[data-testid="stDialog"] .stDownloadButton button {
     padding: 11px !important;
 }
 div[data-testid="stDialog"] .st-key-letter_go button {
-    background: var(--accent) !important; border: none !important;
+    background: linear-gradient(180deg, var(--accent-hover), var(--accent)) !important;
+    border: none !important; box-shadow: 0 2px 10px -3px var(--accent-border) !important;
 }
 div[data-testid="stDialog"] .st-key-letter_go button p { color: #171A12 !important; font-weight: 700 !important; }
-div[data-testid="stDialog"] .st-key-letter_go button:hover { background: var(--accent-hover) !important; }
+div[data-testid="stDialog"] .st-key-letter_go button:hover {
+    background: linear-gradient(180deg, var(--accent-bright), var(--accent-hover)) !important;
+}
 div[data-testid="stDialog"] .stDownloadButton button {
     background: transparent !important; border: 1px solid var(--accent-border) !important;
 }
 div[data-testid="stDialog"] .stDownloadButton button p { color: var(--accent) !important; }
 div[data-testid="stDialog"] .stDownloadButton button:hover { border-color: var(--accent) !important; }
+
+/* ---- Selectbox dropdown menu (the OPEN options list) ----
+   BaseWeb portals the dropdown to <body>, OUTSIDE stDialog, so it can't be
+   scoped to the dialog — and it inherited the same olive theme.backgroundColor
+   leak as the modal card. Style it globally (selects only appear in these
+   dialogs). The <ul> is the visible menu; the popover + its wrapper divs must go
+   transparent so only the dark <ul> shows. Options are already light-on-transparent. */
+div[data-baseweb="popover"],
+div[data-baseweb="popover"] > div,
+div[data-baseweb="popover"] > div > div { background: transparent !important; }
+div[data-baseweb="popover"] ul {
+    background: #1E2216 !important; border: 1px solid rgba(236,237,230,.13) !important;
+    border-radius: 12px !important; padding: 5px !important;
+    box-shadow: 0 18px 40px -14px rgba(0,0,0,.6) !important;
+}
+div[data-baseweb="popover"] li[role="option"] {
+    color: var(--text) !important; font: 500 14px Heebo, sans-serif !important;
+    border-radius: 8px !important; direction: rtl; text-align: right;
+}
+div[data-baseweb="popover"] li[role="option"]:hover {
+    background: rgba(236,237,230,.06) !important;
+}
+div[data-baseweb="popover"] li[role="option"][aria-selected="true"] {
+    background: var(--accent-soft) !important; color: var(--accent-bright) !important;
+}
+
+/* ---- Hide "Press Enter to apply" — it overlaps the typed RTL text and reads
+   as leftover default chrome inside the styled fields ---- */
+div[data-testid="stDialog"] [data-testid="InputInstructions"] { display: none !important; }
 
 /* ---- Result card (shared by all three) ---- */
 .cai-ent-card { position: relative; overflow: hidden; border-radius: 18px;
