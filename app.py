@@ -1,3 +1,4 @@
+import base64
 import html
 import inspect
 from pathlib import Path
@@ -709,13 +710,6 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     font: 400 12px/1.8 Heebo, sans-serif; color: var(--text-dim);
     direction: rtl; text-align: right;
 }}
-/* full-order link inside the clause dialog */
-.cai-full-pdf {{
-    display: inline-block; margin-top: 10px;
-    font: 500 13px Heebo, sans-serif; color: var(--text-dim) !important;
-    text-decoration: none !important;
-}}
-.cai-full-pdf:hover {{ color: var(--accent) !important; }}
 
 /* ── Section gaps — Streamlit's default 16px block gap balloons the
    card list; the design wants tight 10-12px rhythm (buttons carry their
@@ -1161,6 +1155,18 @@ _QUOTA_NOTICES = {
 }
 
 
+# document glyph for the letters modal header (this feature drafts letters, so
+# it gets a page mark instead of the shared chevron); accent-bright via
+# currentColor so it re-tints per role
+_LETTER_EMBLEM = (
+    "<svg viewBox='0 0 24 24' width='21' height='21' fill='none' "
+    "stroke='currentColor' stroke-width='1.7' stroke-linecap='round' "
+    "stroke-linejoin='round' style='color:var(--accent-bright)'>"
+    "<path d='M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z'/>"
+    "<path d='M14 3v4h4'/><path d='M9.5 13h5M9.5 16.5h5'/></svg>"
+)
+
+
 @st.dialog("📄 מחולל מכתבים", width="large")
 def _letters_dialog():
     """Order-grounded formal-letter drafts (בקשת חופשה, ערר, קבילה...).
@@ -1171,7 +1177,17 @@ def _letters_dialog():
     exports whatever the user edited, not the raw model text.
     """
     st.markdown(_MODAL_CSS, unsafe_allow_html=True)
-    st.markdown(_modal_header("מחולל מכתבים"), unsafe_allow_html=True)
+    # inline header (not _modal_header) so this feature's document emblem lives
+    # entirely in the letters region — the shared header keeps its chevron
+    st.markdown(
+        "<div class='cai-mhead'>"
+        f"<div class='cai-memblem'>{_LETTER_EMBLEM}</div>"
+        "<div class='cai-mtitles'>"
+        "<div class='cai-mtitle'>מחולל מכתבים</div>"
+        "<div class='cai-msub'>מעוגן בפקודות מטכ״ל · בלמ״ס</div>"
+        "</div></div>",
+        unsafe_allow_html=True,
+    )
     kind = st.selectbox(
         "סוג המכתב",
         list(LETTER_TYPES),
@@ -1222,6 +1238,14 @@ def _letters_dialog():
             except Exception:
                 metrics.refund(st.session_state.session_id)
                 st.error("⚠️ אירעה שגיאה זמנית בניסוח. נסה לשלוח שוב.")
+    # standing note under the button (matches the design mock): sets the
+    # expectation that the output is an order-grounded draft to review
+    st.markdown(
+        "<div style='font:400 11.5px Heebo,sans-serif;color:rgba(236,237,230,.42);"
+        "direction:rtl;text-align:right;margin:10px 2px 0;line-height:1.55'>"
+        "הטיוטה נוסחה לפי לשון הפקודה — יש לעבור עליה לפני הגשה.</div>",
+        unsafe_allow_html=True,
+    )
     draft = st.session_state.get("letter_draft")
     # a draft from another letter type stays hidden instead of masquerading
     # as the currently selected one
@@ -1493,6 +1517,45 @@ div[data-testid="stDialog"] [data-testid="InputInstructions"] { display: none !i
 .cai-pa-disc { direction: rtl; text-align: right; font: 400 11px/1.55 Heebo, sans-serif;
     color: rgba(236,237,230,.4); border-top: 1px solid rgba(236,237,230,.08);
     padding-top: 12px; margin-top: 16px; }
+
+/* ---- Source-clause modal (📄 סעיף המקור) — the in-app clause preview ---- */
+/* document-icon emblem (this modal shows the order's page, not the chevron mark) */
+.cai-sc-emblem { width: 42px; height: 42px; border-radius: 13px; flex: none;
+    background: var(--accent-soft); border: 1px solid var(--accent-border);
+    display: flex; align-items: center; justify-content: center; color: var(--accent-bright); }
+.cai-sc-emblem svg { width: 20px; height: 20px; }
+/* clause subject + dim caption */
+.cai-sc-ctitle { font: 600 15px Heebo, sans-serif; color: var(--text);
+    line-height: 1.5; direction: rtl; text-align: right; }
+.cai-sc-ccap { font: 400 12.5px Heebo, sans-serif; color: var(--text-dim);
+    margin-top: 3px; direction: rtl; text-align: right; }
+/* framed page preview: caption bar + the real (or placeholder) page render */
+.cai-sc-preview { margin-top: 16px; border-radius: 16px; overflow: hidden;
+    border: 1px solid rgba(236,237,230,.12); background: #0F110A; }
+.cai-sc-pbar { display: flex; align-items: center; justify-content: space-between;
+    padding: 9px 14px; background: rgba(236,237,230,.04);
+    border-bottom: 1px solid rgba(236,237,230,.08); }
+.cai-sc-pbar .pg { font: 600 11px Heebo, sans-serif; color: rgba(236,237,230,.55); }
+.cai-sc-pbar .tag { font: 600 9.5px ui-monospace, Menlo, monospace;
+    letter-spacing: 1.5px; color: var(--accent); opacity: .85; }
+.cai-sc-preview img { display: block; width: 100%; }
+.cai-sc-ph { height: 230px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center; color: var(--accent);
+    background: repeating-linear-gradient(135deg,#15180F 0 11px,#12140C 11px 22px); }
+.cai-sc-ph svg { opacity: .6; margin-bottom: 10px; }
+.cai-sc-ph div { font: 600 11px ui-monospace, Menlo, monospace;
+    letter-spacing: 1px; color: rgba(236,237,230,.4); }
+/* full-order CTA restyled as a solid olive button (kept an <a> to the PDF) */
+.cai-sc-cta { display: flex; align-items: center; justify-content: center; gap: 9px;
+    width: 100%; margin-top: 16px; padding: 13px; border-radius: 13px; box-sizing: border-box;
+    background: var(--accent-soft); border: 1px solid var(--accent-border);
+    color: var(--accent-bright) !important; font: 600 13.5px Heebo, sans-serif;
+    text-decoration: none !important; transition: background .15s ease, border-color .15s ease; }
+.cai-sc-cta svg { flex: none; width: 16px; height: 16px; }
+.cai-sc-cta:hover { background: color-mix(in srgb, var(--accent) 22%, transparent) !important;
+    border-color: var(--accent) !important; }
+.cai-sc-disc { text-align: center; font: 400 11px Heebo, sans-serif; direction: rtl;
+    color: rgba(236,237,230,.4); margin-top: 10px; line-height: 1.5; }
 </style>
 """
 
@@ -2513,18 +2576,89 @@ def _clause_dialog(primary: dict, page: int | None, full_href: str | None) -> No
     the passage highlighted, so a soldier verifies the source without a lost
     PDF tab and returns to the chat by closing the dialog (state intact).
     The full order stays one tap away for those who want the whole document.
+
+    Rebuilt as the premium dark-olive modal (shares _MODAL_CSS with the three
+    side dialogs) so every modal speaks one visual language. The page render is
+    embedded as a base64 <img> INSIDE the framed preview card — st.image can't
+    live between the card's caption bar and its border, and the seamless frame is
+    the whole point of the redesign. Accent uses the role tokens, so it re-tints.
     """
+    st.markdown(_MODAL_CSS, unsafe_allow_html=True)
+
+    # classification sub-label: "פ״מ {order} · עמוד {n} · בלמ״ס" (dynamic,
+    # unlike the fixed sub on the side dialogs). doc_id is our own id ("35.0402"
+    # / "PM-35.0402") — drop the "PM-" prefix so it reads as a plain order number.
+    did = (primary.get("doc_id") or "").strip()
+    order = did[3:] if did.upper().startswith("PM-") else did
+    sub_parts = []
+    if order:
+        sub_parts.append(f"פ״מ {html.escape(order)}")
+    if page:
+        sub_parts.append(f"עמוד {page}")
+    sub_parts.append("בלמ״ס")
+
+    doc_svg = (
+        "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.7' "
+        "stroke-linecap='round' stroke-linejoin='round'><path d='M6 3h8l4 4v14H6z'></path>"
+        "<path d='M14 3v4h4'></path><path d='M9 12h6M9 16h6'></path></svg>"
+    )
+    st.markdown(
+        "<div class='cai-mhead'>"
+        f"<div class='cai-sc-emblem'>{doc_svg}</div>"
+        "<div class='cai-mtitles'>"
+        "<div class='cai-mtitle'>סעיף המקור</div>"
+        f"<div class='cai-msub'>{' · '.join(sub_parts)}</div>"
+        "</div></div>",
+        unsafe_allow_html=True,
+    )
+
     title = primary.get("title", "")
-    st.caption(title + (f" · עמוד {page}" if page else ""))
+    st.markdown(
+        f"<div class='cai-sc-ctitle'>{html.escape(title)}</div>"
+        "<div class='cai-sc-ccap'>הסעיף הרלוונטי מתוך נוסח הפקודה הרשמי</div>",
+        unsafe_allow_html=True,
+    )
+
+    # ── framed page preview: the real highlighted render, or a placeholder ──
     img = _clause_image(primary.get("source_file"), page, primary.get("highlight", "")) if page else None
-    if img:
-        st.image(img, use_container_width=True)
-    elif not full_href:
-        st.info("לא נמצאה תצוגת סעיף לפקודה זו.")
-    if full_href:
+    if img or page:
+        if img:
+            b64 = base64.b64encode(img).decode()
+            body = f"<img src='data:image/png;base64,{b64}' alt='עמוד הפקודה'>"
+        else:
+            body = (
+                "<div class='cai-sc-ph'><svg width='34' height='34' viewBox='0 0 24 24' "
+                "fill='none' stroke='currentColor' stroke-width='1.4' stroke-linecap='round' "
+                "stroke-linejoin='round'><path d='M6 3h8l4 4v14H6z'></path>"
+                "<path d='M14 3v4h4'></path><path d='M8 12h8M8 15h8M8 18h5'></path></svg>"
+                "<div>תצוגת עמוד הפקודה</div></div>"
+            )
+        pg_label = f"עמוד {page} מתוך הפקודה" if page else "עמוד מתוך הפקודה"
         st.markdown(
-            f"<a class='cai-full-pdf' href='{full_href}' target='_blank' rel='noopener'>"
-            f"⎙ פתח את הפקודה המלאה (PDF)</a>",
+            "<div class='cai-sc-preview'><div class='cai-sc-pbar'>"
+            f"<span class='pg'>{pg_label}</span><span class='tag'>PDF</span></div>"
+            f"{body}</div>",
+            unsafe_allow_html=True,
+        )
+    elif not full_href:
+        st.markdown(
+            "<div class='cai-sc-ccap' style='margin-top:16px'>"
+            "לא נמצאה תצוגת סעיף לפקודה זו.</div>",
+            unsafe_allow_html=True,
+        )
+
+    if full_href:
+        ext_svg = (
+            "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.9' "
+            "stroke-linecap='round' stroke-linejoin='round'><path d='M14 3h7v7'></path>"
+            "<path d='M21 3l-9 9'></path>"
+            "<path d='M19 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5'></path></svg>"
+        )
+        st.markdown(
+            f"<a class='cai-sc-cta' href='{html.escape(full_href, quote=True)}' "
+            f"target='_blank' rel='noopener'>{ext_svg}"
+            "<span>פתח את הפקודה המלאה (PDF)</span></a>"
+            "<div class='cai-sc-disc'>הכוונה כללית — נוסח הפקודה הרשמי הוא הקובע.</div>",
             unsafe_allow_html=True,
         )
 
