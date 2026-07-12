@@ -1253,9 +1253,12 @@ def _letters_dialog():
 # and an accent-railed result card — replacing the flat olive-splash look.
 _MODAL_CSS = """
 <style>
-/* ---- Modal surface: force the dark gradient so the dialog stops inheriting
-   the olive splash background (theme.backgroundColor) ---- */
-div[data-testid="stDialog"] > div {
+/* ---- Modal surface: Streamlit paints the VISIBLE card ([role="dialog"], the
+   inner box) with the olive theme.backgroundColor (#99A26B) — the > div behind
+   it is only a full-viewport positioning layer. Force the dark gradient onto the
+   card itself, or the whole modal reads olive/"cheap" no matter what's inside. ---- */
+div[data-testid="stDialog"] > div { direction: rtl; background: transparent !important; }
+div[data-testid="stDialog"] [role="dialog"] {
     direction: rtl;
     background: linear-gradient(180deg,#1E2216 0%,#181B12 100%) !important;
     border: 1px solid rgba(236,237,230,.10) !important;
