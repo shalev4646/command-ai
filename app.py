@@ -54,15 +54,6 @@ except Exception:
     st.code(traceback.format_exc())
     st.stop()
 
-# Popular-questions strip helper. Guarded the same way as everything a stale
-# Streamlit Cloud build (app.py re-run against an older cached module set)
-# could be missing: if popular.py can't load, _top_questions stays None and
-# the home screen just renders the existing suggested questions unchanged.
-try:
-    from popular import top_questions as _top_questions
-except Exception:
-    _top_questions = None
-
 @st.cache_resource(show_spinner=False)
 def _startup_ingest():
     ensure_pdfs_ingested()
@@ -238,14 +229,17 @@ ROLE_META = {
     "soldier": {
         "label": "חייל", "accent": "#99A26B", "accent_hover": "#AAB37C",
         "soft": "rgba(153,162,107,.14)", "border": "rgba(153,162,107,.35)",
+        "bright": "#C4CE92",  # lightened accent for the modal hero number
     },
     "commander": {
         "label": "מפקד", "accent": "#B29A72", "accent_hover": "#C4AC84",
         "soft": "rgba(178,154,114,.14)", "border": "rgba(178,154,114,.4)",
+        "bright": "#D6C193",
     },
     "reserve": {
         "label": "מילואים", "accent": "#8A9BC0", "accent_hover": "#9DAECE",
         "soft": "rgba(138,155,192,.12)", "border": "rgba(138,155,192,.38)",
+        "bright": "#B4C3E0",
     },
 }
 role_meta = ROLE_META.get(st.session_state.role, ROLE_META["soldier"])
@@ -254,6 +248,7 @@ ACCENT = role_meta["accent"]
 ACCENT_HOVER = role_meta["accent_hover"]
 ACCENT_SOFT = role_meta["soft"]
 ACCENT_BORDER = role_meta["border"]
+ACCENT_BRIGHT = role_meta["bright"]
 
 # chat screen needs room under the fixed header band; entry has no header
 MAIN_TOP_PADDING = "12px" if st.session_state.role is None else "80px"
@@ -286,6 +281,7 @@ st.markdown(f"""
     --accent-hover: {ACCENT_HOVER};
     --accent-soft: {ACCENT_SOFT};
     --accent-border: {ACCENT_BORDER};
+    --accent-bright: {ACCENT_BRIGHT};
     --ehold: {EHOLD};
 }}
 
@@ -498,23 +494,6 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
 .st-key-sug_1 button {{ animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .32s; }}
 .st-key-sug_2 button {{ animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .4s; }}
 .st-key-sug_3 button {{ animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .48s; }}
-
-/* ── 🔥 הנשאלות השבוע — popular-questions strip. The buttons inherit the base
-   surface-card style (radius 14, olive border) so they read as the same pills
-   as the suggested cards; only the accent heading + an earlier stagger set the
-   group apart. Sits above the suggested cards on the home screen. ── */
-.cai-hot-head {{ font: 600 13px Heebo, sans-serif; color: var(--accent);
-    text-align: center; margin: 8px 0 10px; display: flex; gap: 7px;
-    align-items: center; justify-content: center;
-    animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .18s; }}
-.cai-hot-head::before, .cai-hot-head::after {{
-    content: ""; height: 1px; width: 26px; background: var(--accent-border); }}
-.st-key-hot_0 button, .st-key-hot_1 button, .st-key-hot_2 button, .st-key-hot_3 button {{
-    animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; }}
-.st-key-hot_0 button {{ animation-delay: .2s; }}
-.st-key-hot_1 button {{ animation-delay: .26s; }}
-.st-key-hot_2 button {{ animation-delay: .32s; }}
-.st-key-hot_3 button {{ animation-delay: .38s; }}
 
 /* ── Composer — pill bar + circular olive send ── */
 /* the pinned composer strip shows the BOTTOM slice of the same viewport-
@@ -1191,6 +1170,8 @@ def _letters_dialog():
     budget. The draft lands in an editable textarea; the download button
     exports whatever the user edited, not the raw model text.
     """
+    st.markdown(_MODAL_CSS, unsafe_allow_html=True)
+    st.markdown(_modal_header("מחולל מכתבים"), unsafe_allow_html=True)
     kind = st.selectbox(
         "סוג המכתב",
         list(LETTER_TYPES),
@@ -1261,67 +1242,234 @@ def _letters_dialog():
             st.caption("מעוגן בפקודות: " + " · ".join(s["title"] for s in srcs[:2]))
 
 
-# CSS is injected inside each dialog (scoped) rather than into the global
-# f-string style block — keeps each feature self-contained and avoids
-# touching that block's {{ }} escaping. :root tokens (--accent/--surface/...)
-# are global, so they resolve here too.
-_PA_CSS = """
+# ── Shared "premium modal" design system ──────────────────────────────────
+# One scoped stylesheet for all three side-drawer dialogs (letters, punishment
+# authority, entitlements). Injected inside each dialog rather than into the
+# global f-string block so each feature stays self-contained and we avoid that
+# block's {{ }} escaping. :root tokens (--accent / --accent-bright / --surface /
+# --text*) are global, so the whole modal re-tints per role (חייל / מפקד /
+# מילואים) automatically. Rebuilt from design_handoff_entitlements_calculator:
+# dark-olive surface, chevron-emblem header, segmented control, styled fields
+# and an accent-railed result card — replacing the flat olive-splash look.
+_MODAL_CSS = """
 <style>
+/* ---- Modal surface: force the dark gradient so the dialog stops inheriting
+   the olive splash background (theme.backgroundColor) ---- */
+div[data-testid="stDialog"] > div {
+    direction: rtl;
+    background: linear-gradient(180deg,#1E2216 0%,#181B12 100%) !important;
+    border: 1px solid rgba(236,237,230,.10) !important;
+    border-radius: 26px !important;
+    box-shadow: 0 -1px 0 rgba(255,255,255,.05) inset,
+                0 30px 60px -18px rgba(0,0,0,.65) !important;
+}
+/* hide Streamlit's native dialog title (emoji h2) — we inject our own header */
+div[data-testid="stDialog"] h2 { display: none !important; }
+/* native close button -> premium 34px circle, pinned to the far (left) end */
+div[data-testid="stDialog"] button[aria-label="Close"],
+div[data-testid="stDialog"] [data-testid="stDialogCloseButton"] {
+    width: 34px !important; height: 34px !important; border-radius: 50% !important;
+    background: rgba(236,237,230,.06) !important;
+    border: 1px solid rgba(236,237,230,.12) !important;
+    color: rgba(236,237,230,.6) !important;
+}
+div[data-testid="stDialog"] button[aria-label="Close"]:hover,
+div[data-testid="stDialog"] [data-testid="stDialogCloseButton"]:hover {
+    background: rgba(236,237,230,.12) !important; color: var(--text) !important;
+}
+
+/* ---- Injected header: chevron emblem + Suez-One title + classification ---- */
+.cai-mhead { display: flex; align-items: center; gap: 13px; direction: rtl;
+    text-align: right; margin: 2px 0 18px; }
+.cai-memblem { width: 42px; height: 42px; border-radius: 13px; flex: none;
+    background: var(--accent-soft); border: 1px solid var(--accent-border);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.cai-memblem span { display: block; width: 15px; height: 15px; transform: rotate(45deg);
+    border-top: 3px solid var(--accent); border-left: 3px solid var(--accent); }
+.cai-memblem span + span { border-top-color: var(--accent-border);
+    border-left-color: var(--accent-border); margin-top: -6px; }
+.cai-mtitles { flex: 1; min-width: 0; }
+.cai-mtitle { font: 400 22px 'Suez One', serif; color: var(--text); line-height: 1.1; }
+.cai-msub { font: 600 12.5px Heebo, sans-serif; letter-spacing: 1.2px; color: var(--accent);
+    opacity: .9; margin-top: 6px; white-space: nowrap; }
+
+/* ---- Field labels (selects / inputs / the segmented question) ---- */
+div[data-testid="stDialog"] [data-testid="stSelectbox"] label,
+div[data-testid="stDialog"] [data-testid="stTextInput"] label,
+div[data-testid="stDialog"] [data-testid="stTextArea"] label,
+div[data-testid="stDialog"] [data-testid="stRadio"] > label {
+    font: 600 11px Heebo, sans-serif !important; letter-spacing: .02em;
+    color: rgba(236,237,230,.45) !important; margin-bottom: 7px !important;
+}
+
+/* ---- Select fields -> dark pill with olive chevron ---- */
+div[data-testid="stDialog"] [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+    background: #22271A !important; border: 1px solid rgba(236,237,230,.13) !important;
+    border-radius: 12px !important; min-height: 50px; padding: 4px 12px !important;
+    direction: rtl; transition: border-color .15s ease;
+}
+div[data-testid="stDialog"] [data-testid="stSelectbox"] div[data-baseweb="select"] > div:hover {
+    border-color: var(--accent-border) !important;
+}
+div[data-testid="stDialog"] [data-testid="stSelectbox"] div[data-baseweb="select"] div[value],
+div[data-testid="stDialog"] [data-testid="stSelectbox"] div[data-baseweb="select"] input,
+div[data-testid="stDialog"] [data-testid="stSelectbox"] div[data-baseweb="select"] span {
+    font: 600 14.5px Heebo, sans-serif !important; color: var(--text) !important;
+}
+div[data-testid="stDialog"] [data-testid="stSelectbox"] div[data-baseweb="select"] svg {
+    fill: var(--accent) !important; color: var(--accent) !important;
+}
+
+/* ---- Text inputs (letters) -> same dark pill ---- */
+div[data-testid="stDialog"] [data-testid="stTextInput"] div[data-baseweb="input"],
+div[data-testid="stDialog"] [data-testid="stTextInput"] div[data-baseweb="base-input"] {
+    background: #22271A !important; border: 1px solid rgba(236,237,230,.13) !important;
+    border-radius: 12px !important;
+}
+div[data-testid="stDialog"] [data-testid="stTextInput"] div[data-baseweb="base-input"] {
+    border: none !important; background: transparent !important;
+}
+div[data-testid="stDialog"] [data-testid="stTextInput"] input {
+    background: transparent !important; color: var(--text) !important;
+    font: 600 14.5px Heebo, sans-serif !important; direction: rtl; padding: 12px 14px !important;
+}
+div[data-testid="stDialog"] [data-testid="stTextInput"] input::placeholder {
+    color: rgba(236,237,230,.35) !important; font-weight: 400 !important;
+}
+/* ---- Draft textarea -> dark pill ---- */
+div[data-testid="stDialog"] [data-testid="stTextArea"] div[data-baseweb="base-input"],
+div[data-testid="stDialog"] [data-testid="stTextArea"] textarea {
+    background: #22271A !important; border-radius: 12px !important;
+    border-color: rgba(236,237,230,.13) !important; color: var(--text) !important;
+}
+
+/* ---- Radio -> segmented control ("מה לחשב?") ---- */
+div[data-testid="stDialog"] [data-testid="stRadio"] div[role="radiogroup"] {
+    display: flex !important; flex-direction: row !important; gap: 4px;
+    background: rgba(0,0,0,.25); border: 1px solid rgba(236,237,230,.08);
+    border-radius: 13px; padding: 4px;
+}
+div[data-testid="stDialog"] [data-testid="stRadio"] div[role="radiogroup"] label {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    padding: 10px; margin: 0 !important; border-radius: 10px; cursor: pointer;
+    transition: background .15s ease;
+}
+div[data-testid="stDialog"] [data-testid="stRadio"] div[role="radiogroup"] label > div:first-child {
+    display: none !important;  /* hide the radio dot */
+}
+div[data-testid="stDialog"] [data-testid="stRadio"] div[role="radiogroup"] label p {
+    font: 600 13.5px Heebo, sans-serif !important; color: rgba(236,237,230,.6) !important;
+    margin: 0 !important;
+}
+div[data-testid="stDialog"] [data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) {
+    background: linear-gradient(180deg, var(--accent-hover), var(--accent));
+    box-shadow: 0 2px 8px -2px var(--accent-border);
+}
+div[data-testid="stDialog"] [data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) p {
+    color: #171A12 !important; font-weight: 700 !important;
+}
+
+/* ---- Buttons inside the modal ---- */
+div[data-testid="stDialog"] .stButton button,
+div[data-testid="stDialog"] .stDownloadButton button {
+    border-radius: 12px !important; font: 700 14px Heebo, sans-serif !important;
+    padding: 11px !important;
+}
+div[data-testid="stDialog"] .st-key-letter_go button {
+    background: var(--accent) !important; border: none !important;
+}
+div[data-testid="stDialog"] .st-key-letter_go button p { color: #171A12 !important; font-weight: 700 !important; }
+div[data-testid="stDialog"] .st-key-letter_go button:hover { background: var(--accent-hover) !important; }
+div[data-testid="stDialog"] .stDownloadButton button {
+    background: transparent !important; border: 1px solid var(--accent-border) !important;
+}
+div[data-testid="stDialog"] .stDownloadButton button p { color: var(--accent) !important; }
+div[data-testid="stDialog"] .stDownloadButton button:hover { border-color: var(--accent) !important; }
+
+/* ---- Result card (shared by all three) ---- */
+.cai-ent-card { position: relative; overflow: hidden; border-radius: 18px;
+    background: linear-gradient(180deg,#20261A 0%,#161A11 100%);
+    border: 1px solid var(--accent-border); padding: 20px 20px 22px;
+    margin: 18px 0 6px; direction: rtl; text-align: right; }
+.cai-ent-card::before { content: ""; position: absolute; top: 0; right: 0; bottom: 0;
+    width: 3px; background: linear-gradient(180deg, var(--accent-bright), var(--accent)); }
+.cai-ent-value { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; direction: rtl; }
+.cai-ent-num { font: 800 42px Heebo, sans-serif; color: var(--accent-bright);
+    line-height: .95; letter-spacing: -.01em; }
+.cai-ent-unit { font: 700 24px Heebo, sans-serif; color: var(--accent-bright); }
+.cai-ent-unit.sm { font-size: 18px; font-weight: 700; line-height: 1.4; }
+.cai-ent-sub { font: 500 13px Heebo, sans-serif; color: var(--text-sec); margin-top: 8px; line-height: 1.5; }
+.cai-ent-h { font: 700 13px Heebo, sans-serif; color: var(--text); margin: 12px 0 4px; }
+.cai-ent-rows { margin-top: 16px; border-top: 1px solid rgba(236,237,230,.08); }
+.cai-ent-row { display: flex; justify-content: space-between; align-items: center;
+    gap: 10px; padding: 11px 0; }
+.cai-ent-row:not(:last-child) { border-bottom: 1px solid rgba(236,237,230,.07); }
+.cai-ent-row span { font: 400 13px Heebo, sans-serif; color: rgba(236,237,230,.5); }
+.cai-ent-row b { font: 600 13.5px Heebo, sans-serif; color: var(--text); }
+.cai-ent-list { margin: 2px 8px 2px 0; padding-right: 18px; }
+.cai-ent-list li { font: 400 13px Heebo, sans-serif; color: var(--text); line-height: 1.6; }
+.cai-ent-note { font: 400 12px Heebo, sans-serif; color: rgba(236,237,230,.5); line-height: 1.6; margin-top: 6px; }
+.cai-ent-cite { display: inline-flex; align-items: center; gap: 8px; margin-top: 15px;
+    background: var(--accent-soft); border: 1px solid var(--accent-border);
+    border-radius: 10px; padding: 7px 13px; direction: rtl;
+    font: 600 12px Heebo, sans-serif; color: var(--accent-bright); }
+.cai-ent-cite::before { content: ""; width: 12px; height: 12px; flex: none;
+    border: 1.5px solid var(--accent); border-radius: 3px; transform: rotate(45deg); }
+.cai-ent-disc { display: flex; gap: 7px; margin: 16px 2px 0; direction: rtl; text-align: right; }
+.cai-ent-disc span.g { flex: none; font-size: 12px; line-height: 1.55; }
+.cai-ent-disc span.t { font: 400 11px Heebo, sans-serif; color: rgba(236,237,230,.4); line-height: 1.55; }
+
+/* ---- Punishment-authority views (share the card shell) ---- */
 .cai-pa-intro { direction: rtl; text-align: right; font: 400 12.5px/1.6 Heebo, sans-serif;
-    color: var(--text-sec); margin: 2px 0 10px; }
+    color: var(--text-sec); margin: 2px 0 4px; }
+.cai-pa-caps { border-radius: 18px; overflow: hidden; position: relative; margin-top: 16px;
+    background: linear-gradient(180deg,#20261A 0%,#161A11 100%);
+    border: 1px solid var(--accent-border); padding: 6px 18px; direction: rtl; }
+.cai-pa-caps::before { content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 3px;
+    background: linear-gradient(180deg, var(--accent-bright), var(--accent)); }
 .cai-pa-row { direction: rtl; display: flex; align-items: center; justify-content: space-between;
-    gap: 10px; padding: 7px 2px; border-bottom: 1px solid var(--border); }
+    gap: 10px; padding: 12px 0; }
+.cai-pa-row:not(:last-child) { border-bottom: 1px solid rgba(236,237,230,.07); }
 .cai-pa-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.cai-pa-pun { font: 500 13px Heebo, sans-serif; color: var(--text); }
+.cai-pa-pun { font: 600 13.5px Heebo, sans-serif; color: var(--text); }
 .cai-pa-clause { font: 500 10.5px Heebo, sans-serif; color: var(--text-faint); }
-.cai-pa-max { flex: 0 0 auto; border-radius: 8px; padding: 3px 11px; white-space: nowrap;
-    font: 600 12.5px Heebo, sans-serif; border: 1px solid; }
-.cai-pa-max.ok    { color:#A9C687; background:rgba(148,183,110,.13); border-color:rgba(148,183,110,.35); }
+.cai-pa-max { flex: 0 0 auto; border-radius: 9px; padding: 4px 12px; white-space: nowrap;
+    font: 700 12.5px Heebo, sans-serif; border: 1px solid; }
+.cai-pa-max.ok    { color:#A9C687; background:rgba(148,183,110,.13); border-color:rgba(148,183,110,.4); }
 .cai-pa-max.plain { color:var(--text-sec); background:rgba(236,237,230,.05); border-color:var(--border); }
-.cai-pa-max.no    { color:#D68C77; background:rgba(208,124,102,.10); border-color:rgba(208,124,102,.32); }
+.cai-pa-max.no    { color:#D68C77; background:rgba(208,124,102,.10); border-color:rgba(208,124,102,.35); }
 .cai-pa-box { direction: rtl; text-align: right; border: 1px solid var(--border);
-    border-radius: 10px; padding: 11px 13px; margin-top: 14px; background: rgba(236,237,230,.03); }
-.cai-pa-box-title { font: 600 13px Heebo, sans-serif; color: var(--text); margin-bottom: 5px; }
+    border-radius: 12px; padding: 13px 15px; margin-top: 12px; background: rgba(236,237,230,.03); }
+.cai-pa-box-title { font: 700 13px Heebo, sans-serif; color: var(--text); margin-bottom: 5px; }
 .cai-pa-box-body { font: 400 12.5px/1.65 Heebo, sans-serif; color: var(--text-sec); }
-.cai-pa-tag { display:inline-block; font: 500 10.5px Heebo, sans-serif; color: var(--text-faint);
-    margin-top: 5px; }
+.cai-pa-tag { display: inline-flex; align-items: center; gap: 7px; margin-top: 8px;
+    font: 600 11px Heebo, sans-serif; color: var(--accent-bright);
+    background: var(--accent-soft); border: 1px solid var(--accent-border);
+    border-radius: 9px; padding: 5px 11px; }
+.cai-pa-tag::before { content: ""; width: 11px; height: 11px; flex: none;
+    border: 1.5px solid var(--accent); border-radius: 3px; transform: rotate(45deg); }
+.cai-pa-note { margin: 4px 8px 0 0; padding-right: 18px; }
 .cai-pa-note li { font: 400 12px/1.6 Heebo, sans-serif; color: var(--text-dim); margin-bottom: 6px; }
-.cai-pa-disc { direction: rtl; text-align: right; font: 400 11.5px/1.6 Heebo, sans-serif;
-    color: var(--text-faint); border-top: 1px solid var(--border); padding-top: 11px; margin-top: 14px; }
+.cai-pa-disc { direction: rtl; text-align: right; font: 400 11px/1.55 Heebo, sans-serif;
+    color: rgba(236,237,230,.4); border-top: 1px solid rgba(236,237,230,.08);
+    padding-top: 12px; margin-top: 16px; }
 </style>
 """
 
-# ── Entitlement calculator (deterministic, order-cited; no LLM, no quota) ──
-# Scoped dark-RTL styling for the result cards. The modal portals outside the
-# chat column, but --accent/--surface/--text are declared on :root in the main
-# CSS block, so they resolve here too (accent follows the active role).
-_ENT_CSS = """
-<style>
-.cai-ent-card {
-    background: var(--surface); border: 1px solid var(--border-strong);
-    border-right: 3px solid var(--accent); border-radius: 14px;
-    padding: 16px 18px; margin: 12px 0 6px; direction: rtl; text-align: right;
-}
-.cai-ent-value { font: 700 30px Heebo, sans-serif; color: var(--accent); line-height: 1.15; }
-.cai-ent-value.sm { font-size: 19px; }
-.cai-ent-sub { font: 500 13.5px Heebo, sans-serif; color: var(--text-sec); margin-top: 4px; }
-.cai-ent-h { font: 700 13px Heebo, sans-serif; color: var(--text); margin: 12px 0 4px; }
-.cai-ent-rows { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; }
-.cai-ent-row { display: flex; gap: 8px; font: 400 13.5px Heebo, sans-serif; }
-.cai-ent-row span { color: var(--text-dim); min-width: 84px; }
-.cai-ent-row b { color: var(--text); font-weight: 600; }
-.cai-ent-list { margin: 2px 8px 2px 0; padding-right: 18px; }
-.cai-ent-list li { font: 400 13px Heebo, sans-serif; color: var(--text); line-height: 1.6; }
-.cai-ent-note { font: 400 12px Heebo, sans-serif; color: var(--text-dim); line-height: 1.55; margin-top: 8px; }
-.cai-ent-cite {
-    display: inline-block; margin-top: 12px;
-    background: var(--accent-soft); border: 1px solid var(--accent-border);
-    border-radius: 8px; padding: 4px 11px;
-    font: 600 12px Heebo, sans-serif; color: var(--accent); direction: rtl;
-}
-.cai-ent-disc { font: 400 11px Heebo, sans-serif; color: var(--text-faint); line-height: 1.5; margin: 8px 2px 0; direction: rtl; text-align: right; }
-</style>
-"""
+
+def _modal_header(title: str) -> str:
+    """The shared premium modal header — chevron emblem + Suez-One title +
+    the standing 'מעוגן בפקודות מטכ״ל · בלמ״ס' classification sub-label.
+    Replaces Streamlit's native (now hidden) dialog title across all three
+    side dialogs, and re-tints per role via the :root accent tokens."""
+    return (
+        "<div class='cai-mhead'>"
+        "<div class='cai-memblem'><span></span><span></span></div>"
+        "<div class='cai-mtitles'>"
+        f"<div class='cai-mtitle'>{html.escape(title)}</div>"
+        "<div class='cai-msub'>מעוגן בפקודות מטכ״ל · בלמ״ס</div>"
+        "</div></div>"
+    )
 
 
 @st.dialog("⚖️ בודק סמכות עונש משמעתי", width="large")
@@ -1336,7 +1484,8 @@ def _punishment_dialog():
     """
     if not _pa:
         return
-    st.markdown(_PA_CSS, unsafe_allow_html=True)
+    st.markdown(_MODAL_CSS, unsafe_allow_html=True)
+    st.markdown(_modal_header("בודק סמכות עונש"), unsafe_allow_html=True)
     st.markdown(
         "<div class='cai-pa-intro'>בחר את סוג קצין השיפוט כדי לראות אילו עונשים "
         "מרביים הוא מוסמך להטיל בדין משמעתי, לפי פ\"מ 33.0302 — ואת נתיב הערר.</div>",
@@ -1371,7 +1520,10 @@ def _punishment_dialog():
             f"<span class='cai-pa-max {cls}'>{html.escape(mx)}</span>"
             "</div>"
         )
-    st.markdown("".join(rows_html), unsafe_allow_html=True)
+    st.markdown(
+        f"<div class='cai-pa-caps'>{''.join(rows_html)}</div>",
+        unsafe_allow_html=True,
+    )
 
     # rank-specific footnote (e.g. only אל"ם may jail an officer/senior NCO)
     if rec.get("note"):
@@ -1414,11 +1566,27 @@ def _punishment_dialog():
     )
 
 
+def _hero_html(value: str) -> str:
+    """Render an entitlement headline as the two-size hero (big number + unit).
+
+    "7 ימים" -> 42px "7" + 24px "ימים"; "50%" -> 42px "50%"; a full sentence
+    like "אין מכסת שחרור ייעודית" has no leading count, so it renders whole at
+    the smaller unit size rather than being awkwardly split."""
+    m = re.match(r'^\s*(\d+)\s*(%?)\s*(.*)$', value.strip())
+    if m and m.group(1):
+        num = html.escape(m.group(1) + m.group(2))
+        unit = m.group(3).strip()
+        tail = f"<span class='cai-ent-unit'>{html.escape(unit)}</span>" if unit else ""
+        return f"<span class='cai-ent-num'>{num}</span>{tail}"
+    return f"<span class='cai-ent-unit'>{html.escape(value)}</span>"
+
+
 def _ent_card(html_inner: str) -> None:
     """Render one entitlement result card + the standing disclaimer."""
     st.markdown(
         f"<div class='cai-ent-card'>{html_inner}</div>"
-        f"<div class='cai-ent-disc'>⚠️ {html.escape(entitlements.DISCLAIMER)}</div>",
+        "<div class='cai-ent-disc'><span class='g'>⚠️</span>"
+        f"<span class='t'>{html.escape(entitlements.DISCLAIMER)}</span></div>",
         unsafe_allow_html=True,
     )
 
@@ -1443,7 +1611,7 @@ def _ent_leave_ui() -> None:
     note = (f"<div class='cai-ent-note'>{html.escape(r['note'])}</div>"
             if r.get("note") else "")
     _ent_card(
-        f"<div class='cai-ent-value'>{html.escape(r['days'])}</div>"
+        f"<div class='cai-ent-value'>{_hero_html(r['days'])}</div>"
         f"<div class='cai-ent-sub'>{html.escape(titles[cat_key])} · "
         f"{html.escape(r['label'])}</div>"
         f"<div class='cai-ent-rows'>"
@@ -1474,7 +1642,8 @@ def _ent_pay_ui() -> None:
         comps = "".join(f"<li>{html.escape(c)}</li>" for c in s["components"])
         sups = "".join(f"<li>{html.escape(c)}</li>" for c in s["supplements"])
         _ent_card(
-            f"<div class='cai-ent-value sm'>{html.escape(s['headline'])}</div>"
+            f"<div class='cai-ent-value'><span class='cai-ent-unit sm'>"
+            f"{html.escape(s['headline'])}</span></div>"
             f"<div class='cai-ent-note'>{html.escape(s['how_set'])}</div>"
             f"<div class='cai-ent-h'>רכיבי דמי הקיום</div>"
             f"<ul class='cai-ent-list'>{comps}</ul>"
@@ -1500,7 +1669,7 @@ def _ent_pay_ui() -> None:
         band_label = " · " + blabels[band]
     p = entitlements.family_payment(rk, band)
     _ent_card(
-        f"<div class='cai-ent-value'>{html.escape(p['percent'])}</div>"
+        f"<div class='cai-ent-value'>{_hero_html(p['percent'])}</div>"
         f"<div class='cai-ent-sub'>מהשכר הבסיסי · {html.escape(p['label'])}"
         f"{html.escape(band_label)}</div>"
         f"<div class='cai-ent-note'>{html.escape(p['note'])}</div>"
@@ -1518,11 +1687,12 @@ def _entitlements_dialog():
     No daily quota and NO Anthropic call — it only reads curated, order-cited
     data from entitlements.py, so it can't burn budget or hallucinate a figure.
     """
-    st.markdown(_ENT_CSS, unsafe_allow_html=True)
+    st.markdown(_MODAL_CSS, unsafe_allow_html=True)
+    st.markdown(_modal_header("מחשבון זכאויות"), unsafe_allow_html=True)
     calc = st.radio(
         "מה לחשב?", ["leave", "pay"],
-        format_func=lambda k: {"leave": "🗓️ ימי חופשה",
-                               "pay": "₪ דמי קיום / תשלומים למשפחה"}[k],
+        format_func=lambda k: {"leave": "ימי חופשה",
+                               "pay": "דמי קיום / תשלומים"}[k],
         key="ent_calc", horizontal=True,
     )
     if calc == "leave":
@@ -2410,26 +2580,6 @@ if not st.session_state.messages:
         f"<div class='cai-greet-sub'>שאלות נפוצות מפקודות המטכ\"ל במערכת ({len(docs)})</div>",
         unsafe_allow_html=True,
     )
-    # 🔥 "הנשאלות השבוע": the most-asked real questions for this role, pulled
-    # from the metrics ring buffer and curated-filled on cold start. Rendered
-    # above the suggested cards, tapped the same way (queue_question → rerun).
-    # Defensive: a stale cloud build may lack the helper (guarded import at the
-    # top) — then, or on any error/empty result, the strip is skipped and the
-    # suggested questions below render exactly as before.
-    popular = []
-    if _top_questions is not None:
-        try:
-            popular = _top_questions(st.session_state.role, k=4)
-        except Exception:
-            popular = []
-    if popular:
-        st.markdown(
-            "<div class='cai-hot-head'>🔥 הנשאלות השבוע</div>",
-            unsafe_allow_html=True,
-        )
-        for i, q in enumerate(popular):
-            if st.button(q, key=f"hot_{i}", use_container_width=True):
-                queue_question(q)
     for i, q in enumerate(suggested_questions):
         if st.button(q, key=f"sug_{i}", use_container_width=True):
             queue_question(q)
