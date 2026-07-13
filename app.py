@@ -374,6 +374,10 @@ html, body, [data-testid="stApp"], [data-testid="stAppViewContainer"] {{
 /* iOS rubber-band overscroll must reveal the dark backdrop, never a light
    page edge; disable the bounce chain where the platform honors it */
 html, body {{ overscroll-behavior-y: none; }}
+/* iOS Safari "text autosizing" inflates long text blocks (cards, title,
+   disclaimer) on the phone only — desktop matched the mock, iPhone didn't.
+   Pin the rendered sizes to the authored ones. */
+html {{ -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }}
 /* vertical gradient — dark at top, warming to olive toward the composer.
    NOTE: no `fixed` attachment — iOS Safari renders it black; vh fallback
    first for devices without dvh support */
@@ -565,7 +569,7 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
 .cai-greet {{ font: 400 28px 'Suez One', serif; color: var(--text); margin: 20px 0 2px;
     text-align: center;
     animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .08s; }}
-.cai-greet-sub {{ font: 400 13px Heebo, sans-serif; color: var(--text-dim); margin-bottom: 12px;
+.cai-greet-sub {{ font: 400 13px Heebo, sans-serif; color: var(--text-dim); margin-bottom: 8px;
     text-align: center;
     animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .16s; }}
 
@@ -590,6 +594,10 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     justify-content: center;
 }}
 [data-testid="stAppViewContainer"]:has(.cai-greet) .cai-greet {{ margin-top: 0; }}
+
+/* suggestion cards: mock rhythm is a tight 10px gap (8px button margin +
+   the 2px wrapper margin), vs the entry buttons' 12px */
+[class*="st-key-sug_"] button {{ margin-bottom: 8px; }}
 
 /* suggestion cards stagger */
 .st-key-sug_0 button {{ animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .24s; }}
@@ -626,9 +634,15 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     background-color: var(--surface) !important;
     border: 1px solid var(--border-strong) !important;
     border-radius: 99px !important;
-    padding: 4px 6px 4px 4px !important;
+    padding: 8px 18px 8px 8px !important; /* text inset 18 (right), send 8 (left) */
     align-items: center !important;
     transition: border-color .15s ease;
+}}
+/* the baseweb wrapper adds 12px 16px of its own — it ballooned the pill to
+   74px; zeroed, the pill is exactly send-button + 8px padding = 56px tall */
+[data-testid="stChatInput"] > div {{
+    padding: 0 !important;
+    min-height: 0 !important;
 }}
 [data-testid="stChatInput"]:focus-within {{ border-color: var(--accent-border) !important; }}
 [data-testid="stChatInputTextArea"] {{
@@ -2179,7 +2193,7 @@ with st.sidebar:
 st.markdown(
     f"<div class='cai-header'>"
     f"<span class='cai-wordmark'>CommandAI</span>"
-    f"<span class='cai-pill'>מחובר כ־{role_label}</span>"
+    f"<span class='cai-pill'>מחובר כ{role_label}</span>"
     f"</div>",
     unsafe_allow_html=True,
 )
@@ -2874,7 +2888,7 @@ for msg_i, msg in enumerate(st.session_state.messages):
 if not st.session_state.messages:
     st.markdown(
         f"<div class='cai-greet'>במה אפשר לעזור?</div>"
-        f"<div class='cai-greet-sub'>שאלות נפוצות מפקודות המטכ\"ל במערכת ({len(docs)})</div>",
+        f"<div class='cai-greet-sub'>שאלות נפוצות מפקודות המטכ\"ל במערכת</div>",
         unsafe_allow_html=True,
     )
     for i, q in enumerate(suggested_questions):
