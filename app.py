@@ -335,8 +335,10 @@ ACCENT_SOFT = role_meta["soft"]
 ACCENT_BORDER = role_meta["border"]
 ACCENT_BRIGHT = role_meta["bright"]
 
-# chat screen needs room under the fixed header band; entry has no header
-MAIN_TOP_PADDING = "12px" if st.session_state.role is None else "72px"
+# chat screen needs room under the fixed header band; entry has no header.
+# --cai-sat is the iOS status-bar inset (measured on the shell doc, pushed
+# into this frame by the PWA script) — the band grew by it, so clear it too.
+MAIN_TOP_PADDING = "12px" if st.session_state.role is None else "calc(72px + var(--cai-sat, 0px))"
 
 # entry elements start their stagger after the boot splash curtain lifts
 # (splash_active is computed at the top of the script, where the splash
@@ -443,7 +445,7 @@ header {{ visibility: hidden; }}
    bars per the design instead of Streamlit's arrow icon */
 [data-testid="stExpandSidebarButton"] {{
     position: fixed !important;
-    top: 12px !important;
+    top: calc(var(--cai-sat, 0px) + 12px) !important;
     inset-inline-start: 20px !important;
     z-index: 110 !important;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='12'%3E%3Crect width='16' height='2' y='0' rx='1' fill='%23ECEDE6'/%3E%3Crect width='16' height='2' y='5' rx='1' fill='%23ECEDE6'/%3E%3Crect width='16' height='2' y='10' rx='1' fill='%23ECEDE6'/%3E%3C/svg%3E") !important;
@@ -567,12 +569,14 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
    center the content on the 430px column and clear the hamburger. ── */
 .cai-header {{
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    height: 64px; box-sizing: border-box;
+    /* the band grows UP by the status-bar inset so its olive fills behind
+       the translucent clock; content stays in the 64px below via padding */
+    height: calc(64px + var(--cai-sat, 0px)); box-sizing: border-box;
     background: rgba(23,26,18,.92);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     display: flex; align-items: center; gap: 12px;
-    padding: 0 72px 0 20px;
+    padding: var(--cai-sat, 0px) 72px 0 20px;
     border-bottom: 1px solid rgba(236,237,230,.1);
     /* no entrance animation: a transform on a fixed element re-anchors it
        and Streamlit can freeze the animation at its from-state (top: 18px) */
@@ -580,7 +584,8 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
 /* dead-center on the SCREEN like the mock — as a flex child it hugged the
    hamburger; absolute centering detaches it from the row flow */
 .cai-wordmark {{ font: 400 19px 'Suez One', serif; color: var(--text);
-    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }}
+    position: absolute; left: 50%; top: calc(var(--cai-sat, 0px) + 32px);
+    transform: translate(-50%, -50%); }}
 .cai-pill {{
     margin-inline-start: auto;
     font: 600 12px Heebo, sans-serif; color: var(--accent);
@@ -887,7 +892,7 @@ body:has([data-testid="stExpandSidebarButton"]) [data-testid="stSidebar"] {{ dis
 }}
 /* compact drawer chrome: small 34px close button, tight top padding,
    content pinned so "+ שיחה חדשה" sits at the drawer bottom */
-[data-testid="stSidebarHeader"] {{ padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px 0 !important; }}
+[data-testid="stSidebarHeader"] {{ padding: calc(max(env(safe-area-inset-top, 0px), var(--cai-sat, 0px)) + 12px) 16px 0 !important; }}
 [data-testid="stSidebarCollapseButton"] {{ width: 34px !important; height: 34px !important; border-radius: 9px !important; }}
 [data-testid="stSidebarUserContent"] {{ padding: 6px 20px 24px !important; }}
 [data-testid="stSidebarUserContent"] > div > [data-testid="stVerticalBlock"] {{
@@ -1273,10 +1278,38 @@ if _pwa:
                        {{ name: "apple-mobile-web-app-capable", content: "yes" }});
                 upsert('meta[name="mobile-web-app-capable"]', "meta",
                        {{ name: "mobile-web-app-capable", content: "yes" }});
+                // translucent → the status bar goes transparent and the dark
+                // -olive header band shows behind the clock (no black bar). The
+                // web view then extends UNDER the clock, so the inset must be
+                // reclaimed as top padding — see the --cai-sat probe below.
                 upsert('meta[name="apple-mobile-web-app-status-bar-style"]', "meta",
-                       {{ name: "apple-mobile-web-app-status-bar-style", content: "black" }});
+                       {{ name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" }});
                 upsert('meta[name="apple-mobile-web-app-title"]', "meta",
                        {{ name: "apple-mobile-web-app-title", content: "CommandAI" }});
+                // black-translucent needs the layout viewport to cover the
+                // safe area, else env(safe-area-inset-top) stays 0 even here on
+                // the top doc. Extend the existing viewport meta, don't clobber.
+                var vp = doc.querySelector('meta[name="viewport"]');
+                if (vp) {{
+                    var vc = vp.getAttribute("content") || "";
+                    if (!/viewport-fit/.test(vc))
+                        vp.setAttribute("content", vc + ", viewport-fit=cover");
+                }}
+                // env(safe-area-inset-top) reads 0 inside the app iframe, so
+                // measure it HERE (the top/shell doc, where it's real) and push
+                // it into the app frame's :root as --cai-sat. The header band,
+                // wordmark, hamburger and drawer all clear the clock by it.
+                var probe = doc.createElement("div");
+                probe.style.cssText = "position:fixed;top:0;left:0;width:0;" +
+                    "height:env(safe-area-inset-top,0px);visibility:hidden;pointer-events:none;";
+                doc.body.appendChild(probe);
+                var appRoot = window.parent.document.documentElement;
+                var syncSat = function () {{
+                    appRoot.style.setProperty("--cai-sat", (probe.offsetHeight || 0) + "px");
+                }};
+                syncSat();
+                window.top.addEventListener("resize", syncSat);
+                window.top.addEventListener("orientationchange", syncSat);
                 // iOS launch screens — shown from icon tap to first paint,
                 // which on a weak connection is most of the wait (the
                 // alternative is a black void). One <link> per device class.
