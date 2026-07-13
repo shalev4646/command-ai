@@ -62,6 +62,80 @@ def _startup_ingest():
     # first user question doesn't stall behind it
     warm_index()
 
+
+@st.cache_resource(show_spinner=False)
+def _patch_boot_shell() -> bool:
+    """Brand Streamlit's static index.html with an instant olive splash.
+
+    The static shell is the first thing the browser paints — before the
+    websocket, the theme config, the gray skeleton pulse or any delta. Out
+    of the box that whole phase is Streamlit's white page + spinner +
+    skeleton (the "junk" users see on slow mobile loads). Patching the
+    served file makes t=0 already look like the boot splash, which then
+    takes over seamlessly (same olive, same wordmark), so the wait is one
+    clean branded screen end to end.
+
+    Idempotent by marker id. The patch lives in the installed package, so
+    it survives until the next dependency reinstall; the first session
+    after a reinstall re-applies it (only that visitor's first load sees
+    the stock shell once). Read-only installs just skip — everything else
+    still works.
+    """
+    try:
+        index = Path(inspect.getfile(st)).parent / "static" / "index.html"
+        src = index.read_text(encoding="utf-8")
+        if 'id="cai-boot"' in src or "</head>" not in src:
+            return 'id="cai-boot"' in src
+        head_add = """
+    <link id="cai-boot-font" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Suez+One&display=swap">
+    <style id="cai-boot">
+      html, body { background: #99A26B; }
+      #cai-boot-splash { position: fixed; inset: 0; z-index: 2147483000; background: #99A26B;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 18px; transition: opacity .4s ease; pointer-events: none; }
+      #cai-boot-splash .chev span { display: block; width: 26px; height: 26px;
+        border-top: 6px solid #171A12; border-left: 6px solid #171A12; transform: rotate(45deg); }
+      #cai-boot-splash .chev span + span { border-color: rgba(23,26,18,.45); margin-top: -9px; }
+      #cai-boot-splash .t { font: 400 34px 'Suez One', serif; color: #171A12; }
+      #cai-boot-splash .s { font: 600 11px ui-monospace, Menlo, monospace; letter-spacing: 3px;
+        color: rgba(23,26,18,.6); }
+      [data-testid="stSkeleton"], [data-testid="stAppSkeleton"],
+      [data-testid="stStatusWidget"], [data-testid="stDecoration"] { display: none !important; }
+    </style>
+"""
+        body_add = """
+    <div id="cai-boot-splash" dir="rtl">
+      <div class="chev"><span></span><span></span></div>
+      <div class="t">CommandAI</div>
+      <div class="s">מערכת פקודות · בלמ"ס</div>
+    </div>
+    <script id="cai-boot-js">
+      (function () {
+        var el = document.getElementById('cai-boot-splash');
+        if (!el) return;
+        var gone = false;
+        var lift = function () {
+          if (gone) return; gone = true;
+          el.style.opacity = '0';
+          setTimeout(function () { el.remove(); }, 450);
+        };
+        // first real content: the app's own boot splash (identical olive, so
+        // the hand-off is invisible) or any rendered markdown (admin view)
+        var ready = function () {
+          return document.querySelector('.cai-splash, [data-testid="stAppViewContainer"] .stMarkdown');
+        };
+        var tick = setInterval(function () { if (ready()) { clearInterval(tick); lift(); } }, 120);
+        setTimeout(function () { clearInterval(tick); lift(); }, 90000);
+      })();
+    </script>
+"""
+        patched = src.replace("</head>", head_add + "  </head>", 1)
+        patched = patched.replace('<div id="root"></div>', '<div id="root"></div>' + body_add, 1)
+        index.write_text(patched, encoding="utf-8")
+        return True
+    except Exception:
+        return False
+
 # PDF bytes are re-read on every rerun to keep their media-manager entries
 # alive (see _pdf_media_url); cache the disk reads — ~40 multi-hundred-KB
 # files per rerun otherwise. ttl bounds staleness: on Streamlit Cloud the
@@ -75,6 +149,8 @@ st.set_page_config(
     layout="centered",
     initial_sidebar_state="collapsed",
 )
+
+_patch_boot_shell()
 
 # ── Session state (initialized before theming, since accent depends on role) ──
 if "messages" not in st.session_state:
@@ -295,6 +371,9 @@ html, body, [data-testid="stApp"], [data-testid="stAppViewContainer"] {{
     background-color: var(--bg);
     color: var(--text);
 }}
+/* iOS rubber-band overscroll must reveal the dark backdrop, never a light
+   page edge; disable the bounce chain where the platform honors it */
+html, body {{ overscroll-behavior-y: none; }}
 /* vertical gradient — dark at top, warming to olive toward the composer.
    NOTE: no `fixed` attachment — iOS Safari renders it black; vh fallback
    first for devices without dvh support */
@@ -339,16 +418,16 @@ header {{ visibility: hidden; }}
     background-color: var(--surface) !important;
     border: 1px solid var(--border) !important;
     border-radius: 10px !important;
-    width: 44px !important;
-    height: 44px !important;
+    width: 40px !important;
+    height: 40px !important;
 }}
 /* the hamburger lives INSIDE the fixed header band: same 430px column,
    vertically centered in the 64px bar, above it in z-order; drawn as 3
    bars per the design instead of Streamlit's arrow icon */
 [data-testid="stExpandSidebarButton"] {{
     position: fixed !important;
-    top: 10px !important;
-    inset-inline-start: 12px !important;
+    top: 12px !important;
+    inset-inline-start: 20px !important;
     z-index: 110 !important;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='12'%3E%3Crect width='16' height='2' y='0' rx='1' fill='%23ECEDE6'/%3E%3Crect width='16' height='2' y='5' rx='1' fill='%23ECEDE6'/%3E%3Crect width='16' height='2' y='10' rx='1' fill='%23ECEDE6'/%3E%3C/svg%3E") !important;
     background-repeat: no-repeat !important;
@@ -469,7 +548,7 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     display: flex; align-items: center; gap: 12px;
-    padding: 0 68px 0 22px;
+    padding: 0 72px 0 20px;
     border-bottom: 1px solid rgba(236,237,230,.1);
     /* no entrance animation: a transform on a fixed element re-anchors it
        and Streamlit can freeze the animation at its from-state (top: 18px) */
@@ -482,13 +561,35 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     border-radius: 99px; padding: 5px 12px;
 }}
 
-/* ── Chat home greeting — top-anchored and centered, per the reference ── */
+/* ── Chat home greeting — centered on the column ── */
 .cai-greet {{ font: 400 28px 'Suez One', serif; color: var(--text); margin: 20px 0 2px;
     text-align: center;
     animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .08s; }}
 .cai-greet-sub {{ font: 400 13px Heebo, sans-serif; color: var(--text-dim); margin-bottom: 12px;
     text-align: center;
     animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .16s; }}
+
+/* ── Chat home (no conversation yet): fill the viewport band between the
+   fixed header and the pinned composer, hero+cards centered vertically in
+   it (mock note: "ממורכז אנכית כדי למלא את המסך, שורת קלט נעוצה למטה").
+   Gated on .cai-greet so conversations and the entry screen keep their
+   top-anchored flow; browsers without :has() just keep that flow too. ── */
+/* NB: the main <section> is stMain on plain pages but becomes
+   stAppScrollToBottomContainer once a chat input mounts — anchor the gate
+   on stAppViewContainer, which exists in both layouts */
+[data-testid="stAppViewContainer"]:has(.cai-greet) [data-testid="stMainBlockContainer"] {{
+    display: flex; flex-direction: column;
+    min-height: calc(100dvh - 134px - env(safe-area-inset-bottom, 0px)); /* composer strip */
+    padding-top: 64px !important;     /* the fixed header band */
+    padding-bottom: 0 !important;
+}}
+/* the vertical block stretches to fill the container, so the actual
+   centering happens INSIDE it, on the element containers */
+[data-testid="stAppViewContainer"]:has(.cai-greet)
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] {{
+    justify-content: center;
+}}
+[data-testid="stAppViewContainer"]:has(.cai-greet) .cai-greet {{ margin-top: 0; }}
 
 /* suggestion cards stagger */
 .st-key-sug_0 button {{ animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .24s; }}
@@ -974,8 +1075,24 @@ components.html(
             if (r.height > 0 && r.height < 140 && r.width < 300 && win.innerHeight - r.bottom < 60) HIDE(el);
         });
     });
+    // Darken every same-origin ancestor document (the cloud shell page is
+    // WHITE by default — it's what shows through on iOS rubber-band
+    // overscroll and as white gaps/dividers while scrolling the PWA).
+    // Idempotent per document; same color as the app backdrop.
+    const darkenShell = () => contexts.forEach(win => {
+        try {
+            const doc = win.document;
+            if (doc.getElementById('cai-shell-dark')) return;
+            const s = doc.createElement('style');
+            s.id = 'cai-shell-dark';
+            s.textContent = 'html,body{background:#171A12 !important;margin:0;overscroll-behavior:none;}' +
+                            'iframe{background:#171A12;}';
+            doc.head.appendChild(s);
+        } catch (e) {}
+    });
     killBadges();
-    setInterval(killBadges, 1000);
+    darkenShell();
+    setInterval(() => { killBadges(); darkenShell(); }, 1000);
     </script>""",
     height=0,
 )
