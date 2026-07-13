@@ -596,8 +596,9 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
 [data-testid="stAppViewContainer"]:has(.cai-greet) .cai-greet {{ margin-top: 0; }}
 
 /* suggestion cards: mock rhythm is a tight 10px gap (8px button margin +
-   the 2px wrapper margin), vs the entry buttons' 12px */
-[class*="st-key-sug_"] button {{ margin-bottom: 8px; }}
+   the 2px wrapper margin), vs the entry buttons' 12px. Must outrank the
+   base `div[data-testid="stButton"] > button` rule on specificity. */
+[class*="st-key-sug_"] div[data-testid="stButton"] > button {{ margin-bottom: 8px; }}
 
 /* suggestion cards stagger */
 .st-key-sug_0 button {{ animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .24s; }}
@@ -1333,7 +1334,9 @@ def _letters_dialog():
         details[label] = st.text_input(
             label, placeholder=placeholder or None, key=f"letter_{kind}_{i}"
         )
-    if st.button("✍️ נסח טיוטה", key="letter_go", use_container_width=True):
+    # label has no ✍️ emoji — the colorful glyph clashed with the mock's clean
+    # look; the pen is drawn by CSS (st-key-letter_go p::after mask) in accent
+    if st.button("נסח טיוטה", key="letter_go", use_container_width=True):
         quota = metrics.reserve(st.session_state.session_id)
         if quota != "ok":
             st.warning(_QUOTA_NOTICES[quota])
@@ -1549,6 +1552,15 @@ div[data-testid="stDialog"] .st-key-letter_go button {
     border: 1px solid var(--accent-border) !important; box-shadow: none !important;
 }
 div[data-testid="stDialog"] .st-key-letter_go button p { color: var(--accent-bright) !important; font-weight: 700 !important; }
+/* the mock's pen glyph: monochrome, accent-tinted via mask (an emoji in the
+   label renders full-color and clashes). RTL puts ::after at the LEFT end. */
+div[data-testid="stDialog"] .st-key-letter_go button p::after {
+    content: ""; display: inline-block; width: 15px; height: 15px;
+    margin-inline-start: 9px; vertical-align: -2px;
+    background-color: var(--accent-bright);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 20h9' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 20h9' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+}
 div[data-testid="stDialog"] .st-key-letter_go button:hover {
     background: var(--accent-soft) !important; border-color: var(--accent) !important;
 }
