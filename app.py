@@ -1528,8 +1528,10 @@ div[data-testid="stDialog"] .stDownloadButton button {
     border-radius: 12px !important; font: 700 14px Heebo, sans-serif !important;
     padding: 11px !important;
 }
+/* dark fill + olive outline + olive text (the mock's OUTLINED button), not the
+   green-tinted accent-soft fill that read as a solid olive block */
 div[data-testid="stDialog"] .st-key-letter_go button {
-    background: var(--accent-soft) !important;
+    background: #22271A !important;
     border: 1px solid var(--accent-border) !important; box-shadow: none !important;
 }
 div[data-testid="stDialog"] .st-key-letter_go button p { color: var(--accent-bright) !important; font-weight: 700 !important; }
