@@ -1575,6 +1575,13 @@ div[data-testid="stDialog"] [data-testid="stRadio"] > label {
     font: 600 11px Heebo, sans-serif !important; letter-spacing: .02em;
     color: rgba(236,237,230,.45) !important; margin-bottom: 7px !important;
 }
+/* the label TEXT lives in an inner <p> (stWidgetLabel) with its own emotion
+   font/color — the label-level shorthand above never reaches it on device,
+   so phones showed big cream labels instead of the mock's small dim ones */
+div[data-testid="stDialog"] [data-testid="stWidgetLabel"] p {
+    font-size: 11px !important; font-weight: 600 !important;
+    color: rgba(236,237,230,.45) !important; letter-spacing: .02em;
+}
 
 /* ---- Select fields -> dark pill with olive chevron ---- */
 div[data-testid="stDialog"] [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
@@ -1655,13 +1662,15 @@ div[data-testid="stDialog"] .st-key-letter_go button {
     background: #22271A !important;
     border: 1px solid var(--accent-border) !important; box-shadow: none !important;
 }
-div[data-testid="stDialog"] .st-key-letter_go button p { color: var(--accent-bright) !important; font-weight: 700 !important; }
+/* accent-hover, not accent-bright: #C4CE92 reads as plain white on phone
+   panels — the mock's button text is a clearly-olive #AAB37C */
+div[data-testid="stDialog"] .st-key-letter_go button p { color: var(--accent-hover) !important; font-weight: 700 !important; }
 /* the mock's pen glyph: monochrome, accent-tinted via mask (an emoji in the
    label renders full-color and clashes). RTL puts ::after at the LEFT end. */
 div[data-testid="stDialog"] .st-key-letter_go button p::after {
     content: ""; display: inline-block; width: 15px; height: 15px;
     margin-inline-start: 9px; vertical-align: -2px;
-    background-color: var(--accent-bright);
+    background-color: var(--accent-hover);
     -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 20h9' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
     mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 20h9' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
 }
