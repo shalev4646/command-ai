@@ -80,6 +80,14 @@ def _patch_boot_shell() -> bool:
     after a reinstall re-applies it (only that visitor's first load sees
     the stock shell once). Read-only installs just skip — everything else
     still works.
+
+    LOCAL-ONLY in practice: on Streamlit Community Cloud the platform's
+    front server (uvicorn, `Via: google`) serves its own snapshot of the
+    app's index.html — the file patched here is never the one delivered
+    (verified 2026-07-13: served Last-Modified stays at container build
+    time and the marker never appears, even right after a live session
+    ran this code). The cloud boot is branded by the PWA launch images +
+    the olive loading theme (config.toml backgroundColor) instead.
     """
     try:
         index = Path(inspect.getfile(st)).parent / "static" / "index.html"
@@ -389,12 +397,17 @@ html {{ -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }}
     min-height: 100vh;
     min-height: 100dvh;
 }}
-/* hide the scroll bar (shows as a dark strip on the left edge in RTL) */
-[data-testid="stAppViewContainer"], [data-testid="stMain"], body {{
+/* hide the scroll bar (shows as a strip on the left edge in RTL).
+   NB stAppScrollToBottomContainer: the main <section> is REPLACED by this
+   testid once a chat input mounts — it's the chat screen's real scroller,
+   and Streamlit gives it scrollbar-width:thin (the visible side line) */
+[data-testid="stAppViewContainer"], [data-testid="stMain"],
+[data-testid="stAppScrollToBottomContainer"], body {{
     scrollbar-width: none !important;
 }}
 [data-testid="stAppViewContainer"]::-webkit-scrollbar,
 [data-testid="stMain"]::-webkit-scrollbar,
+[data-testid="stAppScrollToBottomContainer"]::-webkit-scrollbar,
 body::-webkit-scrollbar {{ display: none !important; width: 0 !important; }}
 /* hide Streamlit Cloud viewer badges — the crown "hosted with Streamlit"
    pill and the creator-avatar bubble injected at the bottom corner (their
@@ -499,10 +512,15 @@ div[data-testid="stButton"] > button {{
     box-shadow: none;
     transition: background-color .18s ease, border-color .18s ease, transform .1s ease;
 }}
-div[data-testid="stButton"] > button:hover {{
-    background-color: var(--surface-hover);
-    border-color: var(--accent-border);
-    color: var(--text);
+/* hover only where a real pointer exists — iOS applies :hover on tap and
+   KEEPS it (sticky hover): a touched suggestion card stayed lit with an
+   olive border. Touch devices get the :active press feedback only. */
+@media (hover: hover) {{
+    div[data-testid="stButton"] > button:hover {{
+        background-color: var(--surface-hover);
+        border-color: var(--accent-border);
+        color: var(--text);
+    }}
 }}
 div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
 
@@ -531,9 +549,11 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     background-color: rgba(138,155,192,.12); border: 1px solid rgba(138,155,192,.38);
     background-image: {_ICON_RESERVE};
 }}
-.st-key-role_soldier button:hover {{ border-color: rgba(153,162,107,.5) !important; }}
-.st-key-role_commander button:hover {{ border-color: rgba(178,154,114,.5) !important; }}
-.st-key-role_reserve button:hover {{ border-color: rgba(138,155,192,.5) !important; }}
+@media (hover: hover) {{
+    .st-key-role_soldier button:hover {{ border-color: rgba(153,162,107,.5) !important; }}
+    .st-key-role_commander button:hover {{ border-color: rgba(178,154,114,.5) !important; }}
+    .st-key-role_reserve button:hover {{ border-color: rgba(138,155,192,.5) !important; }}
+}}
 .st-key-role_soldier button p, .st-key-role_commander button p, .st-key-role_reserve button p {{
     font-size: 12.5px !important; color: var(--text-dim); text-align: right; margin: 0; line-height: 1.35;
 }}
@@ -617,7 +637,9 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     background-size: 100% 100vh !important;
     background-size: 100% 100dvh !important;
     background-position: bottom !important;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    /* env() is 0 inside the cloud shell's iframe, so give the disclaimer a
+       real floor — on iPhone it sat right on the home-indicator bar */
+    padding-bottom: max(14px, env(safe-area-inset-bottom, 0px));
 }}
 /* the inner wrappers must not paint their own (near-black) theme color
    over the gradient strip */
@@ -1124,6 +1146,49 @@ def _icon_bytes(name: str) -> bytes | None:
         return None
 
 
+# Streamlit Community Cloud mounts the repo at /mount/src — absent locally.
+_ON_CLOUD = Path("/mount/src").exists()
+
+# iOS launch screens: (device px width, height, device-pixel-ratio) per
+# iPhone class. iOS shows the matching image from the moment the icon is
+# tapped until the page's first paint — on a weak connection that is most
+# of the wait, and without these it is a black void (see 2026-07-13 video:
+# ~15s of black before anything web-controlled can run).
+_STARTUP_SIZES = [
+    (640, 1136, 2), (750, 1334, 2), (828, 1792, 2),
+    (1125, 2436, 3), (1170, 2532, 3), (1179, 2556, 3), (1206, 2622, 3),
+    (1242, 2688, 3), (1284, 2778, 3), (1290, 2796, 3), (1320, 2868, 3),
+]
+
+
+@st.cache_data(show_spinner=False)
+def _startup_png(w: int, h: int, dpr: int) -> bytes:
+    """Olive launch screen with the double-chevron mark, geometry matched to
+    the boot splash so the OS launch image morphs into it seamlessly. The
+    splash chevron is a 26px box + 6px border-top/left rotated 45° → a 32px
+    box whose apex reaches 22.6px above its top; spans stack 23px apart
+    (32px flow − 9px negative margin), and flex-centering puts the first
+    apex a constant ~44px above screen center (measured on the live splash)."""
+    import io
+    from PIL import Image, ImageDraw
+
+    img = Image.new("RGB", (w, h), "#99A26B")
+    draw = ImageDraw.Draw(img, "RGBA")
+    dd = 32 * 0.7071 * dpr          # apex-to-arm-tip reach of the 32px box
+    tv = 6 * 1.4142 * dpr           # vertical band thickness of a 6px stroke
+    cx = w / 2
+    for i, color in enumerate([(23, 26, 18, 255), (23, 26, 18, 115)]):
+        ay = h / 2 - 44 * dpr + i * 23 * dpr
+        draw.polygon(
+            [(cx - dd, ay + dd), (cx, ay), (cx + dd, ay + dd),
+             (cx + dd, ay + dd + tv), (cx, ay + tv), (cx - dd, ay + dd + tv)],
+            fill=color,
+        )
+    buf = io.BytesIO()
+    img.save(buf, "PNG", optimize=True)
+    return buf.getvalue()
+
+
 def _pwa_assets() -> dict | None:
     """Register the PWA assets (icons + web-app manifest) with the media
     file manager and return their URLs. Called EVERY rerun — entries whose
@@ -1148,7 +1213,14 @@ def _pwa_assets() -> dict | None:
             "short_name": "CommandAI",
             "lang": "he",
             "dir": "rtl",
-            "start_url": "/",
+            # On the cloud the platform serves the app document itself at
+            # /~/+/ (the React shell embeds it from there, and it answers
+            # 200 with no auth-redirect hop even cookieless). Launching the
+            # PWA straight at it skips the shell entirely: no white shell
+            # page, no shell JS bundle, no viewer badges — the boot goes
+            # launch-image → olive loading theme → splash. Locally the app
+            # really is served at /.
+            "start_url": "/~/+/" if _ON_CLOUD else "/",
             "scope": "/",
             "display": "standalone",
             "background_color": "#99A26B",  # the boot-splash olive
@@ -1162,6 +1234,11 @@ def _pwa_assets() -> dict | None:
         }
         data = json.dumps(manifest, ensure_ascii=False).encode("utf-8")
         urls["manifest"] = mgr.add(data, "application/json", "pwa_manifest")
+        urls["startup"] = [
+            (w, h, r, mgr.add(_startup_png(w, h, r), "image/png",
+                              f"pwa_launch_{w}x{h}"))
+            for (w, h, r) in _STARTUP_SIZES
+        ]
         return urls
     except Exception:
         return None
@@ -1173,14 +1250,19 @@ if _pwa:
     # the app lives inside the platform shell, same-origin) — inject there,
     # like the badge watchdog above. Media URLs are app-frame relative, so
     # they're resolved against the app frame's directory (this component's
-    # parent), which differs local (/) vs cloud shell (/~/+/). Idempotent by
-    # element id — the top document survives Streamlit reruns.
+    # parent), which differs local (/) vs cloud shell (/~/+/). The shell
+    # ships its OWN manifest / theme-color (#FFFFFF) / apple-touch-icon, and
+    # for duplicate manifests the FIRST one wins — so existing tags are
+    # REPLACED in place, not appended after. Idempotent by element id — the
+    # top document survives Streamlit reruns. iOS snapshots all of this at
+    # add-time: users who installed before must remove + re-add the icon.
     components.html(
         f"""
         <script>
         (function () {{
             var icon180 = {json.dumps(_pwa[180])};
             var manifest = {json.dumps(_pwa["manifest"])};
+            var startup = {json.dumps(_pwa["startup"])};
             try {{
                 var doc = window.top.document;
                 if (doc.getElementById("cai-pwa-manifest")) return;
@@ -1188,18 +1270,40 @@ if _pwa:
                 var dir = loc.pathname.endsWith("/") ? loc.pathname : loc.pathname + "/";
                 var base = loc.origin + dir;
                 var abs = function (u) {{ return base + String(u).replace(/^\\//, ""); }};
-                var add = function (tag, attrs) {{
-                    var el = doc.createElement(tag);
+                var head = doc.head;
+                var upsert = function (sel, tag, attrs) {{
+                    var el = head.querySelector(sel);
+                    if (!el) {{ el = doc.createElement(tag); head.appendChild(el); }}
                     for (var k in attrs) el.setAttribute(k, attrs[k]);
-                    doc.head.appendChild(el);
                 }};
-                add("link", {{ id: "cai-pwa-manifest", rel: "manifest", href: abs(manifest) }});
-                add("link", {{ rel: "apple-touch-icon", sizes: "180x180", href: abs(icon180) }});
-                add("meta", {{ name: "apple-mobile-web-app-capable", content: "yes" }});
-                add("meta", {{ name: "mobile-web-app-capable", content: "yes" }});
-                add("meta", {{ name: "apple-mobile-web-app-status-bar-style", content: "black" }});
-                add("meta", {{ name: "apple-mobile-web-app-title", content: "CommandAI" }});
-                add("meta", {{ name: "theme-color", content: "#171A12" }});
+                upsert('link[rel="manifest"]', "link",
+                       {{ id: "cai-pwa-manifest", rel: "manifest", href: abs(manifest) }});
+                upsert('link[rel="apple-touch-icon"]', "link",
+                       {{ rel: "apple-touch-icon", sizes: "180x180", href: abs(icon180) }});
+                upsert('meta[name="theme-color"]', "meta",
+                       {{ name: "theme-color", content: "#171A12" }});
+                upsert('meta[name="apple-mobile-web-app-capable"]', "meta",
+                       {{ name: "apple-mobile-web-app-capable", content: "yes" }});
+                upsert('meta[name="mobile-web-app-capable"]', "meta",
+                       {{ name: "mobile-web-app-capable", content: "yes" }});
+                upsert('meta[name="apple-mobile-web-app-status-bar-style"]', "meta",
+                       {{ name: "apple-mobile-web-app-status-bar-style", content: "black" }});
+                upsert('meta[name="apple-mobile-web-app-title"]', "meta",
+                       {{ name: "apple-mobile-web-app-title", content: "CommandAI" }});
+                // iOS launch screens — shown from icon tap to first paint,
+                // which on a weak connection is most of the wait (the
+                // alternative is a black void). One <link> per device class.
+                startup.forEach(function (s) {{
+                    var l = doc.createElement("link");
+                    l.setAttribute("rel", "apple-touch-startup-image");
+                    l.setAttribute("media",
+                        "(device-width: " + (s[0] / s[2]) + "px) and " +
+                        "(device-height: " + (s[1] / s[2]) + "px) and " +
+                        "(-webkit-device-pixel-ratio: " + s[2] + ") and " +
+                        "(orientation: portrait)");
+                    l.setAttribute("href", abs(s[3]));
+                    head.appendChild(l);
+                }});
             }} catch (e) {{}}
         }})();
         </script>
@@ -2174,7 +2278,9 @@ with st.sidebar:
             "<div class='cai-install-hint'>"
             "<b>אייפון:</b> בספארי — כפתור השיתוף ⬆️ ואז «הוסף למסך הבית».<br>"
             "<b>אנדרואיד:</b> בכרום — תפריט ⋮ ואז «הוספה למסך הבית».<br>"
-            "האפליקציה תיפתח במסך מלא, עם אייקון CommandAI."
+            "האפליקציה תיפתח במסך מלא, עם אייקון CommandAI.<br>"
+            "<b>כבר מותקן אצלך?</b> מחק את האייקון והוסף מחדש — מסך הפתיחה "
+            "המהיר נטען רק בהוספה."
             "</div>",
             unsafe_allow_html=True,
         )
