@@ -3,12 +3,13 @@
 [server]
 enableStaticServing = true
 
-# Drop the platform toolbar (Deploy / ⋮ / status icons) at the CONFIG level:
-# unlike our CSS, this applies from the frontend's very first frame, so the
-# icons can't flash at the top while the app is still booting. The sidebar
-# toggle (our hamburger) is separate from the toolbar and stays.
-[client]
-toolbarMode = "minimal"
+# NO toolbarMode override. `toolbarMode = "minimal"` sounded like a clean
+# way to drop the platform icons from the first loading frame, but on 1.58
+# it UNMOUNTS the whole sidebar + stExpandSidebarButton from the DOM (A/B
+# proven locally 2026-07-13: identical build, flag flipped via CLI — with
+# "minimal" neither exists, with "auto" both return). That kills the drawer
+# (letters, calculators, switch-role) on every device. Platform-icon flash
+# is instead handled by the app CSS + the boot splash covering the frame.
 
 # Pin the dark olive theme regardless of the device's light/dark mode —
 # without this, iPhones in light mode render Streamlit's light theme
