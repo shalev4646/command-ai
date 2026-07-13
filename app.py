@@ -1398,6 +1398,10 @@ _MODAL_CSS = """
    inner box) with the olive theme.backgroundColor (#99A26B) — the > div behind
    it is only a full-viewport positioning layer. Force the dark gradient onto the
    card itself, or the whole modal reads olive/"cheap" no matter what's inside. ---- */
+/* Backdrop: Streamlit's default overlay is a LIGHT cream tint that WASHES the
+   olive app behind the modal; the design wants the surroundings dimmed dark.
+   Darken the full-screen stDialog layer (the card below keeps its own bg). */
+div[data-testid="stDialog"] { background: rgba(9,11,7,.66) !important; }
 div[data-testid="stDialog"] > div { direction: rtl; background: transparent !important; }
 div[data-testid="stDialog"] [role="dialog"] {
     direction: rtl;
