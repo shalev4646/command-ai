@@ -336,7 +336,7 @@ ACCENT_BORDER = role_meta["border"]
 ACCENT_BRIGHT = role_meta["bright"]
 
 # chat screen needs room under the fixed header band; entry has no header
-MAIN_TOP_PADDING = "12px" if st.session_state.role is None else "80px"
+MAIN_TOP_PADDING = "12px" if st.session_state.role is None else "72px"
 
 # entry elements start their stagger after the boot splash curtain lifts
 # (splash_active is computed at the top of the script, where the splash
@@ -589,7 +589,7 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
 }}
 
 /* ── Chat home greeting — centered on the column ── */
-.cai-greet {{ font: 400 28px 'Suez One', serif; color: var(--text); margin: 20px 0 2px;
+.cai-greet {{ font: 400 28px 'Suez One', serif; color: var(--text); margin: 0 0 2px;
     text-align: center;
     animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .08s; }}
 .cai-greet-sub {{ font: 400 13px Heebo, sans-serif; color: var(--text-dim); margin-bottom: 8px;
