@@ -577,7 +577,10 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     /* no entrance animation: a transform on a fixed element re-anchors it
        and Streamlit can freeze the animation at its from-state (top: 18px) */
 }}
-.cai-wordmark {{ font: 400 19px 'Suez One', serif; color: var(--text); }}
+/* dead-center on the SCREEN like the mock — as a flex child it hugged the
+   hamburger; absolute centering detaches it from the row flow */
+.cai-wordmark {{ font: 400 19px 'Suez One', serif; color: var(--text);
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }}
 .cai-pill {{
     margin-inline-start: auto;
     font: 600 12px Heebo, sans-serif; color: var(--accent);
@@ -593,27 +596,11 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     text-align: center;
     animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .16s; }}
 
-/* ── Chat home (no conversation yet): fill the viewport band between the
-   fixed header and the pinned composer, hero+cards centered vertically in
-   it (mock note: "ממורכז אנכית כדי למלא את המסך, שורת קלט נעוצה למטה").
-   Gated on .cai-greet so conversations and the entry screen keep their
-   top-anchored flow; browsers without :has() just keep that flow too. ── */
-/* NB: the main <section> is stMain on plain pages but becomes
-   stAppScrollToBottomContainer once a chat input mounts — anchor the gate
-   on stAppViewContainer, which exists in both layouts */
-[data-testid="stAppViewContainer"]:has(.cai-greet) [data-testid="stMainBlockContainer"] {{
-    display: flex; flex-direction: column;
-    min-height: calc(100dvh - 134px - env(safe-area-inset-bottom, 0px)); /* composer strip */
-    padding-top: 64px !important;     /* the fixed header band */
-    padding-bottom: 0 !important;
-}}
-/* the vertical block stretches to fill the container, so the actual
-   centering happens INSIDE it, on the element containers */
-[data-testid="stAppViewContainer"]:has(.cai-greet)
-[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] {{
-    justify-content: center;
-}}
-[data-testid="stAppViewContainer"]:has(.cai-greet) .cai-greet {{ margin-top: 0; }}
+/* ── Chat home vertical rhythm — exactly like the mock: the hero sits a
+   fixed ~35px under the header (MAIN_TOP_PADDING 80 + greet margin 20)
+   and the leftover space collects between the cards and the composer.
+   An equal-split vertical centering was tried and looked "floaty" with
+   short/few suggestion cards — the mock is top-anchored, so are we. ── */
 
 /* suggestion cards: mock rhythm is a tight 10px gap (8px button margin +
    the 2px wrapper margin), vs the entry buttons' 12px. Must outrank the
