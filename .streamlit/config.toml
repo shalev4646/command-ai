@@ -3,6 +3,13 @@
 [server]
 enableStaticServing = true
 
+# Drop the platform toolbar (Deploy / ⋮ / status icons) at the CONFIG level:
+# unlike our CSS, this applies from the frontend's very first frame, so the
+# icons can't flash at the top while the app is still booting. The sidebar
+# toggle (our hamburger) is separate from the toolbar and stays.
+[client]
+toolbarMode = "minimal"
+
 # Pin the dark olive theme regardless of the device's light/dark mode —
 # without this, iPhones in light mode render Streamlit's light theme
 # (dark text) under our dark backgrounds and the text is unreadable.
