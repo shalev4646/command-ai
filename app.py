@@ -1531,7 +1531,14 @@ div[data-testid="stDialog"] [role="dialog"] {
     border-radius: 26px !important;
     box-shadow: 0 -1px 0 rgba(255,255,255,.05) inset,
                 0 30px 60px -18px rgba(0,0,0,.65) !important;
+    padding: 22px 22px 26px !important;  /* mock: airy card, not Streamlit's tight default */
 }
+/* the app-wide stVerticalBlock{gap:0} crushes the dialog's rhythm — restore
+   the mock's ~14px breathing room between field groups (label carries 7px) */
+div[data-testid="stDialog"] [data-testid="stSelectbox"],
+div[data-testid="stDialog"] [data-testid="stTextInput"],
+div[data-testid="stDialog"] [data-testid="stTextArea"],
+div[data-testid="stDialog"] [data-testid="stRadio"] { margin-bottom: 12px; }
 /* Streamlit renders the dialog title as a <p> in a markdown bar (NOT an <h2>) —
    it's the modal's first child. Hide that whole bar; we inject our own header in
    the body. The close button is a SEPARATE absolutely-positioned element (sibling
@@ -1612,7 +1619,7 @@ div[data-testid="stDialog"] [data-testid="stTextInput"] div[data-baseweb="base-i
 }
 div[data-testid="stDialog"] [data-testid="stTextInput"] input {
     background: transparent !important; color: var(--text) !important;
-    font: 600 14.5px Heebo, sans-serif !important; direction: rtl; padding: 12px 14px !important;
+    font: 600 14.5px Heebo, sans-serif !important; direction: rtl; padding: 13px 15px !important;
 }
 div[data-testid="stDialog"] [data-testid="stTextInput"] input::placeholder {
     color: rgba(236,237,230,.35) !important; font-weight: 400 !important;
