@@ -459,6 +459,56 @@ header {{ visibility: hidden; }}
 [data-testid="stExpandSidebarButton"] svg,
 [data-testid="stSidebarCollapseButton"] svg {{ fill: var(--text) !important; }}
 
+/* ── App-owned drawer + hamburger (replaces st.sidebar) ──
+   The cloud platform force-suppresses the native sidebar: on *.streamlit.app
+   stSidebar NEVER mounts (MutationObserver across the whole role-pick
+   transition, 2026-07-13, on a build whose config.toml has no toolbarMode
+   override), even though the identical code mounts it locally — platform
+   client flags outrank config.toml. These elements are plain widgets, so no
+   platform sidebar behavior can take them away. */
+.st-key-drawer_open_btn {{
+    position: fixed; top: 12px; inset-inline-start: 20px;
+    width: 40px; z-index: 110;
+}}
+.st-key-drawer_open_btn button {{
+    width: 40px !important; height: 40px !important; min-height: 40px !important;
+    background-color: var(--surface) !important;
+    border: 1px solid var(--border) !important; border-radius: 10px !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='12'%3E%3Crect width='16' height='2' y='0' rx='1' fill='%23ECEDE6'/%3E%3Crect width='16' height='2' y='5' rx='1' fill='%23ECEDE6'/%3E%3Crect width='16' height='2' y='10' rx='1' fill='%23ECEDE6'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important; background-position: center !important;
+}}
+.st-key-drawer_open_btn button p {{ display: none; }}
+@media (hover: hover) {{
+    .st-key-drawer_open_btn button:hover {{ background-color: var(--surface-hover) !important; }}
+}}
+.st-key-drawer_backdrop {{ position: fixed; inset: 0; z-index: 125; }}
+.st-key-drawer_backdrop button {{
+    width: 100% !important; height: 100% !important; min-height: 100% !important;
+    background: rgba(9, 11, 7, .62) !important;
+    border: none !important; border-radius: 0 !important; box-shadow: none !important;
+}}
+.st-key-drawer_backdrop button p {{ display: none; }}
+.st-key-cai_drawer {{
+    position: fixed; top: 0; bottom: 0; inset-inline-start: 0;
+    width: min(78vw, 340px); z-index: 130;
+    background: #171A12; border-inline-end: 1px solid var(--border);
+    box-shadow: 0 0 40px rgba(0, 0, 0, .45);
+    padding: calc(env(safe-area-inset-top, 0px) + 16px) 18px 24px;
+    overflow-y: auto; overscroll-behavior: contain;
+    animation: drawerIn .26s cubic-bezier(.2, .7, .2, 1);
+}}
+@keyframes drawerIn {{ from {{ transform: translateX(12%); opacity: 0; }} to {{ transform: none; opacity: 1; }} }}
+.st-key-cai_drawer [data-testid="stElementContainer"] {{ margin-bottom: 8px; }}
+.st-key-drawer_close [data-testid="stElementContainer"],
+.st-key-cai_drawer .st-key-drawer_close {{ margin-bottom: 2px; }}
+.st-key-drawer_close {{ display: flex; justify-content: flex-end; }}
+.st-key-drawer_close button {{
+    width: 34px !important; height: 34px !important; min-height: 34px !important;
+    border-radius: 9px !important;
+    background-color: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+}}
+
 /* ── Main container — mobile-first column, max 430px ── */
 [data-testid="stMainBlockContainer"], .main .block-container {{
     max-width: 560px;
@@ -1058,6 +1108,19 @@ a.cai-order-link:hover {{
 # bottom corner mounted directly on <body>, where the app mounts nothing. ──
 components.html(
     """<script>
+    // ── Shell escape: when the app is embedded in the platform shell, the
+    // shell suppresses the WHOLE sidebar chrome (stSidebar + the expand
+    // hamburger never mount — A/B proven 2026-07-13: identical build shows
+    // both on the direct /~/+/ frame and neither via the shell), which
+    // kills the drawer. Bounce the top window to the direct app frame —
+    // same origin, so this is allowed. Guards: only when an extra shell
+    // layer exists (top !== parent; local and direct loads no-op), and
+    // never when the top URL carries a query (?admin=1 and debug flows).
+    try {
+        if (window.top !== window.parent && !window.top.location.search) {
+            window.top.location.replace(window.parent.location.href);
+        }
+    } catch (e) {}
     // On Streamlit Cloud the app itself runs inside an iframe of a platform
     // shell page (same *.streamlit.app origin), and the viewer badges are
     // mounted on the SHELL document — one level above window.parent. Sweep
@@ -1347,15 +1410,12 @@ if st.session_state.role is None:
 
     if st.button("**כניסת חיילים**  \nחובה / סדיר", key="role_soldier", use_container_width=True):
         st.session_state.role = "soldier"
-        st.session_state.close_drawer = True
         st.rerun()
     if st.button("**כניסת מפקדים**  \nקבע", key="role_commander", use_container_width=True):
         st.session_state.role = "commander"
-        st.session_state.close_drawer = True
         st.rerun()
     if st.button("**כניסת מילואים**  \nמערך המילואים", key="role_reserve", use_container_width=True):
         st.session_state.role = "reserve"
-        st.session_state.close_drawer = True
         st.rerun()
 
     st.markdown("<div class='cai-entry-footer'>בלמ\"ס · לשימוש פנימי בלבד</div>", unsafe_allow_html=True)
@@ -2128,8 +2188,10 @@ def handle_question(question: str):
     profile_kw = {}
     if "profile" in inspect.signature(stream_ai_answer).parameters:
         # empty selection -> None, so the composed user turn stays
-        # byte-identical to the pre-profile format (prompt-cache prefix)
-        profile_kw["profile"] = st.session_state.get("profile_statuses") or None
+        # byte-identical to the pre-profile format (prompt-cache prefix).
+        # profile_saved mirrors the drawer's pills widget — the widget key
+        # itself is dropped by Streamlit on runs where the drawer is closed.
+        profile_kw["profile"] = st.session_state.get("profile_saved") or None
     try:
         with st.spinner("מחפש בפקודות..."):
             result = stream_ai_answer(question, history, role=st.session_state.role, **profile_kw)
@@ -2240,108 +2302,141 @@ def _order_link(title: str, url: str | None, date_badge: str | None = None) -> s
     return f"<div class='cai-order-link'>{safe_title}{tail}</div>"
 
 
-# ── Sidebar (drawer) ──
-with st.sidebar:
-    st.markdown(f"<div class='cai-drawer-role'>מחובר כ־{role_label}</div>", unsafe_allow_html=True)
-    if st.button("החלף תפקיד", key="switch_role", use_container_width=True):
-        archive_current_conversation()
-        st.session_state.role = None
-        st.session_state.messages = []
-        st.session_state.pending_question = None
-        st.session_state.pop("suggested", None)
-        # a stale search would silently filter the next role's orders list
-        st.session_state.pop("orders_search", None)
+# ── Drawer (app-owned overlay) ──
+# The native st.sidebar is force-suppressed by the cloud platform: on
+# *.streamlit.app the frontend NEVER mounts stSidebar (verified 2026-07-13
+# with a MutationObserver across the whole role-pick transition, on a build
+# whose config.toml carries no toolbarMode override), even though the same
+# code mounts it locally — the platform's client flags outrank config.toml.
+# So the drawer is app-owned: an st.button hamburger toggles a fixed-position
+# keyed container through session state. No stSidebar machinery anywhere, so
+# no platform build can take it away again.
+if "drawer_open" not in st.session_state:
+    st.session_state.drawer_open = False
+
+if st.button("תפריט", key="drawer_open_btn"):
+    st.session_state.drawer_open = True
+    st.rerun()
+
+if st.session_state.drawer_open:
+    # full-viewport click-catcher UNDER the panel — tapping outside closes
+    if st.button("סגירת התפריט", key="drawer_backdrop"):
+        st.session_state.drawer_open = False
         st.rerun()
-    # personal statuses that change entitlements (lone soldier, new
-    # immigrant...). The widget key IS the persistence: st.pills keeps the
-    # selection list in session state under "profile_statuses" across
-    # reruns, and handle_question threads it into the API user turn only
-    # when non-empty (backend._compose_user_content) — so an empty
-    # selection keeps requests byte-identical to the pre-profile format.
-    st.markdown("<div class='cai-profile-label'>התאמה אישית</div>", unsafe_allow_html=True)
-    st.pills(
-        "התאמה אישית",
-        ["חייל בודד", "עולה חדש", "הורה לילדים", "נשוי/אה"],
-        selection_mode="multi",
-        key="profile_statuses",
-        label_visibility="collapsed",
-    )
-    st.markdown("---")
-    docs = get_loaded_docs_info(role=st.session_state.role)
-    with st.expander(f"פקודות מטכ\"ל במערכת ({len(docs)})", expanded=False):
-        if docs:
-            search = _search_norm(st.text_input(
-                "חיפוש פקודה",
-                key="orders_search",
-                label_visibility="collapsed",
-                placeholder="🔎 חיפוש פקודה...",
-            ))
-            # media URLs are registered for ALL docs, filtered or not: a
-            # media-manager entry whose coord isn't re-registered during a
-            # rerun is purged at that rerun's end — filtering registration
-            # would 404 a PDF the user already opened in another tab
-            rows = [
-                (doc, _pdf_media_url(doc["source_file"], f"pdfside_{doc['id']}")
-                 if doc.get("source_file") else None)
-                for doc in docs
-            ]
-            shown = [
-                (doc, url) for doc, url in rows
-                if not search
-                or search in _search_norm(doc["title"])
-                or search in _search_norm(str(doc["id"]))
-            ]
-            if not shown:
-                st.caption("לא נמצאו פקודות מתאימות")
-            # each title is itself the tap target that opens the order's PDF
-            # inline (styled as a flat list line, not a button — CSS above)
-            for doc, url in shown:
-                st.markdown(_order_link(doc["title"], url, _doc_date_badge(doc["id"])), unsafe_allow_html=True)
-        else:
-            st.caption("אין פקודות טעונות")
-    if LETTER_TYPES and st.button("📄 מחולל מכתבים", key="open_letters", use_container_width=True):
-        _letters_dialog()
-    # deterministic tools, zero-token, no quota — each gated on its module
-    if _pa and st.button("⚖️ בודק סמכות עונש", key="open_punishment", use_container_width=True):
-        _punishment_dialog()
-    if entitlements and st.button("🧮 מחשבון זכאויות", key="open_entitlements", use_container_width=True):
-        _entitlements_dialog()
-    # A2HS is a browser gesture we can't trigger — the hint tells pilot
-    # users where it hides. The PWA head metadata (icon, standalone) is
-    # already injected, so the result actually looks like an app.
-    with st.expander("📲 להתקנה כאפליקציה"):
-        st.markdown(
-            "<div class='cai-install-hint'>"
-            "<b>אייפון:</b> בספארי — כפתור השיתוף ⬆️ ואז «הוסף למסך הבית».<br>"
-            "<b>אנדרואיד:</b> בכרום — תפריט ⋮ ואז «הוספה למסך הבית».<br>"
-            "האפליקציה תיפתח במסך מלא, עם אייקון CommandAI.<br>"
-            "<b>כבר מותקן אצלך?</b> מחק את האייקון והוסף מחדש — מסך הפתיחה "
-            "המהיר נטען רק בהוספה."
-            "</div>",
-            unsafe_allow_html=True,
+    with st.container(key="cai_drawer"):
+        if st.button("✕", key="drawer_close"):
+            st.session_state.drawer_open = False
+            st.rerun()
+        st.markdown(f"<div class='cai-drawer-role'>מחובר כ־{role_label}</div>", unsafe_allow_html=True)
+        if st.button("החלף תפקיד", key="switch_role", use_container_width=True):
+            archive_current_conversation()
+            st.session_state.role = None
+            st.session_state.messages = []
+            st.session_state.pending_question = None
+            st.session_state.pop("suggested", None)
+            # a stale search would silently filter the next role's orders list
+            st.session_state.pop("orders_search", None)
+            st.session_state.drawer_open = False
+            st.rerun()
+        # personal statuses that change entitlements (lone soldier, new
+        # immigrant...). The pills widget only exists while the drawer is
+        # open, and Streamlit drops a widget's session key on any run where
+        # the widget isn't rendered — so profile_saved mirrors the selection
+        # and survives closed-drawer runs (handle_question reads the mirror).
+        # An empty selection stays falsy, keeping the composed API user turn
+        # byte-identical to the pre-profile format (backend._compose_user_content).
+        st.markdown("<div class='cai-profile-label'>התאמה אישית</div>", unsafe_allow_html=True)
+        if "profile_statuses" not in st.session_state and st.session_state.get("profile_saved"):
+            st.session_state.profile_statuses = st.session_state.profile_saved
+        _profile_sel = st.pills(
+            "התאמה אישית",
+            ["חייל בודד", "עולה חדש", "הורה לילדים", "נשוי/אה"],
+            selection_mode="multi",
+            key="profile_statuses",
+            label_visibility="collapsed",
         )
-    st.markdown("---")
+        st.session_state.profile_saved = list(_profile_sel or [])
+        st.markdown("---")
+        docs = get_loaded_docs_info(role=st.session_state.role)
+        with st.expander(f"פקודות מטכ\"ל במערכת ({len(docs)})", expanded=False):
+            if docs:
+                search = _search_norm(st.text_input(
+                    "חיפוש פקודה",
+                    key="orders_search",
+                    label_visibility="collapsed",
+                    placeholder="🔎 חיפוש פקודה...",
+                ))
+                # media URLs are registered for ALL docs, filtered or not: a
+                # media-manager entry whose coord isn't re-registered during a
+                # rerun is purged at that rerun's end — filtering registration
+                # would 404 a PDF the user already opened in another tab
+                rows = [
+                    (doc, _pdf_media_url(doc["source_file"], f"pdfside_{doc['id']}")
+                     if doc.get("source_file") else None)
+                    for doc in docs
+                ]
+                shown = [
+                    (doc, url) for doc, url in rows
+                    if not search
+                    or search in _search_norm(doc["title"])
+                    or search in _search_norm(str(doc["id"]))
+                ]
+                if not shown:
+                    st.caption("לא נמצאו פקודות מתאימות")
+                # each title is itself the tap target that opens the order's PDF
+                # inline (styled as a flat list line, not a button — CSS above)
+                for doc, url in shown:
+                    st.markdown(_order_link(doc["title"], url, _doc_date_badge(doc["id"])), unsafe_allow_html=True)
+            else:
+                st.caption("אין פקודות טעונות")
+        if LETTER_TYPES and st.button("📄 מחולל מכתבים", key="open_letters", use_container_width=True):
+            st.session_state.drawer_open = False
+            _letters_dialog()
+        # deterministic tools, zero-token, no quota — each gated on its module
+        if _pa and st.button("⚖️ בודק סמכות עונש", key="open_punishment", use_container_width=True):
+            st.session_state.drawer_open = False
+            _punishment_dialog()
+        if entitlements and st.button("🧮 מחשבון זכאויות", key="open_entitlements", use_container_width=True):
+            st.session_state.drawer_open = False
+            _entitlements_dialog()
+        # A2HS is a browser gesture we can't trigger — the hint tells pilot
+        # users where it hides. The PWA head metadata (icon, standalone) is
+        # already injected, so the result actually looks like an app.
+        with st.expander("📲 להתקנה כאפליקציה"):
+            st.markdown(
+                "<div class='cai-install-hint'>"
+                "<b>אייפון:</b> בספארי — כפתור השיתוף ⬆️ ואז «הוסף למסך הבית».<br>"
+                "<b>אנדרואיד:</b> בכרום — תפריט ⋮ ואז «הוספה למסך הבית».<br>"
+                "האפליקציה תיפתח במסך מלא, עם אייקון CommandAI.<br>"
+                "<b>כבר מותקן אצלך?</b> מחק את האייקון והוסף מחדש — מסך הפתיחה "
+                "המהיר נטען רק בהוספה."
+                "</div>",
+                unsafe_allow_html=True,
+            )
+        st.markdown("---")
 
-    st.markdown("<div class='cai-drawer-section'><span class='dot'></span>שיחות אחרונות</div>", unsafe_allow_html=True)
-    # only this role's conversations: restoring a chat that ran under another
-    # role's system prompt would mix personas/doc scopes in one thread
-    role_history = [
-        (i, conv) for i, conv in enumerate(st.session_state.conversation_history)
-        if conv.get("role") == st.session_state.role
-    ]
-    if role_history:
-        for i, conv in role_history:
-            if st.button(f"💬 {conv['title']}", key=f"hist_{i}", use_container_width=True):
-                st.session_state.messages = conv["messages"].copy()
-                st.rerun()
-    else:
-        st.caption("אין שיחות קודמות")
-    st.markdown("---")
+        st.markdown("<div class='cai-drawer-section'><span class='dot'></span>שיחות אחרונות</div>", unsafe_allow_html=True)
+        # only this role's conversations: restoring a chat that ran under another
+        # role's system prompt would mix personas/doc scopes in one thread
+        role_history = [
+            (i, conv) for i, conv in enumerate(st.session_state.conversation_history)
+            if conv.get("role") == st.session_state.role
+        ]
+        if role_history:
+            for i, conv in role_history:
+                if st.button(f"💬 {conv['title']}", key=f"hist_{i}", use_container_width=True):
+                    st.session_state.messages = conv["messages"].copy()
+                    st.session_state.drawer_open = False
+                    st.rerun()
+        else:
+            st.caption("אין שיחות קודמות")
+        st.markdown("---")
 
-    if st.button("+ שיחה חדשה", key="new_chat", use_container_width=True):
-        archive_current_conversation()
-        st.session_state.messages = []
-        st.rerun()
+        if st.button("+ שיחה חדשה", key="new_chat", use_container_width=True):
+            archive_current_conversation()
+            st.session_state.messages = []
+            st.session_state.drawer_open = False
+            st.rerun()
 
 # ── Header: wordmark + role pill ──
 st.markdown(
@@ -3061,24 +3156,5 @@ if prompt := st.chat_input("שאל על פקודה..."):
     handle_question(prompt)
     st.rerun()
 
-# ── Streamlit auto-opens a sidebar the first time it mounts mid-session,
-# so picking a role landed users inside the drawer instead of the chat.
-# Right after the role gate, click the collapse button once it appears. ──
-if st.session_state.pop("close_drawer", False):
-    components.html(
-        """<script>
-        const doc = window.parent.document;
-        let tries = 30;
-        const tick = setInterval(() => {
-            const sb = doc.querySelector('[data-testid="stSidebar"]');
-            const isOpen = sb && sb.getAttribute('aria-expanded') !== 'false'
-                && getComputedStyle(sb).display !== 'none';
-            const btn = doc.querySelector('[data-testid="stSidebarCollapseButton"] button')
-                     || doc.querySelector('[data-testid="stSidebarCollapseButton"]');
-            if (isOpen && btn) { btn.click(); clearInterval(tick); }
-            else if (sb && !isOpen) { clearInterval(tick); }
-            if (--tries <= 0) clearInterval(tick);
-        }, 100);
-        </script>""",
-        height=0,
-    )
+# (the old "auto-collapse the sidebar after role pick" JS is gone — the
+# app-owned drawer above renders closed by default and never auto-opens)
