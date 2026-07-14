@@ -495,9 +495,10 @@ header {{ visibility: hidden; }}
     box-shadow: 0 0 40px rgba(0, 0, 0, .45);
     padding: calc(env(safe-area-inset-top, 0px) + 16px) 18px 24px;
     overflow-y: auto; overscroll-behavior: contain;
-    animation: drawerIn .26s cubic-bezier(.2, .7, .2, 1);
+    /* no slide-in animation on purpose: Streamlit replaces the node on
+       EVERY rerun (pill click, expander toggle), which restarts a CSS
+       animation and makes the open drawer jump 12% sideways mid-use */
 }}
-@keyframes drawerIn {{ from {{ transform: translateX(12%); opacity: 0; }} to {{ transform: none; opacity: 1; }} }}
 .st-key-cai_drawer [data-testid="stElementContainer"] {{ margin-bottom: 8px; }}
 .st-key-drawer_close [data-testid="stElementContainer"],
 .st-key-cai_drawer .st-key-drawer_close {{ margin-bottom: 2px; }}
@@ -2400,15 +2401,18 @@ if st.session_state.drawer_open:
                     st.markdown(_order_link(doc["title"], url, _doc_date_badge(doc["id"])), unsafe_allow_html=True)
             else:
                 st.caption("אין פקודות טעונות")
+        # the tool buttons deliberately leave drawer_open=True: a dialog
+        # dismiss doesn't rerun the full script, so flipping the flag here
+        # leaves the drawer painted from the previous run while its widgets
+        # no longer render — the next tap inside it would be silently lost.
+        # Kept open, the dialog simply overlays the menu and closing it
+        # returns the user to a live, state-consistent drawer.
         if LETTER_TYPES and st.button("📄 מחולל מכתבים", key="open_letters", use_container_width=True):
-            st.session_state.drawer_open = False
             _letters_dialog()
         # deterministic tools, zero-token, no quota — each gated on its module
         if _pa and st.button("⚖️ בודק סמכות עונש", key="open_punishment", use_container_width=True):
-            st.session_state.drawer_open = False
             _punishment_dialog()
         if entitlements and st.button("🧮 מחשבון זכאויות", key="open_entitlements", use_container_width=True):
-            st.session_state.drawer_open = False
             _entitlements_dialog()
         # A2HS is a browser gesture we can't trigger — the hint tells pilot
         # users where it hides. The PWA head metadata (icon, standalone) is
