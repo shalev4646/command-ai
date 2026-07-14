@@ -2633,6 +2633,18 @@ _DS_CSS = """
 .st-key-pf_type_w button[data-testid*="segmented_controlActive"] p,
 .st-key-pf_type_w [data-testid="stButtonGroup"] button[aria-checked="true"] p {
   color: var(--accent-bright) !important; font-weight: 700 !important; }
+
+/* ═══ Reconcile with the 9a session's OLD-drawer CSS (merged) ═══
+   Streamlit centers button labels by default and the old drawer added an 8px
+   element margin — force THIS drawer's + settings' rows to lead their label
+   from the reading edge (right, RTL) and sit tight. */
+.st-key-cai_drawer [data-testid="stElementContainer"] { margin-bottom: 0 !important; }
+.st-key-cai_tools button, .st-key-cai_recent button, [class*="st-key-cai_sgrp"] button {
+  justify-content: flex-start !important;
+}
+.st-key-cai_tools button [data-testid="stMarkdownContainer"],
+.st-key-cai_recent button [data-testid="stMarkdownContainer"],
+[class*="st-key-cai_sgrp"] button [data-testid="stMarkdownContainer"] { width: 100% !important; }
 </style>
 """
 for _k, _u in _ICON.items():
