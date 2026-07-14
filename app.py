@@ -2685,41 +2685,46 @@ def _settings_personal():
         "<div class='cai-set-changephoto'>שינוי תמונה <span class='cai-bakrov'>בקרוב</span></div>"
         "</div>", unsafe_allow_html=True)
 
+    # Widgets edit their OWN keys only; the stable mirrors that handle_question
+    # reads are committed on Save. Seed each widget from its mirror on first
+    # render — on close the widget key drops (widget not rendered) and reopen
+    # reseeds it, so an unsaved edit is discarded rather than leaking.
     st.markdown("<div class='cai-set-seclabel'>פרטי זיהוי</div>", unsafe_allow_html=True)
     st.markdown("<div class='cai-fld-label'>שם מלא</div>", unsafe_allow_html=True)
     if "pf_name_w" not in st.session_state:
         st.session_state.pf_name_w = st.session_state.get("profile_name", "")
-    _name = st.text_input("שם מלא", key="pf_name_w",
-                          label_visibility="collapsed", placeholder="ישראל ישראלי")
-    st.session_state.profile_name = _name or ""
+    st.text_input("שם מלא", key="pf_name_w",
+                  label_visibility="collapsed", placeholder="ישראל ישראלי")
 
     st.markdown("<div class='cai-fld-label'>סוג שירות</div>", unsafe_allow_html=True)
     if "pf_type_w" not in st.session_state:
         st.session_state.pf_type_w = st.session_state.get("service_type", "סדיר")
-    _type = st.segmented_control("סוג שירות", _SERVICE_TYPES, key="pf_type_w",
-                                 selection_mode="single", label_visibility="collapsed")
-    if _type:
-        st.session_state.service_type = _type
+    st.segmented_control("סוג שירות", _SERVICE_TYPES, key="pf_type_w",
+                         selection_mode="single", label_visibility="collapsed")
 
     st.markdown("<div class='cai-fld-label'>מסלול השירות</div>", unsafe_allow_html=True)
     _tracks = ["בחר/י מסלול…"] + _SERVICE_TRACKS
     if "pf_track_w" not in st.session_state:
         _cur = st.session_state.get("service_track", "")
         st.session_state.pf_track_w = _cur if _cur in _SERVICE_TRACKS else _tracks[0]
-    _track = st.selectbox("מסלול השירות", _tracks, key="pf_track_w", label_visibility="collapsed")
-    st.session_state.service_track = "" if _track == _tracks[0] else _track
+    st.selectbox("מסלול השירות", _tracks, key="pf_track_w", label_visibility="collapsed")
 
     st.markdown("<div class='cai-set-seclabel'>התאמה אישית · סטטוס</div>", unsafe_allow_html=True)
     st.markdown("<div class='cai-lang-note'>בחירת הסטטוס מתאימה את החישובים והתשובות עבורך.</div>", unsafe_allow_html=True)
     if "profile_statuses" not in st.session_state and st.session_state.get("profile_saved"):
         st.session_state.profile_statuses = st.session_state.profile_saved
-    _sel = st.pills("סטטוס", _STATUS_PILLS, selection_mode="multi",
-                    key="profile_statuses", label_visibility="collapsed")
-    st.session_state.profile_saved = list(_sel or [])
+    st.pills("סטטוס", _STATUS_PILLS, selection_mode="multi",
+             key="profile_statuses", label_visibility="collapsed")
 
-    # save flips profile_customized -> the service fields now reach the answer
-    # (until then the API turn stays byte-identical; see handle_question).
+    # Save COMMITS the widgets to their mirrors and flips profile_customized —
+    # only now do the service fields reach the answer. An untouched user's API
+    # turn stays byte-identical (see handle_question).
     if st.button("שמירת שינויים", key="save_profile", use_container_width=True):
+        st.session_state.profile_name = st.session_state.get("pf_name_w", "") or ""
+        st.session_state.service_type = st.session_state.get("pf_type_w") or "סדיר"
+        _tr = st.session_state.get("pf_track_w")
+        st.session_state.service_track = "" if (not _tr or _tr == _tracks[0]) else _tr
+        st.session_state.profile_saved = list(st.session_state.get("profile_statuses") or [])
         st.session_state.profile_customized = True
         st.session_state.settings_screen = "hub"
         st.rerun()
