@@ -312,8 +312,10 @@ if _is_admin:
 # Dark-olive theme; role accents: soldier olive, commander tan, reserve blue.
 ROLE_META = {
     "soldier": {
-        "label": "חייל", "accent": "#99A26B", "accent_hover": "#AAB37C",
-        "soft": "rgba(153,162,107,.14)", "border": "rgba(153,162,107,.35)",
+        # 9a home redesign palette (design_handoff_commandai_home): olive
+        # lightened #99A26B → #A3AE6E, tints rebased on rgb(163,174,110)
+        "label": "חייל", "accent": "#A3AE6E", "accent_hover": "#B2BD7E",
+        "soft": "rgba(163,174,110,.14)", "border": "rgba(163,174,110,.35)",
         "bright": "#C4CE92",  # lightened accent for the modal hero number
     },
     "commander": {
