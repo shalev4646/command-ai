@@ -497,7 +497,7 @@ header {{ visibility: hidden; }}
 .st-key-cai_drawer {{
     position: fixed; top: 0; bottom: 0; inset-inline-start: 0;
     width: min(78vw, 340px); z-index: 130;
-    background: #171A12; border-inline-end: 1px solid var(--border);
+    background: #14170E; border-inline-end: 1px solid var(--border);
     box-shadow: 0 0 40px rgba(0, 0, 0, .45);
     padding: calc(env(safe-area-inset-top, 0px) + 16px) 18px 24px;
     overflow-y: auto; overscroll-behavior: contain;
@@ -506,15 +506,26 @@ header {{ visibility: hidden; }}
        animation and makes the open drawer jump 12% sideways mid-use */
 }}
 .st-key-cai_drawer [data-testid="stElementContainer"] {{ margin-bottom: 8px; }}
+/* 9a language inside the drawer: translucent card buttons (the solid
+   var(--surface) look belongs to the previous design) — the solid-olive
+   "+ שיחה חדשה" keeps its own !important styling */
+.st-key-cai_drawer div[data-testid="stButton"] > button {{
+    background-color: rgba(239,240,232,.045);
+    border: 1px solid rgba(239,240,232,.12);
+}}
+.st-key-cai_drawer hr {{ border-color: var(--border) !important; margin: 14px 0 !important; }}
 .st-key-drawer_close [data-testid="stElementContainer"],
 .st-key-cai_drawer .st-key-drawer_close {{ margin-bottom: 2px; }}
 .st-key-drawer_close {{ display: flex; justify-content: flex-end; }}
+/* close button — small circle in the hamburger's olive-tint style */
 .st-key-drawer_close button {{
-    width: 34px !important; height: 34px !important; min-height: 34px !important;
-    border-radius: 9px !important;
-    background-color: var(--surface) !important;
-    border: 1px solid var(--border) !important;
+    width: 36px !important; height: 36px !important; min-height: 36px !important;
+    border-radius: 50% !important;
+    background-color: rgba(163,174,110,.14) !important;
+    border: 1px solid rgba(163,174,110,.3) !important;
+    color: var(--accent) !important;
 }}
+.st-key-drawer_close button p {{ color: var(--accent) !important; }}
 
 /* ── Main container — mobile-first column, max 430px ── */
 [data-testid="stMainBlockContainer"], .main .block-container {{
@@ -938,8 +949,8 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     padding: 4px 15px !important;
 }}
 [class*="st-key-src_"] button p {{ font: 600 12.5px Heebo, sans-serif !important; }}
-[class*="st-key-src_"] button:hover {{ background: var(--accent) !important; color: #171A12 !important; }}
-[class*="st-key-src_"] button:hover p {{ color: #171A12 !important; }}
+[class*="st-key-src_"] button:hover {{ background: var(--accent) !important; color: #14170E !important; }}
+[class*="st-key-src_"] button:hover p {{ color: #14170E !important; }}
 /* install-as-app hint (drawer expander) */
 .cai-install-hint {{
     font: 400 12px/1.8 Heebo, sans-serif; color: var(--text-dim);
@@ -1028,10 +1039,10 @@ body:has([data-testid="stExpandSidebarButton"]) [data-testid="stSidebar"] {{ dis
 .cai-profile-label {{ font: 400 12.5px Heebo, sans-serif; color: var(--text-dim); margin: 2px 0 4px; }}
 .st-key-profile_statuses [data-testid="stPills"] {{ direction: rtl; gap: 6px; }}
 .st-key-profile_statuses button {{
-    background: rgba(236,237,230,.05) !important;
-    border: 1px solid rgba(236,237,230,.22) !important;
+    background: rgba(239,240,232,.045) !important;
+    border: 1px solid rgba(239,240,232,.22) !important;
     border-radius: 99px !important;
-    color: rgba(236,237,230,.75) !important;
+    color: rgba(239,240,232,.75) !important;
     min-height: 0 !important;
     padding: 3px 12px !important;
 }}
@@ -1053,13 +1064,13 @@ div[data-testid="stDialog"] textarea {{ direction: rtl; font: 400 14px/1.7 Heebo
 .st-key-new_chat button {{
     background-color: var(--accent) !important;
     border: none !important;
-    color: #171A12 !important;
+    color: #14170E !important;
     font: 700 15px Heebo, sans-serif !important;
     text-align: center !important;
     justify-content: center;
 }}
 .st-key-new_chat button:hover {{ background-color: var(--accent-hover) !important; }}
-.st-key-new_chat button p {{ color: #171A12 !important; font-weight: 700 !important; text-align: center !important; }}
+.st-key-new_chat button p {{ color: #14170E !important; font-weight: 700 !important; text-align: center !important; }}
 
 /* ── Expander (loaded orders) — flat row with count, no theme boxes ── */
 [data-testid="stExpander"],
@@ -1074,18 +1085,18 @@ div[data-testid="stDialog"] textarea {{ direction: rtl; font: 400 14px/1.7 Heebo
 }}
 [data-testid="stExpander"] summary {{ color: var(--text) !important; font: 500 14.5px Heebo, sans-serif !important; padding: 10px 4px !important; }}
 [data-testid="stExpander"] summary:hover {{ color: var(--accent) !important; }}
-[data-testid="stExpander"] summary svg {{ fill: rgba(236,237,230,.4) !important; }}
+[data-testid="stExpander"] summary svg {{ fill: rgba(239,240,232,.4) !important; }}
 /* only the orders list scrolls (capped like the design), not the drawer */
 [data-testid="stExpanderDetails"] {{
     padding: 0 !important;
     max-height: 300px;
     overflow-y: auto;
     scrollbar-width: thin;
-    scrollbar-color: rgba(236,237,230,.25) transparent;
+    scrollbar-color: rgba(239,240,232,.25) transparent;
 }}
 [data-testid="stExpanderDetails"]::-webkit-scrollbar {{ width: 5px; }}
 [data-testid="stExpanderDetails"]::-webkit-scrollbar-thumb {{
-    background: rgba(236,237,230,.25); border-radius: 3px;
+    background: rgba(239,240,232,.25); border-radius: 3px;
 }}
 
 /* ── Loaded orders: each title IS the tap target that opens its PDF
@@ -1093,7 +1104,7 @@ div[data-testid="stDialog"] textarea {{ direction: rtl; font: 400 14px/1.7 Heebo
 .cai-order-link {{
     display: block;
     border-right: 2px solid var(--accent-border);
-    color: rgba(236,237,230,.65) !important;
+    color: rgba(239,240,232,.65) !important;
     font: 400 13px Heebo, sans-serif;
     text-align: right;
     text-decoration: none !important;
@@ -1113,28 +1124,29 @@ a.cai-order-link:hover {{
    this?" is answered in the list itself */
 .cai-order-date {{
     font: 400 10.5px Heebo, sans-serif;
-    color: rgba(236,237,230,.38);
+    color: rgba(239,240,232,.38);
     margin-right: 6px;
     white-space: nowrap;
 }}
-/* orders search field — surface pill matching the drawer's dark theme */
-[data-testid="stSidebar"] [data-testid="stTextInput"] {{ margin: 4px 8px 8px 0; }}
-[data-testid="stSidebar"] [data-testid="stTextInput"] div[data-baseweb="input"],
-[data-testid="stSidebar"] [data-testid="stTextInput"] div[data-baseweb="base-input"] {{
-    background-color: var(--surface) !important;
+/* orders search field — translucent pill matching the 9a drawer (rescoped
+   from the dead [data-testid="stSidebar"] to the app-owned drawer) */
+.st-key-cai_drawer [data-testid="stTextInput"] {{ margin: 4px 8px 8px 0; }}
+.st-key-cai_drawer [data-testid="stTextInput"] div[data-baseweb="input"],
+.st-key-cai_drawer [data-testid="stTextInput"] div[data-baseweb="base-input"] {{
+    background-color: rgba(239,240,232,.045) !important;
     border: 1px solid var(--border-strong) !important;
     border-radius: 10px !important;
 }}
-[data-testid="stSidebar"] [data-testid="stTextInput"] div[data-baseweb="base-input"] {{ border: none !important; }}
-[data-testid="stSidebar"] [data-testid="stTextInput"] input {{
+.st-key-cai_drawer [data-testid="stTextInput"] div[data-baseweb="base-input"] {{ border: none !important; }}
+.st-key-cai_drawer [data-testid="stTextInput"] input {{
     background-color: transparent !important;
     color: var(--text) !important;
     font: 400 13px Heebo, sans-serif !important;
     direction: rtl;
     padding: 8px 12px !important;
 }}
-[data-testid="stSidebar"] [data-testid="stTextInput"] input::placeholder {{
-    color: rgba(236,237,230,.4) !important;
+.st-key-cai_drawer [data-testid="stTextInput"] input::placeholder {{
+    color: rgba(239,240,232,.4) !important;
 }}
 
 /* ── Caption / small text ── */
@@ -1242,8 +1254,8 @@ components.html(
             if (doc.getElementById('cai-shell-dark')) return;
             const s = doc.createElement('style');
             s.id = 'cai-shell-dark';
-            s.textContent = 'html,body{background:#171A12 !important;margin:0;overscroll-behavior:none;}' +
-                            'iframe{background:#171A12;}';
+            s.textContent = 'html,body{background:#14170E !important;margin:0;overscroll-behavior:none;}' +
+                            'iframe{background:#14170E;}';
             doc.head.appendChild(s);
         } catch (e) {}
     });
@@ -1344,7 +1356,7 @@ def _pwa_assets() -> dict | None:
             "scope": "/",
             "display": "standalone",
             "background_color": "#99A26B",  # the boot-splash olive
-            "theme_color": "#171A12",
+            "theme_color": "#14170E",
             "icons": [
                 {"src": urls[192].rsplit("/", 1)[-1], "sizes": "192x192",
                  "type": "image/png", "purpose": "any maskable"},
@@ -1401,7 +1413,7 @@ if _pwa:
                 upsert('link[rel="apple-touch-icon"]', "link",
                        {{ rel: "apple-touch-icon", sizes: "180x180", href: abs(icon180) }});
                 upsert('meta[name="theme-color"]', "meta",
-                       {{ name: "theme-color", content: "#171A12" }});
+                       {{ name: "theme-color", content: "#14170E" }});
                 upsert('meta[name="apple-mobile-web-app-capable"]', "meta",
                        {{ name: "apple-mobile-web-app-capable", content: "yes" }});
                 upsert('meta[name="mobile-web-app-capable"]', "meta",
