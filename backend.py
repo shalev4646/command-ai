@@ -424,15 +424,17 @@ def _compose_user_content(question: str, context: str, profile: list[str] | None
     (the prompt-cache prefix) and the eval gates were built against that
     exact shape, so the default path must never drift. A non-empty profile
     adds one parenthetical line between the question and the context header;
-    its trailing clause keeps the model from dragging an irrelevant status
-    into every answer.
+    its trailing clause keeps the model from dragging an irrelevant detail
+    into every answer. `profile` holds the asker's personal details — status
+    pills (חייל בודד...) and, when set, service type/track (שירות סדיר,
+    מסלול שירות: ...) — so the label reads "פרטי השואל", not just מעמד.
     """
     if not profile:
         return f"{question}\n\n{_CONTEXT_HEADER}\n{context}"
     return (
         f"{question}\n\n"
-        f"(מעמד אישי של השואל: {', '.join(profile)}. "
-        f"התחשב בו רק אם הוא רלוונטי לשאלה.)\n\n"
+        f"(פרטי השואל: {', '.join(profile)}. "
+        f"התחשב בהם רק אם הם רלוונטיים לשאלה.)\n\n"
         f"{_CONTEXT_HEADER}\n{context}"
     )
 

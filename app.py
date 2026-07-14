@@ -173,6 +173,21 @@ if "session_id" not in st.session_state:
     # anonymous per-tab id — keys the daily usage quota and the metrics log
     st.session_state.session_id = metrics.new_session_id()
 
+# ── Profile & settings (session-only; no DB). These MIRROR the settings-dialog
+# widgets: Streamlit drops a widget's session key on any run where the widget
+# isn't rendered (dialog closed), so a stable mirror is what handle_question
+# reads — exactly the pattern profile_saved uses for the status pills. Service
+# type/track are folded into the answer ONLY after an explicit "save"
+# (profile_customized), so an untouched user's API turn stays byte-identical to
+# the pre-profile format (backend._compose_user_content). ──
+st.session_state.setdefault("profile_name", "")
+st.session_state.setdefault("service_type", "סדיר")
+st.session_state.setdefault("service_track", "")
+st.session_state.setdefault("profile_customized", False)
+st.session_state.setdefault("share_analytics", True)
+st.session_state.setdefault("show_settings", False)
+st.session_state.setdefault("settings_screen", "hub")
+
 # ── Boot splash — the very FIRST delta the browser receives ──
 # Rendered before _startup_ingest() so the branded curtain (logo on the
 # splash olive) covers the ENTIRE wait — cold-boot ingestion / model
@@ -1547,15 +1562,16 @@ def _letters_dialog():
                 # letters burn the same quota as questions — log them the
                 # same way too (the "[מכתב]" prefix separates them in the
                 # sheet), or the pilot's usage/cost picture undercounts
-                metrics.log_question(
-                    session_id=st.session_state.session_id,
-                    role=st.session_state.role or "",
-                    question=f"[מכתב] {LETTER_TYPES[kind]['title']}",
-                    answer=draft["text"],
-                    sources=draft.get("sources"),
-                    usage=draft.get("usage"),
-                    latency_s=time.time() - t0,
-                )
+                if st.session_state.get("share_analytics", True):
+                    metrics.log_question(
+                        session_id=st.session_state.session_id,
+                        role=st.session_state.role or "",
+                        question=f"[מכתב] {LETTER_TYPES[kind]['title']}",
+                        answer=draft["text"],
+                        sources=draft.get("sources"),
+                        usage=draft.get("usage"),
+                        latency_s=time.time() - t0,
+                    )
             except (APIConnectionError, APITimeoutError):
                 metrics.refund(st.session_state.session_id)
                 st.error("⚠️ אין כרגע חיבור לשירות. בדוק את החיבור ונסה שוב בעוד רגע.")
@@ -2165,6 +2181,675 @@ def _entitlements_dialog():
         _ent_pay_ui()
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# Drawer + Settings — redesigned surface (mockup 2a + 8a–8e).
+# The settings screens are an APP-OWNED overlay (a keyed st.container + a
+# backdrop, driven by a settings_screen state machine) — the SAME proven
+# pattern as the drawer. Not st.dialog: a dialog dismiss doesn't run the full
+# script (so the state machine would strand), and dialogs can't nest. The
+# overlay sidesteps both, and it fills the screen like the mockup.
+# ═══════════════════════════════════════════════════════════════════════════
+import urllib.parse as _uparse
+
+
+def _svg(inner: str, stroke: str = "#AAB37C", sw: str = "1.7", w: int = 18) -> str:
+    """A stroke-only 24-viewBox icon as a data: URI, for CSS background-image."""
+    svg = (f"<svg xmlns='http://www.w3.org/2000/svg' width='{w}' height='{w}' "
+           f"viewBox='0 0 24 24' fill='none' stroke='{stroke}' stroke-width='{sw}' "
+           f"stroke-linecap='round' stroke-linejoin='round'>{inner}</svg>")
+    return "data:image/svg+xml," + _uparse.quote(svg)
+
+
+_ICON = {
+    "letters": _svg("<path d='M6 3h8l4 4v14H6z'/><path d='M14 3v4h4'/><path d='M9 12h6M9 16h6'/>"),
+    "gavel": _svg("<path d='M12 3v18'/><path d='M9 21h6'/><path d='M5 7h14'/>"
+                  "<path d='M5 7l-2.6 5a2.6 2.6 0 0 0 5.2 0z'/><path d='M19 7l-2.6 5a2.6 2.6 0 0 0 5.2 0z'/>"),
+    "calc": _svg("<rect x='5' y='3' width='14' height='18' rx='2'/><path d='M8 7h8'/>"
+                 "<path d='M9 12h.01M12 12h.01M15 12h.01M9 16h.01M12 16h.01M15 16h.01'/>"),
+    "book": _svg("<rect x='4' y='3' width='12' height='16' rx='2'/><path d='M8 3v16'/>"
+                 "<path d='M18 6v13a2 2 0 0 1-2 2H7'/>", stroke="#C4CE92"),
+    "user": _svg("<path d='M20 21a8 8 0 0 0-16 0'/><circle cx='12' cy='7' r='4'/>"),
+    "bell": _svg("<path d='M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9'/><path d='M13.7 21a2 2 0 0 1-3.4 0'/>"),
+    "globe": _svg("<circle cx='12' cy='12' r='9'/><path d='M3 12h18'/>"
+                  "<path d='M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18'/>"),
+    "trash": _svg("<path d='M3 6h18'/><path d='M8 6V4h8v2'/><path d='M6 6l1 14h10l1-14'/>"),
+    "lock": _svg("<rect x='4' y='10' width='16' height='11' rx='2'/><path d='M8 10V7a4 4 0 0 1 8 0v3'/>"),
+    "info": _svg("<circle cx='12' cy='12' r='9'/><path d='M12 16v-4'/><path d='M12 8h.01'/>"),
+    "clock": _svg("<path d='M12 2a10 10 0 1 0 10 10'/><path d='M12 6v6l4 2'/>"),
+    "chart": _svg("<path d='M3 3v18h18'/><path d='M7 14l4-4 3 3 5-6'/>"),
+    "chat": _svg("<path d='M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'/>"),
+    "shield": _svg("<path d='M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z'/><path d='M9 12l2 2 4-4'/>", stroke="#C4CE92", w=24),
+    "gear": _svg("<circle cx='12' cy='12' r='3'/><path d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'/>", stroke="#ECEDE6"),
+}
+
+# CSS for the redesigned drawer + settings overlay. Plain string (single
+# braces); icon data-URIs are spliced in by token so the CSS body stays literal.
+_DS_CSS = """
+<style id="cai-ds">
+/* ═══ DRAWER — redesigned (mockup 2a) ═══ */
+.st-key-cai_drawer {
+  width: min(85vw, 320px) !important;
+  background: linear-gradient(180deg,#121509 0%,#0E1007 100%) !important;
+  border-inline-end: 1px solid rgba(236,237,230,.08) !important;
+  box-shadow: -14px 0 44px rgba(0,0,0,.5) !important;
+  padding: calc(env(safe-area-inset-top,0px) + 30px) 16px 0 !important;
+  display: flex !important; flex-direction: column !important;
+}
+.st-key-cai_drawer > div[data-testid="stVerticalBlock"] {
+  flex: 1; display: flex; flex-direction: column;
+  min-height: calc(100dvh - 40px); gap: 2px;
+}
+.st-key-cai_drawer [data-testid="stElementContainer"] { margin-bottom: 0; }
+/* top row: gear (right) + close « (left) */
+.st-key-cai_drawer div[data-testid="stHorizontalBlock"]:first-of-type { align-items: center; }
+/* push each top-row button to the OUTER edge of its column (auto cross-axis
+   margins — direction-agnostic; the element container is button-width). */
+.st-key-open_settings { margin: 0 0 0 auto !important; }
+.st-key-drawer_close { margin: 0 auto 0 0 !important; }
+/* Streamlit stacks columns vertically in a narrow container — force our
+   column rows (top bar, recent head, settings header) to stay horizontal. */
+.st-key-cai_drawer div[data-testid="stHorizontalBlock"],
+.st-key-cai_settings div[data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; gap: 8px !important; }
+.st-key-cai_drawer div[data-testid="stColumn"],
+.st-key-cai_settings div[data-testid="stColumn"] { min-width: 0 !important; }
+.st-key-open_settings button, .st-key-drawer_close button {
+  width: 36px !important; height: 36px !important; min-height: 36px !important;
+  border-radius: 10px !important; padding: 0 !important;
+  background-color: rgba(236,237,230,.06) !important;
+  border: 1px solid rgba(236,237,230,.12) !important;
+  color: rgba(236,237,230,.65) !important;
+  display: flex; align-items: center; justify-content: center;
+}
+.st-key-open_settings button p { font-size: 0 !important; }
+.st-key-open_settings button {
+  background-image: url("ICON_GEAR") !important; background-repeat: no-repeat !important;
+  background-position: center !important; background-size: 18px 18px !important;
+}
+.st-key-drawer_close button p { font: 600 18px Heebo !important; color: rgba(236,237,230,.6) !important; }
+
+/* role card */
+.cai-role-card {
+  display: flex; align-items: center; gap: 12px; margin-top: 8px;
+  padding: 12px 13px; border-radius: 14px;
+  background: linear-gradient(135deg,rgba(153,162,107,.16),rgba(153,162,107,.04));
+  border: 1px solid rgba(153,162,107,.3);
+}
+.cai-role-av {
+  width: 40px; height: 40px; border-radius: 12px; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg,#AEB784,#8E9962);
+  border: 1px solid rgba(196,206,146,.5);
+  font: 700 20px 'Suez One', serif; color: #171A12;
+}
+.cai-role-meta { flex: 1; min-width: 0; }
+.cai-role-k { font: 600 10px Heebo; letter-spacing: 1px; color: rgba(236,237,230,.45); }
+.cai-role-nm { font: 400 17px 'Suez One', serif; color: #ECEDE6; line-height: 1.15; margin-top: 1px; }
+.cai-role-badge {
+  font: 600 10.5px Heebo; color: rgba(196,206,146,.9); flex: none;
+  background: rgba(153,162,107,.14); border: 1px solid rgba(153,162,107,.34);
+  border-radius: 99px; padding: 4px 10px;
+}
+
+/* section label */
+.cai-sec-label { font: 600 11px Heebo; letter-spacing: 1px; color: rgba(236,237,230,.4); margin: 16px 0 8px; }
+
+/* knowledge-base card (expander styled as the accent card) */
+.st-key-cai_kb [data-testid="stExpander"] details {
+  background: linear-gradient(135deg,rgba(153,162,107,.18),rgba(153,162,107,.05)) !important;
+  border: 1px solid rgba(153,162,107,.34) !important; border-radius: 14px !important;
+}
+.st-key-cai_kb [data-testid="stExpander"] summary {
+  font: 700 14px Heebo !important; color: #ECEDE6 !important;
+  background: url("ICON_BOOK") right 14px center / 18px 18px no-repeat transparent !important;
+  padding: 13px 40px 13px 14px !important;
+}
+.st-key-cai_kb [data-testid="stExpanderDetails"] { padding: 4px 6px 6px !important; max-height: 260px; }
+
+/* grouped card of rows (tools + recent) */
+.st-key-cai_tools, .st-key-cai_recent {
+  border-radius: 15px; overflow: hidden;
+  background: #232A18; border: 1px solid rgba(236,237,230,.1);
+}
+.st-key-cai_tools [data-testid="stElementContainer"],
+.st-key-cai_recent [data-testid="stElementContainer"] { margin: 0 !important; }
+.st-key-cai_tools button, .st-key-cai_recent button {
+  background: transparent !important; border: none !important; border-radius: 0 !important;
+  padding: 13px 14px !important; margin: 0 !important; min-height: 0 !important;
+  text-align: right; box-shadow: none !important;
+  border-top: 1px solid rgba(236,237,230,.07) !important;
+  position: relative;
+}
+.st-key-cai_tools [data-testid="stElementContainer"]:first-child button,
+.st-key-cai_recent [data-testid="stElementContainer"]:first-child button { border-top: none !important; }
+.st-key-cai_tools button p, .st-key-cai_recent button p {
+  font: 500 14px Heebo !important; color: #ECEDE6 !important; text-align: right !important;
+  padding-inline-start: 28px; padding-inline-end: 16px;
+}
+/* leading icon + trailing chevron on tool rows */
+.st-key-cai_tools button::before {
+  content: ""; position: absolute; inset-inline-start: 14px; top: 50%;
+  transform: translateY(-50%); width: 18px; height: 18px;
+  background-repeat: no-repeat; background-position: center; background-size: 18px;
+}
+.st-key-open_letters button::before { background-image: url("ICON_LETTERS"); }
+.st-key-open_punishment button::before { background-image: url("ICON_GAVEL"); }
+.st-key-open_entitlements button::before { background-image: url("ICON_CALC"); }
+.st-key-cai_tools button::after, .st-key-cai_recent button::after {
+  content: "‹"; position: absolute; inset-inline-end: 14px; top: 50%;
+  transform: translateY(-50%); color: rgba(236,237,230,.3); font-size: 14px;
+}
+@media (hover: hover) {
+  .st-key-cai_tools button:hover, .st-key-cai_recent button:hover { background: rgba(236,237,230,.04) !important; }
+}
+
+/* recent head row */
+.cai-recent-head { display: flex; align-items: center; gap: 8px; margin: 16px 0 8px; }
+.cai-recent-t { font: 600 11px Heebo; letter-spacing: 1px; color: rgba(236,237,230,.4); }
+.cai-recent-n { font: 700 10px Heebo; color: rgba(196,206,146,.9); background: rgba(153,162,107,.14); border-radius: 99px; padding: 1px 7px; }
+.st-key-clear_recent { display: flex; justify-content: flex-end; }
+.st-key-clear_recent button {
+  background: transparent !important; border: none !important; box-shadow: none !important;
+  padding: 0 !important; min-height: 0 !important; margin: 16px 0 8px !important; width: auto !important;
+}
+.st-key-clear_recent button p { font: 500 11px Heebo !important; color: rgba(236,237,230,.35) !important; }
+
+/* footer CTA — soft accent (mockup 2a) + classification */
+.st-key-new_chat { margin-top: auto !important; padding-top: 10px; }
+.st-key-new_chat button {
+  background: rgba(153,162,107,.12) !important;
+  border: 1px solid rgba(153,162,107,.4) !important;
+  color: #C4CE92 !important; border-radius: 13px !important;
+  font: 600 13.5px Heebo !important; padding: 11px !important;
+}
+.st-key-new_chat button p { color: #C4CE92 !important; font-weight: 600 !important; }
+@media (hover: hover) { .st-key-new_chat button:hover { background: rgba(153,162,107,.2) !important; } }
+.cai-drawer-foot {
+  text-align: center; margin: 8px 0 calc(env(safe-area-inset-bottom,0px) + 10px);
+  font: 600 9px ui-monospace, Menlo, monospace; letter-spacing: 2px; color: rgba(236,237,230,.3);
+}
+
+/* ═══ SETTINGS overlay (mockup 8a–8e) ═══ */
+.st-key-settings_backdrop { position: fixed; inset: 0; z-index: 135; }
+.st-key-settings_backdrop button {
+  width: 100% !important; height: 100% !important; min-height: 100% !important;
+  background: rgba(9,11,7,.85) !important; border: none !important;
+  border-radius: 0 !important; box-shadow: none !important;
+}
+.st-key-settings_backdrop button p { display: none; }
+.st-key-cai_settings {
+  position: fixed; inset: 0; z-index: 140;
+  width: min(100vw, 440px); margin: 0 auto;
+  background: linear-gradient(180deg,#141710 0%,#0E1007 100%);
+  padding: calc(env(safe-area-inset-top,0px) + 20px) 20px calc(env(safe-area-inset-bottom,0px) + 20px) !important;
+  overflow-y: auto; overscroll-behavior: contain;
+}
+.st-key-cai_settings [data-testid="stElementContainer"] { margin-bottom: 0; }
+/* header: back + title */
+.st-key-cai_settings div[data-testid="stHorizontalBlock"]:first-of-type { align-items: center; gap: 12px; }
+.st-key-settings_back button {
+  width: 36px !important; height: 36px !important; min-height: 36px !important;
+  border-radius: 10px !important; padding: 0 !important;
+  background: rgba(236,237,230,.06) !important; border: 1px solid rgba(236,237,230,.12) !important;
+}
+.st-key-settings_back button p { font: 600 20px Heebo !important; color: rgba(236,237,230,.7) !important; }
+.cai-set-title { font: 400 21px 'Suez One', serif; color: #ECEDE6; padding: 4px 0; }
+.cai-set-seclabel { font: 600 10px Heebo; letter-spacing: 2px; color: rgba(236,237,230,.38); margin: 22px 0 9px; }
+
+/* settings grouped card + nav rows */
+[class*="st-key-cai_sgrp"] {
+  border-radius: 15px; overflow: hidden;
+  background: #1E2416; border: 1px solid rgba(236,237,230,.1);
+}
+[class*="st-key-cai_sgrp"] [data-testid="stElementContainer"] { margin: 0 !important; }
+[class*="st-key-cai_sgrp"] button {
+  background: transparent !important; border: none !important; border-radius: 0 !important;
+  padding: 14px !important; margin: 0 !important; min-height: 0 !important; box-shadow: none !important;
+  text-align: right; position: relative;
+  border-top: 1px solid rgba(236,237,230,.07) !important;
+}
+[class*="st-key-cai_sgrp"] [data-testid="stElementContainer"]:first-child button { border-top: none !important; }
+[class*="st-key-cai_sgrp"] button p {
+  font: 500 14px Heebo !important; color: #ECEDE6 !important; text-align: right !important;
+  padding-inline-start: 30px; padding-inline-end: 16px;
+}
+[class*="st-key-cai_sgrp"] button::before {
+  content: ""; position: absolute; inset-inline-start: 14px; top: 50%;
+  transform: translateY(-50%); width: 18px; height: 18px;
+  background-repeat: no-repeat; background-position: center; background-size: 18px;
+}
+[class*="st-key-cai_sgrp"] button::after {
+  content: "‹"; position: absolute; inset-inline-end: 14px; top: 50%;
+  transform: translateY(-50%); color: rgba(236,237,230,.3); font-size: 14px;
+}
+.st-key-nav_personal button::before, .st-key-nav_personal2 button::before { background-image: url("ICON_USER"); }
+.st-key-nav_language button::before { background-image: url("ICON_GLOBE"); }
+.st-key-nav_clearhist button::before, .st-key-nav_clearhist2 button::before { background-image: url("ICON_CHAT"); }
+.st-key-nav_privacy button::before { background-image: url("ICON_LOCK"); }
+.st-key-nav_about button::before { background-image: url("ICON_INFO"); }
+@media (hover: hover) { [class*="st-key-cai_sgrp"] button:hover { background: rgba(236,237,230,.03) !important; } }
+
+/* hub profile card */
+.cai-set-profile {
+  display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 16px;
+  background: linear-gradient(135deg,rgba(153,162,107,.16),rgba(153,162,107,.04));
+  border: 1px solid rgba(153,162,107,.3);
+}
+.cai-set-profile .av {
+  width: 46px; height: 46px; border-radius: 13px; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg,#AEB784,#8E9962); border: 1px solid rgba(196,206,146,.5);
+  font: 700 22px 'Suez One', serif; color: #171A12;
+}
+.cai-set-profile .m { flex: 1; min-width: 0; }
+.cai-set-profile .nm { font: 700 16px Heebo; color: #ECEDE6; }
+.cai-set-profile .sub { font: 500 12px Heebo; color: rgba(196,206,146,.85); margin-top: 2px; }
+
+/* toggle-display + coming-soon chip + inline row (for בקרוב items) */
+.cai-row { display: flex; align-items: center; gap: 13px; padding: 14px; }
+.cai-row .ic { width: 18px; height: 18px; flex: none; background-repeat: no-repeat; background-position: center; background-size: 18px; }
+.cai-row .tx { flex: 1; }
+.cai-row .t { font: 500 14px Heebo; color: #ECEDE6; }
+.cai-row .s { font: 400 11px Heebo; color: rgba(236,237,230,.45); margin-top: 1px; }
+.cai-row .val { font: 600 12px Heebo; color: rgba(196,206,146,.85); }
+.cai-row .chev { color: rgba(236,237,230,.3); font-size: 14px; flex: none; }
+.cai-div { height: 1px; background: rgba(236,237,230,.07); margin: 0 14px; }
+.cai-tgl { width: 44px; height: 26px; border-radius: 99px; background: rgba(236,237,230,.14); position: relative; flex: none; }
+.cai-tgl .k { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: rgba(236,237,230,.6); }
+.cai-tgl.on { background: #99A26B; }
+.cai-tgl.on .k { left: auto; right: 3px; background: #171A12; }
+.cai-bakrov { font: 600 9.5px Heebo; letter-spacing: .3px; color: rgba(196,206,146,.85); background: rgba(153,162,107,.14); border: 1px solid rgba(153,162,107,.3); border-radius: 99px; padding: 2px 8px; flex: none; }
+.cai-set-icletters { background-image: url("ICON_BELL"); }
+.cai-ic-bell { background-image: url("ICON_BELL"); }
+.cai-ic-lock { background-image: url("ICON_LOCK"); }
+.cai-ic-clock { background-image: url("ICON_CLOCK"); }
+.cai-ic-chart { background-image: url("ICON_CHART"); }
+.cai-ic-chat { background-image: url("ICON_CHAT"); }
+
+/* banners */
+.cai-banner { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 16px; margin-top: 4px;
+  background: linear-gradient(135deg,rgba(153,162,107,.16),rgba(153,162,107,.04)); border: 1px solid rgba(153,162,107,.3); }
+.cai-banner .bi { width: 26px; height: 26px; flex: none; background-repeat: no-repeat; background-position: center; background-size: 26px; }
+.cai-banner .bt { font: 700 14px Heebo; color: #ECEDE6; }
+.cai-banner .bs { font: 400 11.5px Heebo; color: rgba(196,206,146,.85); margin-top: 2px; line-height: 1.45; }
+.cai-info { display: flex; align-items: center; gap: 9px; margin-top: 16px; padding: 12px 14px; border-radius: 13px;
+  background: rgba(153,162,107,.08); border: 1px solid rgba(153,162,107,.2); }
+.cai-info .ii { width: 16px; height: 16px; flex: none; background-image: url("ICON_INFO"); background-repeat: no-repeat; background-position: center; background-size: 16px; }
+.cai-info span { font: 400 11.5px Heebo; color: rgba(236,237,230,.6); line-height: 1.5; }
+
+/* personal: avatar + fields */
+.cai-set-avwrap { display: flex; flex-direction: column; align-items: center; gap: 11px; padding: 10px 0 18px; }
+.cai-set-avbig { width: 76px; height: 76px; border-radius: 22px; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg,#AEB784,#8E9962); border: 1px solid rgba(196,206,146,.5);
+  font: 700 34px 'Suez One', serif; color: #171A12; box-shadow: 0 8px 20px -8px rgba(153,162,107,.6); }
+.cai-set-changephoto { display: flex; align-items: center; gap: 6px; font: 600 12px Heebo; color: rgba(196,206,146,.6); }
+.cai-fld-label { font: 600 11px Heebo; color: rgba(236,237,230,.45); margin: 0 0 7px; }
+.cai-lang-note { font: 400 11.5px Heebo; color: rgba(236,237,230,.5); margin: 6px 2px 14px; line-height: 1.55; }
+
+/* language rows */
+.cai-lang-card { border-radius: 15px; overflow: hidden; background: #1E2416; border: 1px solid rgba(236,237,230,.1); }
+.cai-lang-row { display: flex; align-items: center; gap: 13px; padding: 15px 14px; }
+.cai-lang-row .fl { font-size: 20px; flex: none; }
+.cai-lang-row .nm { flex: 1; font: 600 14.5px Heebo; color: #ECEDE6; }
+.cai-lang-row.dim .nm { color: rgba(236,237,230,.5); font-weight: 500; }
+.cai-lang-row .def { font: 400 11px Heebo; color: rgba(236,237,230,.4); margin-top: 1px; }
+.cai-lang-row .ok { color: #99A26B; font-size: 18px; font-weight: 700; }
+
+/* ToS */
+.cai-tos-lead { font: 400 21px 'Suez One', serif; color: #ECEDE6; margin-bottom: 4px; }
+.cai-tos-sub { font: 500 12px Heebo; color: rgba(236,237,230,.4); margin-bottom: 20px; }
+.cai-tos-h { font: 700 14.5px Heebo; color: #C4CE92; margin-bottom: 6px; }
+.cai-tos-b { font: 400 13px Heebo; color: rgba(236,237,230,.78); line-height: 1.7; }
+.cai-tos-sec { margin-bottom: 20px; }
+.cai-set-foot { text-align: center; margin-top: 22px; padding-top: 16px; border-top: 1px solid rgba(236,237,230,.09); }
+.cai-set-foot .a { font: 600 9px ui-monospace, Menlo, monospace; letter-spacing: 2px; color: rgba(236,237,230,.35); }
+.cai-set-foot .b { font: 400 10.5px Heebo; color: rgba(236,237,230,.3); margin-top: 8px; line-height: 1.5; }
+
+/* save / danger buttons */
+.st-key-save_profile button {
+  background: #99A26B !important; border: none !important; color: #171A12 !important;
+  border-radius: 13px !important; font: 700 14px Heebo !important; padding: 13px !important; margin-top: 22px !important;
+}
+.st-key-save_profile button p { color: #171A12 !important; font-weight: 700 !important; text-align: center !important; }
+@media (hover: hover) { .st-key-save_profile button:hover { background: #A6AF76 !important; } }
+[class*="st-key-danger_"] button {
+  background: rgba(198,120,110,.1) !important; border: 1px solid rgba(198,120,110,.35) !important;
+  color: #D89189 !important; border-radius: 13px !important; font: 600 13.5px Heebo !important;
+  padding: 13px !important; margin-top: 20px !important;
+}
+[class*="st-key-danger_"] button p { color: #D89189 !important; font-weight: 600 !important; text-align: center !important; }
+@media (hover: hover) { [class*="st-key-danger_"] button:hover { background: rgba(198,120,110,.18) !important; } }
+
+/* privacy banner icon + real analytics toggle */
+.cai-banner .bi { background-image: url("ICON_SHIELD"); }
+.st-key-cai_analytics { border-radius: 15px; background: #1E2416; border: 1px solid rgba(236,237,230,.1); padding: 10px 14px 12px; margin-bottom: 8px; }
+.st-key-cai_analytics [data-testid="stElementContainer"] { margin: 0 !important; }
+.st-key-share_analytics_w label { font: 500 14px Heebo !important; color: #ECEDE6 !important; }
+.st-key-share_analytics_w [data-baseweb="checkbox"] > div:first-child { background: #99A26B !important; }
+.cai-analytics-sub { font: 400 11px Heebo; color: rgba(236,237,230,.45); margin: 2px 0 0; }
+
+/* personal-details native widgets styled to the mockup fields (8b) */
+.st-key-pf_name_w [data-baseweb="input"], .st-key-pf_name_w [data-baseweb="base-input"] {
+  background: transparent !important; border: none !important; }
+.st-key-pf_name_w input {
+  background: #22271A !important; border: 1px solid rgba(236,237,230,.13) !important;
+  border-radius: 12px !important; color: #ECEDE6 !important;
+  font: 500 14.5px Heebo !important; padding: 13px 15px !important; }
+.st-key-pf_track_w [data-baseweb="select"] > div {
+  background: #22271A !important; border: 1px solid rgba(236,237,230,.13) !important;
+  border-radius: 12px !important; min-height: 48px !important; }
+.st-key-pf_track_w [data-baseweb="select"] div, .st-key-pf_track_w [data-baseweb="select"] span {
+  color: #ECEDE6 !important; font: 500 14px Heebo !important; }
+/* service-type: 3 equal separated tabs */
+.st-key-pf_type_w [data-testid="stButtonGroup"] {
+  width: 100% !important; display: grid !important;
+  grid-template-columns: 1fr 1fr 1fr !important; gap: 7px !important; }
+.st-key-pf_type_w [data-testid="stButtonGroup"] button {
+  width: 100% !important; border-radius: 11px !important; min-height: 44px !important;
+  background: #22271A !important; border: 1px solid rgba(236,237,230,.13) !important;
+  color: rgba(236,237,230,.7) !important; }
+.st-key-pf_type_w [data-testid="stButtonGroup"] button p {
+  color: rgba(236,237,230,.7) !important; font: 500 13px Heebo !important; }
+.st-key-pf_type_w button[data-testid*="segmented_controlActive"],
+.st-key-pf_type_w [data-testid="stButtonGroup"] button[aria-checked="true"] {
+  background: rgba(153,162,107,.18) !important; border-color: #99A26B !important; }
+.st-key-pf_type_w button[data-testid*="segmented_controlActive"] p,
+.st-key-pf_type_w [data-testid="stButtonGroup"] button[aria-checked="true"] p {
+  color: #C4CE92 !important; font-weight: 700 !important; }
+</style>
+"""
+for _k, _u in _ICON.items():
+    _DS_CSS = _DS_CSS.replace("ICON_" + _k.upper(), _u)
+
+
+# ── Personal-details options + Terms text (mockup 8b / 8e) ──
+_SERVICE_TYPES = ["סדיר", "מילואים", "קבע"]
+_SERVICE_TRACKS = [
+    "לוחם/ת (תעודת לוחם)",
+    "תומכ״ל / עורפי",
+    "רמ״פ א׳ ומעלה (ללא תעודת לוחם)",
+    "אחר / לא רלוונטי",
+]
+_STATUS_PILLS = ["חייל בודד", "עולה חדש", "הורה לילדים", "נשוי/אה"]
+_TOS_SECTIONS = [
+    ("1. הצהרה כללית",
+     "אפליקציה זו (\"האפליקציה\") הינה כלי עזר פרטי שפותח על ידי מפתח עצמאי. האפליקציה אינה "
+     "כלי רשמי של צה\"ל, משרד הביטחון או כל גוף ממלכתי אחר. השימוש באפליקציה הוא על אחריות המשתמש בלבד."),
+    ("2. הגבלת אחריות",
+     "השירות באפליקציה ניתן כמות שהוא (\"As-Is\"). המפתח אינו אחראי לדיוק, לשלמות או לעדכניות המידע "
+     "המוצג באפליקציה. המשתמש מודע לכך שהאפליקציה מבוססת על מודלים של בינה מלאכותית (AI), אשר עלולים "
+     "לספק מידע שגוי, חלקי או לא מדויק (\"הזיות\"). אין להסתמך על מידע זה כייעוץ צבאי, מקצועי או משפטי מחייב."),
+    ("3. איסור הזנת מידע מסווג",
+     "חל איסור מוחלט על המשתמשים להזין, להעלות או לשתף בתוך האפליקציה מידע מסווג, רגיש, או כל מידע "
+     "שחשיפתו מהווה עבירת ביטחון שדה. המפתח אינו נושא באחריות לכל נזק או השלכה משפטית הנובעת מהפרת "
+     "סעיף זה על ידי המשתמש."),
+    ("4. פרטיות ונתונים",
+     "המידע שאתה מזין לאפליקציה משמש לצורך הפעלת מודלי הבינה המלאכותית בלבד.<br><br>אנו נוקטים באמצעים "
+     "טכניים סבירים כדי לשמור על פרטיות המשתמשים. עם זאת, אין אבטחה מוחלטת ברשת, והמשתמש לוקח על עצמו "
+     "את הסיכון הכרוך בהזנת נתונים במערכת."),
+    ("5. קניין רוחני",
+     "כלל התוכן, העיצוב, הקוד המקור והלוגו של האפליקציה הינם קניינו הרוחני הבלעדי של המפתח. אין להעתיק, "
+     "לשכפל או להשתמש בהם ללא אישור מראש ובכתב."),
+]
+
+
+def _clear_history():
+    """Wipe archived conversations + the active chat (a deliberate cleanup)."""
+    st.session_state.conversation_history = []
+    st.session_state.messages = []
+
+
+def _wipe_all():
+    """Full on-device wipe: chats + profile back to defaults (mockup 8d)."""
+    st.session_state.conversation_history = []
+    st.session_state.messages = []
+    st.session_state.profile_saved = []
+    st.session_state.profile_customized = False
+    st.session_state.profile_name = ""
+    st.session_state.service_track = ""
+    st.session_state.service_type = "סדיר"
+    # drop the settings widgets' keys so they reseed from the reset mirrors
+    for _k in ("profile_statuses", "pf_name_w", "pf_type_w", "pf_track_w"):
+        st.session_state.pop(_k, None)
+
+
+def _settings_hub():
+    """8a — settings home: profile card + grouped nav + logout."""
+    _svc = st.session_state.get("service_type") or "סדיר"
+    _sub = ["שירות חובה" if _svc == "סדיר" else _svc]
+    _pills = st.session_state.get("profile_saved") or []
+    if _pills:
+        _sub.append(_pills[0])
+    st.markdown(
+        "<div class='cai-set-profile'>"
+        f"<div class='av'>{html.escape(role_label[:1])}</div>"
+        f"<div class='m'><div class='nm'>{html.escape(role_label)}</div>"
+        f"<div class='sub'>{html.escape(' · '.join(_sub))}</div></div>"
+        "</div>", unsafe_allow_html=True)
+
+    st.markdown("<div class='cai-set-seclabel'>חשבון</div>", unsafe_allow_html=True)
+    with st.container(key="cai_sgrp_acct"):
+        if st.button("פרטים אישיים", key="nav_personal", use_container_width=True):
+            st.session_state.settings_screen = "personal"
+            st.rerun()
+
+    st.markdown("<div class='cai-set-seclabel'>התראות</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='cai-lang-card'><div class='cai-row'>"
+        "<div class='ic cai-ic-bell'></div>"
+        "<div class='tx'><div class='t'>עדכוני פקודות מטכ\"ל</div>"
+        "<div class='s'>התראה כשפקודה מתעדכנת</div></div>"
+        "<span class='cai-bakrov'>בקרוב</span>"
+        "<div class='cai-tgl'><span class='k'></span></div>"
+        "</div></div>", unsafe_allow_html=True)
+
+    st.markdown("<div class='cai-set-seclabel'>שפה</div>", unsafe_allow_html=True)
+    with st.container(key="cai_sgrp_lang"):
+        if st.button("שפה", key="nav_language", use_container_width=True):
+            st.session_state.settings_screen = "language"
+            st.rerun()
+
+    st.markdown("<div class='cai-set-seclabel'>פרטיות ונתונים</div>", unsafe_allow_html=True)
+    with st.container(key="cai_sgrp_priv"):
+        if st.button("נקה היסטוריית שיחות", key="nav_clearhist", use_container_width=True):
+            _clear_history()
+            st.rerun()
+        if st.button("פרטיות ואבטחה", key="nav_privacy", use_container_width=True):
+            st.session_state.settings_screen = "privacy"
+            st.rerun()
+
+    st.markdown("<div class='cai-set-seclabel'>אודות</div>", unsafe_allow_html=True)
+    with st.container(key="cai_sgrp_about"):
+        if st.button("אודות ותנאי שימוש", key="nav_about", use_container_width=True):
+            st.session_state.settings_screen = "about"
+            st.rerun()
+
+    # logout = reset to the role picker (no real auth; mirrors switch-role)
+    if st.button("התנתקות", key="danger_logout", use_container_width=True):
+        archive_current_conversation()
+        st.session_state.role = None
+        st.session_state.messages = []
+        st.session_state.pending_question = None
+        st.session_state.pop("suggested", None)
+        st.session_state.pop("orders_search", None)
+        st.session_state.show_settings = False
+        st.session_state.drawer_open = False
+        st.rerun()
+    st.markdown("<div class='cai-drawer-foot'>בלמ\"ס · לשימוש פנימי בלבד</div>", unsafe_allow_html=True)
+
+
+def _settings_personal():
+    """8b — personal details: name, service type/track, status pills."""
+    st.markdown(
+        "<div class='cai-set-avwrap'>"
+        f"<div class='cai-set-avbig'>{html.escape(role_label[:1])}</div>"
+        "<div class='cai-set-changephoto'>שינוי תמונה <span class='cai-bakrov'>בקרוב</span></div>"
+        "</div>", unsafe_allow_html=True)
+
+    st.markdown("<div class='cai-set-seclabel'>פרטי זיהוי</div>", unsafe_allow_html=True)
+    st.markdown("<div class='cai-fld-label'>שם מלא</div>", unsafe_allow_html=True)
+    if "pf_name_w" not in st.session_state:
+        st.session_state.pf_name_w = st.session_state.get("profile_name", "")
+    _name = st.text_input("שם מלא", key="pf_name_w",
+                          label_visibility="collapsed", placeholder="ישראל ישראלי")
+    st.session_state.profile_name = _name or ""
+
+    st.markdown("<div class='cai-fld-label'>סוג שירות</div>", unsafe_allow_html=True)
+    if "pf_type_w" not in st.session_state:
+        st.session_state.pf_type_w = st.session_state.get("service_type", "סדיר")
+    _type = st.segmented_control("סוג שירות", _SERVICE_TYPES, key="pf_type_w",
+                                 selection_mode="single", label_visibility="collapsed")
+    if _type:
+        st.session_state.service_type = _type
+
+    st.markdown("<div class='cai-fld-label'>מסלול השירות</div>", unsafe_allow_html=True)
+    _tracks = ["בחר/י מסלול…"] + _SERVICE_TRACKS
+    if "pf_track_w" not in st.session_state:
+        _cur = st.session_state.get("service_track", "")
+        st.session_state.pf_track_w = _cur if _cur in _SERVICE_TRACKS else _tracks[0]
+    _track = st.selectbox("מסלול השירות", _tracks, key="pf_track_w", label_visibility="collapsed")
+    st.session_state.service_track = "" if _track == _tracks[0] else _track
+
+    st.markdown("<div class='cai-set-seclabel'>התאמה אישית · סטטוס</div>", unsafe_allow_html=True)
+    st.markdown("<div class='cai-lang-note'>בחירת הסטטוס מתאימה את החישובים והתשובות עבורך.</div>", unsafe_allow_html=True)
+    if "profile_statuses" not in st.session_state and st.session_state.get("profile_saved"):
+        st.session_state.profile_statuses = st.session_state.profile_saved
+    _sel = st.pills("סטטוס", _STATUS_PILLS, selection_mode="multi",
+                    key="profile_statuses", label_visibility="collapsed")
+    st.session_state.profile_saved = list(_sel or [])
+
+    # save flips profile_customized -> the service fields now reach the answer
+    # (until then the API turn stays byte-identical; see handle_question).
+    if st.button("שמירת שינויים", key="save_profile", use_container_width=True):
+        st.session_state.profile_customized = True
+        st.session_state.settings_screen = "hub"
+        st.rerun()
+    st.markdown(
+        "<div class='cai-lang-note' style='text-align:center'>הפרטים נשמרים במכשיר בלבד לצורך התאמת החישובים.</div>",
+        unsafe_allow_html=True)
+
+
+def _settings_language():
+    """8c — language: Hebrew active; others honestly marked בקרוב."""
+    st.markdown(
+        "<div class='cai-lang-note'>בחירת השפה משנה את שפת הממשק והתשובות. החישובים זהים בכל השפות.</div>",
+        unsafe_allow_html=True)
+    st.markdown(
+        "<div class='cai-lang-card'>"
+        "<div class='cai-lang-row'><span class='fl'>🇮🇱</span><div style='flex:1'>"
+        "<div class='nm'>עברית</div><div class='def'>ברירת מחדל</div></div><span class='ok'>✓</span></div>"
+        "<div class='cai-div'></div>"
+        "<div class='cai-lang-row dim'><span class='fl'>🇸🇦</span><div class='nm'>العربية</div><span class='cai-bakrov'>בקרוב</span></div>"
+        "<div class='cai-div'></div>"
+        "<div class='cai-lang-row dim'><span class='fl'>🇬🇧</span><div class='nm'>English</div><span class='cai-bakrov'>בקרוב</span></div>"
+        "<div class='cai-div'></div>"
+        "<div class='cai-lang-row dim'><span class='fl'>🇷🇺</span><div class='nm'>Русский</div><span class='cai-bakrov'>בקרוב</span></div>"
+        "</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='cai-info'><div class='ii'></div>"
+        "<span>שינוי שפה יחיל מיד את הכיווניות המתאימה לממשק.</span></div>", unsafe_allow_html=True)
+
+
+def _settings_privacy():
+    """8d — privacy: honest בקרוב locks + a real analytics toggle + wipes."""
+    st.markdown(
+        "<div class='cai-banner'><div class='bi'></div>"
+        "<div style='flex:1'><div class='bt'>הנתונים שלך מוגנים</div>"
+        "<div class='bs'>המידע נשמר מוצפן במכשיר ואינו נשלח לשרת חיצוני.</div></div></div>",
+        unsafe_allow_html=True)
+
+    st.markdown("<div class='cai-set-seclabel'>גישה למכשיר</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='cai-lang-card'>"
+        "<div class='cai-row'><div class='ic cai-ic-lock'></div>"
+        "<div class='tx'><div class='t'>נעילה ביומטרית</div><div class='s'>Face ID לפתיחת האפליקציה</div></div>"
+        "<span class='cai-bakrov'>בקרוב</span><div class='cai-tgl'><span class='k'></span></div></div>"
+        "<div class='cai-div'></div>"
+        "<div class='cai-row'><div class='ic cai-ic-clock'></div>"
+        "<div class='tx'><div class='t'>נעילה אוטומטית</div><div class='s'>אחרי דקה של חוסר פעילות</div></div>"
+        "<span class='cai-bakrov'>בקרוב</span></div>"
+        "</div>", unsafe_allow_html=True)
+
+    st.markdown("<div class='cai-set-seclabel'>נתונים</div>", unsafe_allow_html=True)
+    if "share_analytics_w" not in st.session_state:
+        st.session_state.share_analytics_w = st.session_state.get("share_analytics", True)
+    with st.container(key="cai_analytics"):
+        _share = st.toggle("שיתוף נתוני שימוש אנונימיים", key="share_analytics_w")
+        st.session_state.share_analytics = _share
+        st.markdown("<div class='cai-analytics-sub'>לשיפור המענה</div>", unsafe_allow_html=True)
+    with st.container(key="cai_sgrp_data"):
+        if st.button("נקה היסטוריית שיחות", key="nav_clearhist2", use_container_width=True):
+            _clear_history()
+            st.rerun()
+
+    if st.button("מחיקת כל הנתונים מהמכשיר", key="danger_wipe", use_container_width=True):
+        _wipe_all()
+        st.rerun()
+
+
+def _settings_about():
+    """8e — about + terms of service (verbatim) + install hint."""
+    st.markdown(
+        "<div class='cai-banner' style='margin-bottom:18px'>"
+        "<div style='width:34px;height:34px;border-radius:10px;flex:none;display:flex;"
+        "align-items:center;justify-content:center;background:rgba(153,162,107,.22);"
+        "color:#C4CE92;font-size:18px;font-weight:700'>✓</div>"
+        "<div style='flex:1'><div class='bt' style='font-size:13.5px'>אישרת את התנאים</div>"
+        "<div class='bs'>בהתקנה הראשונית · גרסה 2.4</div></div></div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='cai-tos-lead'>תנאי שימוש</div><div class='cai-tos-sub'>Terms of Service</div>",
+        unsafe_allow_html=True)
+    for _h, _b in _TOS_SECTIONS:
+        st.markdown(
+            f"<div class='cai-tos-sec'><div class='cai-tos-h'>{_h}</div><div class='cai-tos-b'>{_b}</div></div>",
+            unsafe_allow_html=True)
+    st.markdown("<div class='cai-set-seclabel'>התקנה כאפליקציה</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='cai-lang-card' style='padding:14px'><div class='cai-tos-b' style='color:rgba(236,237,230,.7)'>"
+        "<b>אייפון:</b> בספארי — כפתור השיתוף ⬆️ ואז «הוסף למסך הבית».<br>"
+        "<b>אנדרואיד:</b> בכרום — תפריט ⋮ ואז «הוספה למסך הבית».<br>"
+        "האפליקציה תיפתח במסך מלא, עם אייקון CommandAI."
+        "</div></div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='cai-set-foot'><div class='a'>מחשבון זכאויות · גרסה 2.4</div>"
+        "<div class='b'>כלי עזר פרטי · אינו כלי רשמי של צה\"ל</div></div>", unsafe_allow_html=True)
+
+
+def _render_settings():
+    """App-owned settings overlay (mockup 8a–8e) — a screen state machine.
+    Not st.dialog: a dialog dismiss doesn't run the full script (the machine
+    would strand) and dialogs can't nest. This mirrors the drawer overlay."""
+    st.markdown(_DS_CSS, unsafe_allow_html=True)
+    # backdrop (the gutters on wide viewports) closes settings
+    if st.button("סגירת הגדרות", key="settings_backdrop"):
+        st.session_state.show_settings = False
+        st.rerun()
+    screen = st.session_state.get("settings_screen", "hub")
+    titles = {"hub": "הגדרות", "personal": "פרטים אישיים", "language": "שפה",
+              "privacy": "פרטיות ואבטחה", "about": "תנאי שימוש"}
+    with st.container(key="cai_settings"):
+        _cb, _ct = st.columns([1, 5])
+        with _cb:
+            if st.button("›", key="settings_back"):
+                if screen == "hub":
+                    st.session_state.show_settings = False
+                else:
+                    st.session_state.settings_screen = "hub"
+                st.rerun()
+        with _ct:
+            st.markdown(f"<div class='cai-set-title'>{titles.get(screen, 'הגדרות')}</div>",
+                        unsafe_allow_html=True)
+        if screen == "personal":
+            _settings_personal()
+        elif screen == "language":
+            _settings_language()
+        elif screen == "privacy":
+            _settings_privacy()
+        elif screen == "about":
+            _settings_about()
+        else:
+            _settings_hub()
+
+
 def handle_question(question: str):
     quota = metrics.reserve(st.session_state.session_id)
     if quota != "ok":
@@ -2199,11 +2884,21 @@ def handle_question(question: str):
     # instead of crashing every question until the process restarts
     profile_kw = {}
     if "profile" in inspect.signature(stream_ai_answer).parameters:
-        # empty selection -> None, so the composed user turn stays
+        # Compose the asker's details: status pills (profile_saved) always,
+        # plus service type/track ONLY after an explicit save. An untouched
+        # user yields [] -> None, so the composed user turn stays
         # byte-identical to the pre-profile format (prompt-cache prefix).
-        # profile_saved mirrors the drawer's pills widget — the widget key
-        # itself is dropped by Streamlit on runs where the drawer is closed.
-        profile_kw["profile"] = st.session_state.get("profile_saved") or None
+        # These all mirror dialog/drawer widgets whose session keys Streamlit
+        # drops on the runs where the widget isn't rendered.
+        _injected = list(st.session_state.get("profile_saved") or [])
+        if st.session_state.get("profile_customized"):
+            _svc = st.session_state.get("service_type")
+            if _svc:
+                _injected.append(f"שירות {_svc}")
+            _track = st.session_state.get("service_track")
+            if _track:
+                _injected.append(f"מסלול שירות: {_track}")
+        profile_kw["profile"] = _injected or None
     try:
         with st.spinner("מחפש בפקודות..."):
             result = stream_ai_answer(question, history, role=st.session_state.role, **profile_kw)
@@ -2250,17 +2945,20 @@ def handle_question(question: str):
         "content": text,
         "sources": sources,
     })
-    metrics.log_question(
-        session_id=st.session_state.session_id,
-        role=st.session_state.role or "",
-        question=question,
-        answer=text,
-        sources=sources,
-        # getattr: a stale cached backend from a previous cloud build may
-        # predate last_usage (see deploy note in backend.py)
-        usage=getattr(backend, "last_usage", None),
-        latency_s=time.time() - t0,
-    )
+    # analytics opt-out (privacy settings) suppresses ONLY this usage log —
+    # never the quota reserve/refund, which the app needs to function.
+    if st.session_state.get("share_analytics", True):
+        metrics.log_question(
+            session_id=st.session_state.session_id,
+            role=st.session_state.role or "",
+            question=question,
+            answer=text,
+            sources=sources,
+            # getattr: a stale cached backend from a previous cloud build may
+            # predate last_usage (see deploy note in backend.py)
+            usage=getattr(backend, "last_usage", None),
+            latency_s=time.time() - t0,
+        )
 
 
 def _pdf_media_url(source_file: str, coord: str) -> str | None:
@@ -2335,123 +3033,131 @@ if st.session_state.drawer_open:
     if st.button("סגירת התפריט", key="drawer_backdrop"):
         st.session_state.drawer_open = False
         st.rerun()
+    st.markdown(_DS_CSS, unsafe_allow_html=True)
     with st.container(key="cai_drawer"):
-        if st.button("✕", key="drawer_close"):
-            st.session_state.drawer_open = False
-            st.rerun()
-        st.markdown(f"<div class='cai-drawer-role'>מחובר כ־{role_label}</div>", unsafe_allow_html=True)
-        if st.button("החלף תפקיד", key="switch_role", use_container_width=True):
-            archive_current_conversation()
-            st.session_state.role = None
-            st.session_state.messages = []
-            st.session_state.pending_question = None
-            st.session_state.pop("suggested", None)
-            # a stale search would silently filter the next role's orders list
-            st.session_state.pop("orders_search", None)
-            st.session_state.drawer_open = False
-            st.rerun()
-        # personal statuses that change entitlements (lone soldier, new
-        # immigrant...). The pills widget only exists while the drawer is
-        # open, and Streamlit drops a widget's session key on any run where
-        # the widget isn't rendered — so profile_saved mirrors the selection
-        # and survives closed-drawer runs (handle_question reads the mirror).
-        # An empty selection stays falsy, keeping the composed API user turn
-        # byte-identical to the pre-profile format (backend._compose_user_content).
-        st.markdown("<div class='cai-profile-label'>התאמה אישית</div>", unsafe_allow_html=True)
-        if "profile_statuses" not in st.session_state and st.session_state.get("profile_saved"):
-            st.session_state.profile_statuses = st.session_state.profile_saved
-        _profile_sel = st.pills(
-            "התאמה אישית",
-            ["חייל בודד", "עולה חדש", "הורה לילדים", "נשוי/אה"],
-            selection_mode="multi",
-            key="profile_statuses",
-            label_visibility="collapsed",
-        )
-        st.session_state.profile_saved = list(_profile_sel or [])
-        st.markdown("---")
-        docs = get_loaded_docs_info(role=st.session_state.role)
-        with st.expander(f"פקודות מטכ\"ל במערכת ({len(docs)})", expanded=False):
-            if docs:
-                search = _search_norm(st.text_input(
-                    "חיפוש פקודה",
-                    key="orders_search",
-                    label_visibility="collapsed",
-                    placeholder="🔎 חיפוש פקודה...",
-                ))
-                # media URLs are registered for ALL docs, filtered or not: a
-                # media-manager entry whose coord isn't re-registered during a
-                # rerun is purged at that rerun's end — filtering registration
-                # would 404 a PDF the user already opened in another tab
-                rows = [
-                    (doc, _pdf_media_url(doc["source_file"], f"pdfside_{doc['id']}")
-                     if doc.get("source_file") else None)
-                    for doc in docs
-                ]
-                shown = [
-                    (doc, url) for doc, url in rows
-                    if not search
-                    or search in _search_norm(doc["title"])
-                    or search in _search_norm(str(doc["id"]))
-                ]
-                if not shown:
-                    st.caption("לא נמצאו פקודות מתאימות")
-                # each title is itself the tap target that opens the order's PDF
-                # inline (styled as a flat list line, not a button — CSS above)
-                for doc, url in shown:
-                    st.markdown(_order_link(doc["title"], url, _doc_date_badge(doc["id"])), unsafe_allow_html=True)
-            else:
-                st.caption("אין פקודות טעונות")
-        # the tool buttons deliberately leave drawer_open=True: a dialog
-        # dismiss doesn't rerun the full script, so flipping the flag here
-        # leaves the drawer painted from the previous run while its widgets
-        # no longer render — the next tap inside it would be silently lost.
-        # Kept open, the dialog simply overlays the menu and closing it
-        # returns the user to a live, state-consistent drawer.
-        if LETTER_TYPES and st.button("📄 מחולל מכתבים", key="open_letters", use_container_width=True):
-            _letters_dialog()
-        # deterministic tools, zero-token, no quota — each gated on its module
-        if _pa and st.button("⚖️ בודק סמכות עונש", key="open_punishment", use_container_width=True):
-            _punishment_dialog()
-        if entitlements and st.button("🧮 מחשבון זכאויות", key="open_entitlements", use_container_width=True):
-            _entitlements_dialog()
-        # A2HS is a browser gesture we can't trigger — the hint tells pilot
-        # users where it hides. The PWA head metadata (icon, standalone) is
-        # already injected, so the result actually looks like an app.
-        with st.expander("📲 להתקנה כאפליקציה"):
-            st.markdown(
-                "<div class='cai-install-hint'>"
-                "<b>אייפון:</b> בספארי — כפתור השיתוף ⬆️ ואז «הוסף למסך הבית».<br>"
-                "<b>אנדרואיד:</b> בכרום — תפריט ⋮ ואז «הוספה למסך הבית».<br>"
-                "האפליקציה תיפתח במסך מלא, עם אייקון CommandAI.<br>"
-                "<b>כבר מותקן אצלך?</b> מחק את האייקון והוסף מחדש — מסך הפתיחה "
-                "המהיר נטען רק בהוספה."
-                "</div>",
-                unsafe_allow_html=True,
-            )
-        st.markdown("---")
+        # ── top row: settings gear (right/leading) + close « (left/trailing) ──
+        _c_gear, _c_close = st.columns(2)
+        with _c_gear:
+            # opening settings keeps drawer_open=True on purpose — a dialog
+            # dismiss doesn't rerun the full script, so flipping a layout flag
+            # here would strand the drawer (painted, but its widgets no longer
+            # render → the next tap inside it is silently lost).
+            if st.button("⚙", key="open_settings"):
+                st.session_state.show_settings = True
+                st.session_state.settings_screen = "hub"
+                st.rerun()
+        with _c_close:
+            if st.button("«", key="drawer_close"):
+                st.session_state.drawer_open = False
+                st.rerun()
 
-        st.markdown("<div class='cai-drawer-section'><span class='dot'></span>שיחות אחרונות</div>", unsafe_allow_html=True)
-        # only this role's conversations: restoring a chat that ran under another
-        # role's system prompt would mix personas/doc scopes in one thread
+        # ── role card (display only; role switching lives in Settings) ──
+        _svc_type = st.session_state.get("service_type") or "סדיר"
+        _role_badge = "שירות חובה" if _svc_type == "סדיר" else _svc_type
+        st.markdown(
+            "<div class='cai-role-card'>"
+            f"<div class='cai-role-av'>{html.escape(role_label[:1])}</div>"
+            "<div class='cai-role-meta'>"
+            "<div class='cai-role-k'>מחובר כ־</div>"
+            f"<div class='cai-role-nm'>{html.escape(role_label)}</div></div>"
+            f"<span class='cai-role-badge'>{html.escape(_role_badge)}</span>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+        # ── knowledge base — orders list (expander styled as the accent card) ──
+        st.markdown("<div class='cai-sec-label'>מאגר הידע</div>", unsafe_allow_html=True)
+        docs = get_loaded_docs_info(role=st.session_state.role)
+        with st.container(key="cai_kb"):
+            with st.expander(f"פקודות מטכ\"ל במערכת · {len(docs)}", expanded=False):
+                if docs:
+                    search = _search_norm(st.text_input(
+                        "חיפוש פקודה",
+                        key="orders_search",
+                        label_visibility="collapsed",
+                        placeholder="🔎 חיפוש פקודה...",
+                    ))
+                    # media URLs are registered for ALL docs, filtered or not: a
+                    # media-manager entry whose coord isn't re-registered during a
+                    # rerun is purged at that rerun's end — filtering registration
+                    # would 404 a PDF the user already opened in another tab
+                    rows = [
+                        (doc, _pdf_media_url(doc["source_file"], f"pdfside_{doc['id']}")
+                         if doc.get("source_file") else None)
+                        for doc in docs
+                    ]
+                    shown = [
+                        (doc, url) for doc, url in rows
+                        if not search
+                        or search in _search_norm(doc["title"])
+                        or search in _search_norm(str(doc["id"]))
+                    ]
+                    if not shown:
+                        st.caption("לא נמצאו פקודות מתאימות")
+                    # each title is itself the tap target that opens the order's
+                    # PDF inline (styled as a flat list line, not a button)
+                    for doc, url in shown:
+                        st.markdown(_order_link(doc["title"], url, _doc_date_badge(doc["id"])), unsafe_allow_html=True)
+                else:
+                    st.caption("אין פקודות טעונות")
+
+        # ── tools (grouped card) ──
+        st.markdown("<div class='cai-sec-label'>כלים</div>", unsafe_allow_html=True)
+        with st.container(key="cai_tools"):
+            # the tool buttons deliberately leave drawer_open=True (same reason
+            # as the gear above — the dialog overlays a live, state-consistent
+            # drawer, and closing it returns the user straight to it).
+            if LETTER_TYPES and st.button("מחולל מכתבים", key="open_letters", use_container_width=True):
+                _letters_dialog()
+            # deterministic tools, zero-token, no quota — each gated on its module
+            if _pa and st.button("בודק סמכות עונש", key="open_punishment", use_container_width=True):
+                _punishment_dialog()
+            if entitlements and st.button("מחשבון זכאויות", key="open_entitlements", use_container_width=True):
+                _entitlements_dialog()
+
+        # ── recent conversations — only this role's (restoring a cross-role
+        # chat would mix personas/doc scopes in one thread) ──
         role_history = [
             (i, conv) for i, conv in enumerate(st.session_state.conversation_history)
             if conv.get("role") == st.session_state.role
         ]
-        if role_history:
-            for i, conv in role_history:
-                if st.button(f"💬 {conv['title']}", key=f"hist_{i}", use_container_width=True):
-                    st.session_state.messages = conv["messages"].copy()
-                    st.session_state.drawer_open = False
-                    st.rerun()
-        else:
-            st.caption("אין שיחות קודמות")
-        st.markdown("---")
+        _rc_head, _rc_clear = st.columns([3, 1])
+        with _rc_head:
+            st.markdown(
+                "<div class='cai-recent-head'><span class='cai-recent-t'>שיחות אחרונות</span>"
+                f"<span class='cai-recent-n'>{len(role_history)}</span></div>",
+                unsafe_allow_html=True,
+            )
+        with _rc_clear:
+            if role_history and st.button("נקה הכל", key="clear_recent"):
+                # drop only this role's archived conversations
+                st.session_state.conversation_history = [
+                    c for c in st.session_state.conversation_history
+                    if c.get("role") != st.session_state.role
+                ]
+                st.rerun()
+        with st.container(key="cai_recent"):
+            if role_history:
+                for i, conv in role_history:
+                    if st.button(f"💬 {conv['title']}", key=f"hist_{i}", use_container_width=True):
+                        st.session_state.messages = conv["messages"].copy()
+                        st.session_state.drawer_open = False
+                        st.rerun()
+            else:
+                st.caption("אין שיחות קודמות")
 
-        if st.button("+ שיחה חדשה", key="new_chat", use_container_width=True):
+        # ── footer CTA ──
+        if st.button("שיחה חדשה", key="new_chat", use_container_width=True):
             archive_current_conversation()
             st.session_state.messages = []
             st.session_state.drawer_open = False
             st.rerun()
+        st.markdown("<div class='cai-drawer-foot'>בלמ\"ס · לשימוש פנימי בלבד</div>", unsafe_allow_html=True)
+
+# settings overlay (state machine) — shown whenever the flag is set; opening it
+# leaves the drawer open underneath so closing returns there.
+if st.session_state.get("show_settings"):
+    _render_settings()
 
 # ── Header: wordmark + role pill ──
 st.markdown(
