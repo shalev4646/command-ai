@@ -971,11 +971,6 @@ body:has([data-testid="stExpandSidebarButton"]) [data-testid="stSidebar"] {{ dis
 }}
 [data-testid="stSidebar"] hr {{ margin: 14px 0 !important; }}
 
-/* switch-role: right-aligned label, olive ⇄ icon at the far (left) end */
-.st-key-switch_role button {{ display: flex; align-items: center; justify-content: flex-start; }}
-.st-key-switch_role button::after {{
-    content: "⇄"; color: var(--accent); font-size: 16px; margin-inline-start: auto;
-}}
 .cai-drawer-role {{ font: 400 12.5px Heebo, sans-serif; color: var(--text-dim); margin-bottom: 10px; }}
 .cai-drawer-section {{
     display: flex; align-items: center; gap: 8px;
@@ -2458,7 +2453,6 @@ _DS_CSS = """
 .cai-tgl.on { background: #99A26B; }
 .cai-tgl.on .k { left: auto; right: 3px; background: #171A12; }
 .cai-bakrov { font: 600 9.5px Heebo; letter-spacing: .3px; color: rgba(196,206,146,.85); background: rgba(153,162,107,.14); border: 1px solid rgba(153,162,107,.3); border-radius: 99px; padding: 2px 8px; flex: none; }
-.cai-set-icletters { background-image: url("ICON_BELL"); }
 .cai-ic-bell { background-image: url("ICON_BELL"); }
 .cai-ic-lock { background-image: url("ICON_LOCK"); }
 .cai-ic-clock { background-image: url("ICON_CLOCK"); }
