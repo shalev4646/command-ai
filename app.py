@@ -327,8 +327,10 @@ if _is_admin:
 # Dark-olive theme; role accents: soldier olive, commander tan, reserve blue.
 ROLE_META = {
     "soldier": {
-        "label": "חייל", "accent": "#99A26B", "accent_hover": "#AAB37C",
-        "soft": "rgba(153,162,107,.14)", "border": "rgba(153,162,107,.35)",
+        # 9a home redesign palette (design_handoff_commandai_home): olive
+        # lightened #99A26B → #A3AE6E, tints rebased on rgb(163,174,110)
+        "label": "חייל", "accent": "#A3AE6E", "accent_hover": "#B2BD7E",
+        "soft": "rgba(163,174,110,.14)", "border": "rgba(163,174,110,.35)",
         "bright": "#C4CE92",  # lightened accent for the modal hero number
     },
     "commander": {
@@ -370,15 +372,15 @@ st.markdown(f"""
 @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Suez+One&display=swap');
 
 :root {{
-    --bg: #171A12;
+    --bg: #14170E;
     --surface: #21261A;
     --surface-hover: #2A3120;
-    --text: #ECEDE6;
-    --text-sec: rgba(236,237,230,.6);
-    --text-dim: rgba(236,237,230,.5);
-    --text-faint: rgba(236,237,230,.35);
-    --border: rgba(236,237,230,.12);
-    --border-strong: rgba(236,237,230,.15);
+    --text: #EFF0E8;
+    --text-sec: rgba(239,240,232,.6);
+    --text-dim: rgba(239,240,232,.55);
+    --text-faint: rgba(239,240,232,.4);
+    --border: rgba(239,240,232,.12);
+    --border-strong: rgba(239,240,232,.16);
     --accent: {ACCENT};
     --accent-hover: {ACCENT_HOVER};
     --accent-soft: {ACCENT_SOFT};
@@ -405,14 +407,17 @@ html, body {{ overscroll-behavior-y: none; }}
 html {{ -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }}
 /* vertical gradient — dark at top, warming to olive toward the composer.
    NOTE: no `fixed` attachment — iOS Safari renders it black; vh fallback
-   first for devices without dvh support */
+   first for devices without sv/dvh support. svh (SMALL viewport) wins where
+   supported: on iOS standalone, dvh sticks at a value LARGER than the
+   visible screen until the first touch (app-switcher pinch too), pushing
+   the layout past the bottom edge — svh never exceeds what's visible. */
 [data-testid="stAppViewContainer"] {{
-    background-image: linear-gradient(180deg, #171A12 0%, #171A12 42%, #1C2114 68%, #242C18 88%, #2A3420 100%) !important;
+    background-image: linear-gradient(180deg, #14170E 0%, #161A0F 52%, #20270F 100%) !important;
     background-size: 100% 100vh !important;
-    background-size: 100% 100dvh !important;
+    background-size: 100% 100svh !important;
     background-attachment: scroll !important;
     min-height: 100vh;
-    min-height: 100dvh;
+    min-height: 100svh;
 }}
 /* hide the scroll bar (shows as a strip on the left edge in RTL).
    NB stAppScrollToBottomContainer: the main <section> is REPLACED by this
@@ -482,19 +487,20 @@ header {{ visibility: hidden; }}
    client flags outrank config.toml. These elements are plain widgets, so no
    platform sidebar behavior can take them away. */
 .st-key-drawer_open_btn {{
-    position: fixed; top: 12px; inset-inline-start: 20px;
-    width: 40px; z-index: 110;
+    position: fixed; top: calc(var(--cai-sat, 0px) + 11px); inset-inline-start: 18px;
+    width: 42px; z-index: 110;
 }}
+/* 9a: 42px CIRCLE, olive-tinted, three 15×2 olive bars (gap 4) */
 .st-key-drawer_open_btn button {{
-    width: 40px !important; height: 40px !important; min-height: 40px !important;
-    background-color: var(--surface) !important;
-    border: 1px solid var(--border) !important; border-radius: 10px !important;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='12'%3E%3Crect width='16' height='2' y='0' rx='1' fill='%23ECEDE6'/%3E%3Crect width='16' height='2' y='5' rx='1' fill='%23ECEDE6'/%3E%3Crect width='16' height='2' y='10' rx='1' fill='%23ECEDE6'/%3E%3C/svg%3E") !important;
+    width: 42px !important; height: 42px !important; min-height: 42px !important;
+    background-color: rgba(163,174,110,.14) !important;
+    border: 1px solid rgba(163,174,110,.3) !important; border-radius: 50% !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='15' height='14'%3E%3Crect width='15' height='2' y='0' rx='1' fill='%23A3AE6E'/%3E%3Crect width='15' height='2' y='6' rx='1' fill='%23A3AE6E'/%3E%3Crect width='15' height='2' y='12' rx='1' fill='%23A3AE6E'/%3E%3C/svg%3E") !important;
     background-repeat: no-repeat !important; background-position: center !important;
 }}
 .st-key-drawer_open_btn button p {{ display: none; }}
 @media (hover: hover) {{
-    .st-key-drawer_open_btn button:hover {{ background-color: var(--surface-hover) !important; }}
+    .st-key-drawer_open_btn button:hover {{ background-color: rgba(163,174,110,.24) !important; }}
 }}
 .st-key-drawer_backdrop {{ position: fixed; inset: 0; z-index: 125; }}
 .st-key-drawer_backdrop button {{
@@ -506,7 +512,7 @@ header {{ visibility: hidden; }}
 .st-key-cai_drawer {{
     position: fixed; top: 0; bottom: 0; inset-inline-start: 0;
     width: min(78vw, 340px); z-index: 130;
-    background: #171A12; border-inline-end: 1px solid var(--border);
+    background: #14170E; border-inline-end: 1px solid var(--border);
     box-shadow: 0 0 40px rgba(0, 0, 0, .45);
     padding: calc(env(safe-area-inset-top, 0px) + 16px) 18px 24px;
     overflow-y: auto; overscroll-behavior: contain;
@@ -515,15 +521,26 @@ header {{ visibility: hidden; }}
        animation and makes the open drawer jump 12% sideways mid-use */
 }}
 .st-key-cai_drawer [data-testid="stElementContainer"] {{ margin-bottom: 8px; }}
+/* 9a language inside the drawer: translucent card buttons (the solid
+   var(--surface) look belongs to the previous design) — the solid-olive
+   "+ שיחה חדשה" keeps its own !important styling */
+.st-key-cai_drawer div[data-testid="stButton"] > button {{
+    background-color: rgba(239,240,232,.045);
+    border: 1px solid rgba(239,240,232,.12);
+}}
+.st-key-cai_drawer hr {{ border-color: var(--border) !important; margin: 14px 0 !important; }}
 .st-key-drawer_close [data-testid="stElementContainer"],
 .st-key-cai_drawer .st-key-drawer_close {{ margin-bottom: 2px; }}
 .st-key-drawer_close {{ display: flex; justify-content: flex-end; }}
+/* close button — small circle in the hamburger's olive-tint style */
 .st-key-drawer_close button {{
-    width: 34px !important; height: 34px !important; min-height: 34px !important;
-    border-radius: 9px !important;
-    background-color: var(--surface) !important;
-    border: 1px solid var(--border) !important;
+    width: 36px !important; height: 36px !important; min-height: 36px !important;
+    border-radius: 50% !important;
+    background-color: rgba(163,174,110,.14) !important;
+    border: 1px solid rgba(163,174,110,.3) !important;
+    color: var(--accent) !important;
 }}
+.st-key-drawer_close button p {{ color: var(--accent) !important; }}
 
 /* ── Main container — mobile-first column, max 430px ── */
 [data-testid="stMainBlockContainer"], .main .block-container {{
@@ -635,49 +652,80 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
    center the content on the 430px column and clear the hamburger. ── */
 .cai-header {{
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    /* the band grows UP by the status-bar inset so its olive fills behind
+    /* the band grows UP by the status-bar inset so its dark fill sits behind
        the translucent clock; content stays in the 64px below via padding */
     height: calc(64px + var(--cai-sat, 0px)); box-sizing: border-box;
-    background: rgba(23,26,18,.92);
+    background: rgba(20,23,14,.92); /* == gradient top, so the band is invisible on home */
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     display: flex; align-items: center; gap: 12px;
-    padding: var(--cai-sat, 0px) 72px 0 20px;
-    border-bottom: 1px solid rgba(236,237,230,.1);
+    padding: var(--cai-sat, 0px) 72px 0 18px;
+    /* 9a: NO divider line beneath the header */
     /* no entrance animation: a transform on a fixed element re-anchors it
        and Streamlit can freeze the animation at its from-state (top: 18px) */
 }}
-/* dead-center on the SCREEN like the mock — as a flex child it hugged the
-   hamburger; absolute centering detaches it from the row flow */
-.cai-wordmark {{ font: 400 19px 'Suez One', serif; color: var(--text);
-    position: absolute; left: 50%; top: calc(var(--cai-sat, 0px) + 32px);
-    transform: translate(-50%, -50%); }}
+/* flows in the header row right after the hamburger (right-of-center), per
+   the design — space-between flow puts the wordmark next to the menu button,
+   cx≈258 on a 390 viewport. NOT screen-centered. */
+.cai-wordmark {{ font: 400 20px 'Suez One', serif; color: var(--text); }}
+/* 9a: two-tone wordmark — "Command" light, "AI" olive */
+.cai-wordmark .cai-wm-ai {{ color: var(--accent); }}
 .cai-pill {{
     margin-inline-start: auto;
     font: 600 12px Heebo, sans-serif; color: var(--accent);
     background: var(--accent-soft); border: 1px solid var(--accent-border);
-    border-radius: 99px; padding: 5px 12px;
+    border-radius: 99px; padding: 6px 13px; white-space: nowrap;
 }}
 
-/* ── Chat home greeting — centered on the column; margin-top lands the
-   title ~35px under the header band, like the mock ── */
-.cai-greet {{ font: 400 28px 'Suez One', serif; color: var(--text); margin: 8px 0 2px;
+/* ── Chat home greeting — 9a: title 30px + subtitle 13.5px, both CENTERED,
+   7px apart (the previous right-aligned pass followed the older handoff;
+   the 9a redesign centers the greeting block) ── */
+.cai-greet {{ font: 400 30px 'Suez One', serif; color: var(--text); margin: 0 0 7px;
     text-align: center;
     animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .08s; }}
-.cai-greet-sub {{ font: 400 13px Heebo, sans-serif; color: var(--text-dim); margin-bottom: 8px;
+.cai-greet-sub {{ font: 400 13.5px Heebo, sans-serif; color: var(--text-dim); margin-bottom: 0;
     text-align: center;
     animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .16s; }}
 
-/* ── Chat home vertical rhythm — exactly like the mock: the hero sits a
-   fixed ~35px under the header (MAIN_TOP_PADDING 80 + greet margin 20)
-   and the leftover space collects between the cards and the composer.
-   An equal-split vertical centering was tried and looked "floaty" with
-   short/few suggestion cards — the mock is top-anchored, so are we. ── */
+/* ── Chat home vertical layout — 9a: the greeting+cards block is VERTICALLY
+   CENTERED between header and composer, with 78px bottom padding so it sits
+   slightly above true center. Gated on .cai-greet (home only); the section
+   testid swaps to stAppScrollToBottomContainer once chat_input mounts, so
+   the gate anchors on stAppViewContainer. ── */
+[data-testid="stAppViewContainer"]:has(.cai-greet) [data-testid="stMainBlockContainer"] {{
+    display: flex; flex-direction: column;
+    min-height: calc(100vh - 134px - env(safe-area-inset-bottom, 0px));  /* composer strip */
+    min-height: calc(100svh - 134px - env(safe-area-inset-bottom, 0px)); /* svh: see gradient note */
+    padding-top: calc(64px + var(--cai-sat, 0px)) !important; /* header band */
+    padding-bottom: 78px !important;
+}}
+/* the vertical block stretches to fill, so the centering happens inside it */
+[data-testid="stAppViewContainer"]:has(.cai-greet)
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] {{
+    justify-content: center;
+}}
 
-/* suggestion cards: mock rhythm is a tight 10px gap (8px button margin +
-   the 2px wrapper margin), vs the entry buttons' 12px. Must outrank the
-   base `div[data-testid="stButton"] > button` rule on specificity. */
-[class*="st-key-sug_"] div[data-testid="stButton"] > button {{ margin-bottom: 8px; }}
+/* ── Suggestion cards — 9a: translucent surface, radius 16, padding 16/18,
+   14.5px/1.5, 11px apart, 18px under the subtitle. Must outrank the base
+   `div[data-testid="stButton"] > button` rule on specificity. ── */
+[class*="st-key-sug_"] div[data-testid="stButton"] > button {{
+    background-color: rgba(239,240,232,.045);
+    border: 1px solid rgba(239,240,232,.12);
+    border-radius: 16px;
+    padding: 16px 18px;
+    font-size: 14.5px;
+    line-height: 1.5;
+    margin-bottom: 9px; /* + 2px wrapper margin = the 9a 11px card gap */
+}}
+/* 31px nets the 9a 18px sub→card gap after the ~13px the invisible
+   markdown-wrapper chrome swallows (measured live) */
+.st-key-sug_0 div[data-testid="stButton"] > button {{ margin-top: 31px; }}
+@media (hover: hover) {{
+    [class*="st-key-sug_"] div[data-testid="stButton"] > button:hover {{
+        background-color: rgba(163,174,110,.08);
+        border-color: rgba(163,174,110,.5);
+    }}
+}}
 
 /* suggestion cards stagger */
 .st-key-sug_0 button {{ animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .24s; }}
@@ -691,10 +739,10 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
    scrolling below (no `fixed` attachment — broken on iOS Safari; vh
    fallback first for devices without dvh) */
 [data-testid="stBottom"] {{
-    background-color: #242C18 !important;
-    background-image: linear-gradient(180deg, #171A12 0%, #171A12 42%, #1C2114 68%, #242C18 88%, #2A3420 100%) !important;
+    background-color: #20270F !important;
+    background-image: linear-gradient(180deg, #14170E 0%, #161A0F 52%, #20270F 100%) !important;
     background-size: 100% 100vh !important;
-    background-size: 100% 100dvh !important;
+    background-size: 100% 100svh !important; /* svh: see gradient note above */
     background-position: bottom !important;
     /* env() is 0 inside the cloud shell's iframe, so give the disclaimer a
        real floor — on iPhone it sat right on the home-indicator bar */
@@ -713,39 +761,55 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     background-color: transparent !important; border: none !important; box-shadow: none !important;
 }}
 [data-testid="stChatInput"] {{
-    background-color: var(--surface) !important;
+    background-color: rgba(239,240,232,.06) !important; /* 9a translucent pill */
     border: 1px solid var(--border-strong) !important;
     border-radius: 99px !important;
-    padding: 8px 18px 8px 8px !important; /* text inset 18 (right), send 8 (left) */
+    padding: 5px 6px 5px 5px !important; /* 9a: 5/6/5/5, text carries its own 14px inset */
     align-items: center !important;
     transition: border-color .15s ease;
 }}
-/* the baseweb wrapper adds 12px 16px of its own — it ballooned the pill to
-   74px; zeroed, the pill is exactly send-button + 8px padding = 56px tall */
+/* the baseweb wrapper adds 12px 16px of its own — it ballooned the pill;
+   zeroed + stretched to the FULL pill width (Streamlit leaves it at its
+   intrinsic ~240px, which left the send button floating mid-pill — visible
+   on iPhone and at any viewport), and the textarea side grows to fill so
+   the send button hugs the far (left) edge */
 [data-testid="stChatInput"] > div {{
     padding: 0 !important;
     min-height: 0 !important;
+    width: 100% !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
 }}
+[data-testid="stChatInput"] > div > *:has(textarea),
+[data-testid="stChatInput"] > div > textarea {{
+    flex: 1 1 auto !important; min-width: 0 !important;
+}}
+/* "Press Enter to apply" hint occupies row space next to the send button on
+   iOS — never show it inside the composer */
+[data-testid="stChatInput"] [data-testid="InputInstructions"] {{ display: none !important; }}
 [data-testid="stChatInput"]:focus-within {{ border-color: var(--accent-border) !important; }}
 [data-testid="stChatInputTextArea"] {{
-    color: var(--text) !important; font: 400 14px Heebo, sans-serif !important; direction: rtl;
+    color: var(--text) !important; font: 400 15px Heebo, sans-serif !important; direction: rtl;
+    padding: 0 14px !important;
 }}
-[data-testid="stChatInput"] textarea::placeholder {{ color: rgba(236,237,230,.4) !important; }}
+[data-testid="stChatInput"] textarea::placeholder {{ color: rgba(239,240,232,.4) !important; }}
 [data-testid="stChatInputSubmitButton"] {{
     background-color: var(--accent) !important;
     border-radius: 50% !important;
-    width: 40px !important; height: 40px !important;
-    min-width: 40px !important; min-height: 40px !important;
+    width: 44px !important; height: 44px !important;
+    min-width: 44px !important; min-height: 44px !important;
+    flex: 0 0 auto !important;
     padding: 0 !important; border: none !important;
+    box-shadow: 0 0 24px rgba(163,174,110,.35) !important; /* 9a glow */
 }}
 [data-testid="stChatInputSubmitButton"]:hover {{ background-color: var(--accent-hover) !important; }}
-[data-testid="stChatInputSubmitButton"] svg {{ fill: #171A12 !important; }}
+[data-testid="stChatInputSubmitButton"] svg {{ fill: #14170E !important; }}
 /* disclaimer under the composer */
 [data-testid="stBottomBlockContainer"]::after {{
     content: "כלי עזר מבוסס בינה מלאכותית — אינו ייעוץ משפטי או פקודה מחייבת. בכל סתירה, פקודות מטכ״ל הרשמיות הן הקובעות.";
-    display: block; text-align: center; margin-top: 8px;
-    line-height: 1.45; max-width: 460px; margin-inline: auto;
-    font: 400 10.5px Heebo, sans-serif; color: rgba(236,237,230,.5);
+    display: block; text-align: center; margin-top: 10px;
+    line-height: 1.55; max-width: 460px; margin-inline: auto;
+    font: 400 10.5px Heebo, sans-serif; color: var(--text-faint);
 }}
 
 /* ── Chat messages ── */
@@ -900,8 +964,8 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     padding: 4px 15px !important;
 }}
 [class*="st-key-src_"] button p {{ font: 600 12.5px Heebo, sans-serif !important; }}
-[class*="st-key-src_"] button:hover {{ background: var(--accent) !important; color: #171A12 !important; }}
-[class*="st-key-src_"] button:hover p {{ color: #171A12 !important; }}
+[class*="st-key-src_"] button:hover {{ background: var(--accent) !important; color: #14170E !important; }}
+[class*="st-key-src_"] button:hover p {{ color: #14170E !important; }}
 /* install-as-app hint (drawer expander) */
 .cai-install-hint {{
     font: 400 12px/1.8 Heebo, sans-serif; color: var(--text-dim);
@@ -985,10 +1049,10 @@ body:has([data-testid="stExpandSidebarButton"]) [data-testid="stSidebar"] {{ dis
 .cai-profile-label {{ font: 400 12.5px Heebo, sans-serif; color: var(--text-dim); margin: 2px 0 4px; }}
 .st-key-profile_statuses [data-testid="stPills"] {{ direction: rtl; gap: 6px; }}
 .st-key-profile_statuses button {{
-    background: rgba(236,237,230,.05) !important;
-    border: 1px solid rgba(236,237,230,.22) !important;
+    background: rgba(239,240,232,.045) !important;
+    border: 1px solid rgba(239,240,232,.22) !important;
     border-radius: 99px !important;
-    color: rgba(236,237,230,.75) !important;
+    color: rgba(239,240,232,.75) !important;
     min-height: 0 !important;
     padding: 3px 12px !important;
 }}
@@ -1010,13 +1074,13 @@ div[data-testid="stDialog"] textarea {{ direction: rtl; font: 400 14px/1.7 Heebo
 .st-key-new_chat button {{
     background-color: var(--accent) !important;
     border: none !important;
-    color: #171A12 !important;
+    color: #14170E !important;
     font: 700 15px Heebo, sans-serif !important;
     text-align: center !important;
     justify-content: center;
 }}
 .st-key-new_chat button:hover {{ background-color: var(--accent-hover) !important; }}
-.st-key-new_chat button p {{ color: #171A12 !important; font-weight: 700 !important; text-align: center !important; }}
+.st-key-new_chat button p {{ color: #14170E !important; font-weight: 700 !important; text-align: center !important; }}
 
 /* ── Expander (loaded orders) — flat row with count, no theme boxes ── */
 [data-testid="stExpander"],
@@ -1031,18 +1095,18 @@ div[data-testid="stDialog"] textarea {{ direction: rtl; font: 400 14px/1.7 Heebo
 }}
 [data-testid="stExpander"] summary {{ color: var(--text) !important; font: 500 14.5px Heebo, sans-serif !important; padding: 10px 4px !important; }}
 [data-testid="stExpander"] summary:hover {{ color: var(--accent) !important; }}
-[data-testid="stExpander"] summary svg {{ fill: rgba(236,237,230,.4) !important; }}
+[data-testid="stExpander"] summary svg {{ fill: rgba(239,240,232,.4) !important; }}
 /* only the orders list scrolls (capped like the design), not the drawer */
 [data-testid="stExpanderDetails"] {{
     padding: 0 !important;
     max-height: 300px;
     overflow-y: auto;
     scrollbar-width: thin;
-    scrollbar-color: rgba(236,237,230,.25) transparent;
+    scrollbar-color: rgba(239,240,232,.25) transparent;
 }}
 [data-testid="stExpanderDetails"]::-webkit-scrollbar {{ width: 5px; }}
 [data-testid="stExpanderDetails"]::-webkit-scrollbar-thumb {{
-    background: rgba(236,237,230,.25); border-radius: 3px;
+    background: rgba(239,240,232,.25); border-radius: 3px;
 }}
 
 /* ── Loaded orders: each title IS the tap target that opens its PDF
@@ -1050,7 +1114,7 @@ div[data-testid="stDialog"] textarea {{ direction: rtl; font: 400 14px/1.7 Heebo
 .cai-order-link {{
     display: block;
     border-right: 2px solid var(--accent-border);
-    color: rgba(236,237,230,.65) !important;
+    color: rgba(239,240,232,.65) !important;
     font: 400 13px Heebo, sans-serif;
     text-align: right;
     text-decoration: none !important;
@@ -1070,28 +1134,29 @@ a.cai-order-link:hover {{
    this?" is answered in the list itself */
 .cai-order-date {{
     font: 400 10.5px Heebo, sans-serif;
-    color: rgba(236,237,230,.38);
+    color: rgba(239,240,232,.38);
     margin-right: 6px;
     white-space: nowrap;
 }}
-/* orders search field — surface pill matching the drawer's dark theme */
-[data-testid="stSidebar"] [data-testid="stTextInput"] {{ margin: 4px 8px 8px 0; }}
-[data-testid="stSidebar"] [data-testid="stTextInput"] div[data-baseweb="input"],
-[data-testid="stSidebar"] [data-testid="stTextInput"] div[data-baseweb="base-input"] {{
-    background-color: var(--surface) !important;
+/* orders search field — translucent pill matching the 9a drawer (rescoped
+   from the dead [data-testid="stSidebar"] to the app-owned drawer) */
+.st-key-cai_drawer [data-testid="stTextInput"] {{ margin: 4px 8px 8px 0; }}
+.st-key-cai_drawer [data-testid="stTextInput"] div[data-baseweb="input"],
+.st-key-cai_drawer [data-testid="stTextInput"] div[data-baseweb="base-input"] {{
+    background-color: rgba(239,240,232,.045) !important;
     border: 1px solid var(--border-strong) !important;
     border-radius: 10px !important;
 }}
-[data-testid="stSidebar"] [data-testid="stTextInput"] div[data-baseweb="base-input"] {{ border: none !important; }}
-[data-testid="stSidebar"] [data-testid="stTextInput"] input {{
+.st-key-cai_drawer [data-testid="stTextInput"] div[data-baseweb="base-input"] {{ border: none !important; }}
+.st-key-cai_drawer [data-testid="stTextInput"] input {{
     background-color: transparent !important;
     color: var(--text) !important;
     font: 400 13px Heebo, sans-serif !important;
     direction: rtl;
     padding: 8px 12px !important;
 }}
-[data-testid="stSidebar"] [data-testid="stTextInput"] input::placeholder {{
-    color: rgba(236,237,230,.4) !important;
+.st-key-cai_drawer [data-testid="stTextInput"] input::placeholder {{
+    color: rgba(239,240,232,.4) !important;
 }}
 
 /* ── Caption / small text ── */
@@ -1199,8 +1264,8 @@ components.html(
             if (doc.getElementById('cai-shell-dark')) return;
             const s = doc.createElement('style');
             s.id = 'cai-shell-dark';
-            s.textContent = 'html,body{background:#171A12 !important;margin:0;overscroll-behavior:none;}' +
-                            'iframe{background:#171A12;}';
+            s.textContent = 'html,body{background:#14170E !important;margin:0;overscroll-behavior:none;}' +
+                            'iframe{background:#14170E;}';
             doc.head.appendChild(s);
         } catch (e) {}
     });
@@ -1301,7 +1366,7 @@ def _pwa_assets() -> dict | None:
             "scope": "/",
             "display": "standalone",
             "background_color": "#99A26B",  # the boot-splash olive
-            "theme_color": "#171A12",
+            "theme_color": "#14170E",
             "icons": [
                 {"src": urls[192].rsplit("/", 1)[-1], "sizes": "192x192",
                  "type": "image/png", "purpose": "any maskable"},
@@ -1358,7 +1423,7 @@ if _pwa:
                 upsert('link[rel="apple-touch-icon"]', "link",
                        {{ rel: "apple-touch-icon", sizes: "180x180", href: abs(icon180) }});
                 upsert('meta[name="theme-color"]', "meta",
-                       {{ name: "theme-color", content: "#171A12" }});
+                       {{ name: "theme-color", content: "#14170E" }});
                 upsert('meta[name="apple-mobile-web-app-capable"]', "meta",
                        {{ name: "apple-mobile-web-app-capable", content: "yes" }});
                 upsert('meta[name="mobile-web-app-capable"]', "meta",
@@ -3184,8 +3249,8 @@ if st.session_state.get("show_settings"):
 # ── Header: wordmark + role pill ──
 st.markdown(
     f"<div class='cai-header'>"
-    f"<span class='cai-wordmark'>CommandAI</span>"
-    f"<span class='cai-pill'>מחובר כ{role_label}</span>"
+    f"<span class='cai-wordmark'>Command<span class='cai-wm-ai'>AI</span></span>"
+    f"<span class='cai-pill'>מחובר כ־{role_label}</span>"
     f"</div>",
     unsafe_allow_html=True,
 )
