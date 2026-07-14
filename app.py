@@ -647,7 +647,7 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
    prototype: heading + subtitle hug the right margin like the cards below,
    NOT centered (an earlier centered pass deviated from the mock). margin-top
    lands the title ~35px under the header band. ── */
-.cai-greet {{ font: 400 28px 'Suez One', serif; color: var(--text); margin: 8px 0 2px;
+.cai-greet {{ font: 400 28px 'Suez One', serif; color: var(--text); margin: 8px 0 12px;
     text-align: right;
     animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .08s; }}
 .cai-greet-sub {{ font: 400 13px Heebo, sans-serif; color: var(--text-dim); margin-bottom: 8px;
@@ -664,6 +664,10 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
    the 2px wrapper margin), vs the entry buttons' 12px. Must outrank the
    base `div[data-testid="stButton"] > button` rule on specificity. */
 [class*="st-key-sug_"] div[data-testid="stButton"] > button {{ margin-bottom: 8px; }}
+/* breathing room under the subtitle before the first card (the subtitle's
+   own margin collapses out of its markdown container, so anchor the gap on
+   the first card) — matches the prototype's ~18px sub→card rhythm */
+.st-key-sug_0 div[data-testid="stButton"] > button {{ margin-top: 20px; }}
 
 /* suggestion cards stagger */
 .st-key-sug_0 button {{ animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .24s; }}
