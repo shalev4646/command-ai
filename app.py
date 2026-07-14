@@ -2227,7 +2227,7 @@ _DS_CSS = """
   background: linear-gradient(180deg,#121509 0%,#0E1007 100%) !important;
   border-inline-end: 1px solid rgba(236,237,230,.08) !important;
   box-shadow: -14px 0 44px rgba(0,0,0,.5) !important;
-  padding: calc(env(safe-area-inset-top,0px) + 30px) 16px 0 !important;
+  padding: max(42px, calc(env(safe-area-inset-top,0px) + 12px)) 16px 0 !important;
   display: flex !important; flex-direction: column !important;
 }
 .st-key-cai_drawer > div[data-testid="stVerticalBlock"] {
@@ -2260,7 +2260,7 @@ _DS_CSS = """
   background-image: url("ICON_GEAR") !important; background-repeat: no-repeat !important;
   background-position: center !important; background-size: 18px 18px !important;
 }
-.st-key-drawer_close button p { font: 600 18px Heebo !important; color: rgba(236,237,230,.6) !important; }
+.st-key-drawer_close button p { font: 600 16px Heebo !important; color: rgba(236,237,230,.6) !important; direction: ltr !important; }
 
 /* role card */
 .cai-role-card {
@@ -2288,17 +2288,24 @@ _DS_CSS = """
 /* section label */
 .cai-sec-label { font: 600 11px Heebo; letter-spacing: 1px; color: rgba(236,237,230,.4); margin: 16px 0 8px; }
 
-/* knowledge-base card (expander styled as the accent card) */
-.st-key-cai_kb [data-testid="stExpander"] details {
-  background: linear-gradient(135deg,rgba(153,162,107,.18),rgba(153,162,107,.05)) !important;
-  border: 1px solid rgba(153,162,107,.34) !important; border-radius: 14px !important;
+/* knowledge-base card — custom accent card (icon + title + count pill + ‹) with
+   a transparent st.button overlaying it to capture the tap */
+.st-key-cai_kb { position: relative; }
+.cai-kb-card {
+  display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-radius: 14px;
+  background: linear-gradient(135deg,rgba(153,162,107,.18),rgba(153,162,107,.05));
+  border: 1px solid rgba(153,162,107,.34);
 }
-.st-key-cai_kb [data-testid="stExpander"] summary {
-  font: 700 14px Heebo !important; color: #ECEDE6 !important;
-  background: url("ICON_BOOK") right 14px center / 18px 18px no-repeat transparent !important;
-  padding: 13px 40px 13px 14px !important;
-}
-.st-key-cai_kb [data-testid="stExpanderDetails"] { padding: 4px 6px 6px !important; max-height: 260px; }
+.cai-kb-card .kb-ic { width: 18px; height: 18px; flex: none; background: url("ICON_BOOK") center / 18px no-repeat; }
+.cai-kb-card .kb-title { flex: 1; font: 700 14px Heebo; color: #ECEDE6; }
+.cai-kb-card .kb-badge { flex: none; font: 800 11px Heebo; color: #171A12; background: #99A26B; border-radius: 99px; padding: 2px 9px; }
+.cai-kb-card .kb-chev { flex: none; color: rgba(196,206,146,.8); font-size: 15px; direction: ltr; transition: transform .18s ease; }
+.cai-kb-card .kb-chev::before { content: "‹"; }
+.cai-kb-card.open .kb-chev { transform: rotate(90deg); }
+.st-key-toggle_orders { position: absolute !important; top: 0; inset-inline: 0; margin: 0 !important; z-index: 3; }
+.st-key-toggle_orders button { opacity: 0 !important; height: 52px !important; min-height: 52px !important; padding: 0 !important; margin: 0 !important; border: none !important; }
+.st-key-cai_kb [data-testid="stTextInput"] { margin-top: 10px; }
+.st-key-cai_kb .cai-order-link:first-of-type { margin-top: 6px; }
 
 /* grouped card of rows (tools + recent) */
 .st-key-cai_tools, .st-key-cai_recent {
@@ -3067,8 +3074,24 @@ if st.session_state.drawer_open:
         # ── knowledge base — orders list (expander styled as the accent card) ──
         st.markdown("<div class='cai-sec-label'>מאגר הידע</div>", unsafe_allow_html=True)
         docs = get_loaded_docs_info(role=st.session_state.role)
+        if "orders_open" not in st.session_state:
+            st.session_state.orders_open = False
         with st.container(key="cai_kb"):
-            with st.expander(f"פקודות מטכ\"ל במערכת · {len(docs)}", expanded=False):
+            # The card visual carries the olive count PILL + the ‹ chevron —
+            # a plain st.button/expander label can't style a badge, so we draw
+            # the card in HTML and overlay a transparent st.button to capture
+            # the tap (CSS positions it over the card).
+            st.markdown(
+                "<div class='cai-kb-card" + (" open" if st.session_state.orders_open else "") + "'>"
+                "<span class='kb-ic'></span>"
+                "<span class='kb-title'>פקודות מטכ\"ל במערכת</span>"
+                f"<span class='kb-badge'>{len(docs)}</span>"
+                "<span class='kb-chev'></span></div>",
+                unsafe_allow_html=True)
+            if st.button("פקודות מטכ\"ל במערכת", key="toggle_orders", use_container_width=True):
+                st.session_state.orders_open = not st.session_state.orders_open
+                st.rerun()
+            if st.session_state.orders_open:
                 if docs:
                     search = _search_norm(st.text_input(
                         "חיפוש פקודה",
