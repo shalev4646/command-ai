@@ -392,14 +392,17 @@ html, body {{ overscroll-behavior-y: none; }}
 html {{ -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }}
 /* vertical gradient — dark at top, warming to olive toward the composer.
    NOTE: no `fixed` attachment — iOS Safari renders it black; vh fallback
-   first for devices without dvh support */
+   first for devices without sv/dvh support. svh (SMALL viewport) wins where
+   supported: on iOS standalone, dvh sticks at a value LARGER than the
+   visible screen until the first touch (app-switcher pinch too), pushing
+   the layout past the bottom edge — svh never exceeds what's visible. */
 [data-testid="stAppViewContainer"] {{
     background-image: linear-gradient(180deg, #14170E 0%, #161A0F 52%, #20270F 100%) !important;
     background-size: 100% 100vh !important;
-    background-size: 100% 100dvh !important;
+    background-size: 100% 100svh !important;
     background-attachment: scroll !important;
     min-height: 100vh;
-    min-height: 100dvh;
+    min-height: 100svh;
 }}
 /* hide the scroll bar (shows as a strip on the left edge in RTL).
    NB stAppScrollToBottomContainer: the main <section> is REPLACED by this
@@ -665,7 +668,8 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
    the gate anchors on stAppViewContainer. ── */
 [data-testid="stAppViewContainer"]:has(.cai-greet) [data-testid="stMainBlockContainer"] {{
     display: flex; flex-direction: column;
-    min-height: calc(100dvh - 134px - env(safe-area-inset-bottom, 0px)); /* composer strip */
+    min-height: calc(100vh - 134px - env(safe-area-inset-bottom, 0px));  /* composer strip */
+    min-height: calc(100svh - 134px - env(safe-area-inset-bottom, 0px)); /* svh: see gradient note */
     padding-top: calc(64px + var(--cai-sat, 0px)) !important; /* header band */
     padding-bottom: 78px !important;
 }}
@@ -712,7 +716,7 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     background-color: #20270F !important;
     background-image: linear-gradient(180deg, #14170E 0%, #161A0F 52%, #20270F 100%) !important;
     background-size: 100% 100vh !important;
-    background-size: 100% 100dvh !important;
+    background-size: 100% 100svh !important; /* svh: see gradient note above */
     background-position: bottom !important;
     /* env() is 0 inside the cloud shell's iframe, so give the disclaimer a
        real floor — on iPhone it sat right on the home-indicator bar */
