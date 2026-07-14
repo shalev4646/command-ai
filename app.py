@@ -351,6 +351,9 @@ ACCENT_HOVER = role_meta["accent_hover"]
 ACCENT_SOFT = role_meta["soft"]
 ACCENT_BORDER = role_meta["border"]
 ACCENT_BRIGHT = role_meta["bright"]
+# accent as an "r,g,b" triplet so drawer/settings tints can be role-aware via
+# rgba(var(--accent-rgb), <alpha>) instead of a hardcoded olive.
+ACCENT_RGB = ",".join(str(int(ACCENT.lstrip("#")[i:i + 2], 16)) for i in (0, 2, 4))
 
 # chat screen needs room under the fixed header band; entry has no header.
 # --cai-sat is the iOS status-bar inset (measured on the shell doc, pushed
@@ -386,6 +389,7 @@ st.markdown(f"""
     --accent-soft: {ACCENT_SOFT};
     --accent-border: {ACCENT_BORDER};
     --accent-bright: {ACCENT_BRIGHT};
+    --accent-rgb: {ACCENT_RGB};
     --ehold: {EHOLD};
 }}
 
@@ -2331,8 +2335,8 @@ _DS_CSS = """
 .cai-role-card {
   display: flex; align-items: center; gap: 12px; margin-top: 8px;
   padding: 12px 13px; border-radius: 14px;
-  background: linear-gradient(135deg,rgba(153,162,107,.16),rgba(153,162,107,.04));
-  border: 1px solid rgba(153,162,107,.3);
+  background: linear-gradient(135deg,rgba(var(--accent-rgb),.16),rgba(var(--accent-rgb),.04));
+  border: 1px solid rgba(var(--accent-rgb),.3);
 }
 .cai-role-av {
   width: 40px; height: 40px; border-radius: 12px; flex: none;
@@ -2346,7 +2350,7 @@ _DS_CSS = """
 .cai-role-nm { font: 400 17px 'Suez One', serif; color: #ECEDE6; line-height: 1.15; margin-top: 1px; }
 .cai-role-badge {
   font: 600 10.5px Heebo; color: rgba(196,206,146,.9); flex: none;
-  background: rgba(153,162,107,.14); border: 1px solid rgba(153,162,107,.34);
+  background: rgba(var(--accent-rgb),.14); border: 1px solid rgba(var(--accent-rgb),.34);
   border-radius: 99px; padding: 4px 10px;
 }
 
@@ -2358,12 +2362,12 @@ _DS_CSS = """
 .st-key-cai_kb { position: relative; }
 .cai-kb-card {
   display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-radius: 14px;
-  background: linear-gradient(135deg,rgba(153,162,107,.18),rgba(153,162,107,.05));
-  border: 1px solid rgba(153,162,107,.34);
+  background: linear-gradient(135deg,rgba(var(--accent-rgb),.18),rgba(var(--accent-rgb),.05));
+  border: 1px solid rgba(var(--accent-rgb),.34);
 }
 .cai-kb-card .kb-ic { width: 18px; height: 18px; flex: none; background: url("ICON_BOOK") center / 18px no-repeat; }
 .cai-kb-card .kb-title { flex: 1; font: 700 14px Heebo; color: #ECEDE6; }
-.cai-kb-card .kb-badge { flex: none; font: 800 11px Heebo; color: #171A12; background: #99A26B; border-radius: 99px; padding: 2px 9px; }
+.cai-kb-card .kb-badge { flex: none; font: 800 11px Heebo; color: #171A12; background: var(--accent); border-radius: 99px; padding: 2px 9px; }
 .cai-kb-card .kb-chev { flex: none; color: rgba(196,206,146,.8); font-size: 15px; direction: ltr; transition: transform .18s ease; }
 .cai-kb-card .kb-chev::before { content: "‹"; }
 .cai-kb-card.open .kb-chev { transform: rotate(90deg); }
@@ -2412,7 +2416,7 @@ _DS_CSS = """
 /* recent head row */
 .cai-recent-head { display: flex; align-items: center; gap: 8px; margin: 16px 0 8px; }
 .cai-recent-t { font: 600 11px Heebo; letter-spacing: 1px; color: rgba(236,237,230,.4); }
-.cai-recent-n { font: 700 10px Heebo; color: rgba(196,206,146,.9); background: rgba(153,162,107,.14); border-radius: 99px; padding: 1px 7px; }
+.cai-recent-n { font: 700 10px Heebo; color: rgba(196,206,146,.9); background: rgba(var(--accent-rgb),.14); border-radius: 99px; padding: 1px 7px; }
 .st-key-clear_recent { display: flex; justify-content: flex-end; }
 .st-key-clear_recent button {
   background: transparent !important; border: none !important; box-shadow: none !important;
@@ -2423,13 +2427,13 @@ _DS_CSS = """
 /* footer CTA — soft accent (mockup 2a) + classification */
 .st-key-new_chat { margin-top: auto !important; padding-top: 10px; }
 .st-key-new_chat button {
-  background: rgba(153,162,107,.12) !important;
-  border: 1px solid rgba(153,162,107,.4) !important;
-  color: #C4CE92 !important; border-radius: 13px !important;
+  background: rgba(var(--accent-rgb),.12) !important;
+  border: 1px solid rgba(var(--accent-rgb),.4) !important;
+  color: var(--accent-bright) !important; border-radius: 13px !important;
   font: 600 13.5px Heebo !important; padding: 11px !important;
 }
-.st-key-new_chat button p { color: #C4CE92 !important; font-weight: 600 !important; }
-@media (hover: hover) { .st-key-new_chat button:hover { background: rgba(153,162,107,.2) !important; } }
+.st-key-new_chat button p { color: var(--accent-bright) !important; font-weight: 600 !important; }
+@media (hover: hover) { .st-key-new_chat button:hover { background: rgba(var(--accent-rgb),.2) !important; } }
 .cai-drawer-foot {
   text-align: center; margin: 8px 0 calc(env(safe-area-inset-bottom,0px) + 10px);
   font: 600 9px ui-monospace, Menlo, monospace; letter-spacing: 2px; color: rgba(236,237,230,.3);
@@ -2498,8 +2502,8 @@ _DS_CSS = """
 /* hub profile card */
 .cai-set-profile {
   display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 16px;
-  background: linear-gradient(135deg,rgba(153,162,107,.16),rgba(153,162,107,.04));
-  border: 1px solid rgba(153,162,107,.3);
+  background: linear-gradient(135deg,rgba(var(--accent-rgb),.16),rgba(var(--accent-rgb),.04));
+  border: 1px solid rgba(var(--accent-rgb),.3);
 }
 .cai-set-profile .av {
   width: 46px; height: 46px; border-radius: 13px; flex: none;
@@ -2522,9 +2526,9 @@ _DS_CSS = """
 .cai-div { height: 1px; background: rgba(236,237,230,.07); margin: 0 14px; }
 .cai-tgl { width: 44px; height: 26px; border-radius: 99px; background: rgba(236,237,230,.14); position: relative; flex: none; }
 .cai-tgl .k { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: rgba(236,237,230,.6); }
-.cai-tgl.on { background: #99A26B; }
+.cai-tgl.on { background: var(--accent); }
 .cai-tgl.on .k { left: auto; right: 3px; background: #171A12; }
-.cai-bakrov { font: 600 9.5px Heebo; letter-spacing: .3px; color: rgba(196,206,146,.85); background: rgba(153,162,107,.14); border: 1px solid rgba(153,162,107,.3); border-radius: 99px; padding: 2px 8px; flex: none; }
+.cai-bakrov { font: 600 9.5px Heebo; letter-spacing: .3px; color: rgba(196,206,146,.85); background: rgba(var(--accent-rgb),.14); border: 1px solid rgba(var(--accent-rgb),.3); border-radius: 99px; padding: 2px 8px; flex: none; }
 .cai-ic-bell { background-image: url("ICON_BELL"); }
 .cai-ic-lock { background-image: url("ICON_LOCK"); }
 .cai-ic-clock { background-image: url("ICON_CLOCK"); }
@@ -2533,12 +2537,12 @@ _DS_CSS = """
 
 /* banners */
 .cai-banner { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 16px; margin-top: 4px;
-  background: linear-gradient(135deg,rgba(153,162,107,.16),rgba(153,162,107,.04)); border: 1px solid rgba(153,162,107,.3); }
+  background: linear-gradient(135deg,rgba(var(--accent-rgb),.16),rgba(var(--accent-rgb),.04)); border: 1px solid rgba(var(--accent-rgb),.3); }
 .cai-banner .bi { width: 26px; height: 26px; flex: none; background-repeat: no-repeat; background-position: center; background-size: 26px; }
 .cai-banner .bt { font: 700 14px Heebo; color: #ECEDE6; }
 .cai-banner .bs { font: 400 11.5px Heebo; color: rgba(196,206,146,.85); margin-top: 2px; line-height: 1.45; }
 .cai-info { display: flex; align-items: center; gap: 9px; margin-top: 16px; padding: 12px 14px; border-radius: 13px;
-  background: rgba(153,162,107,.08); border: 1px solid rgba(153,162,107,.2); }
+  background: rgba(var(--accent-rgb),.08); border: 1px solid rgba(var(--accent-rgb),.2); }
 .cai-info .ii { width: 16px; height: 16px; flex: none; background-image: url("ICON_INFO"); background-repeat: no-repeat; background-position: center; background-size: 16px; }
 .cai-info span { font: 400 11.5px Heebo; color: rgba(236,237,230,.6); line-height: 1.5; }
 
@@ -2546,7 +2550,7 @@ _DS_CSS = """
 .cai-set-avwrap { display: flex; flex-direction: column; align-items: center; gap: 11px; padding: 10px 0 18px; }
 .cai-set-avbig { width: 76px; height: 76px; border-radius: 22px; display: flex; align-items: center; justify-content: center;
   background: linear-gradient(135deg,#AEB784,#8E9962); border: 1px solid rgba(196,206,146,.5);
-  font: 700 34px 'Suez One', serif; color: #171A12; box-shadow: 0 8px 20px -8px rgba(153,162,107,.6); }
+  font: 700 34px 'Suez One', serif; color: #171A12; box-shadow: 0 8px 20px -8px rgba(var(--accent-rgb),.6); }
 .cai-set-changephoto { display: flex; align-items: center; gap: 6px; font: 600 12px Heebo; color: rgba(196,206,146,.6); }
 .cai-fld-label { font: 600 11px Heebo; color: rgba(236,237,230,.45); margin: 0 0 7px; }
 .cai-lang-note { font: 400 11.5px Heebo; color: rgba(236,237,230,.5); margin: 6px 2px 14px; line-height: 1.55; }
@@ -2558,12 +2562,12 @@ _DS_CSS = """
 .cai-lang-row .nm { flex: 1; font: 600 14.5px Heebo; color: #ECEDE6; }
 .cai-lang-row.dim .nm { color: rgba(236,237,230,.5); font-weight: 500; }
 .cai-lang-row .def { font: 400 11px Heebo; color: rgba(236,237,230,.4); margin-top: 1px; }
-.cai-lang-row .ok { color: #99A26B; font-size: 18px; font-weight: 700; }
+.cai-lang-row .ok { color: var(--accent); font-size: 18px; font-weight: 700; }
 
 /* ToS */
 .cai-tos-lead { font: 400 21px 'Suez One', serif; color: #ECEDE6; margin-bottom: 4px; }
 .cai-tos-sub { font: 500 12px Heebo; color: rgba(236,237,230,.4); margin-bottom: 20px; }
-.cai-tos-h { font: 700 14.5px Heebo; color: #C4CE92; margin-bottom: 6px; }
+.cai-tos-h { font: 700 14.5px Heebo; color: var(--accent-bright); margin-bottom: 6px; }
 .cai-tos-b { font: 400 13px Heebo; color: rgba(236,237,230,.78); line-height: 1.7; }
 .cai-tos-sec { margin-bottom: 20px; }
 .cai-set-foot { text-align: center; margin-top: 22px; padding-top: 16px; border-top: 1px solid rgba(236,237,230,.09); }
@@ -2572,7 +2576,7 @@ _DS_CSS = """
 
 /* save / danger buttons */
 .st-key-save_profile button {
-  background: #99A26B !important; border: none !important; color: #171A12 !important;
+  background: var(--accent) !important; border: none !important; color: #171A12 !important;
   border-radius: 13px !important; font: 700 14px Heebo !important; padding: 13px !important; margin-top: 22px !important;
 }
 .st-key-save_profile button p { color: #171A12 !important; font-weight: 700 !important; text-align: center !important; }
@@ -2590,7 +2594,7 @@ _DS_CSS = """
 .st-key-cai_analytics { border-radius: 15px; background: #1E2416; border: 1px solid rgba(236,237,230,.1); padding: 10px 14px 12px; margin-bottom: 8px; }
 .st-key-cai_analytics [data-testid="stElementContainer"] { margin: 0 !important; }
 .st-key-share_analytics_w label { font: 500 14px Heebo !important; color: #ECEDE6 !important; }
-.st-key-share_analytics_w [data-baseweb="checkbox"] > div:first-child { background: #99A26B !important; }
+.st-key-share_analytics_w [data-baseweb="checkbox"] > div:first-child { background: var(--accent) !important; }
 .cai-analytics-sub { font: 400 11px Heebo; color: rgba(236,237,230,.45); margin: 2px 0 0; }
 
 /* personal-details native widgets styled to the mockup fields (8b) */
@@ -2617,10 +2621,10 @@ _DS_CSS = """
   color: rgba(236,237,230,.7) !important; font: 500 13px Heebo !important; }
 .st-key-pf_type_w button[data-testid*="segmented_controlActive"],
 .st-key-pf_type_w [data-testid="stButtonGroup"] button[aria-checked="true"] {
-  background: rgba(153,162,107,.18) !important; border-color: #99A26B !important; }
+  background: rgba(var(--accent-rgb),.18) !important; border-color: var(--accent) !important; }
 .st-key-pf_type_w button[data-testid*="segmented_controlActive"] p,
 .st-key-pf_type_w [data-testid="stButtonGroup"] button[aria-checked="true"] p {
-  color: #C4CE92 !important; font-weight: 700 !important; }
+  color: var(--accent-bright) !important; font-weight: 700 !important; }
 </style>
 """
 for _k, _u in _ICON.items():
@@ -2862,8 +2866,8 @@ def _settings_about():
     st.markdown(
         "<div class='cai-banner' style='margin-bottom:18px'>"
         "<div style='width:34px;height:34px;border-radius:10px;flex:none;display:flex;"
-        "align-items:center;justify-content:center;background:rgba(153,162,107,.22);"
-        "color:#C4CE92;font-size:18px;font-weight:700'>✓</div>"
+        "align-items:center;justify-content:center;background:rgba(var(--accent-rgb),.22);"
+        "color:var(--accent-bright);font-size:18px;font-weight:700'>✓</div>"
         "<div style='flex:1'><div class='bt' style='font-size:13.5px'>אישרת את התנאים</div>"
         "<div class='bs'>בהתקנה הראשונית · גרסה 2.4</div></div></div>", unsafe_allow_html=True)
     st.markdown(
