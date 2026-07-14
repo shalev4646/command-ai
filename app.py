@@ -2388,14 +2388,21 @@ _DS_CSS = """
   padding: 13px 14px !important; margin: 0 !important; min-height: 0 !important;
   text-align: right; box-shadow: none !important;
   border-top: 1px solid rgba(236,237,230,.07) !important;
-  position: relative;
+  position: relative; justify-content: flex-start !important;
 }
 .st-key-cai_tools [data-testid="stElementContainer"]:first-child button,
 .st-key-cai_recent [data-testid="stElementContainer"]:first-child button { border-top: none !important; }
 .st-key-cai_tools button p, .st-key-cai_recent button p {
   font: 500 14px Heebo !important; color: #ECEDE6 !important; text-align: right !important;
-  padding-inline-start: 28px; padding-inline-end: 16px;
+  width: 100%; box-sizing: border-box;
+  padding-inline-start: 40px; padding-inline-end: 24px;
 }
+/* Streamlit nests the label in content-width flex wrappers that center it —
+   force the whole chain full-width so text-align:right actually right-aligns. */
+.st-key-cai_tools button > div, .st-key-cai_recent button > div, [class*="st-key-cai_sgrp"] button > div,
+.st-key-cai_tools button > div > span, .st-key-cai_recent button > div > span, [class*="st-key-cai_sgrp"] button > div > span,
+.st-key-cai_tools button [data-testid="stMarkdownContainer"], .st-key-cai_recent button [data-testid="stMarkdownContainer"],
+[class*="st-key-cai_sgrp"] button [data-testid="stMarkdownContainer"] { width: 100% !important; }
 /* leading icon + trailing chevron on tool rows */
 .st-key-cai_tools button::before {
   content: ""; position: absolute; inset-inline-start: 14px; top: 50%;
@@ -2475,13 +2482,14 @@ _DS_CSS = """
 [class*="st-key-cai_sgrp"] button {
   background: transparent !important; border: none !important; border-radius: 0 !important;
   padding: 14px !important; margin: 0 !important; min-height: 0 !important; box-shadow: none !important;
-  text-align: right; position: relative;
+  text-align: right; position: relative; justify-content: flex-start !important;
   border-top: 1px solid rgba(236,237,230,.07) !important;
 }
 [class*="st-key-cai_sgrp"] [data-testid="stElementContainer"]:first-child button { border-top: none !important; }
 [class*="st-key-cai_sgrp"] button p {
   font: 500 14px Heebo !important; color: #ECEDE6 !important; text-align: right !important;
-  padding-inline-start: 30px; padding-inline-end: 16px;
+  width: 100%; box-sizing: border-box;
+  padding-inline-start: 42px; padding-inline-end: 24px;
 }
 [class*="st-key-cai_sgrp"] button::before {
   content: ""; position: absolute; inset-inline-start: 14px; top: 50%;
