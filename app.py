@@ -643,8 +643,9 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     border-radius: 99px; padding: 5px 12px;
 }}
 
-/* ── Chat home greeting — centered on the column ── */
-.cai-greet {{ font: 400 28px 'Suez One', serif; color: var(--text); margin: 0 0 2px;
+/* ── Chat home greeting — centered on the column; margin-top lands the
+   title ~35px under the header band, like the mock ── */
+.cai-greet {{ font: 400 28px 'Suez One', serif; color: var(--text); margin: 16px 0 2px;
     text-align: center;
     animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .08s; }}
 .cai-greet-sub {{ font: 400 13px Heebo, sans-serif; color: var(--text-dim); margin-bottom: 8px;
