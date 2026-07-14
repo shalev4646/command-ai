@@ -632,11 +632,10 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     /* no entrance animation: a transform on a fixed element re-anchors it
        and Streamlit can freeze the animation at its from-state (top: 18px) */
 }}
-/* dead-center on the SCREEN like the mock — as a flex child it hugged the
-   hamburger; absolute centering detaches it from the row flow */
-.cai-wordmark {{ font: 400 19px 'Suez One', serif; color: var(--text);
-    position: absolute; left: 50%; top: calc(var(--cai-sat, 0px) + 32px);
-    transform: translate(-50%, -50%); }}
+/* flows in the header row right after the hamburger (right-of-center), per
+   the design prototype — cx≈260 on a 390 viewport. An earlier absolute
+   centering (cx 195) deviated from the mock and was reverted. */
+.cai-wordmark {{ font: 400 19px 'Suez One', serif; color: var(--text); }}
 .cai-pill {{
     margin-inline-start: auto;
     font: 600 12px Heebo, sans-serif; color: var(--accent);
@@ -644,13 +643,15 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     border-radius: 99px; padding: 5px 12px;
 }}
 
-/* ── Chat home greeting — centered on the column; margin-top lands the
-   title ~35px under the header band, like the mock ── */
+/* ── Chat home greeting — RIGHT-aligned (start), matching the design
+   prototype: heading + subtitle hug the right margin like the cards below,
+   NOT centered (an earlier centered pass deviated from the mock). margin-top
+   lands the title ~35px under the header band. ── */
 .cai-greet {{ font: 400 28px 'Suez One', serif; color: var(--text); margin: 8px 0 2px;
-    text-align: center;
+    text-align: right;
     animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .08s; }}
 .cai-greet-sub {{ font: 400 13px Heebo, sans-serif; color: var(--text-dim); margin-bottom: 8px;
-    text-align: center;
+    text-align: right;
     animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .16s; }}
 
 /* ── Chat home vertical rhythm — exactly like the mock: the hero sits a
