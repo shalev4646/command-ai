@@ -1108,17 +1108,27 @@ a.cai-order-link:hover {{
 # bottom corner mounted directly on <body>, where the app mounts nothing. ──
 components.html(
     """<script>
-    // ── Shell escape: when the app is embedded in the platform shell, the
-    // shell suppresses the WHOLE sidebar chrome (stSidebar + the expand
-    // hamburger never mount — A/B proven 2026-07-13: identical build shows
-    // both on the direct /~/+/ frame and neither via the shell), which
-    // kills the drawer. Bounce the top window to the direct app frame —
-    // same origin, so this is allowed. Guards: only when an extra shell
-    // layer exists (top !== parent; local and direct loads no-op), and
-    // never when the top URL carries a query (?admin=1 and debug flows).
+    // ── Shell escape: when the app is embedded in the platform shell, bounce
+    // the top window to the direct /~/+/ frame — the shell's white page (and
+    // its badge/scroll quirks) disappears entirely, and the app runs exactly
+    // like the re-added PWA. This iframe's sandbox lacks allow-top-navigation
+    // (verified live: allow-forms/modals/popups/same-origin/scripts/downloads
+    // only), so navigating window.top from HERE throws — instead inject a
+    // <script> into the shell document itself (allow-same-origin permits DOM
+    // writes; inline scripts pass the shell's CSP — verified live) and let it
+    // redirect from the shell's own unsandboxed context. Guards: only when an
+    // extra shell layer exists (top !== parent; local and direct loads no-op),
+    // idempotent by element id, and never when the top URL carries a query
+    // (?admin=1 and debug flows).
     try {
         if (window.top !== window.parent && !window.top.location.search) {
-            window.top.location.replace(window.parent.location.href);
+            const tdoc = window.top.document;
+            if (!tdoc.getElementById('cai-shell-escape')) {
+                const esc = tdoc.createElement('script');
+                esc.id = 'cai-shell-escape';
+                esc.textContent = 'location.replace(' + JSON.stringify(window.parent.location.href) + ');';
+                tdoc.head.appendChild(esc);
+            }
         }
     } catch (e) {}
     // On Streamlit Cloud the app itself runs inside an iframe of a platform
