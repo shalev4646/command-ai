@@ -16,6 +16,7 @@ from anthropic import APIConnectionError, APITimeoutError, BadRequestError
 import metrics
 import escalation_paths
 from escalation_paths import path_for
+from boot_shell import patch_index_html
 
 # letters/doc_dates are sibling new modules — a cached cloud build can pair
 # a fresh app.py with an older tree (see backend deploy note), so a missing
@@ -65,84 +66,18 @@ def _startup_ingest():
 
 @st.cache_resource(show_spinner=False)
 def _patch_boot_shell() -> bool:
-    """Brand Streamlit's static index.html with an instant olive splash.
+    """Brand Streamlit's static index.html with the instant olive splash.
 
-    The static shell is the first thing the browser paints — before the
-    websocket, the theme config, the gray skeleton pulse or any delta. Out
-    of the box that whole phase is Streamlit's white page + spinner +
-    skeleton (the "junk" users see on slow mobile loads). Patching the
-    served file makes t=0 already look like the boot splash, which then
-    takes over seamlessly (same olive, same wordmark), so the wait is one
-    clean branded screen end to end.
+    Thin runtime wrapper over boot_shell.patch_index_html (the single source
+    of truth, shared with the Docker build that bakes the same patch into the
+    image). Runs once per process; self-heals the file on the first session
+    if a dependency reinstall reset it.
 
-    Idempotent by marker id. The patch lives in the installed package, so
-    it survives until the next dependency reinstall; the first session
-    after a reinstall re-applies it (only that visitor's first load sees
-    the stock shell once). Read-only installs just skip — everything else
-    still works.
-
-    LOCAL-ONLY in practice: on Streamlit Community Cloud the platform's
-    front server (uvicorn, `Via: google`) serves its own snapshot of the
-    app's index.html — the file patched here is never the one delivered
-    (verified 2026-07-13: served Last-Modified stays at container build
-    time and the marker never appears, even right after a live session
-    ran this code). The cloud boot is branded by the PWA launch images +
-    the olive loading theme (config.toml backgroundColor) instead.
+    No-op in practice on Streamlit Community Cloud (the platform serves its
+    own index.html snapshot); it bites only where we own the served file —
+    local dev and the self-hosted container. See boot_shell.py for detail.
     """
-    try:
-        index = Path(inspect.getfile(st)).parent / "static" / "index.html"
-        src = index.read_text(encoding="utf-8")
-        if 'id="cai-boot"' in src or "</head>" not in src:
-            return 'id="cai-boot"' in src
-        head_add = """
-    <link id="cai-boot-font" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Suez+One&display=swap">
-    <style id="cai-boot">
-      html, body { background: #99A26B; }
-      #cai-boot-splash { position: fixed; inset: 0; z-index: 2147483000; background: #99A26B;
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        gap: 18px; transition: opacity .4s ease; pointer-events: none; }
-      #cai-boot-splash .chev span { display: block; width: 26px; height: 26px;
-        border-top: 6px solid #171A12; border-left: 6px solid #171A12; transform: rotate(45deg); }
-      #cai-boot-splash .chev span + span { border-color: rgba(23,26,18,.45); margin-top: -9px; }
-      #cai-boot-splash .t { font: 400 34px 'Suez One', serif; color: #171A12; }
-      #cai-boot-splash .s { font: 600 11px ui-monospace, Menlo, monospace; letter-spacing: 3px;
-        color: rgba(23,26,18,.6); }
-      [data-testid="stSkeleton"], [data-testid="stAppSkeleton"],
-      [data-testid="stStatusWidget"], [data-testid="stDecoration"] { display: none !important; }
-    </style>
-"""
-        body_add = """
-    <div id="cai-boot-splash" dir="rtl">
-      <div class="chev"><span></span><span></span></div>
-      <div class="t">CommandAI</div>
-      <div class="s">מערכת פקודות · בלמ"ס</div>
-    </div>
-    <script id="cai-boot-js">
-      (function () {
-        var el = document.getElementById('cai-boot-splash');
-        if (!el) return;
-        var gone = false;
-        var lift = function () {
-          if (gone) return; gone = true;
-          el.style.opacity = '0';
-          setTimeout(function () { el.remove(); }, 450);
-        };
-        // first real content: the app's own boot splash (identical olive, so
-        // the hand-off is invisible) or any rendered markdown (admin view)
-        var ready = function () {
-          return document.querySelector('.cai-splash, [data-testid="stAppViewContainer"] .stMarkdown');
-        };
-        var tick = setInterval(function () { if (ready()) { clearInterval(tick); lift(); } }, 120);
-        setTimeout(function () { clearInterval(tick); lift(); }, 90000);
-      })();
-    </script>
-"""
-        patched = src.replace("</head>", head_add + "  </head>", 1)
-        patched = patched.replace('<div id="root"></div>', '<div id="root"></div>' + body_add, 1)
-        index.write_text(patched, encoding="utf-8")
-        return True
-    except Exception:
-        return False
+    return patch_index_html()
 
 # PDF bytes are re-read on every rerun to keep their media-manager entries
 # alive (see _pdf_media_url); cache the disk reads — ~40 multi-hundred-KB
@@ -211,10 +146,17 @@ if splash_active:
 @import url('https://fonts.googleapis.com/css2?family=Suez+One&display=swap');
 @keyframes bootEnterUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:none; } }
 @keyframes bootEnterScale { from { opacity:0; transform:scale(.6); } to { opacity:1; transform:none; } }
-@keyframes bootCurtainUp { from { transform:translateY(0); } to { transform:translateY(-101%); } }
+/* the parked curtain must END invisible: it stays in the DOM above the
+   viewport, and iOS Safari (no theme-color meta yet) SAMPLES it when tinting
+   its chrome — an olive ghost kept the bars olive after the lift */
+@keyframes bootCurtainUp { 0% { transform:translateY(0); } 99% { opacity:1; } 100% { transform:translateY(-101%); opacity:0; visibility:hidden; } }
 .cai-splash {
     position: fixed; inset: 0; background: #99A26B; z-index: 999990;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 18px;
+    /* top-anchor the logo where the entry screen lands it (~26% down) so the
+       curtain lift reveals the same layout instead of the logo jumping up
+       from dead-center. --cai-sat pushes it clear of the iOS notch. */
+    padding-top: calc(var(--cai-sat, 0px) + 14vh);
     animation: bootCurtainUp .65s cubic-bezier(.7,0,.3,1) both; animation-delay: 30s;
     pointer-events: none;
 }
@@ -233,6 +175,23 @@ if splash_active:
 <div class='cai-splash-title'>CommandAI</div>
 <div class='cai-splash-sub'>מערכת פקודות · בלמ"ס</div>
 </div>""", unsafe_allow_html=True)
+
+# In-browser Safari tints its top/bottom chrome from <meta name="theme-color">;
+# Streamlit never writes that meta, so until OUR injection lands Safari falls
+# back to sampling the page — the olive boot splash — and the olive bars then
+# outlive the curtain by however long the boot work below takes (seen live:
+# olive bars over the dark entry screen). Pin the meta in a tiny self-contained
+# frame BEFORE the heavy startup, so the bars are correct by first paint. The
+# full PWA injection further down re-asserts it on every run.
+components.html(
+    """<script>try{
+    var d = window.top.document,
+        m = d.querySelector('meta[name="theme-color"]');
+    if (!m) { m = d.createElement("meta"); m.setAttribute("name", "theme-color"); d.head.appendChild(m); }
+    m.setAttribute("content", "#14170E");
+    }catch(e){}</script>""",
+    height=0,
+)
 
 _startup_ingest()
 
@@ -395,7 +354,9 @@ st.markdown(f"""
 
 @keyframes enterUp {{ from {{ opacity:0; transform:translateY(18px); }} to {{ opacity:1; transform:none; }} }}
 @keyframes enterScale {{ from {{ opacity:0; transform:scale(.6); }} to {{ opacity:1; transform:none; }} }}
-@keyframes curtainUp {{ from {{ transform:translateY(0); }} to {{ transform:translateY(-101%); }} }}
+/* mirror of bootCurtainUp: the re-armed curtain must also PARK invisible,
+   or Safari keeps sampling the olive ghost for its chrome tint */
+@keyframes curtainUp {{ 0% {{ transform:translateY(0); }} 99% {{ opacity:1; }} 100% {{ transform:translateY(-101%); opacity:0; visibility:hidden; }} }}
 
 html, body, [data-testid="stApp"], [data-testid="stAppViewContainer"] {{
     font-family: Heebo, -apple-system, "Segoe UI", Arial, sans-serif;
@@ -1411,6 +1372,12 @@ if _pwa:
             var startup = {json.dumps(_pwa["startup"])};
             try {{
                 var doc = window.top.document;
+                // theme pin first, EVERY run (not just the first): a shell
+                // script or reconnect can rewrite <head>, and Safari re-tints
+                // its chrome live off this meta
+                var tc = doc.querySelector('meta[name="theme-color"]');
+                if (!tc) {{ tc = doc.createElement("meta"); tc.setAttribute("name", "theme-color"); doc.head.appendChild(tc); }}
+                tc.setAttribute("content", "#14170E");
                 if (doc.getElementById("cai-pwa-manifest")) return;
                 var loc = window.parent.location;
                 var dir = loc.pathname.endsWith("/") ? loc.pathname : loc.pathname + "/";
@@ -1426,8 +1393,6 @@ if _pwa:
                        {{ id: "cai-pwa-manifest", rel: "manifest", href: abs(manifest) }});
                 upsert('link[rel="apple-touch-icon"]', "link",
                        {{ rel: "apple-touch-icon", sizes: "180x180", href: abs(icon180) }});
-                upsert('meta[name="theme-color"]', "meta",
-                       {{ name: "theme-color", content: "#14170E" }});
                 upsert('meta[name="apple-mobile-web-app-capable"]', "meta",
                        {{ name: "apple-mobile-web-app-capable", content: "yes" }});
                 upsert('meta[name="mobile-web-app-capable"]', "meta",
@@ -2296,14 +2261,21 @@ _DS_CSS = """
   background: linear-gradient(180deg,#121509 0%,#0E1007 100%) !important;
   border-inline-end: 1px solid rgba(236,237,230,.08) !important;
   box-shadow: -14px 0 44px rgba(0,0,0,.5) !important;
-  padding: max(42px, calc(env(safe-area-inset-top,0px) + 12px)) 16px 0 !important;
+  padding: max(42px, calc(env(safe-area-inset-top,0px) + 12px)) 16px calc(env(safe-area-inset-bottom,0px) + 10px) !important;
   display: flex !important; flex-direction: column !important;
-}
-.st-key-cai_drawer > div[data-testid="stVerticalBlock"] {
-  flex: 1; display: flex; flex-direction: column;
-  min-height: calc(100dvh - 40px); gap: 2px;
+  /* the keyed container IS the stVerticalBlock (1.58) — no inner wrapper to
+     size. Height comes from the fixed inset; margin-top:auto on the CTA pins
+     it to the bottom; overflow-y (base CSS) scrolls when content is taller. */
+  gap: 0 !important;
 }
 .st-key-cai_drawer [data-testid="stElementContainer"] { margin-bottom: 0; }
+/* Streamlit gives stMarkdownContainer margin-bottom:-1rem (offsets the 16px
+   bottom margin of a markdown <p>). Our blocks are raw <div>s with no <p>, so
+   the -16px goes UNCANCELLED and every markdown pulls its successor 16px up —
+   section labels land ON the card above and the recent-head row collapses.
+   Zero it here; all rhythm comes from the blocks' own margins. */
+.st-key-cai_drawer [data-testid="stMarkdownContainer"],
+.st-key-cai_settings [data-testid="stMarkdownContainer"] { margin-bottom: 0 !important; }
 /* top row: gear (right) + close « (left) */
 .st-key-cai_drawer div[data-testid="stHorizontalBlock"]:first-of-type { align-items: center; }
 /* push each top-row button to the OUTER edge of its column (auto cross-axis
@@ -2374,7 +2346,27 @@ _DS_CSS = """
 .st-key-toggle_orders { position: absolute !important; top: 0; inset-inline: 0; margin: 0 !important; z-index: 3; }
 .st-key-toggle_orders button { opacity: 0 !important; height: 52px !important; min-height: 52px !important; padding: 0 !important; margin: 0 !important; border: none !important; }
 .st-key-cai_kb [data-testid="stTextInput"] { margin-top: 10px; }
-.st-key-cai_kb .cai-order-link:first-of-type { margin-top: 6px; }
+/* open state (mockup): card + search + list read as ONE bordered card with a
+   darker well; the card head keeps only its top corners */
+.st-key-cai_kb:has(.cai-kb-card.open) {
+  border: 1px solid rgba(var(--accent-rgb),.34); border-radius: 16px;
+  background: rgba(0,0,0,.22);
+}
+.st-key-cai_kb:has(.cai-kb-card.open) .cai-kb-card {
+  border: none; border-radius: 16px 16px 0 0;
+  border-bottom: 1px solid rgba(var(--accent-rgb),.18);
+}
+.st-key-cai_kb:has(.cai-kb-card.open) [data-testid="stTextInput"] { margin: 10px 12px 0; }
+/* the expanded orders list scrolls INSIDE the card region (mockup: search
+   stays put, only the lines scroll) instead of stretching the whole drawer */
+.cai-orders-scroll {
+  max-height: min(45svh, 330px);
+  overflow-y: auto; overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  margin: 6px 12px 8px 8px;
+}
+.cai-orders-scroll::-webkit-scrollbar { width: 4px; }
+.cai-orders-scroll::-webkit-scrollbar-thumb { background: rgba(236,237,230,.18); border-radius: 3px; }
 
 /* grouped card of rows (tools + recent) */
 .st-key-cai_tools, .st-key-cai_recent {
@@ -2442,7 +2434,8 @@ _DS_CSS = """
 .st-key-new_chat button p { color: var(--accent-bright) !important; font-weight: 600 !important; }
 @media (hover: hover) { .st-key-new_chat button:hover { background: rgba(var(--accent-rgb),.2) !important; } }
 .cai-drawer-foot {
-  text-align: center; margin: 8px 0 calc(env(safe-area-inset-bottom,0px) + 10px);
+  /* safe-area clearance now lives on the drawer's own padding-bottom */
+  text-align: center; margin: 8px 0 2px;
   font: 600 9px ui-monospace, Menlo, monospace; letter-spacing: 2px; color: rgba(236,237,230,.3);
 }
 
@@ -3206,9 +3199,18 @@ if st.session_state.drawer_open:
                     if not shown:
                         st.caption("לא נמצאו פקודות מתאימות")
                     # each title is itself the tap target that opens the order's
-                    # PDF inline (styled as a flat list line, not a button)
-                    for doc, url in shown:
-                        st.markdown(_order_link(doc["title"], url, _doc_date_badge(doc["id"])), unsafe_allow_html=True)
+                    # PDF inline (styled as a flat list line, not a button).
+                    # ONE markdown for the whole list: the wrapper div is the
+                    # inner scroll region — per-row st.markdown calls would each
+                    # be siblings in the drawer flow and stretch it viewport-long
+                    else:
+                        st.markdown(
+                            "<div class='cai-orders-scroll'>"
+                            + "".join(_order_link(doc["title"], url, _doc_date_badge(doc["id"]))
+                                      for doc, url in shown)
+                            + "</div>",
+                            unsafe_allow_html=True,
+                        )
                 else:
                     st.caption("אין פקודות טעונות")
 
