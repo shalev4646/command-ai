@@ -216,6 +216,59 @@ components.html(
             d.addEventListener(t, function (e) { e.preventDefault(); }, { passive: false });
         });
     }
+    // Home-screen (standalone) launches: the layout viewport can stick ~56px
+    // taller than the glass, sinking Streamlit's sticky stBottom below it.
+    // BOTH the (display-mode: standalone) media query and the svh unit proved
+    // unreliable on-device (fix attempts 1-2 didn't bite), so: detect
+    // standalone in JS (navigator.standalone covers apple-meta installs) and
+    // feed the MEASURED visible height to the CSS as --cai-vvh; the shell
+    // rules key off the html.cai-standalone class. Measurements are re-taken
+    // over the first seconds (launch values can settle late) but never while
+    // an input is focused — the iOS keyboard shrinks visualViewport and would
+    // squash the app.
+    var aw = window.parent, aroot = aw.document.documentElement;
+    var standalone = (window.top.navigator.standalone === true) ||
+        (window.top.matchMedia && window.top.matchMedia("(display-mode: standalone)").matches);
+    if (standalone) {
+        aroot.classList.add("cai-standalone");
+        if (!window.top.__caiVVH) {
+            window.top.__caiVVH = true;
+            var tw = window.top;
+            var setH = function () {
+                var ae = aw.document.activeElement;
+                if (ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName)) return;
+                var h = tw.visualViewport ? tw.visualViewport.height : tw.innerHeight;
+                if (h >= 400) aroot.style.setProperty("--cai-vvh", Math.round(h) + "px");
+            };
+            setH(); setTimeout(setH, 800); setTimeout(setH, 2500);
+            tw.addEventListener("orientationchange", function () { setTimeout(setH, 400); });
+            // self-diagnosis: if the composer strip still bottoms out below
+            // the glass, surface the raw numbers in a screenshot-able badge
+            setTimeout(function () {
+                try {
+                    var sb = aw.document.querySelector('[data-testid="stBottom"]');
+                    if (!sb) return;
+                    var vv = tw.visualViewport ? tw.visualViewport.height : tw.innerHeight;
+                    var delta = sb.getBoundingClientRect().bottom - vv;
+                    if (delta <= 8) return;
+                    var probe = aw.document.createElement("div");
+                    probe.style.cssText = "position:fixed;top:0;left:0;width:0;height:100svh;visibility:hidden;";
+                    aw.document.body.appendChild(probe);
+                    var b = aw.document.createElement("div");
+                    b.style.cssText = "position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);" +
+                        "left:50%;transform:translateX(-50%);z-index:2147483000;background:#000;" +
+                        "color:#C4CE92;font:700 10px ui-monospace,monospace;padding:3px 8px;" +
+                        "border-radius:8px;pointer-events:none;direction:ltr;white-space:nowrap;";
+                    b.textContent = "dbg2 vv=" + Math.round(vv) + " in=" + tw.innerHeight +
+                        " svh=" + Math.round(probe.getBoundingClientRect().height) +
+                        " icb=" + aw.document.documentElement.clientHeight +
+                        " sbB=" + Math.round(sb.getBoundingClientRect().bottom);
+                    aw.document.body.appendChild(b);
+                    probe.remove();
+                } catch (e) {}
+            }, 3200);
+        }
+    }
     }catch(e){}</script>""",
     height=0,
 )
@@ -401,20 +454,27 @@ html, body {{ touch-action: manipulation; }}
    physical screen (the 770dd2c phenomenon — dvh/ICB report ~56px extra at
    rest). Streamlit's shell is absolute-fill, so it inherits the ghost
    height and its sticky stBottom bottoms out BELOW the glass — composer
-   low, disclaimer clipped. Pin the shell chain (and our fixed overlays)
-   to the small viewport unit, which tracks the true screen on iOS.
-   Standalone-scoped: in Safari the URL bar collapses and the app must
-   keep filling the grown viewport, so svh would leave a dead band there. */
-@media all and (display-mode: standalone) {{
-    .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {{
-        height: 100svh !important;
-        min-height: 100svh !important;
-        max-height: 100svh !important;
-    }}
-    .st-key-cai_drawer, .st-key-cai_settings,
-    .st-key-drawer_backdrop, .st-key-settings_backdrop {{
-        height: 100svh !important; bottom: auto !important;
-    }}
+   low, disclaimer clipped. The (display-mode: standalone) media query and
+   the svh unit BOTH failed to bite on-device, so the boot pin frame
+   detects standalone in JS (html.cai-standalone) and feeds the MEASURED
+   visible height as --cai-vvh; svh stays only as a fallback. Scoped to
+   standalone: in Safari the URL bar collapses and the app must keep
+   filling the grown viewport, so a pinned height would leave a dead band. */
+/* .stMain is a CLASS on purpose: with a chat_input mounted the main section's
+   data-testid flips to stAppScrollToBottomContainer (the class persists) —
+   a testid selector left the chat screen's scroller unpinned. */
+html.cai-standalone .stApp,
+html.cai-standalone [data-testid="stAppViewContainer"],
+html.cai-standalone .stMain {{
+    height: var(--cai-vvh, 100svh) !important;
+    min-height: var(--cai-vvh, 100svh) !important;
+    max-height: var(--cai-vvh, 100svh) !important;
+}}
+html.cai-standalone .st-key-cai_drawer,
+html.cai-standalone .st-key-cai_settings,
+html.cai-standalone .st-key-drawer_backdrop,
+html.cai-standalone .st-key-settings_backdrop {{
+    height: var(--cai-vvh, 100svh) !important; bottom: auto !important;
 }}
 /* iOS Safari "text autosizing" inflates long text blocks (cards, title,
    disclaimer) on the phone only — desktop matched the mock, iPhone didn't.
