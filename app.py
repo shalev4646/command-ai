@@ -189,6 +189,25 @@ components.html(
         m = d.querySelector('meta[name="theme-color"]');
     if (!m) { m = d.createElement("meta"); m.setAttribute("name", "theme-color"); d.head.appendChild(m); }
     m.setAttribute("content", "#14170E");
+    // iOS zoom lockdown (user request: no pinch-zoom at all). Three vectors:
+    // (1) focus auto-zoom on <16px inputs — killed by the viewport caps (iOS
+    //     honors maximum-scale for the AUTO zoom even where it ignores it for
+    //     manual pinch); this is the "page suddenly enlarged after login" bug;
+    // (2) manual pinch in Safari — the caps are ignored there since iOS 10,
+    //     so preventDefault the iOS-only gesture events;
+    // (3) double-tap zoom — touch-action:manipulation in the app CSS.
+    var vp = d.querySelector('meta[name="viewport"]');
+    if (vp) {
+        var vc = vp.getAttribute("content") || "";
+        if (!/maximum-scale/.test(vc))
+            vp.setAttribute("content", vc + ", maximum-scale=1, user-scalable=no");
+    }
+    if (!window.top.__caiNoZoom) {
+        window.top.__caiNoZoom = true;
+        ["gesturestart", "gesturechange"].forEach(function (t) {
+            d.addEventListener(t, function (e) { e.preventDefault(); }, { passive: false });
+        });
+    }
     }catch(e){}</script>""",
     height=0,
 )
@@ -366,6 +385,10 @@ html, body, [data-testid="stApp"], [data-testid="stAppViewContainer"] {{
 /* iOS rubber-band overscroll must reveal the dark backdrop, never a light
    page edge; disable the bounce chain where the platform honors it */
 html, body {{ overscroll-behavior-y: none; }}
+/* no double-tap zoom (iOS 13+ honors manipulation = pan only + no dbl-tap);
+   pinch + focus auto-zoom are killed by the viewport caps / gesture guards
+   in the boot theme-pin component */
+html, body {{ touch-action: manipulation; }}
 /* iOS Safari "text autosizing" inflates long text blocks (cards, title,
    disclaimer) on the phone only — desktop matched the mock, iPhone didn't.
    Pin the rendered sizes to the authored ones. */
