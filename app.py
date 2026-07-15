@@ -397,6 +397,25 @@ html, body {{ overscroll-behavior-y: none; }}
    pinch + focus auto-zoom are killed by the viewport caps / gesture guards
    in the boot theme-pin component */
 html, body {{ touch-action: manipulation; }}
+/* iOS home-screen app: the layout viewport can stick LARGER than the
+   physical screen (the 770dd2c phenomenon — dvh/ICB report ~56px extra at
+   rest). Streamlit's shell is absolute-fill, so it inherits the ghost
+   height and its sticky stBottom bottoms out BELOW the glass — composer
+   low, disclaimer clipped. Pin the shell chain (and our fixed overlays)
+   to the small viewport unit, which tracks the true screen on iOS.
+   Standalone-scoped: in Safari the URL bar collapses and the app must
+   keep filling the grown viewport, so svh would leave a dead band there. */
+@media all and (display-mode: standalone) {{
+    .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {{
+        height: 100svh !important;
+        min-height: 100svh !important;
+        max-height: 100svh !important;
+    }}
+    .st-key-cai_drawer, .st-key-cai_settings,
+    .st-key-drawer_backdrop, .st-key-settings_backdrop {{
+        height: 100svh !important; bottom: auto !important;
+    }}
+}}
 /* iOS Safari "text autosizing" inflates long text blocks (cards, title,
    disclaimer) on the phone only — desktop matched the mock, iPhone didn't.
    Pin the rendered sizes to the authored ones. */
