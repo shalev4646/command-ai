@@ -184,7 +184,7 @@ if splash_active:
 # frame BEFORE the heavy startup, so the bars are correct by first paint. The
 # full PWA injection further down re-asserts it on every run.
 components.html(
-    """<script>try{
+    r"""<script>try{
     var d = window.top.document,
         m = d.querySelector('meta[name="theme-color"]');
     if (!m) { m = d.createElement("meta"); m.setAttribute("name", "theme-color"); d.head.appendChild(m); }
@@ -216,16 +216,19 @@ components.html(
             d.addEventListener(t, function (e) { e.preventDefault(); }, { passive: false });
         });
     }
-    // Home-screen (standalone) launches: the layout viewport can stick ~56px
-    // taller than the glass, sinking Streamlit's sticky stBottom below it.
-    // BOTH the (display-mode: standalone) media query and the svh unit proved
-    // unreliable on-device (fix attempts 1-2 didn't bite), so: detect
-    // standalone in JS (navigator.standalone covers apple-meta installs) and
-    // feed the MEASURED visible height to the CSS as --cai-vvh; the shell
-    // rules key off the html.cai-standalone class. Measurements are re-taken
-    // over the first seconds (launch values can settle late) but never while
-    // an input is focused — the iOS keyboard shrinks visualViewport and would
-    // squash the app.
+    // Home-screen (standalone) launches: until the first UIKit re-layout
+    // (keyboard open/close, rotation) the web view itself is sized ~56px
+    // taller than the glass, and EVERY in-page metric agrees on the ghost
+    // value — visualViewport.height, innerHeight, svh and the ICB all report
+    // glass+56, which is why attempts 1-3 (media query, svh pin, raw
+    // visualViewport feed) were no-ops and why the old self-diagnosis badge
+    // never fired (stBottom.bottom - vv == 0 inside the lie). The one metric
+    // anchored to the physical glass is window.screen, so the measured
+    // height is CLAMPED to the orientation-corrected screen dimension; when
+    // iOS later corrects the view, vv drops to that same number, so the pin
+    // never jumps. Measurements are re-taken over the first seconds but
+    // never while an input is focused — the iOS keyboard shrinks
+    // visualViewport and would squash the app.
     var aw = window.parent, aroot = aw.document.documentElement;
     var standalone = (window.top.navigator.standalone === true) ||
         (window.top.matchMedia && window.top.matchMedia("(display-mode: standalone)").matches);
@@ -234,10 +237,18 @@ components.html(
         if (!window.top.__caiVVH) {
             window.top.__caiVVH = true;
             var tw = window.top;
+            var glassH = function () {
+                var sw = tw.screen && tw.screen.width, sh = tw.screen && tw.screen.height;
+                if (!sw || !sh) return 0;
+                var land = tw.matchMedia && tw.matchMedia("(orientation: landscape)").matches;
+                return land ? Math.min(sw, sh) : Math.max(sw, sh);
+            };
             var setH = function () {
                 var ae = aw.document.activeElement;
                 if (ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName)) return;
                 var h = tw.visualViewport ? tw.visualViewport.height : tw.innerHeight;
+                var g = glassH();
+                if (g >= 400) h = Math.min(h, g); // ghost-viewport clamp (see above)
                 if (h >= 400) aroot.style.setProperty("--cai-vvh", Math.round(h) + "px");
             };
             setH(); setTimeout(setH, 800); setTimeout(setH, 2500);
@@ -249,7 +260,9 @@ components.html(
                     var sb = aw.document.querySelector('[data-testid="stBottom"]');
                     if (!sb) return;
                     var vv = tw.visualViewport ? tw.visualViewport.height : tw.innerHeight;
-                    var delta = sb.getBoundingClientRect().bottom - vv;
+                    var g2 = glassH();
+                    // the glass is the truth — vv itself lies at cold launch
+                    var delta = sb.getBoundingClientRect().bottom - (g2 >= 400 ? Math.min(vv, g2) : vv);
                     if (delta <= 8) return;
                     var probe = aw.document.createElement("div");
                     probe.style.cssText = "position:fixed;top:0;left:0;width:0;height:100svh;visibility:hidden;";
@@ -259,7 +272,8 @@ components.html(
                         "left:50%;transform:translateX(-50%);z-index:2147483000;background:#000;" +
                         "color:#C4CE92;font:700 10px ui-monospace,monospace;padding:3px 8px;" +
                         "border-radius:8px;pointer-events:none;direction:ltr;white-space:nowrap;";
-                    b.textContent = "dbg2 vv=" + Math.round(vv) + " in=" + tw.innerHeight +
+                    b.textContent = "dbg3 vv=" + Math.round(vv) + " in=" + tw.innerHeight +
+                        " scr=" + Math.round(g2) +
                         " svh=" + Math.round(probe.getBoundingClientRect().height) +
                         " icb=" + aw.document.documentElement.clientHeight +
                         " sbB=" + Math.round(sb.getBoundingClientRect().bottom);
@@ -773,6 +787,12 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     min-height: calc(100svh - 134px - env(safe-area-inset-bottom, 0px)); /* svh: see gradient note */
     padding-top: calc(64px + var(--cai-sat, 0px)) !important; /* header band */
     padding-bottom: 78px !important;
+}}
+/* standalone: svh lies at cold launch (ghost viewport, see --cai-vvh notes),
+   sinking the vertically-centered greeting ~28px until the first re-layout —
+   center on the glass-clamped measurement instead */
+html.cai-standalone [data-testid="stAppViewContainer"]:has(.cai-greet) [data-testid="stMainBlockContainer"] {{
+    min-height: calc(var(--cai-vvh, 100svh) - 134px - env(safe-area-inset-bottom, 0px));
 }}
 /* the vertical block stretches to fill, so the centering happens inside it */
 [data-testid="stAppViewContainer"]:has(.cai-greet)
