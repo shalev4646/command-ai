@@ -454,8 +454,33 @@ st.markdown(f"""
 
 html, body, [data-testid="stApp"], [data-testid="stAppViewContainer"] {{
     font-family: Heebo, -apple-system, "Segoe UI", Arial, sans-serif;
-    background-color: var(--bg);
     color: var(--text);
+}}
+/* ── ONE background: a single fixed gradient underlay ──
+   The backdrop used to be painted twice — once on stAppViewContainer and
+   again as a "bottom slice" on stBottom — with both copies sized by svh,
+   which lies on iOS standalone, so the copies met at visibly different
+   colors (the stripe the user circled above the composer and under the
+   header). One fixed-position paint under everything makes a seam
+   structurally impossible; the bars above it are translucent glass.
+   (A ::before div, not background-attachment:fixed — iOS renders that
+   black, see the old gradient note.) html keeps the dark base so
+   overscroll never flashes light. body must NOT paint: an in-flow block's
+   background covers negative-z descendants in paint order. */
+html {{ background-color: var(--bg); }}
+body {{ background: transparent !important; }}
+[data-testid="stApp"], [data-testid="stAppViewContainer"] {{
+    background: transparent !important;
+}}
+body::before {{
+    content: ""; position: fixed; inset: 0; z-index: -1;
+    background: linear-gradient(180deg, #14170E 0%, #161A0F 52%, #20270F 100%);
+}}
+/* standalone: inset:0 tracks the ghost-sized layout viewport at cold
+   launch, which would stretch the ramp past the glass — pin the underlay
+   to the clamped measurement so the visible ramp is exact */
+html.cai-standalone body::before {{
+    bottom: auto; height: var(--cai-vvh, 100svh);
 }}
 /* iOS rubber-band overscroll must reveal the dark backdrop, never a light
    page edge; disable the bounce chain where the platform honors it */
@@ -494,17 +519,10 @@ html.cai-standalone .st-key-settings_backdrop {{
    disclaimer) on the phone only — desktop matched the mock, iPhone didn't.
    Pin the rendered sizes to the authored ones. */
 html {{ -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }}
-/* vertical gradient — dark at top, warming to olive toward the composer.
-   NOTE: no `fixed` attachment — iOS Safari renders it black; vh fallback
-   first for devices without sv/dvh support. svh (SMALL viewport) wins where
-   supported: on iOS standalone, dvh sticks at a value LARGER than the
-   visible screen until the first touch (app-switcher pinch too), pushing
-   the layout past the bottom edge — svh never exceeds what's visible. */
+/* the gradient itself lives on body::before above — the container only
+   keeps its viewport-filling min-height (svh: never exceeds the visible
+   glass, unlike dvh which sticks large on iOS standalone) */
 [data-testid="stAppViewContainer"] {{
-    background-image: linear-gradient(180deg, #14170E 0%, #161A0F 52%, #20270F 100%) !important;
-    background-size: 100% 100vh !important;
-    background-size: 100% 100svh !important;
-    background-attachment: scroll !important;
     min-height: 100vh;
     min-height: 100svh;
 }}
@@ -744,7 +762,11 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     /* the band grows UP by the status-bar inset so its dark fill sits behind
        the translucent clock; content stays in the 64px below via padding */
     height: calc(64px + var(--cai-sat, 0px)); box-sizing: border-box;
-    background: rgba(20,23,14,.92); /* == gradient top, so the band is invisible on home */
+    /* tint fades to nothing at the band's lower edge — a flat fill ended in
+       a visible line against the page gradient (user-circled seam); the hue
+       matches the gradient TOP so the fade is invisible on home */
+    background: linear-gradient(180deg,
+        rgba(20,23,14,.92) 0%, rgba(20,23,14,.82) 55%, rgba(20,23,14,0) 100%);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     display: flex; align-items: center; gap: 12px;
@@ -829,16 +851,17 @@ html.cai-standalone [data-testid="stAppViewContainer"]:has(.cai-greet) [data-tes
 .st-key-sug_3 button {{ animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .48s; }}
 
 /* ── Composer — pill bar + circular olive send ── */
-/* the pinned composer strip shows the BOTTOM slice of the same viewport-
-   sized gradient, continuing the backdrop seamlessly while masking content
-   scrolling below (no `fixed` attachment — broken on iOS Safari; vh
-   fallback first for devices without dvh) */
+/* the composer strip is translucent glass over the fixed underlay: the old
+   "bottom slice of the gradient" repaint was sized by svh, which lies on
+   iOS standalone, so its colors met the page gradient at a visible step
+   (user-circled seam above the composer). The tint's hue is the gradient's
+   BOTTOM color and fades to nothing at the strip's top edge — invisible on
+   home, frosts messages scrolling beneath it on the chat screen */
 [data-testid="stBottom"] {{
-    background-color: #20270F !important;
-    background-image: linear-gradient(180deg, #14170E 0%, #161A0F 52%, #20270F 100%) !important;
-    background-size: 100% 100vh !important;
-    background-size: 100% 100svh !important; /* svh: see gradient note above */
-    background-position: bottom !important;
+    background: linear-gradient(180deg,
+        rgba(32,39,15,0) 0%, rgba(32,39,15,.42) 45%, rgba(32,39,15,.6) 100%) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     /* env() is 0 inside the cloud shell's iframe, so give the disclaimer a
        real floor — on iPhone it sat right on the home-indicator bar */
     padding-bottom: max(14px, env(safe-area-inset-bottom, 0px));
