@@ -190,17 +190,25 @@ components.html(
     if (!m) { m = d.createElement("meta"); m.setAttribute("name", "theme-color"); d.head.appendChild(m); }
     m.setAttribute("content", "#14170E");
     // iOS zoom lockdown (user request: no pinch-zoom at all). Three vectors:
-    // (1) focus auto-zoom on <16px inputs — killed by the viewport caps (iOS
-    //     honors maximum-scale for the AUTO zoom even where it ignores it for
-    //     manual pinch); this is the "page suddenly enlarged after login" bug;
-    // (2) manual pinch in Safari — the caps are ignored there since iOS 10,
-    //     so preventDefault the iOS-only gesture events;
+    // (1) focus auto-zoom on <16px inputs — killed by maximum-scale=1 (iOS
+    //     honors it for the AUTO zoom even where it ignores it for manual
+    //     pinch); this was the "page suddenly enlarged after login" bug;
+    // (2) manual pinch — preventDefault on the iOS-only gesture events below
+    //     (works in Safari AND standalone);
     // (3) double-tap zoom — touch-action:manipulation in the app CSS.
+    // Deliberately NOT user-scalable=no: standalone/home-screen web views
+    // honor it and it regressed the standalone viewport height (fixed-bottom
+    // composer/disclaimer pushed ~50px below the screen — the old stuck-
+    // large-viewport symptom); it adds nothing the guards don't already do.
     var vp = d.querySelector('meta[name="viewport"]');
     if (vp) {
         var vc = vp.getAttribute("content") || "";
         if (!/maximum-scale/.test(vc))
-            vp.setAttribute("content", vc + ", maximum-scale=1, user-scalable=no");
+            vp.setAttribute("content", vc + ", maximum-scale=1");
+        // strip the harmful cap from clients that loaded the previous build
+        if (/user-scalable=no/.test(vp.getAttribute("content")))
+            vp.setAttribute("content",
+                vp.getAttribute("content").replace(/,?\s*user-scalable=no/, ""));
     }
     if (!window.top.__caiNoZoom) {
         window.top.__caiNoZoom = true;
