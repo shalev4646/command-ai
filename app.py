@@ -160,8 +160,10 @@ if splash_active:
     animation: bootCurtainUp .65s cubic-bezier(.7,0,.3,1) both; animation-delay: 30s;
     pointer-events: none;
 }
-.cai-splash-chev { display:flex; flex-direction:column; align-items:center;
-    animation: bootEnterScale .6s cubic-bezier(.2,.7,.2,1) both; animation-delay: .1s; }
+/* NO entrance animation on the chevron: the OS launch image already shows
+   it at this exact spot (see _startup_png) — a scale-in here reads as the
+   logo "popping" during the image→splash handoff; only the text enters */
+.cai-splash-chev { display:flex; flex-direction:column; align-items:center; }
 .cai-splash-chev span { display:block; width:26px; height:26px;
     border-top:6px solid #171A12; border-left:6px solid #171A12; transform:rotate(45deg); }
 .cai-splash-chev span + span { border-color: rgba(23,26,18,.45); margin-top: -9px; }
@@ -1530,14 +1532,29 @@ _STARTUP_SIZES = [
 ]
 
 
+# status-bar heights (pt) per launch-image class — the ONLY per-device input
+# the PNG needs to land its chevron where the splash draws its own (the
+# splash pads by env(safe-area-inset-top), which iOS reports as these).
+# Keyed by the pixel triple because 828×1792@2 (XR, 48pt) and 1242×2688@3
+# (XS Max, 44pt) share a pt-size with different bars.
+_STARTUP_SAT = {
+    (640, 1136, 2): 20, (750, 1334, 2): 20, (828, 1792, 2): 48,
+    (1125, 2436, 3): 44, (1170, 2532, 3): 47, (1179, 2556, 3): 59,
+    (1206, 2622, 3): 62, (1242, 2688, 3): 44, (1284, 2778, 3): 47,
+    (1290, 2796, 3): 59, (1320, 2868, 3): 62,
+}
+
+
 @st.cache_data(show_spinner=False)
 def _startup_png(w: int, h: int, dpr: int) -> bytes:
-    """Olive launch screen with the double-chevron mark, geometry matched to
-    the boot splash so the OS launch image morphs into it seamlessly. The
-    splash chevron is a 26px box + 6px border-top/left rotated 45° → a 32px
-    box whose apex reaches 22.6px above its top; spans stack 23px apart
-    (32px flow − 9px negative margin), and flex-centering puts the first
-    apex a constant ~44px above screen center (measured on the live splash)."""
+    """Olive launch screen with the double-chevron mark at the SPLASH's
+    chevron position, so the OS launch image morphs into the splash without
+    a jump (the user filmed the old centered chevron leaping to the splash's
+    top-aligned one). The splash chevron's first apex sits at
+    env(safe-area-inset-top) + 14vh − 6.6px: the .cai-splash padding is
+    sat+14vh, and a 26px box + 6px border rotated 45° overhangs its layout
+    top by (32·√2−32)/2 ≈ 6.6px. Verified against the launch video: apex at
+    ~176pt on a 393×852 device = 59 + 119.3 − 6.6."""
     import io
     from PIL import Image, ImageDraw
 
@@ -1546,8 +1563,10 @@ def _startup_png(w: int, h: int, dpr: int) -> bytes:
     dd = 32 * 0.7071 * dpr          # apex-to-arm-tip reach of the 32px box
     tv = 6 * 1.4142 * dpr           # vertical band thickness of a 6px stroke
     cx = w / 2
+    sat = _STARTUP_SAT.get((w, h, dpr), 47)
+    apex = (sat + 0.14 * (h / dpr) - 6.6) * dpr
     for i, color in enumerate([(23, 26, 18, 255), (23, 26, 18, 115)]):
-        ay = h / 2 - 44 * dpr + i * 23 * dpr
+        ay = apex + i * 23 * dpr
         draw.polygon(
             [(cx - dd, ay + dd), (cx, ay), (cx + dd, ay + dd),
              (cx + dd, ay + dd + tv), (cx, ay + tv), (cx - dd, ay + dd + tv)],
