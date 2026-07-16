@@ -2767,6 +2767,28 @@ _DS_CSS = """
   padding: calc(env(safe-area-inset-top,0px) + 20px) 20px calc(env(safe-area-inset-bottom,0px) + 20px) !important;
   overflow-y: auto; overscroll-behavior: contain;
 }
+/* the settings overlay and the drawer are their own scroll containers —
+   the base scrollbar-hiding rules (stMain et al) don't reach them, and on
+   the iPhone the thumb showed as a light strip down the LEFT edge (RTL) */
+.st-key-cai_settings, .st-key-cai_drawer { scrollbar-width: none !important; }
+.st-key-cai_settings::-webkit-scrollbar,
+.st-key-cai_drawer::-webkit-scrollbar { display: none !important; width: 0 !important; }
+/* status-bar mask: settings has no fixed header band (its title scrolls away
+   by design), so scrolled content collided with the clock / Dynamic Island.
+   Same recipe as .cai-header — a fixed tint that fades to nothing + blur.
+   Fixed (not sticky): a sticky ::before can't enter the container's padding
+   zone, which is exactly the strip that needs covering. z-index beats the
+   position:relative rows inside (same stacking context, z auto). */
+.st-key-cai_settings::before {
+  content: ""; position: fixed; top: 0; left: 50%;
+  transform: translateX(-50%); width: min(100vw, 440px);
+  height: calc(max(var(--cai-sat, 0px), env(safe-area-inset-top, 0px)) + 26px);
+  background: linear-gradient(180deg,
+      rgba(20,23,16,.95) 0%, rgba(20,23,16,.85) 55%, rgba(20,23,16,0) 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 10; pointer-events: none;
+}
 .st-key-cai_settings [data-testid="stElementContainer"] { margin-bottom: 0; }
 /* header: back + title */
 .st-key-cai_settings div[data-testid="stHorizontalBlock"]:first-of-type { align-items: center; gap: 12px; }
