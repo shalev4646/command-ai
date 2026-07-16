@@ -534,10 +534,14 @@ ACCENT_RGB = ",".join(str(int(ACCENT.lstrip("#")[i:i + 2], 16)) for i in (0, 2, 
 # into this frame by the PWA script) — the band grew by it, so clear it too.
 MAIN_TOP_PADDING = "12px" if st.session_state.role is None else "calc(72px + var(--cai-sat, 0px))"
 
-# entry elements start their stagger after the boot splash curtain lifts
-# (splash_active is computed at the top of the script, where the splash
-# renders as the first delta)
-EHOLD = "1.35s" if splash_active else "0s"
+# entry elements stagger in around the boot splash curtain lift (delay 1.15s
+# + .65s travel). 1.35s meant nothing STARTED fading until the lift was 30%
+# done, leaving ~0.5s of pure dark-blank after the reveal (measured on the
+# 2026-07-17 iPhone video, t=7.44-7.92, confirmed as a perceived stall).
+# 0.9s starts the fades under the still-opaque curtain: the header is landing
+# right as the lift finishes (the top edge is revealed LAST) and the role
+# cards' rise is the only choreography left on screen — same look, -0.45s.
+EHOLD = "0.9s" if splash_active else "0s"
 
 # CSS-drawn role icons (chevron / bars / diamond) as inline SVG tiles
 _ICON_SOLDIER = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18'%3E%3Cpath d='M4 12 L9 6 L14 12' fill='none' stroke='%2399A26B' stroke-width='3'/%3E%3C/svg%3E\")"
