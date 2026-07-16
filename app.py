@@ -2609,6 +2609,22 @@ _DS_CSS = """
 
 /* section label */
 .cai-sec-label { font: 600 11px Heebo; letter-spacing: 1px; color: rgba(236,237,230,.4); margin: 16px 0 8px; }
+/* RTL hard-pin (user video, iPhone): Streamlit right-pane CSS lands
+   text-align:left on plain markdown <div>s even under direction:rtl, so the
+   section labels (מאגר הידע / כלים / שיחות אחרונות), the role-card texts and
+   the settings/תקנון copy all hugged the LEFT edge. Force start-side
+   alignment on every markdown text node inside the drawer + settings;
+   flex rows (cards, pills, chevrons) are position-driven and unaffected. */
+.st-key-cai_drawer [data-testid="stMarkdownContainer"],
+.st-key-cai_drawer [data-testid="stMarkdownContainer"] div,
+.st-key-cai_drawer [data-testid="stMarkdownContainer"] p,
+.st-key-cai_settings [data-testid="stMarkdownContainer"],
+.st-key-cai_settings [data-testid="stMarkdownContainer"] div,
+.st-key-cai_settings [data-testid="stMarkdownContainer"] p {
+  text-align: right;
+  direction: rtl;
+}
+.cai-recent-head { direction: rtl; }
 
 /* knowledge-base card — custom accent card (icon + title + count pill + ‹) with
    a transparent st.button overlaying it to capture the tap */
