@@ -217,73 +217,119 @@ components.html(
         });
     }
     // Home-screen (standalone) launches: until the first UIKit re-layout
-    // (keyboard open/close, rotation) the web view itself is sized ~56px
-    // taller than the glass, and EVERY in-page metric agrees on the ghost
-    // value — visualViewport.height, innerHeight, svh and the ICB all report
-    // glass+56, which is why attempts 1-3 (media query, svh pin, raw
-    // visualViewport feed) were no-ops and why the old self-diagnosis badge
-    // never fired (stBottom.bottom - vv == 0 inside the lie). The one metric
-    // anchored to the physical glass is window.screen, so the measured
-    // height is CLAMPED to the orientation-corrected screen dimension; when
-    // iOS later corrects the view, vv drops to that same number, so the pin
-    // never jumps. Measurements are re-taken over the first seconds but
-    // never while an input is focused — the iOS keyboard shrinks
-    // visualViewport and would squash the app.
+    // (keyboard open/close, rotation) the web view is sized ~56px taller
+    // than the glass and EVERY in-page metric repeats the ghost value (vv /
+    // innerHeight / svh / ICB), so the pin must clamp to the one metric
+    // anchored to the physical glass: window.screen. ATTEMPT-4 RESULT: the
+    // clamp alone changed nothing on-device AND the conditional badge stayed
+    // silent — which indicts the ARMING, not the math (declared detection
+    // via navigator.standalone/display-mode may not pass in the icon-launch
+    // context). So: (a) the pin now ALSO arms off the symptom itself — an
+    // iOS viewport reporting TALLER than the glass exists only in the ghost
+    // state (in-browser Safari is always shorter, so no false arm); (b) the
+    // diagnosis badge is UNCONDITIONAL on iOS (or ?caidbg=1), two samples,
+    // self-removing — its absence now means the script never ran at all;
+    // (c) the outer catch paints the error instead of swallowing it.
+    // Measurements never run while an input is focused — the iOS keyboard
+    // shrinks visualViewport and would squash the app.
     var aw = window.parent, aroot = aw.document.documentElement;
-    var standalone = (window.top.navigator.standalone === true) ||
-        (window.top.matchMedia && window.top.matchMedia("(display-mode: standalone)").matches);
-    if (standalone) {
+    var tw = window.top;
+    // the navigator.standalone PROPERTY exists only on iOS WebKit
+    var ios = tw.navigator && ("standalone" in tw.navigator);
+    var glassH = function () {
+        var sw = tw.screen && tw.screen.width, sh = tw.screen && tw.screen.height;
+        if (!sw || !sh) return 0;
+        var land = tw.matchMedia && tw.matchMedia("(orientation: landscape)").matches;
+        return land ? Math.min(sw, sh) : Math.max(sw, sh);
+    };
+    var vvNow = function () { return tw.visualViewport ? tw.visualViewport.height : tw.innerHeight; };
+    if ((tw.navigator.standalone === true) ||
+        (tw.matchMedia && tw.matchMedia("(display-mode: standalone)").matches)) tw.__caiSA = true;
+    var setH = function () {
+        var g = glassH();
+        if (!tw.__caiSA && ios && g >= 400 && Math.min(vvNow(), tw.innerHeight) - g >= 12)
+            tw.__caiSA = true; // symptom gate: taller-than-glass == ghost state
+        if (!tw.__caiSA) return;
         aroot.classList.add("cai-standalone");
-        if (!window.top.__caiVVH) {
-            window.top.__caiVVH = true;
-            var tw = window.top;
-            var glassH = function () {
-                var sw = tw.screen && tw.screen.width, sh = tw.screen && tw.screen.height;
-                if (!sw || !sh) return 0;
-                var land = tw.matchMedia && tw.matchMedia("(orientation: landscape)").matches;
-                return land ? Math.min(sw, sh) : Math.max(sw, sh);
-            };
-            var setH = function () {
-                var ae = aw.document.activeElement;
-                if (ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName)) return;
-                var h = tw.visualViewport ? tw.visualViewport.height : tw.innerHeight;
-                var g = glassH();
-                if (g >= 400) h = Math.min(h, g); // ghost-viewport clamp (see above)
-                if (h >= 400) aroot.style.setProperty("--cai-vvh", Math.round(h) + "px");
-            };
-            setH(); setTimeout(setH, 800); setTimeout(setH, 2500);
-            tw.addEventListener("orientationchange", function () { setTimeout(setH, 400); });
-            // self-diagnosis: if the composer strip still bottoms out below
-            // the glass, surface the raw numbers in a screenshot-able badge
-            setTimeout(function () {
-                try {
-                    var sb = aw.document.querySelector('[data-testid="stBottom"]');
-                    if (!sb) return;
-                    var vv = tw.visualViewport ? tw.visualViewport.height : tw.innerHeight;
-                    var g2 = glassH();
-                    // the glass is the truth — vv itself lies at cold launch
-                    var delta = sb.getBoundingClientRect().bottom - (g2 >= 400 ? Math.min(vv, g2) : vv);
-                    if (delta <= 8) return;
-                    var probe = aw.document.createElement("div");
-                    probe.style.cssText = "position:fixed;top:0;left:0;width:0;height:100svh;visibility:hidden;";
-                    aw.document.body.appendChild(probe);
-                    var b = aw.document.createElement("div");
-                    b.style.cssText = "position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);" +
-                        "left:50%;transform:translateX(-50%);z-index:2147483000;background:#000;" +
-                        "color:#C4CE92;font:700 10px ui-monospace,monospace;padding:3px 8px;" +
-                        "border-radius:8px;pointer-events:none;direction:ltr;white-space:nowrap;";
-                    b.textContent = "dbg3 vv=" + Math.round(vv) + " in=" + tw.innerHeight +
-                        " scr=" + Math.round(g2) +
-                        " svh=" + Math.round(probe.getBoundingClientRect().height) +
-                        " icb=" + aw.document.documentElement.clientHeight +
-                        " sbB=" + Math.round(sb.getBoundingClientRect().bottom);
-                    aw.document.body.appendChild(b);
-                    probe.remove();
-                } catch (e) {}
-            }, 3200);
-        }
+        var ae = aw.document.activeElement;
+        if (ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName)) return;
+        var h = vvNow();
+        if (g >= 400) h = Math.min(h, g); // ghost-viewport clamp (see above)
+        if (h >= 400) aroot.style.setProperty("--cai-vvh", Math.round(h) + "px");
+    };
+    if (!tw.__caiVVH) {
+        tw.__caiVVH = true;
+        [0, 400, 900, 1600, 2600, 4200, 7000].forEach(function (ms) { setTimeout(setH, ms); });
+        tw.addEventListener("orientationchange", function () { setTimeout(setH, 400); });
+        tw.addEventListener("resize", setH);
+        tw.addEventListener("pageshow", setH);
+        if (tw.visualViewport) tw.visualViewport.addEventListener("resize", setH);
     }
-    }catch(e){}</script>""",
+    // unconditional launch diagnosis — reads every boundary in one shot:
+    // sa=<declared standalone><display-mode><armed>, cls=class applied,
+    // vvh=the pinned var, app=computed .stApp height (CSS bit), sbB=where
+    // the composer strip actually ends, top=app doc IS the top doc
+    var dbg = function (tag) {
+        try {
+            var doc = aw.document, sb = doc.querySelector('[data-testid="stBottom"]');
+            var app = doc.querySelector('.stApp');
+            var probe = doc.createElement("div");
+            probe.style.cssText = "position:fixed;top:0;left:0;width:0;height:100svh;visibility:hidden;";
+            doc.body.appendChild(probe);
+            var txt = tag +
+                " sa=" + (tw.navigator.standalone === true ? 1 : 0) +
+                ((tw.matchMedia && tw.matchMedia("(display-mode: standalone)").matches) ? 1 : 0) +
+                (tw.__caiSA ? 1 : 0) +
+                " cls=" + (aroot.classList.contains("cai-standalone") ? 1 : 0) +
+                " vvh=" + (aroot.style.getPropertyValue("--cai-vvh") || "-") +
+                " vv=" + Math.round(vvNow()) + " in=" + tw.innerHeight +
+                " scr=" + glassH() +
+                " svh=" + Math.round(probe.getBoundingClientRect().height) +
+                " app=" + (app ? Math.round(app.getBoundingClientRect().height) : -1) +
+                " sbB=" + (sb ? Math.round(sb.getBoundingClientRect().bottom) : -1) +
+                " top=" + (tw === aw ? 1 : 0);
+            probe.remove();
+            var b = doc.getElementById("cai-dbg");
+            if (!b) {
+                b = doc.createElement("div");
+                b.id = "cai-dbg";
+                b.style.cssText = "position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);" +
+                    "left:50%;transform:translateX(-50%);z-index:2147483000;background:#000;" +
+                    "color:#C4CE92;font:700 9px ui-monospace,monospace;padding:3px 8px;" +
+                    "border-radius:8px;pointer-events:none;direction:ltr;max-width:94vw;text-align:center;";
+                doc.body.appendChild(b);
+            }
+            b.textContent = txt;
+        } catch (e) {}
+    };
+    if (!tw.__caiDbg && (ios || /[?&]caidbg=1/.test(tw.location.search || ""))) {
+        tw.__caiDbg = true;
+        setTimeout(function () { dbg("dbg4a"); }, 3000);
+        setTimeout(function () { dbg("dbg4b"); }, 7500);
+        setTimeout(function () {
+            try { var b0 = aw.document.getElementById("cai-dbg"); if (b0) b0.remove(); } catch (e) {}
+        }, 16000);
+    }
+    }catch(e){
+        // surfacing catch: a silent death here is exactly what blinded
+        // attempts 1-4 — paint the failure (iOS / debug param only)
+        try {
+            var _ios = false;
+            try { _ios = ("standalone" in window.top.navigator); } catch (i) {}
+            var _dbgq = false;
+            try { _dbgq = /[?&]caidbg=1/.test(String(window.top.location.search || "")); } catch (q) {}
+            if (_ios || _dbgq) {
+                var _d = (window.parent || window).document;
+                var _b = _d.createElement("div");
+                _b.style.cssText = "position:fixed;top:6px;left:50%;transform:translateX(-50%);" +
+                    "z-index:2147483000;background:#5a1111;color:#fff;font:700 9px monospace;" +
+                    "padding:3px 8px;border-radius:8px;direction:ltr;max-width:94vw;";
+                _b.textContent = "caiERR " + String(e && e.message || e).slice(0, 120);
+                _d.body.appendChild(_b);
+                setTimeout(function () { try { _b.remove(); } catch (x) {} }, 16000);
+            }
+        } catch (y) {}
+    }</script>""",
     height=0,
 )
 
