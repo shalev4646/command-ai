@@ -242,142 +242,158 @@ components.html(
     //     visualViewport.offsetTop.
     // Measurements never run while an input is focused — the iOS keyboard
     // shrinks visualViewport and would squash the app.
-    var aw = window.parent, aroot = aw.document.documentElement;
-    var tw = window.top;
-    // the navigator.standalone PROPERTY exists only on iOS WebKit
-    var ios = tw.navigator && ("standalone" in tw.navigator);
-    var glassH = function () {
-        var sw = tw.screen && tw.screen.width, sh = tw.screen && tw.screen.height;
-        if (!sw || !sh) return 0;
-        var land = tw.matchMedia && tw.matchMedia("(orientation: landscape)").matches;
-        return land ? Math.min(sw, sh) : Math.max(sw, sh);
+    // ENGINE INJECTION: everything below must run in the TOP page's realm.
+    // Scheduling from this component is worthless — even timers registered
+    // via window.top.setTimeout are cancelled when Streamlit replaces this
+    // component's iframe on the next rerun (the callback's realm dies with
+    // the iframe: the ?caidbg badge never painted locally, and on-device
+    // only the 3s sample ever fired before a rerun). So the component
+    // SERIALIZES the engine (Function.toString) into a real <script> on the
+    // top document — idempotent by element id, so reruns are no-ops and the
+    // engine's timers/listeners live as long as the page itself. In the PWA
+    // (start_url=/~/+/) and locally the top page IS the app page, which is
+    // the only context where the standalone pin can arm; under the cloud
+    // shell the engine idles harmlessly on the shell document.
+    var engineFn = function () {
+        var aroot = document.documentElement;
+        // the navigator.standalone PROPERTY exists only on iOS WebKit
+        var ios = navigator && ("standalone" in navigator);
+        var glassH = function () {
+            var sw = screen && screen.width, sh = screen && screen.height;
+            if (!sw || !sh) return 0;
+            var land = matchMedia && matchMedia("(orientation: landscape)").matches;
+            return land ? Math.min(sw, sh) : Math.max(sw, sh);
+        };
+        var vvNow = function () { return window.visualViewport ? window.visualViewport.height : window.innerHeight; };
+        var px = function (css) { // resolve a CSS length, in px
+            var p = document.createElement("div");
+            p.style.cssText = "position:fixed;top:0;left:0;width:0;visibility:hidden;" +
+                "pointer-events:none;height:" + css + ";";
+            document.body.appendChild(p);
+            var v = p.getBoundingClientRect().height;
+            p.remove();
+            return v;
+        };
+        if ((navigator.standalone === true) ||
+            (matchMedia && matchMedia("(display-mode: standalone)").matches)) window.__caiSA = true;
+        var setH = function () {
+            try {
+                var g = glassH();
+                if (!window.__caiSA && ios && g >= 400 && Math.min(vvNow(), window.innerHeight) - g >= 12)
+                    window.__caiSA = true; // symptom gate: taller-than-glass == ghost state
+                if (!window.__caiSA) return;
+                aroot.classList.add("cai-standalone");
+                var ae = document.activeElement;
+                if (ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName)) return;
+                var h = vvNow();
+                if (g >= 400) h = Math.min(h, g); // ghost-viewport clamp (see above)
+                if (h < 400) return;
+                aroot.style.setProperty("--cai-vvh", Math.round(h) + "px");
+                // empirical overflow corrective: where does the composer strip
+                // REALLY end? Add back the already-applied offset so the
+                // comparison sees the uncorrected position (fixpoint-stable).
+                var sb = document.querySelector('[data-testid="stBottom"]');
+                var cur = parseFloat(aroot.style.getPropertyValue("--cai-vvoff")) || 0;
+                var off = 0;
+                if (sb) {
+                    var ex = Math.round(sb.getBoundingClientRect().bottom + cur - h);
+                    if (ex >= 12 && ex <= 120) off = ex;
+                }
+                if (off !== Math.round(cur)) aroot.style.setProperty("--cai-vvoff", off + "px");
+            } catch (e) {}
+        };
+        // synthetic re-layout kick — the keyboard cycle fixes the native
+        // geometry by forcing a UIKit re-layout; imitate it cheaply at boot
+        var nudge = function () {
+            try {
+                if (!window.__caiSA) return;
+                window.scrollTo(0, 1); window.scrollTo(0, 0);
+                var vp = document.querySelector('meta[name="viewport"]');
+                if (vp && !window.__caiNudged) {
+                    window.__caiNudged = true;
+                    var c = vp.getAttribute("content") || "";
+                    vp.setAttribute("content", c + ", minimum-scale=1");
+                    setTimeout(function () { try { vp.setAttribute("content", c); } catch (e) {} }, 120);
+                }
+            } catch (e) {}
+        };
+        if (!window.__caiVVH) {
+            window.__caiVVH = true;
+            [0, 300, 700, 1300, 2200, 3500, 5200, 7500].forEach(function (ms) { setTimeout(setH, ms); });
+            setTimeout(nudge, 350);
+            setTimeout(nudge, 1500);
+            var iv = setInterval(setH, 600);
+            setTimeout(function () { clearInterval(iv); }, 30000);
+            window.addEventListener("orientationchange", function () { setTimeout(setH, 400); });
+            window.addEventListener("resize", setH);
+            window.addEventListener("pageshow", setH);
+            // the ✓-dismiss blurs the composer — remeasure right after
+            window.addEventListener("focusout", function () {
+                [80, 350, 800].forEach(function (ms) { setTimeout(setH, ms); });
+            }, true);
+            if (window.visualViewport) window.visualViewport.addEventListener("resize", setH);
+        }
+        // launch diagnosis v2 — OPT-IN only (?caidbg=1): the unconditional
+        // iOS badge did its diagnostic job (rounds 5-6) and the user flagged
+        // the black strip itself as a bug once the layout was fixed
+        var dbg = function (tag) {
+            try {
+                var sb = document.querySelector('[data-testid="stBottom"]');
+                var app = document.querySelector('.stApp');
+                var sbr = sb ? sb.getBoundingClientRect() : null;
+                var apr = app ? app.getBoundingClientRect() : null;
+                var txt = tag +
+                    " sa=" + (navigator.standalone === true ? 1 : 0) +
+                    ((matchMedia && matchMedia("(display-mode: standalone)").matches) ? 1 : 0) +
+                    (window.__caiSA ? 1 : 0) +
+                    " env=" + Math.round(px("env(safe-area-inset-top,0px)")) +
+                    " vvh=" + (aroot.style.getPropertyValue("--cai-vvh") || "-") +
+                    " off=" + (aroot.style.getPropertyValue("--cai-vvoff") || "-") +
+                    " vv=" + Math.round(vvNow()) + " in=" + window.innerHeight +
+                    " scr=" + glassH() +
+                    " svh=" + Math.round(px("100svh")) + " dvh=" + Math.round(px("100dvh")) +
+                    " sY=" + Math.round(window.scrollY || 0) +
+                    " aT=" + (apr ? Math.round(apr.top) : -1) +
+                    " aB=" + (apr ? Math.round(apr.bottom) : -1) +
+                    " sbB=" + (sbr ? Math.round(sbr.bottom) : -1) +
+                    " voT=" + (window.visualViewport ? Math.round(window.visualViewport.offsetTop) : -1);
+                var b = document.getElementById("cai-dbg");
+                if (!b) {
+                    b = document.createElement("div");
+                    b.id = "cai-dbg";
+                    b.style.cssText = "position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);" +
+                        "left:50%;transform:translateX(-50%);z-index:2147483000;background:#000;" +
+                        "color:#C4CE92;font:700 8px ui-monospace,monospace;padding:3px 8px;" +
+                        "border-radius:8px;pointer-events:none;direction:ltr;max-width:94vw;text-align:center;";
+                    document.body.appendChild(b);
+                }
+                b.textContent = txt;
+            } catch (e) {}
+        };
+        if (!window.__caiDbg && /[?&]caidbg=1/.test(window.location.search || "")) {
+            window.__caiDbg = true;
+            [3000, 6500, 10500, 15000].forEach(function (ms, i) {
+                setTimeout(function () { dbg("d6." + (i + 1)); }, ms);
+            });
+            setTimeout(function () {
+                try { var b0 = document.getElementById("cai-dbg"); if (b0) b0.remove(); } catch (e) {}
+            }, 21000);
+        }
     };
-    var vvNow = function () { return tw.visualViewport ? tw.visualViewport.height : tw.innerHeight; };
-    var px = function (css) { // resolve a CSS length on the app doc, in px
-        var p = aw.document.createElement("div");
-        p.style.cssText = "position:fixed;top:0;left:0;width:0;visibility:hidden;" +
-            "pointer-events:none;height:" + css + ";";
-        aw.document.body.appendChild(p);
-        var v = p.getBoundingClientRect().height;
-        p.remove();
-        return v;
-    };
-    if ((tw.navigator.standalone === true) ||
-        (tw.matchMedia && tw.matchMedia("(display-mode: standalone)").matches)) tw.__caiSA = true;
-    var setH = function () {
-        try {
-            var g = glassH();
-            if (!tw.__caiSA && ios && g >= 400 && Math.min(vvNow(), tw.innerHeight) - g >= 12)
-                tw.__caiSA = true; // symptom gate: taller-than-glass == ghost state
-            if (!tw.__caiSA) return;
-            aroot.classList.add("cai-standalone");
-            var ae = aw.document.activeElement;
-            if (ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName)) return;
-            var h = vvNow();
-            if (g >= 400) h = Math.min(h, g); // ghost-viewport clamp (see above)
-            if (h < 400) return;
-            aroot.style.setProperty("--cai-vvh", Math.round(h) + "px");
-            // empirical overflow corrective: where does the composer strip
-            // REALLY end? Add back the already-applied offset so the
-            // comparison sees the uncorrected position (fixpoint-stable).
-            var sb = aw.document.querySelector('[data-testid="stBottom"]');
-            var cur = parseFloat(aroot.style.getPropertyValue("--cai-vvoff")) || 0;
-            var off = 0;
-            if (sb) {
-                var ex = Math.round(sb.getBoundingClientRect().bottom + cur - h);
-                if (ex >= 12 && ex <= 120) off = ex;
-            }
-            if (off !== Math.round(cur)) aroot.style.setProperty("--cai-vvoff", off + "px");
-        } catch (e) {}
-    };
-    // synthetic re-layout kick — the keyboard cycle fixes the native
-    // geometry by forcing a UIKit re-layout; imitate it cheaply at boot
-    var nudge = function () {
-        try {
-            if (!tw.__caiSA) return;
-            tw.scrollTo(0, 1); tw.scrollTo(0, 0);
-            var vp = tw.document.querySelector('meta[name="viewport"]');
-            if (vp && !tw.__caiNudged) {
-                tw.__caiNudged = true;
-                var c = vp.getAttribute("content") || "";
-                vp.setAttribute("content", c + ", minimum-scale=1");
-                tw.setTimeout(function () { try { vp.setAttribute("content", c); } catch (e) {} }, 120);
-            }
-        } catch (e) {}
-    };
-    if (!tw.__caiVVH) {
-        tw.__caiVVH = true;
-        // ALL scheduling on window.top: component-iframe timers are killed
-        // on every Streamlit rerun (that's how round-5's 2nd sample died)
-        [0, 300, 700, 1300, 2200, 3500, 5200, 7500].forEach(function (ms) { tw.setTimeout(setH, ms); });
-        tw.setTimeout(nudge, 350);
-        tw.setTimeout(nudge, 1500);
-        var iv = tw.setInterval(setH, 600);
-        tw.setTimeout(function () { tw.clearInterval(iv); }, 30000);
-        tw.addEventListener("orientationchange", function () { tw.setTimeout(setH, 400); });
-        tw.addEventListener("resize", setH);
-        tw.addEventListener("pageshow", setH);
-        // the ✓-dismiss blurs the composer — remeasure right after
-        tw.addEventListener("focusout", function () {
-            [80, 350, 800].forEach(function (ms) { tw.setTimeout(setH, ms); });
-        }, true);
-        if (tw.visualViewport) tw.visualViewport.addEventListener("resize", setH);
-    }
-    // launch diagnosis v2 — adds the state discriminators the first badge
-    // lacked: env(top), dvh, scrollY, stApp/stBottom rects, vv.offsetTop
-    var dbg = function (tag) {
-        try {
-            var doc = aw.document, sb = doc.querySelector('[data-testid="stBottom"]');
-            var app = doc.querySelector('.stApp');
-            var sbr = sb ? sb.getBoundingClientRect() : null;
-            var apr = app ? app.getBoundingClientRect() : null;
-            var txt = tag +
-                " sa=" + (tw.navigator.standalone === true ? 1 : 0) +
-                ((tw.matchMedia && tw.matchMedia("(display-mode: standalone)").matches) ? 1 : 0) +
-                (tw.__caiSA ? 1 : 0) +
-                " env=" + Math.round(px("env(safe-area-inset-top,0px)")) +
-                " vvh=" + (aroot.style.getPropertyValue("--cai-vvh") || "-") +
-                " off=" + (aroot.style.getPropertyValue("--cai-vvoff") || "-") +
-                " vv=" + Math.round(vvNow()) + " in=" + tw.innerHeight +
-                " scr=" + glassH() +
-                " svh=" + Math.round(px("100svh")) + " dvh=" + Math.round(px("100dvh")) +
-                " sY=" + Math.round(tw.scrollY || 0) +
-                " aT=" + (apr ? Math.round(apr.top) : -1) +
-                " aB=" + (apr ? Math.round(apr.bottom) : -1) +
-                " sbB=" + (sbr ? Math.round(sbr.bottom) : -1) +
-                " voT=" + (tw.visualViewport ? Math.round(tw.visualViewport.offsetTop) : -1) +
-                " top=" + (tw === aw ? 1 : 0);
-            var b = doc.getElementById("cai-dbg");
-            if (!b) {
-                b = doc.createElement("div");
-                b.id = "cai-dbg";
-                b.style.cssText = "position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);" +
-                    "left:50%;transform:translateX(-50%);z-index:2147483000;background:#000;" +
-                    "color:#C4CE92;font:700 8px ui-monospace,monospace;padding:3px 8px;" +
-                    "border-radius:8px;pointer-events:none;direction:ltr;max-width:94vw;text-align:center;";
-                doc.body.appendChild(b);
-            }
-            b.textContent = txt;
-        } catch (e) {}
-    };
-    if (!tw.__caiDbg && (ios || /[?&]caidbg=1/.test(tw.location.search || ""))) {
-        tw.__caiDbg = true;
-        [3000, 6500, 10500, 15000].forEach(function (ms, i) {
-            tw.setTimeout(function () { dbg("d6." + (i + 1)); }, ms);
-        });
-        tw.setTimeout(function () {
-            try { var b0 = aw.document.getElementById("cai-dbg"); if (b0) b0.remove(); } catch (e) {}
-        }, 21000);
+    var hostDoc = window.top.document;
+    if (!hostDoc.getElementById("cai-vvh-engine")) {
+        var es = hostDoc.createElement("script");
+        es.id = "cai-vvh-engine";
+        es.textContent = "(" + engineFn.toString() + ")();";
+        (hostDoc.head || hostDoc.documentElement).appendChild(es);
     }
     }catch(e){
         // surfacing catch: a silent death here is exactly what blinded
         // attempts 1-4 — paint the failure (iOS / debug param only)
         try {
-            var _ios = false;
-            try { _ios = ("standalone" in window.top.navigator); } catch (i) {}
             var _dbgq = false;
             try { _dbgq = /[?&]caidbg=1/.test(String(window.top.location.search || "")); } catch (q) {}
-            if (_ios || _dbgq) {
+            if (_dbgq) {
                 var _d = (window.parent || window).document;
                 var _b = _d.createElement("div");
                 _b.style.cssText = "position:fixed;top:6px;left:50%;transform:translateX(-50%);" +
