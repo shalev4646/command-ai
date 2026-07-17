@@ -284,8 +284,16 @@ components.html(
                 if (!window.__caiSA) return;
                 aroot.classList.add("cai-standalone");
                 var ae = document.activeElement;
-                if (ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName)) return;
+                // skip while typing ONLY if the pane is actually shrunken —
+                // retained focus with the keyboard already closed must not
+                // block a resync (2026-07-17 video: composer stuck mid-screen
+                // after send, answer flowing below it)
+                if (ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName) && vvNow() < g * 0.95) return;
                 var h = vvNow();
+                // keyboard hard-guard: never pin --cai-vvh to a keyboard-
+                // shrunken pane, even when focus tracking failed (Streamlit
+                // replaces the focused textarea without a focusout)
+                if (g >= 400 && h < g * 0.8) return;
                 if (g >= 400) h = Math.min(h, g); // ghost-viewport clamp (see above)
                 if (h < 400) return;
                 aroot.style.setProperty("--cai-vvh", Math.round(h) + "px");
@@ -323,7 +331,13 @@ components.html(
             setTimeout(nudge, 350);
             setTimeout(nudge, 1500);
             var iv = setInterval(setH, 600);
-            setTimeout(function () { clearInterval(iv); }, 30000);
+            setTimeout(function () {
+                clearInterval(iv);
+                // permanent slow resync: a mid-session stuck state (--cai-vvh
+                // pinned to a keyboard pane after focus tracking missed the
+                // close) must heal even when no viewport event ever fires again
+                setInterval(setH, 1500);
+            }, 30000);
             window.addEventListener("orientationchange", function () { setTimeout(setH, 400); });
             window.addEventListener("resize", setH);
             window.addEventListener("pageshow", setH);
@@ -332,6 +346,43 @@ components.html(
                 [80, 350, 800].forEach(function (ms) { setTimeout(setH, ms); });
             }, true);
             if (window.visualViewport) window.visualViewport.addEventListener("resize", setH);
+            // ── role-pick navigation veil ── Streamlit tears the entry screen
+            // down piecewise on the role tap (header vanishes, cards float
+            // ~0.2-0.9s on 3G — the "small stall" the user flagged). The tap
+            // instantly raises an opaque cover in the HOME background color,
+            // and it lifts once the chat header exists — the swap happens
+            // under it, and the tap gets immediate visual feedback.
+            var veil = function () {
+                try {
+                    if (document.getElementById("cai-nav-veil")) return;
+                    var v = document.createElement("div");
+                    v.id = "cai-nav-veil";
+                    v.style.cssText = "position:fixed;inset:0;z-index:999980;" +
+                        "background:#14170E;opacity:0;transition:opacity .12s ease;" +
+                        "pointer-events:none;";
+                    document.body.appendChild(v);
+                    requestAnimationFrame(function () { v.style.opacity = "1"; });
+                    var t0 = Date.now(), done = false;
+                    var lift = function () {
+                        if (done) return; done = true;
+                        v.style.transition = "opacity .28s ease";
+                        v.style.opacity = "0";
+                        setTimeout(function () { try { v.remove(); } catch (e) {} }, 320);
+                    };
+                    var poll = setInterval(function () {
+                        if (document.querySelector(".cai-header")) {
+                            clearInterval(poll); setTimeout(lift, 120);
+                        } else if (Date.now() - t0 > 4000) { clearInterval(poll); lift(); }
+                    }, 80);
+                } catch (e) {}
+            };
+            document.addEventListener("click", function (e) {
+                try {
+                    if (e.target && e.target.closest && e.target.closest(
+                        ".st-key-role_soldier, .st-key-role_commander, .st-key-role_reserve"))
+                        veil();
+                } catch (err) {}
+            }, true);
         }
         // launch diagnosis v2 — OPT-IN only (?caidbg=1): the unconditional
         // iOS badge did its diagnostic job (rounds 5-6) and the user flagged
@@ -681,6 +732,14 @@ body::-webkit-scrollbar {{ display: none !important; width: 0 !important; }}
 [data-testid="stStatusWidget"],
 a[href*="streamlit.io/cloud"],
 a[href*="share.streamlit.io"] {{ display: none !important; }}
+/* the shell-darkener injects `iframe{{background:#14170E}}` into every
+   same-origin ancestor document INCLUDING this one; on the answer action
+   row (transparent-bodied pills iframe) that painted an opaque dark slab
+   over the page gradient — the "black mark" behind העתק/וואטסאפ. Component
+   iframes in THIS document must stay transparent (the injected rule keeps
+   its real job: darkening the cloud-shell documents above us). */
+[data-testid="stElementContainer"] iframe,
+iframe[data-testid="stIFrame"] {{ background: transparent !important; }}
 [data-testid="stAppViewContainer"], [data-testid="stBottom"], [data-testid="stSidebar"] {{ direction: rtl; }}
 
 /* Hide Streamlit chrome, but keep the sidebar toggle (lives inside <header>) visible. */
