@@ -17,6 +17,7 @@ import metrics
 import escalation_paths
 from escalation_paths import path_for
 from boot_shell import patch_index_html
+from common import safe_print
 
 # letters/doc_dates are sibling new modules — a cached cloud build can pair
 # a fresh app.py with an older tree (see backend deploy note), so a missing
@@ -1970,7 +1971,8 @@ def _letters_dialog():
                 st.error("⏸️ המערכת בהשהיה זמנית עקב מגבלת שימוש — נסה שוב מחר."
                          if "usage limits" in str(e)
                          else "⚠️ אירעה שגיאה זמנית בניסוח. נסה לשלוח שוב.")
-            except Exception:
+            except Exception as e:
+                safe_print(f"[letters] draft failed: {e!r}")
                 metrics.refund(st.session_state.session_id)
                 st.error("⚠️ אירעה שגיאה זמנית בניסוח. נסה לשלוח שוב.")
     # standing note under the button (matches the design mock): sets the
@@ -3417,7 +3419,10 @@ def handle_question(question: str):
             msg = "⚠️ **אירעה שגיאה זמנית בעיבוד השאלה.**\n\nנסה לשלוח אותה שוב."
         st.session_state.messages.append({"role": "assistant", "content": msg, "error": True})
         return
-    except Exception:
+    except Exception as e:
+        # last-resort catch: the refund + generic message already cover the
+        # user, but without a log a real production fault leaves no trace
+        safe_print(f"[chat] answer failed: {e!r}")
         metrics.refund(st.session_state.session_id)
         st.session_state.messages.append({
             "role": "assistant",
@@ -3430,6 +3435,9 @@ def handle_question(question: str):
         "role": "assistant",
         "content": text,
         "sources": sources,
+        # answer cut mid-sentence by the shared thinking+answer token cap —
+        # the render loop warns instead of passing a half-answer as complete
+        "truncated": bool(result[3].get("truncated")) if len(result) > 3 else False,
     })
     # analytics opt-out (privacy settings) suppresses ONLY this usage log —
     # never the quota reserve/refund, which the app needs to function.
@@ -3440,9 +3448,11 @@ def handle_question(question: str):
             question=question,
             answer=text,
             sources=sources,
-            # getattr: a stale cached backend from a previous cloud build may
-            # predate last_usage (see deploy note in backend.py)
-            usage=getattr(backend, "last_usage", None),
+            # usage rides back in the 4th return element (per-call, race-free);
+            # the len guard + getattr fall back gracefully if a stale cached
+            # backend from a previous cloud build predates this contract
+            usage=(result[3] if len(result) > 3
+                   else getattr(backend, "last_usage", None)),
             latency_s=time.time() - t0,
         )
 
@@ -3651,6 +3661,10 @@ if st.session_state.drawer_open:
             if role_history:
                 for i, conv in role_history:
                     if st.button(f"💬 {conv['title']}", key=f"hist_{i}", use_container_width=True):
+                        # archive the active chat first, exactly like "שיחה חדשה"
+                        # and logout do — otherwise switching conversations drops
+                        # the current one for good
+                        archive_current_conversation()
                         st.session_state.messages = conv["messages"].copy()
                         st.session_state.drawer_open = False
                         st.rerun()
@@ -3847,11 +3861,17 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
     footer) and hands the PNG to the OS share sheet where files are
     shareable; elsewhere it downloads. Canvas API only — no JS libs.
     """
-    payload = json.dumps(content + "\n\n— CommandAI")
-    src_title = json.dumps(pdf[1] if pdf else None)
+    # json.dumps does NOT escape "<", so a literal "</script>" in the model's
+    # answer (a user can coax it to echo one) would close this inline <script>
+    # and run as markup — and this iframe is same-origin with the app document
+    # (window.top reachable). Escaping "<" blocks the breakout on every payload.
+    def _js(obj):
+        return json.dumps(obj).replace("<", "\\u003c")
+    payload = _js(content + "\n\n— CommandAI")
+    src_title = _js(pdf[1] if pdf else None)
     # verdict clauses classified in Python (verdict.py) — the SINGLE source
     # of the card's colours; the card JS no longer classifies, only draws
-    vclauses = json.dumps(_verdict_clauses(content))
+    vclauses = _js(_verdict_clauses(content))
     components.html(
         f"""
         <!-- same Heebo/Suez One sheet the app imports: iframes don't inherit
@@ -4298,6 +4318,8 @@ for msg_i, msg in enumerate(st.session_state.messages):
             if chip:
                 st.markdown(chip, unsafe_allow_html=True)
             st.markdown(body)
+            if msg.get("truncated"):
+                st.warning("✂️ התשובה נקטעה בגלל אורך. אפשר לשאול על חלק ממוקד יותר לתשובה שלמה.")
         else:
             st.markdown(content)
         if msg["role"] == "assistant" and not msg.get("error"):

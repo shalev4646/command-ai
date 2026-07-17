@@ -8,6 +8,8 @@ import chromadb
 import numpy as np
 from chromadb import Documents, EmbeddingFunction, Embeddings
 
+from common import safe_print
+
 _COLLECTION = "idf_orders"
 # Small windows so a single clause dominates its chunk's embedding — with
 # 600-word chunks, mean-pooling diluted the one clause a question targets
@@ -392,7 +394,10 @@ def index_all_documents(json_dir: Path | None = None) -> int:
             doc = json.loads(f.read_text(encoding="utf-8"))
             total += index_document(doc, save_cache=False)
         except Exception as e:
-            print(f"שגיאה באינדוקס {f.name}: {e}")
+            # print() with Hebrew raises UnicodeEncodeError on a cp1252 console
+            # (the _reingest.py path), which would abort the whole index build
+            # instead of skipping one bad file — safe_print survives it
+            safe_print(f"שגיאה באינדוקס {f.name}: {e}")
     _save_emb_cache()
     return total
 
@@ -439,7 +444,11 @@ def retrieve(
 
     try:
         query_emb = np.asarray(_get_ef()([query])[0], dtype=np.float32)
-    except Exception:
+    except Exception as e:
+        # an embed failure returns no chunks, which reads downstream as "no
+        # documents" and the model answers "המידע לא קיים" — log it so an
+        # infrastructure fault isn't silently disguised as missing content
+        safe_print(f"[vector_store] query embedding failed: {e!r}")
         return []
 
     # embeddings are L2-normalized by the model, so dot product == cosine

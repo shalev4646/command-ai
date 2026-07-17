@@ -5,7 +5,7 @@ from pathlib import Path
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
-from common import ROLES
+from common import ROLES, safe_print
 from metadata_overrides import apply_overrides
 from storage.vector_store import retrieve
 
@@ -46,11 +46,6 @@ _CONTEXT_HEADER = "קטעים רלוונטיים מהפקודות:"
 # accumulated costs one cache miss every 3 turns instead of every turn.
 _HISTORY_MAX = 12   # messages (6 exchanges) before a trim
 _HISTORY_DROP = 6   # messages (3 exchanges) dropped per trim
-
-# Usage of the most recent answer call — lets eval/scripts confirm the
-# prompt cache is working (cache_creation_input_tokens > 0 on turn 2,
-# cache_read_input_tokens > 0 on later follow-ups within the 5-min TTL).
-last_usage: dict | None = None
 
 _COMMON_RULES = """חוקים מוחלטים:
 1. ענה אך ורק על בסיס הקטעים שסופקו לך בהקשר.
@@ -126,8 +121,10 @@ def load_documents() -> list[dict]:
     for f in sorted(json_dir.glob("*.json")):
         try:
             docs.append(apply_overrides(json.loads(f.read_text(encoding="utf-8"))))
-        except Exception:
-            pass
+        except Exception as e:
+            # a corrupt JSON silently drops one order from the whole retrieval
+            # corpus; log which file so it doesn't vanish without a trace
+            safe_print(f"[backend] skipping unreadable doc {f.name}: {e!r}")
     return docs
 
 
@@ -200,7 +197,11 @@ def _standalone_question(question: str, history: list[dict] | None) -> str:
             content = content[:400] + "…"
         lines.append(f"{label}: {content}")
     try:
-        response = client.messages.create(
+        # bound this non-critical pre-retrieval call: without an explicit timeout
+        # the SDK default is 10 min × 3 retries, so a flaky network leaves the
+        # user staring at the spinner for minutes before the raw-question
+        # fallback below kicks in. 8s × 2 attempts caps the wait instead.
+        response = client.with_options(timeout=8.0, max_retries=1).messages.create(
             model=REWRITE_MODEL,
             max_tokens=200,
             tools=[_REWRITE_TOOL],
@@ -443,13 +444,16 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
                      profile: list[str] | None = None):
     """Answer a question as a live stream.
 
-    Returns (text_generator, sources, sent_user_content): the generator yields
-    answer-text deltas as the model produces them (UI renders them via
-    st.write_stream), sources — the distinct orders behind the answer, ranked
-    by retrieval relevance — are computed up front from the retrieved chunks
-    so the UI has them the moment the stream finishes, and sent_user_content
-    is the exact user-turn text sent to the API (question + retrieved
-    context). Callers that keep a conversation going must replay
+    Returns (text_generator, sources, sent_user_content, usage_holder): the
+    generator yields answer-text deltas as the model produces them (UI renders
+    them via st.write_stream), sources — the distinct orders behind the answer,
+    ranked by retrieval relevance — are computed up front from the retrieved
+    chunks so the UI has them the moment the stream finishes, and
+    sent_user_content is the exact user-turn text sent to the API (question +
+    retrieved context). usage_holder is an initially-empty dict the generator
+    fills with the answer's token usage once the stream completes — read it
+    after consuming the generator (it is per-call, so concurrent sessions never
+    share usage). Callers that keep a conversation going must replay
     sent_user_content — not the bare question — as that turn's history
     content, so follow-up requests share a byte-identical prefix and hit the
     prompt cache. `profile` is the asker's personal statuses (חייל בודד,
@@ -495,8 +499,14 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
         }
     messages = past + [{"role": "user", "content": user_content}]
 
+    # usage rides back in a caller-owned dict, filled when the stream finishes
+    # — NOT a module global. Streamlit serves each session on its own thread in
+    # one process, so a shared global was a cross-session race: one session
+    # could read another's usage/cost/search_query into its metrics row. Each
+    # call gets its own holder, so concurrent answers never clobber each other.
+    usage_holder: dict = {}
+
     def _gen():
-        global last_usage
         with client.messages.stream(
             model=MODEL,
             max_tokens=MAX_OUTPUT_TOKENS,
@@ -505,17 +515,21 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
             messages=messages,
         ) as stream:
             yield from stream.text_stream
-            usage = stream.get_final_message().usage
-            last_usage = {
+            final = stream.get_final_message()
+            usage = final.usage
+            usage_holder.update({
                 "input_tokens": usage.input_tokens,
                 "output_tokens": usage.output_tokens,
                 "cache_creation_input_tokens": getattr(usage, "cache_creation_input_tokens", 0) or 0,
                 "cache_read_input_tokens": getattr(usage, "cache_read_input_tokens", 0) or 0,
                 # the rewritten retrieval query rides along for the metrics log
                 "search_query": search_query if search_query != question else "",
-            }
+                # the answer hit the shared thinking+answer token cap and was
+                # cut mid-sentence; app.py warns the user (mirrors letters.py)
+                "truncated": final.stop_reason == "max_tokens",
+            })
 
-    return _gen(), _sources_from_chunks(chunks), user_content
+    return _gen(), _sources_from_chunks(chunks), user_content, usage_holder
 
 
 def get_ai_answer(question: str, history: list[dict] | None = None, role: str = "soldier",
@@ -527,7 +541,7 @@ def get_ai_answer(question: str, history: list[dict] | None = None, role: str = 
     historical user-turn shape), and the sanity check exercises the exact
     production path.
     """
-    text_gen, sources, _ = stream_ai_answer(question, history, role, profile)
+    text_gen, sources, *_ = stream_ai_answer(question, history, role, profile)
     return {"text": "".join(text_gen), "sources": sources}
 
 

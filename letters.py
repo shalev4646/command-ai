@@ -124,7 +124,7 @@ def compose_letter(letter_key: str, details: dict[str, str], role: str = "soldie
         system=_SYSTEM,
         messages=[{"role": "user", "content": user_content}],
     )
-    # same usage shape as backend.last_usage, so metrics.log_question can
+    # same usage shape as the chat path's usage_holder, so metrics.log_question can
     # log a letter row (and its cost) exactly like a chat question
     usage = {
         "input_tokens": msg.usage.input_tokens,
