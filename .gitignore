@@ -11,3 +11,11 @@ static/*
 !static/.gitkeep
 New Text Document.txt
 .claude/
+
+# Design/handoff artifacts — mockups & zips dropped in for reference, not
+# source. Ignoring them also stops push.bat's `git add .` from sweeping them
+# into a commit (has happened before). No source .html/.zip lives in the repo
+# (only new_desing.zip, already tracked).
+docs/
+*.zip
+*.html
