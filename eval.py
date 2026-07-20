@@ -3,6 +3,7 @@
 
 הרצה:  python eval.py            (סט זהב לאחזור + 3 תשובות LLM מלאות)
        python eval.py --no-llm   (סט הזהב בלבד — מהיר וללא עלות API)
+       python eval.py --facts    (+ שכבת נכונות-תשובות, ~20 קריאות Opus ≈ $2)
 
 שני רבדים:
 1. סט זהב (GOLDEN) — ~20 שאלות שמכסות את כל הפקודות הטעונות; לכל שאלה
@@ -20,6 +21,12 @@
 6. מבני (STRUCTURAL) — שלמות שכבות הדאטה של פיצ'רי ה-UI: מיפוי סעיף→עמוד,
    תאריכי נוסח, מסלולי "למי פונים", סכימת המכתבים, וזהות-בייטים של תוכן
    המשתמש כשאין פרופיל (שומר הקאש). רץ בחינם, בלי LLM.
+7. נכונות תשובות (FACTS, ‏--facts בלבד) — הרובד היחיד שבודק שהתשובה עצמה
+   נכונה ולא רק שהאחזור מצא את הפקודה: לכל שאלה עובדות-מפתח מאומתות מול
+   הפקודות (מספרים, דרגות, ציטוט הפקודה) שחייבות להופיע בתשובת ה-LLM, וסירוב
+   נחשב כישלון. חלק מהשאלות הן שאלות אמיתיות מהפיילוט שסורבו/קיבלו 👎.
+   יקר (~20 קריאות Opus ≈ $2) — לכן מאחורי דגל, לא בברירת המחדל.
+   OBSERVE — שאלות אמת עמומות שמודפסות לקריאה ידנית בלבד, בלי pass/fail.
 
 יציאה עם קוד 1 אם שאלה כלשהי נכשלה — מתאים כבדיקת תקינות לפני git push.
 """
@@ -116,6 +123,19 @@ GOLDEN = [
     # regression: the release-leave annex table is RTL-mangled in raw_text —
     # answered "not found" until the key-facts clauses (2026-07-11)
     ("soldier",   "כמה ימי חופשת שחרור מקבלים לפני השחרור?", "PM-35.0402"),
+    # batch 6 (2026-07-20): the 7 orders of the 2026-07-12 corpus expansion
+    # shipped with no eval coverage at all (raw_text-only ingestion). The
+    # medical-profile question moved here FROM NOSCOPE — it was hallucination
+    # bait until 32.0402 was ingested and now has a real in-corpus answer.
+    ("soldier",   "איך אני יכול להוריד פרופיל רפואי?", "32.0402"),
+    ("commander", "מה הנוהל כשנראה שמצב הבריאות של חייל שלי השתנה?", "32.0402"),
+    ("soldier",   "הייתי מעורב בתאונת דרכים עם רכב צבאי — מי מוסמך להתלות את הרישיון הצבאי שלי?", "33.1104"),
+    ("soldier",   "אילו זכויות מגיעות לחיילת בהריון במהלך השירות?", "36.0406"),
+    ("soldier",   "האם מגיעה היעדרות מהשירות לצורך טיפולי פוריות?", "36.0406"),
+    ("soldier",   "לא סיימתי בית ספר יסודי — האם הצבא חייב להשלים לי השכלה בזמן השירות?", "37.0102"),
+    ("commander", "מתי אפשר לשלול מחייל משוחרר את מענק השחרור והפיקדון שלו?", "35.0234"),
+    ("commander", "איזה מענק מקבל משרת קבע בסיום שירותו ומה נחשב לשירות תקין לחישובו?", "20.0502"),
+    ("soldier",   "איזו דרגת רישיון צבאי צריך כדי לנהוג ברכב משא כבד?", "58.0202"),
 ]
 
 # (role, question, expected_doc_id) — same contract as GOLDEN, but phrased the
@@ -139,15 +159,32 @@ DIRTY = [
     ("commander", "חייל שלי מאיים שיפגע בעצמו, מה אני עושה?", "33.0219"),
     ("reserve",   "מילואימניק צריך להגיד לצבא לפני שהוא טס לחול?", "31.0703"),
     ("reserve",   "כמה כסף מקבלים על מילואים חוץ מהמשכורת?", "013.3"),
+    # batch 6 (2026-07-20): slang phrasings for the newest orders
+    ("soldier",   "אפשר להוריד פרופיל בצבא?", "32.0402"),
+    ("soldier",   "עשיתי תאונה עם רכב צבאי, יקחו לי את הרישיון?", "33.1104"),
+    ("soldier",   "חיילת בהריון, מה מגיע לה?", "36.0406"),
+    ("soldier",   "לא סיימתי בית ספר, הצבא נותן להשלים לימודים?", "37.0102"),
+]
+
+# Real pilot questions whose retrieval is KNOWN-BROKEN — printed every run so
+# the gap stays visible, but not counted as failures (the gate stays green).
+# (role, question, expected_doc_id), same contract as GOLDEN.
+XFAIL_RETRIEVAL = [
+    # 2026-07-10, refused live and still failing: heavy typos ("חפשש",
+    # "להתשחרר") defeat both the embedding and the lexical variants —
+    # PM-35.0402 doesn't crack the top-5. Candidate fix: run the Haiku
+    # rewrite on first questions too (today it fires only on follow-ups),
+    # normalizing typos before retrieval.
+    ("soldier", "כמה ימי חפשש מגיע לי אם אני אמור להתשחרר בקרוב?", "PM-35.0402"),
 ]
 
 # (role, question) — questions whose answer is NOT in any ingested order
-# (civil law, courses, medical profile, equipment charging). The pipeline
-# still retrieves the nearest chunks, so these are hallucination bait: the
-# pass condition is an honest refusal, not an answer.
+# (civil law, courses, equipment charging). The pipeline still retrieves the
+# nearest chunks, so these are hallucination bait: the pass condition is an
+# honest refusal, not an answer. The medical-profile question that used to sit
+# here moved to GOLDEN when 32.0402 (שינוי כושר בריאותי) was ingested.
 NOSCOPE = [
     ("soldier",   "מה תנאי הקבלה לקורס טיס?"),
-    ("soldier",   "איך אני יכול להוריד פרופיל רפואי?"),
     ("soldier",   "מה גובה הפיקדון והמענק שמקבלים אחרי השחרור?"),
     ("soldier",   "אילו הטבות מגיעות לחייל משוחרר בלימודים אקדמיים?"),
     ("commander", "מה הנוהל לחיוב חייל על אובדן ציוד צבאי?"),
@@ -188,6 +225,79 @@ FOLLOWUP = [
      [{"role": "user", "content": "כמה ימי חופשה שנתית מגיעים לחייל בשירות חובה?"},
       {"role": "assistant", "content": "**תשובה:** חייל בשירות חובה זכאי ל-18 ימי חופשה שנתית. **מקור:** [PM-35.0402] סעיף 4."}],
      "ומי מאשר אותה?", "PM-35.0402"),
+    # Real pilot conversations whose follow-up was refused/downvoted live
+    # (2026-07-10 / 2026-07-19) — the rewrite must carry the referent back in.
+    ("soldier",
+     [{"role": "user", "content": "מותר למפקד שלי להעיר אותי ב2 בלילה לעשות מסדר?"},
+      {"role": "assistant", "content": "**פסיקה:** אסור, למעט חריגים שאושרו כדין. **מקור:** [PM-33.0213] — כל חייל זכאי לשבע שעות שינה רצופות בין 22:00 ל-06:00."}],
+     "אז למי מותר להחריג משהו כזה?", "PM-33.0213"),
+    ("commander",
+     [{"role": "user", "content": "חייל ביקש להשתחרר מפעילות נופש כי היא פוגעת באמונתו — אני חייב לשחרר אותו?"},
+      {"role": "assistant", "content": "**פסיקה:** חייב להתחשב באורח חייו הדתי של החייל. **מקור:** [PM-34.0101] הדת בצה\"ל."}],
+     "כמה זמן מראש הוא צריך לבקש את השחרור?", "PM-34.0101"),
+]
+
+# ── שכבת FACTS: נכונות התשובה עצמה (רץ רק עם --facts, עולה כסף) ──
+# (role, question, expected_doc_id, fact_groups): התשובה חייבת (א) לא לסרב,
+# (ב) לאזכר את הפקודה הצפויה בין 3 המקורות המובילים של האחזור, (ג) להכיל
+# מכל fact_group לפחות חלופה אחת. העובדות מאומתות מול סעיפי ה-key-facts,
+# punishment_authority.py ו-entitlements.py (שאומתו מול ה-PDF מילה-במילה).
+# חלק מהשאלות = שאלות אמת מהפיילוט שסורבו/דוסלקו (מסומנות) — רגרסיה חיה.
+FACTS = [
+    ("soldier", "כמה שעות שינה רצופות מגיעות לי ובאילו שעות?", "PM-33.0213",
+     [["שבע", "7"], ["22:00"], ["33.0213", "שעות השינה"]]),
+    # pilot 2026-07-09, refused live — the 4h+3h completion rule answers it
+    ("soldier", "כמה מותר לקצץ לי משעות השינה בשביל תורנות שמירה?", "PM-33.0213",
+     [["4", "ארבע"], ["33.0213", "שעות השינה"]]),
+    # pilot 2026-07-19, follow-up downvoted — the approval-ranks clause answers it
+    ("soldier", "למי מותר לאשר חריגה משעות השינה של חיילים?", "PM-33.0213",
+     [["סא\"ל", "אל\"ם", "תא\"ל", "אלוף", "מח\"ט"], ["33.0213", "שעות השינה"]]),
+    # pilot 2026-07-09, refused live — 35.0808 has a dedicated housing clause
+    ("soldier", "איזו עזרה בדיור מגיעה לי כחייל בודד?", "35.0808",
+     [["שכר דירה", "שכ\"ד", "קיבוץ", "בית החייל"], ["35.0808", "בודד"]]),
+    # pilot, got both 👍 and 👎 — 30-day first-degree-relative visit leave
+    ("soldier", "ההורים שלי גרים בחו\"ל — כמה ימי חופשה מגיעים לי בשנה כדי לבקר אותם?", "35.0808",
+     [["30"], ["35.0808", "בודד"]]),
+    # pilot 2026-07-12, refused live — 31.0103 has an exact lost-ID clause
+    ("soldier", "איבדתי את תעודת החוגר רגע לפני השחרור — מה עושים לי?", "31.0103",
+     [["דין", "שיפוט", "תלונה"], ["31.0103", "שחרור ופיטור"]]),
+    # asked 4x locally — forbidden in foot movement, single earpiece allowed
+    ("soldier", "מותר לי ללכת עם אוזניות כשאני במדים?", "33-05-01",
+     [["אסור"], ["תנועה רגלית", "אוזניה בודדת", "בודדת"], ["33-05-01", "הופעה ולבוש"]]),
+    # pilot, downvoted — the ban list: political/military statements, wide groups
+    ("commander", "חיילים שלי מעלים סרטונים מהבסיס לטיקטוק — מה בדיוק אסור להם לפרסם?", "PM-33.0161",
+     [["מפלגתי", "מדיני", "צבאי", "ביטחוני"], ["33.0161", "הרשתי"]]),
+    ("soldier", "כמה זמן לפני כניסת השבת חייבים לשחרר אותי הביתה לחופשה?", "PM-34.0101",
+     [["שעתיים"], ["34.0101", "הדת"]]),
+    ("soldier", "כמה ימי חופשת שחרור מקבלים לפני השחרור?", "PM-35.0402",
+     [["7", "10", "14", "שבעה", "עשרה"], ["35.0402", "חופשות לחיילים"]]),
+    ("soldier", "כמה ימי חופשה שנתית מגיעים לחייל בשירות חובה?", "PM-35.0402",
+     [["18"], ["35.0402", "חופשות לחיילים"]]),
+    # moved from NOSCOPE — 32.0402 is exactly the profile-change procedure
+    ("soldier", "איך אני יכול להוריד פרופיל רפואי?", "32.0402",
+     [["ועדה רפואית"], ["32.0402", "כושר בריאותי"]]),
+    ("soldier", "הייתי מעורב בתאונה עם רכב צבאי — באילו תנאים יתלו לי את הרישיון הצבאי?", "33.1104",
+     [["יסוד להאשים", "עבירה", "ממצ\"פ", "שיטור"], ["33.1104", "התליית", "להתלות"]]),
+    ("commander", "מתי אפשר לשלול מחייל משוחרר את מענק השחרור והפיקדון?", "35.0234",
+     [["אי-התאמה", "אי התאמה", "הרשעה", "עבירה"], ["35.0234", "שלילת"]]),
+    ("soldier", "כמה ימי מחבוש מקסימום אפשר לקבל בדין משמעתי?", "PM-33.0302",
+     [["30"], ["33.0302", "דין משמעתי"]]),
+    ("soldier", "חיילת בהריון — אילו הקלות והתאמות מגיעות לה בשירות?", "36.0406",
+     [["36.0406", "הורות"]]),
+]
+
+# שאלות אמת עמומות — נדפסות לקריאה ידנית בלבד (אין להן pass/fail חד):
+# חלקן פער-קורפוס אמיתי, חלקן תשובה חלקית לגיטימית (כלל 2 בפרומפט).
+OBSERVE = [
+    # likely corpus gap: פניות הציבור procedure isn't the קבילות order
+    ("soldier", "פניתי לפניות הציבור בגלל מצוקה שקשורה ליחס המפקד — הם חייבים לעדכן את המפקד?"),
+    # amounts are civil law (out of corpus) but 35.0234 states the timing —
+    # rule 2 expects a partial answer, not a bare refusal
+    ("soldier", "כמה כסף אני אמור לקבל מענק שחרור ואחרי כמה זמן הוא יכנס לחשבון הבנק?"),
+    # pilot, downvoted: club hours are unit-set (35.0818), Shabbat rules in PM-34.0101
+    ("soldier", "האם מותר לראות טלוויזיה במועדון בשבת?"),
+    # pilot, refused: 2.0101 covers approvals (purpose-bound, ≤6 months)
+    ("soldier", "מסוכן באזור שאני גר — אפשר לבקש אישור לשאת נשק הביתה גם אם אני לא חייב?"),
 ]
 
 TOP_K = 3
@@ -225,6 +335,28 @@ def run_golden() -> int:
 
 def run_dirty() -> int:
     return _run_retrieval_set("שאלות מלוכלכות", DIRTY)
+
+
+def run_xfail() -> None:
+    """Known-broken retrieval cases: printed for visibility, never counted.
+    A case that starts passing is called out so it can graduate to DIRTY."""
+    print("=" * 70)
+    print(f"XFAIL — {len(XFAIL_RETRIEVAL)} כשלי אחזור ידועים (לא נספרים)")
+    print("=" * 70)
+    for role, question, expected in XFAIL_RETRIEVAL:
+        try:
+            chunks = retrieve_for_role(question, role)
+            top_docs = []
+            for c in chunks:
+                if c["doc_id"] not in top_docs:
+                    top_docs.append(c["doc_id"])
+            ok = expected in top_docs[:TOP_K]
+        except Exception:
+            ok = False
+        if ok:
+            print(f"🎉 [{role}] {question} — עבר! אפשר להעביר ל-DIRTY")
+        else:
+            print(f"⚠ [{role}] {question} (עדיין נכשל, ציפינו {expected})")
 
 
 def run_noscope() -> int:
@@ -280,6 +412,66 @@ def run_followup() -> int:
             print(f"    ציפינו {expected}, קיבלנו: {top_docs[:TOP_K]}")
             failures += 1
     return failures
+
+
+def run_facts() -> int:
+    """The answer-correctness gate: full pipeline per question, deterministic
+    assertions on the answer text. Costs ~$0.10/question — run with --facts
+    before shipping retrieval/prompt/model changes, not on every push."""
+    from backend import get_ai_answer
+
+    failures = 0
+    print("=" * 70)
+    print(f"נכונות תשובות (FACTS) — {len(FACTS)} שאלות (צינור מלא + עובדות-מפתח)")
+    print("=" * 70)
+    for role, question, expected_doc, fact_groups in FACTS:
+        try:
+            result = get_ai_answer(question, role=role)
+        except Exception as e:
+            print(f"✗ [{role}] {question}\n    !! שגיאה: {type(e).__name__}: {e}")
+            failures += 1
+            continue
+        answer = result["text"]
+        top_sources = [s["doc_id"] for s in result["sources"][:TOP_K]]
+        problems = []
+        # a BARE refusal is one that opens the answer (the shape rule 2
+        # mandates). A nuanced answer that delivers the facts and only then
+        # qualifies ("לחייל שאינו בודד — לא נקבע") must not fail here.
+        if _MANDATED_REFUSAL in " ".join(answer.split())[:160]:
+            problems.append("סירב למרות שהתשובה קיימת בפקודות")
+        if expected_doc not in top_sources:
+            problems.append(f"הפקודה הצפויה לא במקורות המובילים ({top_sources})")
+        for group in fact_groups:
+            if not any(alt in answer for alt in group):
+                problems.append(f"חסרה עובדה: {' / '.join(group[:3])}")
+        if problems:
+            print(f"✗ [{role}] {question}")
+            for p in problems:
+                print(f"    {p}")
+            snippet = " ".join(answer.split())[:200]
+            print(f"    תשובה: {snippet}")
+            failures += 1
+        else:
+            print(f"✓ [{role}] {question}")
+    return failures
+
+
+def run_observe() -> None:
+    """Ambiguous real-world questions — full answers printed for a human read;
+    no pass/fail (the right behaviour is a judgement call per rule 2)."""
+    from backend import get_ai_answer
+
+    for role, question in OBSERVE:
+        print("=" * 70)
+        print(f"OBSERVE [{role}] {question}")
+        print("-" * 70)
+        try:
+            result = get_ai_answer(question, role=role)
+            print(result["text"])
+            print(f"\n(מקורות: {[s['doc_id'] for s in result['sources'][:4]]})")
+        except Exception as e:
+            print(f"!! שגיאה: {type(e).__name__}: {e}")
+        print()
 
 
 def run_smoke() -> int:
@@ -453,10 +645,14 @@ def main() -> int:
     failures = run_structural()
     failures += run_golden()
     failures += run_dirty()
+    run_xfail()
     if "--no-llm" not in sys.argv:
         failures += run_followup()
         failures += run_noscope()
         failures += run_smoke()
+    if "--facts" in sys.argv:
+        failures += run_facts()
+        run_observe()
 
     print("=" * 70)
     if failures:
