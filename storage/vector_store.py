@@ -253,8 +253,9 @@ def index_document(doc: dict, save_cache: bool = True) -> int:
 
 
 def _index_document_locked(doc: dict, save_cache: bool) -> int:
-    global _corpus
+    global _corpus, _vocab
     _corpus = None  # upserts invalidate the in-memory corpus cache
+    _vocab = None   # ...and the typo-gate vocabulary derived from it
     col = _get_collection()
     doc_id = doc.get("document_id", "unknown")
     title = doc.get("title", "")
@@ -544,6 +545,45 @@ def _term_variants(word: str) -> set[str]:
         if len(v) > 5 and v[-2:] in ("ים", "ות"):
             variants.add(v[:-2])
     return variants
+
+
+# Lazy vocabulary of every match-form in the indexed corpus (finals-folded,
+# punctuation-stripped words). Built once (~0.2s over ~400K corpus words) and
+# invalidated together with the corpus cache on upsert.
+_vocab: set[str] | None = None
+
+
+def _get_vocab() -> set[str]:
+    global _vocab
+    if _vocab is None:
+        vocab = set()
+        for c in _get_corpus():
+            for w in c["text"].split():
+                w = w.strip("?.,:;!\"'()[]").translate(_FINALS)
+                if len(w) >= 2:
+                    vocab.add(w)
+        _vocab = vocab
+    return _vocab
+
+
+def has_unknown_terms(query: str) -> bool:
+    """True when some content word of the query matches nothing in the corpus
+    under the same variant rules retrieval itself uses (prefix stripping,
+    light stemming, finals folding).
+
+    This is the typo-normalization gate: a word no chunk contains in any form
+    is either a typo or off-corpus vocabulary — both are exactly the cases
+    where a Haiku spelling pass can help and the ~1.5s it costs is worth it.
+    When every word is known, raw retrieval already sees everything the
+    normalizer could show it, so the caller skips the LLM round-trip."""
+    vocab = _get_vocab()
+    if not vocab:
+        return False
+    for word in query.split():
+        variants = _term_variants(word)
+        if variants and not any(v in vocab for v in variants):
+            return True
+    return False
 
 
 def _lexical_rerank(query: str, candidates: list[dict]) -> None:

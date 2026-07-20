@@ -10,7 +10,11 @@
    נבדק שהפקודה הנכונה מופיעה בין 3 הקטעים המובילים שנשלפו. רץ בלי LLM,
    בחינם, ולכן משמש שער לפני כל שינוי (מודל, קליטת פקודות, כוונון rerank).
 2. שאלות "מלוכלכות" (DIRTY) — אותם נושאים בניסוח של חייל אמיתי: סלנג,
-   שגיאות כתיב, שאלות קצרות ומעורפלות. רץ בלי LLM כמו סט הזהב.
+   שגיאות כתיב קלות, שאלות קצרות ומעורפלות. רץ בלי LLM כמו סט הזהב —
+   בודק מה האינדקס סופג גולמי, בלי נרמול.
+2ב. שגיאות הקלדה (TYPOS) — טיפו כבד במסלול הייצור של שאלה ראשונה: נרמול
+   Haiku ואז אחזור; + חוזה NOCHANGE — שאלות נקיות חוזרות מהנרמול כלשונן.
+   קריאת Haiku לשאלה (זניח), לכן בשכבת ה-LLM ולא ב---no-llm.
 3. שאלות המשך (FOLLOWUP) — תרחישי שיחה שבהם שאלת ההמשך חסרת הקשר;
    נבדק ששכתוב השאילתה (Haiku) מחזיר את הפקודה הנכונה לטופ-3.
 4. מחוץ למאגר (NOSCOPE) — שאלות שאין להן תשובה בפקודות הטעונות; נבדק
@@ -166,16 +170,34 @@ DIRTY = [
     ("soldier",   "לא סיימתי בית ספר, הצבא נותן להשלים לימודים?", "37.0102"),
 ]
 
-# Real pilot questions whose retrieval is KNOWN-BROKEN — printed every run so
-# the gap stays visible, but not counted as failures (the gate stays green).
-# (role, question, expected_doc_id), same contract as GOLDEN.
-XFAIL_RETRIEVAL = [
-    # 2026-07-10, refused live and still failing: heavy typos ("חפשש",
-    # "להתשחרר") defeat both the embedding and the lexical variants —
-    # PM-35.0402 doesn't crack the top-5. Candidate fix: run the Haiku
-    # rewrite on first questions too (today it fires only on follow-ups),
-    # normalizing typos before retrieval.
+# (role, question, expected_doc_id) — heavy-typo questions that go through the
+# PRODUCTION first-question path: Haiku normalization, then retrieval. DIRTY
+# above tests what the index absorbs raw; this layer tests what normalization
+# must rescue. Runs in the LLM section (a Haiku call per question, ~nothing).
+TYPOS = [
+    # the 2026-07-10 pilot question that was refused live and stayed broken
+    # until normalization existed ("חפשש", "להתשחרר")
     ("soldier", "כמה ימי חפשש מגיע לי אם אני אמור להתשחרר בקרוב?", "PM-35.0402"),
+    ("soldier", "כמה ימי חפשה שנתית מגיעים לחיל סדיר?", "PM-35.0402"),
+    # real pilot typo "טלווזיה" (the club order must lead even typo'd)
+    ("soldier", "מותר לראות טלווזיה במועדון ביחידה?", "35.0818"),
+    # real pilot phrasing "עליתי משמשרת" (משמרת)
+    ("soldier", "אם עליתי משמשרת בלילה עד מתי מותר לי לישון?", "PM-33.0213"),
+]
+
+# (role, question) — CLEAN questions that must come back from the normalizer
+# byte-identical. This is the always-on rewrite's safety contract: it repairs
+# typos and touches nothing else, so every retrieval result the golden/dirty
+# sets certified stays valid in production. Mirrors entries from GOLDEN/DIRTY/
+# FACTS (kept verbatim copies — drift here is harmless, they're just clean
+# questions).
+NOCHANGE = [
+    ("soldier",   "כמה ימי מחבוש אפשר להטיל על חייל בדין משמעתי?"),
+    ("commander", "באילו תנאים מותר למנוע חופשה מחייל?"),
+    ("reserve",   "האם חייל מילואים צריך אישור כדי לצאת לחוץ לארץ?"),
+    ("soldier",   "כמה ימי חופש מגיעים לסדירניק בשנה?"),
+    ("soldier",   "המפקד דופק אותי כל הזמן, למי אפשר להתלונן עליו?"),
+    ("soldier",   "איזו עזרה בדיור מגיעה לי כחייל בודד?"),
 ]
 
 # (role, question) — questions whose answer is NOT in any ingested order
@@ -337,26 +359,52 @@ def run_dirty() -> int:
     return _run_retrieval_set("שאלות מלוכלכות", DIRTY)
 
 
-def run_xfail() -> None:
-    """Known-broken retrieval cases: printed for visibility, never counted.
-    A case that starts passing is called out so it can graduate to DIRTY."""
+def run_typos() -> int:
+    """The first-question production path on heavy typos: Haiku normalization
+    then retrieval, plus the NOCHANGE identity contract on clean questions."""
+    from backend import _standalone_question
+
+    failures = 0
     print("=" * 70)
-    print(f"XFAIL — {len(XFAIL_RETRIEVAL)} כשלי אחזור ידועים (לא נספרים)")
+    print(f"שגיאות הקלדה — {len(TYPOS)} שאלות (נרמול + אחזור בטופ-{TOP_K})")
     print("=" * 70)
-    for role, question, expected in XFAIL_RETRIEVAL:
+    for role, question, expected in TYPOS:
         try:
-            chunks = retrieve_for_role(question, role)
+            rewritten = _standalone_question(question, None)
+            chunks = retrieve_for_role(rewritten, role)
             top_docs = []
             for c in chunks:
                 if c["doc_id"] not in top_docs:
                     top_docs.append(c["doc_id"])
             ok = expected in top_docs[:TOP_K]
-        except Exception:
-            ok = False
+        except Exception as e:
+            print(f"✗ [{role}] {question}\n    !! שגיאה: {type(e).__name__}: {e}")
+            failures += 1
+            continue
         if ok:
-            print(f"🎉 [{role}] {question} — עבר! אפשר להעביר ל-DIRTY")
+            print(f"✓ [{role}] {question}  ←  {rewritten}")
         else:
-            print(f"⚠ [{role}] {question} (עדיין נכשל, ציפינו {expected})")
+            print(f"✗ [{role}] {question}  ←  {rewritten}")
+            print(f"    ציפינו {expected}, קיבלנו: {top_docs[:TOP_K]}")
+            failures += 1
+
+    print("-" * 70)
+    print(f"NOCHANGE — {len(NOCHANGE)} שאלות נקיות (חייבות לחזור כלשונן)")
+    for role, question in NOCHANGE:
+        try:
+            rewritten = _standalone_question(question, None)
+            ok = rewritten == question
+        except Exception as e:
+            print(f"✗ [{role}] {question}\n    !! שגיאה: {type(e).__name__}: {e}")
+            failures += 1
+            continue
+        if ok:
+            print(f"✓ [{role}] {question}")
+        else:
+            print(f"✗ [{role}] {question}")
+            print(f"    הנרמול שינה שאלה נקייה ל: {rewritten}")
+            failures += 1
+    return failures
 
 
 def run_noscope() -> int:
@@ -645,8 +693,8 @@ def main() -> int:
     failures = run_structural()
     failures += run_golden()
     failures += run_dirty()
-    run_xfail()
     if "--no-llm" not in sys.argv:
+        failures += run_typos()
         failures += run_followup()
         failures += run_noscope()
         failures += run_smoke()
