@@ -19,10 +19,25 @@
     "raw": null,
     "marker": null
   },
+  "21.0113": {
+    "date": null,
+    "raw": null,
+    "marker": null
+  },
+  "21.0210": {
+    "date": null,
+    "raw": null,
+    "marker": null
+  },
   "3.0501": {
     "date": null,
     "raw": null,
     "marker": null
+  },
+  "30.0106": {
+    "date": "2021-11-03",
+    "raw": "3 בנובמבר2021",
+    "marker": "tokef-clause"
   },
   "30.33": {
     "date": null,
@@ -34,10 +49,25 @@
     "raw": "יולי98",
     "marker": "tokef-clause;2digit-year;month-precision"
   },
+  "31.0109": {
+    "date": "1997-12-01",
+    "raw": "דצמ97",
+    "marker": "tokef-clause;2digit-year;month-precision"
+  },
+  "31.0116": {
+    "date": "1949-03-01",
+    "raw": "מרס49",
+    "marker": "tokef-clause;2digit-year;month-precision"
+  },
   "31.0203": {
     "date": "1988-12-01",
     "raw": "דצמ88",
     "marker": "tokef-clause;2digit-year;month-precision"
+  },
+  "31.0308": {
+    "date": "1993-10-01",
+    "raw": "אוק93",
+    "marker": "corner-stamp;2digit-year;month-precision"
   },
   "31.0513": {
     "date": "2026-01-21",
@@ -59,6 +89,11 @@
     "raw": "פבר79",
     "marker": "corner-stamp;2digit-year;month-precision"
   },
+  "31.0605": {
+    "date": null,
+    "raw": null,
+    "marker": null
+  },
   "31.0701": {
     "date": "2020-09-17",
     "raw": "17 בספטמבר 2020",
@@ -73,6 +108,11 @@
     "date": "2026-02-03",
     "raw": "3 בפברואר2026",
     "marker": "published-line"
+  },
+  "32.0401": {
+    "date": "1987-04-01",
+    "raw": "אפר87",
+    "marker": "corner-stamp;2digit-year;month-precision"
   },
   "32.0402": {
     "date": "1987-04-01",
@@ -94,10 +134,20 @@
     "raw": "10 במארס 2008",
     "marker": "tokef-clause"
   },
+  "33.0120": {
+    "date": null,
+    "raw": null,
+    "marker": null
+  },
   "33.0145": {
     "date": null,
     "raw": null,
     "marker": null
+  },
+  "33.0146": {
+    "date": "1948-01-01",
+    "raw": "ינו48",
+    "marker": "corner-stamp;2digit-year;month-precision"
   },
   "33.0219": {
     "date": "2026-01-21",
@@ -110,6 +160,11 @@
     "marker": null
   },
   "33.0336": {
+    "date": null,
+    "raw": null,
+    "marker": null
+  },
+  "33.0351": {
     "date": null,
     "raw": null,
     "marker": null
@@ -129,15 +184,55 @@
     "raw": null,
     "marker": null
   },
+  "35.0205": {
+    "date": "1997-02-01",
+    "raw": "פבר97",
+    "marker": "corner-stamp;2digit-year;month-precision"
+  },
+  "35.0206": {
+    "date": null,
+    "raw": null,
+    "marker": null
+  },
+  "35.0209": {
+    "date": "2022-02-02",
+    "raw": "02 בפברואר , 2022",
+    "marker": "updated-line"
+  },
   "35.0210": {
     "date": "1996-05-01",
     "raw": "מאי96",
     "marker": "tokef-clause;2digit-year;month-precision"
   },
+  "35.0227": {
+    "date": "2020-06-25",
+    "raw": "25.06.2020",
+    "marker": "updated-line"
+  },
   "35.0234": {
     "date": "2021-02-14",
     "raw": "14 בפברואר2021",
     "marker": "tokef-clause"
+  },
+  "35.0307": {
+    "date": "1998-09-01",
+    "raw": "ספט98",
+    "marker": "corner-stamp;2digit-year;month-precision"
+  },
+  "35.0803": {
+    "date": "1959-11-01",
+    "raw": "נוב59",
+    "marker": "tokef-clause;2digit-year;month-precision"
+  },
+  "35.0805": {
+    "date": "1978-03-01",
+    "raw": "מרס78",
+    "marker": "corner-stamp;2digit-year;month-precision"
+  },
+  "35.0807": {
+    "date": null,
+    "raw": null,
+    "marker": null
   },
   "35.0808": {
     "date": "2021-02-14",
@@ -145,6 +240,11 @@
     "marker": "tokef-clause"
   },
   "35.0818": {
+    "date": null,
+    "raw": null,
+    "marker": null
+  },
+  "36.0106": {
     "date": null,
     "raw": null,
     "marker": null
@@ -174,6 +274,11 @@
     "raw": "במרס81",
     "marker": "cancelled-clause;2digit-year;month-precision"
   },
+  "36.0513": {
+    "date": "2000-06-01",
+    "raw": "יוני0002",
+    "marker": "tokef-clause;digits-reversed;month-precision"
+  },
   "36.0527": {
     "date": "2019-03-01",
     "raw": "22 במרץ2019",
@@ -184,10 +289,20 @@
     "raw": "מארס 2008",
     "marker": "header-window;month-precision"
   },
+  "38.0122": {
+    "date": "2003-09-21",
+    "raw": "21 בספטמבר2003",
+    "marker": "tokef-clause"
+  },
   "5040.05": {
     "date": "2006-10-01",
     "raw": "באוקטובר6002",
     "marker": "standalone-stamp;digits-reversed;month-precision"
+  },
+  "56.0131": {
+    "date": null,
+    "raw": null,
+    "marker": null
   },
   "58.0202": {
     "date": "2023-04-19",
@@ -198,6 +313,11 @@
     "date": "2024-05-12",
     "raw": "2024במאי12",
     "marker": "published-line"
+  },
+  "61.0113": {
+    "date": null,
+    "raw": null,
+    "marker": null
   },
   "PM-33.0137": {
     "date": "1958-03-01",

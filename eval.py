@@ -131,7 +131,7 @@ GOLDEN = [
     # shipped with no eval coverage at all (raw_text-only ingestion). The
     # medical-profile question moved here FROM NOSCOPE — it was hallucination
     # bait until 32.0402 was ingested and now has a real in-corpus answer.
-    ("soldier",   "איך אני יכול להוריד פרופיל רפואי?", "32.0402"),
+    ("soldier",   "איך אני יכול להוריד פרופיל רפואי?", ("32.0402", "32.0401")),
     ("commander", "מה הנוהל כשנראה שמצב הבריאות של חייל שלי השתנה?", "32.0402"),
     ("soldier",   "הייתי מעורב בתאונת דרכים עם רכב צבאי — מי מוסמך להתלות את הרישיון הצבאי שלי?", "33.1104"),
     ("soldier",   "אילו זכויות מגיעות לחיילת בהריון במהלך השירות?", "36.0406"),
@@ -140,6 +140,33 @@ GOLDEN = [
     ("commander", "מתי אפשר לשלול מחייל משוחרר את מענק השחרור והפיקדון שלו?", "35.0234"),
     ("commander", "איזה מענק מקבל משרת קבע בסיום שירותו ומה נחשב לשירות תקין לחישובו?", "20.0502"),
     ("soldier",   "איזו דרגת רישיון צבאי צריך כדי לנהוג ברכב משא כבד?", "58.0202"),
+    # batch 7 (2026-07-20): 24 orders ingested from the site's canonical HTML
+    # (ingestion/html_ingest.py) — one golden question per order, soldier
+    # daily-life first, then reserve and career money
+    ("soldier",   "אני שוכר דירה במהלך השירות — הצבא משתתף בשכר הדירה שלי?", "35.0307"),
+    ("soldier",   "המצב הכלכלי בבית קשה — איך מבקשים הקלות בתנאי השירות?", "35.0807"),
+    ("soldier",   "התחתנתי במהלך השירות — מגיע לי מענק מהצבא?", "35.0805"),
+    ("soldier",   "אפשר לקבל הלוואה מהצבא כשאני בשירות חובה?", "35.0803"),
+    ("soldier",   "אילו תשלומים מגיעים לי מהצבא כשאני משתחרר משירות חובה?", "35.0205"),
+    ("soldier",   "מתי מגיעים לי דמי כלכלה מהצבא?", "56.0131"),
+    ("soldier",   "האם נסיעה באוטובוס חינם לחיילים במדים?", "33.0120"),
+    ("soldier",   "מותר לי להשתמש בטלפון האישי שלי בתוך הבסיס?", "21.0113"),
+    ("soldier",   "מותר לי לצלם תמונות בתוך הבסיס?", "21.0210"),
+    ("soldier",   "איך מגישים בקשה לעבור תפקיד או יחידה?", "31.0308"),
+    ("soldier",   "אפשר לבקש שיבוץ קרוב לבית מסיבה נפשית?", "31.0116"),
+    ("soldier",   "מה זה תרגול נוסף ומי מוסמך להטיל אותו עליי?", "33.0351"),
+    ("soldier",   "האם המפקד שלי יכול לראות מידע מהתיק הרפואי שלי?", "61.0113"),
+    ("soldier",   "משתחרר מהצבא על סעיף רפואי — איך מגישים בקשה להכרה בנכות?", "38.0122"),
+    ("soldier",   "מי קובע את הפרופיל הרפואי שלי ובאיזה הליך?", ("32.0401", "32.0402")),
+    ("soldier",   "חיילת שמתחתנת — יכולה להשתחרר משירות חובה?", "31.0109"),
+    ("soldier",   "האם הרשעה בדין משמעתי בצבא נרשמת במרשם הפלילי?", "33.0146"),
+    ("soldier",   "אילו תעודות צבאיות מנפיקים לחייל ולמה הן משמשות?", "30.0106"),
+    ("reserve",   "אילו תשלומים מגיעים לי על שירות מילואים?", "35.0206"),
+    ("reserve",   "מה זה תגמול מיוחד למילואים ומי זכאי לו?", "35.0209"),
+    ("reserve",   "גויסתי בצו 8 ויש לי נסיבות אישיות קשות — למי פונים לתיאום השירות?", "31.0605"),
+    ("commander", "איך עובד הסדר הפנסיה למשרתי הקבע החדשים?", "36.0106"),
+    ("commander", "אני בקבע ושוכר דירה — מגיעה לי השתתפות בשכר הדירה?", "36.0513"),
+    ("commander", "חייל שהיה במעצר וזוכה בדין — מקבל חזרה את השכר שנוכה לו?", "35.0227"),
 ]
 
 # (role, question, expected_doc_id) — same contract as GOLDEN, but phrased the
@@ -168,6 +195,10 @@ DIRTY = [
     ("soldier",   "עשיתי תאונה עם רכב צבאי, יקחו לי את הרישיון?", "33.1104"),
     ("soldier",   "חיילת בהריון, מה מגיע לה?", "36.0406"),
     ("soldier",   "לא סיימתי בית ספר, הצבא נותן להשלים לימודים?", "37.0102"),
+    # batch 7 (2026-07-20): the HTML-ingested daily-life orders
+    ("soldier",   "יש חינם באוטובוסים לחיילים?", "33.0120"),
+    ("soldier",   "מותר פלאפון בבסיס?", "21.0113"),
+    ("soldier",   "בא לי לעבור יחידה, איך עושים את זה?", "31.0308"),
 ]
 
 # (role, question, expected_doc_id) — heavy-typo questions that go through the
@@ -207,10 +238,13 @@ NOCHANGE = [
 # here moved to GOLDEN when 32.0402 (שינוי כושר בריאותי) was ingested.
 NOSCOPE = [
     ("soldier",   "מה תנאי הקבלה לקורס טיס?"),
-    ("soldier",   "מה גובה הפיקדון והמענק שמקבלים אחרי השחרור?"),
     ("soldier",   "אילו הטבות מגיעות לחייל משוחרר בלימודים אקדמיים?"),
-    ("commander", "מה הנוהל לחיוב חייל על אובדן ציוד צבאי?"),
     ("reserve",   "כמה ימי מילואים מותר לקרוא לי בשנה לפי החוק?"),
+    # retired to OBSERVE after the 2026-07-21 batch-7 expansion: the pikadon
+    # question (35.0234/35.0205 now state timings and purposes) and the
+    # equipment-charge question (31.0103 carries the forms procedure) both
+    # have legitimate partial answers now — a cited rule-2 answer is correct
+    # behaviour there, which this layer would miscount as fabrication.
 ]
 
 # The sentence the system prompt mandates for missing information. When it
@@ -320,6 +354,9 @@ OBSERVE = [
     ("soldier", "האם מותר לראות טלוויזיה במועדון בשבת?"),
     # pilot, refused: 2.0101 covers approvals (purpose-bound, ≤6 months)
     ("soldier", "מסוכן באזור שאני גר — אפשר לבקש אישור לשאת נשק הביתה גם אם אני לא חייב?"),
+    # ex-NOSCOPE (see there): rule-2 partial answers are the right behaviour
+    ("soldier", "מה גובה הפיקדון והמענק שמקבלים אחרי השחרור?"),
+    ("commander", "מה הנוהל לחיוב חייל על אובדן ציוד צבאי?"),
 ]
 
 TOP_K = 3
@@ -331,13 +368,17 @@ def _run_retrieval_set(name: str, cases: list) -> int:
     print(f"{name} — {len(cases)} שאלות אחזור (הפקודה הנכונה בטופ-{TOP_K})")
     print("=" * 70)
     for role, question, expected in cases:
+        # `expected` is one doc id, or a tuple when sibling orders both answer
+        # the question legitimately (e.g. 32.0401 קביעה / 32.0402 שינוי for
+        # "להוריד פרופיל") — any of them in the top-K passes
+        accepted = expected if isinstance(expected, tuple) else (expected,)
         try:
             chunks = retrieve_for_role(question, role)
             top_docs = []
             for c in chunks:  # distinct docs, in rank order
                 if c["doc_id"] not in top_docs:
                     top_docs.append(c["doc_id"])
-            ok = expected in top_docs[:TOP_K]
+            ok = any(e in top_docs[:TOP_K] for e in accepted)
         except Exception as e:
             print(f"✗ [{role}] {question}\n    !! שגיאה: {type(e).__name__}: {e}")
             failures += 1
