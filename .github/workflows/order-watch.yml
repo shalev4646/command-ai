@@ -1,0 +1,62 @@
+# Monthly watch over אתר הפקודות: did any order in our corpus change?
+# Opens/updates a GitHub Issue (which emails the repo owner) when drift is
+# detected. Manual run: Actions tab -> order-watch -> Run workflow.
+name: order-watch
+
+on:
+  schedule:
+    - cron: '0 6 3 * *'   # 3rd of every month, 06:00 UTC (~09:00 IL)
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Playwright Chromium
+        run: |
+          pip install playwright
+          playwright install --with-deps chromium
+
+      - name: Check the orders portal
+        id: watch
+        env:
+          PYTHONUNBUFFERED: '1'
+        run: python _check_updates.py --ci
+
+      - name: Publish report to run summary
+        if: always()
+        run: |
+          if [ -f storage/order_watch_report.md ]; then
+            cat storage/order_watch_report.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Open / update the alert issue
+        if: steps.watch.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TITLE='🔔 התעדכנו פקודות בפורטל — נדרש רענון קורפוס'
+          BODY_FILE=storage/order_watch_report.md
+          EXISTING=$(gh issue list --state open --search "$TITLE in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body-file "$BODY_FILE"
+          else
+            gh issue create --title "$TITLE" --body-file "$BODY_FILE"
+          fi
+
+      - name: Fail loudly if the portal was unreachable
+        if: steps.watch.outputs.changed == 'error'
+        run: |
+          echo 'הפורטל לא היה נגיש מה-runner (חסימת WAF?) — ראו את הלוג של הצעד הקודם.'
+          exit 1
