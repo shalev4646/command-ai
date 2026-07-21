@@ -329,9 +329,10 @@ FACTS = [
      [["7", "10", "14", "שבעה", "עשרה"], ["35.0402", "חופשות לחיילים"]]),
     ("soldier", "כמה ימי חופשה שנתית מגיעים לחייל בשירות חובה?", "PM-35.0402",
      [["18"], ["35.0402", "חופשות לחיילים"]]),
-    # moved from NOSCOPE — 32.0402 is exactly the profile-change procedure
-    ("soldier", "איך אני יכול להוריד פרופיל רפואי?", "32.0402",
-     [["ועדה רפואית"], ["32.0402", "כושר בריאותי"]]),
+    # moved from NOSCOPE — the profile twins both answer: 32.0402 is the
+    # change procedure, 32.0401 the determination/authority order
+    ("soldier", "איך אני יכול להוריד פרופיל רפואי?", ("32.0402", "32.0401"),
+     [["ועדה רפואית"], ["32.0402", "32.0401", "כושר בריאותי"]]),
     ("soldier", "הייתי מעורב בתאונה עם רכב צבאי — באילו תנאים יתלו לי את הרישיון הצבאי?", "33.1104",
      [["יסוד להאשים", "עבירה", "ממצ\"פ", "שיטור"], ["33.1104", "התליית", "להתלות"]]),
     ("commander", "מתי אפשר לשלול מחייל משוחרר את מענק השחרור והפיקדון?", "35.0234",
@@ -522,13 +523,16 @@ def run_facts() -> int:
             continue
         answer = result["text"]
         top_sources = [s["doc_id"] for s in result["sources"][:TOP_K]]
+        # tuple = sibling orders that both answer legitimately (same contract
+        # as the retrieval sets)
+        accepted = expected_doc if isinstance(expected_doc, tuple) else (expected_doc,)
         problems = []
         # a BARE refusal is one that opens the answer (the shape rule 2
         # mandates). A nuanced answer that delivers the facts and only then
         # qualifies ("לחייל שאינו בודד — לא נקבע") must not fail here.
         if _MANDATED_REFUSAL in " ".join(answer.split())[:160]:
             problems.append("סירב למרות שהתשובה קיימת בפקודות")
-        if expected_doc not in top_sources:
+        if not any(e in top_sources for e in accepted):
             problems.append(f"הפקודה הצפויה לא במקורות המובילים ({top_sources})")
         for group in fact_groups:
             if not any(alt in answer for alt in group):

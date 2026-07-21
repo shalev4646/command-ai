@@ -326,6 +326,25 @@ components.html(
                 }
             } catch (e) {}
         };
+        // heal = measurement + keyboard-scroll-residue reset. iOS pans/
+        // scrolls the page for the keyboard and does not always restore it
+        // on close ("send" taps especially): every fixed element (header,
+        // composer strip) then sits mid-screen while the streamed answer
+        // flows below it, until something re-layouts (2026-07-21 phone
+        // report). The app never scrolls the BODY legitimately — all
+        // scrolling is inner-section — so with the keyboard closed any
+        // residual window/visual-viewport offset is keyboard debris and is
+        // safe to zero.
+        var heal = function () {
+            setH();
+            try {
+                if (!window.__caiSA) return;
+                var ae = document.activeElement;
+                if (ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName) && vvNow() < glassH() * 0.95) return;
+                var vv = window.visualViewport;
+                if ((window.scrollY || 0) > 2 || (vv && vv.offsetTop > 2)) window.scrollTo(0, 0);
+            } catch (e) {}
+        };
         if (!window.__caiVVH) {
             window.__caiVVH = true;
             [0, 300, 700, 1300, 2200, 3500, 5200, 7500].forEach(function (ms) { setTimeout(setH, ms); });
@@ -336,17 +355,28 @@ components.html(
                 clearInterval(iv);
                 // permanent slow resync: a mid-session stuck state (--cai-vvh
                 // pinned to a keyboard pane after focus tracking missed the
-                // close) must heal even when no viewport event ever fires again
-                setInterval(setH, 1500);
+                // close, or keyboard scroll residue) must heal even when no
+                // viewport event ever fires again
+                setInterval(heal, 1500);
             }, 30000);
             window.addEventListener("orientationchange", function () { setTimeout(setH, 400); });
             window.addEventListener("resize", setH);
             window.addEventListener("pageshow", setH);
-            // the ✓-dismiss blurs the composer — remeasure right after
+            // the send/✓-dismiss taps blur the composer — remeasure AND clear
+            // the keyboard's scroll residue right after, so the composer is
+            // back at the bottom for the whole streamed answer
             window.addEventListener("focusout", function () {
-                [80, 350, 800].forEach(function (ms) { setTimeout(setH, ms); });
+                [80, 350, 800].forEach(function (ms) { setTimeout(heal, ms); });
             }, true);
-            if (window.visualViewport) window.visualViewport.addEventListener("resize", setH);
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener("resize", setH);
+                // the keyboard pan fires vv-scroll; once focus is gone the
+                // trailing offset is debris — heal shortly after it settles
+                window.visualViewport.addEventListener("scroll", function () {
+                    clearTimeout(window.__caiHealT);
+                    window.__caiHealT = setTimeout(heal, 250);
+                });
+            }
             // ── role-pick navigation veil ── Streamlit tears the entry screen
             // down piecewise on the role tap (header vanishes, cards float
             // ~0.2-0.9s on 3G — the "small stall" the user flagged). The tap
@@ -3769,6 +3799,12 @@ def _verdict_chip(content: str) -> tuple[str | None, str]:
             _QUAL_CONFLICT_RE.search(qual)                       # compound ruling
             or (mt.group("neg") and mt.group("term") == "אסור")  # לא אסור — double negative, no honest single color
             or (qual and mt.group("term") in ("ניתן", "אפשר") and not qual.startswith("ל"))  # ניתן צו... — passive verb, not the modal
+            # a BARE authority/modal term answers nothing on its own — a
+            # "✓ מוסמך" pill left the pilot user asking "מוסמך למה?"
+            # (2026-07-21 phone report). מותר/אסור/זכאי/פטור/חייב carry a
+            # complete ruling alone; מוסמך/רשאי/ניתן/אפשר need their object
+            # ("מוסמך להטיל עד 30 יום") or they stay body text.
+            or (not qual and mt.group("term") in ("מוסמך", "רשאי", "ניתן", "אפשר"))
             # a BARE verdict against an alternate ';' clause ("אסור; מותר
             # בתנאים") is compound — a flat chip would contradict the body's
             # first words. A QUALIFIED verdict is scoped and honest next to
