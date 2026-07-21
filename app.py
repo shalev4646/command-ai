@@ -901,6 +901,15 @@ html.cai-standalone.cai-kb [data-testid="stBottom"] {{
     /* iOS often reports the pane in ONE resize at animation end — animate
        the jump so the strip rides up instead of teleporting */
     transition: top .18s cubic-bezier(.2,.7,.2,1);
+    /* 19:22 phone shot: the pill floated high above the glue line — the
+       strip drags its home-indicator inset (env sab ≈ 34px) although that
+       zone is behind the keyboard now; and the upward-fading tint read as
+       a hazy block against the dimmed page. Tight padding + no tint/blur:
+       the wash separates content, the near-opaque pill floats clean. */
+    padding-bottom: 10px;
+    background: transparent !important;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
 }}
 /* a residual reveal-pan uncovers the canvas below the fixed underlay —
    match it to the gradient tail so it can never read as a black band
@@ -914,7 +923,7 @@ html.cai-standalone body::after {{
     background: rgba(11,13,7,0); pointer-events: none;
     transition: background .22s ease;
 }}
-html.cai-standalone.cai-kb body::after {{ background: rgba(11,13,7,.5); }}
+html.cai-standalone.cai-kb body::after {{ background: rgba(11,13,7,.55); }}
 /* typing emphasis: the translucent pill goes near-opaque over the wash,
    and the disclaimer clears the strip (tighter hug, less noise) */
 html.cai-standalone.cai-kb [data-testid="stChatInput"] {{
