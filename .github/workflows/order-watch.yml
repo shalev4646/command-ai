@@ -71,16 +71,19 @@ jobs:
         run: |
           TODAY=$(TZ=Asia/Jerusalem date +%d.%m.%Y)
           BODY_FILE=storage/order_watch_report.md
+          # --assignee: an assignment fires a "Participating" notification, so
+          # the owner gets the email even if repo watching is ever turned off.
+          OWNER='shalev4646'
           if [ "${{ steps.watch.outputs.changed }}" = "true" ]; then
             TITLE='🔔 התעדכנו פקודות בפורטל — נדרש רענון קורפוס'
             EXISTING=$(gh issue list --state open --search "$TITLE in:title" --json number --jq '.[0].number // empty')
             if [ -n "$EXISTING" ]; then
               gh issue comment "$EXISTING" --body-file "$BODY_FILE"
             else
-              gh issue create --title "$TITLE ($TODAY)" --body-file "$BODY_FILE"
+              gh issue create --title "$TITLE ($TODAY)" --body-file "$BODY_FILE" --assignee "$OWNER"
             fi
           else
-            N=$(gh issue create --title "✅ אין פקודות מעודכנות — בדיקת $TODAY" --body-file "$BODY_FILE" | grep -o '[0-9]*$')
+            N=$(gh issue create --title "✅ אין פקודות מעודכנות — בדיקת $TODAY" --body-file "$BODY_FILE" --assignee "$OWNER" | grep -o '[0-9]*$')
             gh issue close "$N" --comment 'נסגר אוטומטית — הכול מעודכן; המייל נשלח בעת הפתיחה.'
           fi
 
@@ -90,6 +93,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TODAY=$(TZ=Asia/Jerusalem date +%d.%m.%Y)
-          gh issue create --title "⚠️ בדיקת הפקודות נכשלה — $TODAY" \
+          gh issue create --title "⚠️ בדיקת הפקודות נכשלה — $TODAY" --assignee shalev4646 \
             --body 'הפורטל לא היה נגיש מה-runner (חסימת WAF או תקלת רשת). ראו את לוג הריצה ב-Actions; אפשר להריץ שוב ידנית עם Run workflow.'
           exit 1
