@@ -4883,8 +4883,20 @@ for msg_i, msg in enumerate(st.session_state.messages):
                     msg["fb_comment_sent"] = True
                     st.rerun()
 
-# ── Greeting + suggested questions (only when no conversation yet) ──
-if not st.session_state.messages:
+# ── Chat input (always visible, sticky — renders at the viewport bottom
+#    regardless of code position). Routed through the SAME queue as the
+#    suggested-question taps and reran immediately, so the greeting screen
+#    below clears on this run instead of lingering above the first streaming
+#    answer (2026-07-21 phone video: title + all suggested cards stayed
+#    pinned above the conversation for the whole ~18s of the first answer). ──
+if prompt := st.chat_input("שאל על פקודה..."):
+    queue_question(prompt)
+    st.rerun()
+
+# ── Greeting + suggested questions ── shown only before any conversation AND
+# when nothing is queued: the instant a question is asked (tap or type) the
+# welcome block must vanish, or it sits stale above the answer being streamed.
+if not st.session_state.messages and not st.session_state.pending_question:
     _greet = f"היי {html.escape(_dn)}, במה אפשר לעזור?" if _dn else "במה אפשר לעזור?"
     st.markdown(
         f"<div class='cai-greet'>{_greet}</div>"
@@ -4894,17 +4906,13 @@ if not st.session_state.messages:
     for i, q in enumerate(suggested_questions):
         if st.button(q, key=f"sug_{i}", use_container_width=True):
             queue_question(q)
+            st.rerun()
 
 # ── Process pending question ──
 if st.session_state.pending_question:
     q = st.session_state.pending_question
     st.session_state.pending_question = None
     handle_question(q)
-    st.rerun()
-
-# ── Chat input (always visible, sticky) ──
-if prompt := st.chat_input("שאל על פקודה..."):
-    handle_question(prompt)
     st.rerun()
 
 # (the old "auto-collapse the sidebar after role pick" JS is gone — the
