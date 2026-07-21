@@ -1,11 +1,14 @@
-# Monthly watch over אתר הפקודות: did any order in our corpus change?
-# Opens/updates a GitHub Issue (which emails the repo owner) when drift is
-# detected. Manual run: Actions tab -> order-watch -> Run workflow.
+# Tri-weekly watch over אתר הפקודות: did any order in our corpus change?
+# EVERY run opens a GitHub Issue with the full Hebrew report (which emails the
+# repo owner): a clean run gets a "✅ אין פקודות מעודכנות" issue that is closed
+# immediately (the email is sent on creation), a drift run gets/updates an
+# open "🔔" issue. Manual run: Actions tab -> order-watch -> Run workflow.
 name: order-watch
 
 on:
   schedule:
-    - cron: '0 6 3 * *'   # 3rd of every month, 06:00 UTC (~09:00 IL)
+    - cron: '0 6 * * 1'   # every Monday 06:00 UTC; the gate below keeps only
+                          # every 3rd week (anchored to 2026-07-27)
   workflow_dispatch: {}
 
 permissions:
@@ -17,46 +20,76 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      - name: Tri-weekly gate
+        id: gate
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            days=$(( ( $(date -u +%s) - $(date -u -d '2026-07-27' +%s) ) / 86400 ))
+            if [ $(( days % 21 )) -ne 0 ]; then
+              echo "לא שבוע שלישי (יום $days מהעוגן) — מדלגים"
+              echo "run=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo "run=true" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@v4
+        if: steps.gate.outputs.run == 'true'
 
       - uses: actions/setup-python@v5
+        if: steps.gate.outputs.run == 'true'
         with:
           python-version: '3.12'
 
       - name: Install Playwright Chromium
+        if: steps.gate.outputs.run == 'true'
         run: |
           pip install playwright
           playwright install --with-deps chromium
 
       - name: Check the orders portal
         id: watch
+        if: steps.gate.outputs.run == 'true'
         env:
           PYTHONUNBUFFERED: '1'
         run: python _check_updates.py --ci
 
       - name: Publish report to run summary
-        if: always()
+        if: always() && steps.gate.outputs.run == 'true'
         run: |
           if [ -f storage/order_watch_report.md ]; then
             cat storage/order_watch_report.md >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Open / update the alert issue
-        if: steps.watch.outputs.changed == 'true'
+      # Every completed check emails the owner via an issue. Clean runs get a
+      # fresh "✅" issue that is closed right away — the notification email is
+      # dispatched on creation, and the issues list stays tidy.
+      - name: Email the report (issue per run)
+        if: steps.gate.outputs.run == 'true' && steps.watch.outputs.changed != 'error'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TITLE='🔔 התעדכנו פקודות בפורטל — נדרש רענון קורפוס'
+          TODAY=$(TZ=Asia/Jerusalem date +%d.%m.%Y)
           BODY_FILE=storage/order_watch_report.md
-          EXISTING=$(gh issue list --state open --search "$TITLE in:title" --json number --jq '.[0].number // empty')
-          if [ -n "$EXISTING" ]; then
-            gh issue comment "$EXISTING" --body-file "$BODY_FILE"
+          if [ "${{ steps.watch.outputs.changed }}" = "true" ]; then
+            TITLE='🔔 התעדכנו פקודות בפורטל — נדרש רענון קורפוס'
+            EXISTING=$(gh issue list --state open --search "$TITLE in:title" --json number --jq '.[0].number // empty')
+            if [ -n "$EXISTING" ]; then
+              gh issue comment "$EXISTING" --body-file "$BODY_FILE"
+            else
+              gh issue create --title "$TITLE ($TODAY)" --body-file "$BODY_FILE"
+            fi
           else
-            gh issue create --title "$TITLE" --body-file "$BODY_FILE"
+            N=$(gh issue create --title "✅ אין פקודות מעודכנות — בדיקת $TODAY" --body-file "$BODY_FILE" | grep -o '[0-9]*$')
+            gh issue close "$N" --comment 'נסגר אוטומטית — הכול מעודכן; המייל נשלח בעת הפתיחה.'
           fi
 
       - name: Fail loudly if the portal was unreachable
-        if: steps.watch.outputs.changed == 'error'
+        if: steps.gate.outputs.run == 'true' && steps.watch.outputs.changed == 'error'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          echo 'הפורטל לא היה נגיש מה-runner (חסימת WAF?) — ראו את הלוג של הצעד הקודם.'
+          TODAY=$(TZ=Asia/Jerusalem date +%d.%m.%Y)
+          gh issue create --title "⚠️ בדיקת הפקודות נכשלה — $TODAY" \
+            --body 'הפורטל לא היה נגיש מה-runner (חסימת WAF או תקלת רשת). ראו את לוג הריצה ב-Actions; אפשר להריץ שוב ידנית עם Run workflow.'
           exit 1
