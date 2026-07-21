@@ -363,9 +363,26 @@ components.html(
                 if (ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName) && vvNow() < glassH() * 0.95) return;
                 var vv = window.visualViewport;
                 if ((window.scrollY || 0) > 2 || (vv && vv.offsetTop > 2)) window.scrollTo(0, 0);
+                // outer containers must never hold a scroll offset — the
+                // streaming scroll-to-bottom sometimes lands on them (the
+                // 2026-07-21 traveling-composer report). The chat section
+                // (.stMain / stAppScrollToBottomContainer) is NOT touched:
+                // that's the one legitimate scroller.
+                [document.documentElement, document.body,
+                 document.querySelector('.stApp'),
+                 document.querySelector('[data-testid="stAppViewContainer"]')
+                ].forEach(function (el) {
+                    if (el && el.scrollTop > 0) el.scrollTop = 0;
+                });
                 var sb = document.querySelector('[data-testid="stBottom"]');
                 if (sb) {
-                    var gap = vvNow() - sb.getBoundingClientRect().bottom;
+                    var r = sb.getBoundingClientRect();
+                    // the strip's own height feeds the chat section's
+                    // padding-bottom (--cai-sbh), so the fixed overlay never
+                    // hides the last message
+                    if (r.height >= 60 && r.height <= 260)
+                        aroot.style.setProperty("--cai-sbh", Math.round(r.height) + "px");
+                    var gap = vvNow() - r.bottom;
                     if (gap > 60) kick();
                 }
             } catch (e) {}
@@ -752,6 +769,35 @@ html.cai-standalone .st-key-cai_settings,
 html.cai-standalone .st-key-drawer_backdrop,
 html.cai-standalone .st-key-settings_backdrop {{
     height: var(--cai-vvh, 100svh) !important; bottom: auto !important;
+}}
+/* ── streaming scroll runaway + finger-drag (2026-07-21 phone) ──
+   Streamlit's composer strip is STICKY inside the chat scroller. While an
+   answer streams, the auto scroll-to-bottom can land on an OUTER container
+   (and a finger can drag it) — the sticky loses its anchor and travels
+   mid-screen with the answer flowing below it, snapping back only when the
+   stream ends. Structural fix, standalone-scoped: no outer element may
+   scroll at all — the chat section (and the drawer/settings panels) are the
+   only scrollers — and the composer strip is a true fixed overlay pinned to
+   the MEASURED glass bottom (--cai-vvh; bottom:0 trusts the layout viewport,
+   which ghosts larger than the glass on iOS). translateY self-compensates
+   its unknown height; --cai-sbh (measured by the engine, fallback 134px)
+   reserves scroll room so the last message is never hidden under it. */
+html.cai-standalone, html.cai-standalone body,
+html.cai-standalone .stApp,
+html.cai-standalone [data-testid="stAppViewContainer"] {{
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+}}
+html.cai-standalone [data-testid="stBottom"] {{
+    position: fixed !important;
+    top: calc(var(--cai-vvh, 100svh) - var(--cai-vvoff, 0px)) !important;
+    bottom: auto !important;
+    left: 0 !important; right: 0 !important;
+    transform: translateY(-100%);
+    z-index: 99;
+}}
+html.cai-standalone .stMain {{
+    padding-bottom: var(--cai-sbh, 134px) !important;
 }}
 /* iOS Safari "text autosizing" inflates long text blocks (cards, title,
    disclaimer) on the phone only — desktop matched the mock, iPhone didn't.
