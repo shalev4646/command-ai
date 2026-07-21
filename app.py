@@ -5,6 +5,7 @@ from pathlib import Path
 import itertools
 import json
 import random
+import urllib.parse
 import re
 import time
 import traceback
@@ -96,13 +97,33 @@ st.set_page_config(
 
 _patch_boot_shell()
 
+# ── Device profile cookie (cai_profile) — the app's only cross-visit memory.
+# Written by a tiny JS component every run (see _sync_profile_cookie); read
+# here from the WebSocket handshake via st.context.cookies, so a returning
+# visitor lands straight in the chat ("היי שלו") instead of the role picker.
+# Display-only data: the name never reaches the Anthropic API or the server
+# logs. Seeded ONCE per session ("role" key absent) — switch-role/logout set
+# role=None in-session and must not be re-overridden by the stale handshake
+# cookie on the next rerun. ──
+_ck = {}
+try:
+    _raw = st.context.cookies.get("cai_profile")
+    if _raw:
+        _ck = json.loads(urllib.parse.unquote(_raw))
+    if not isinstance(_ck, dict):
+        _ck = {}
+except Exception:
+    _ck = {}
+
 # ── Session state (initialized before theming, since accent depends on role) ──
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "pending_question" not in st.session_state:
     st.session_state.pending_question = None
 if "role" not in st.session_state:
-    st.session_state.role = None
+    st.session_state.role = (
+        _ck.get("role") if _ck.get("role") in ("soldier", "commander", "reserve") else None
+    )
 if "conversation_history" not in st.session_state:
     st.session_state.conversation_history = []
 if "session_id" not in st.session_state:
@@ -116,7 +137,10 @@ if "session_id" not in st.session_state:
 # type/track are folded into the answer ONLY after an explicit "save"
 # (profile_customized), so an untouched user's API turn stays byte-identical to
 # the pre-profile format (backend._compose_user_content). ──
-st.session_state.setdefault("profile_name", "")
+st.session_state.setdefault("profile_name", str(_ck.get("name") or "")[:40])
+# name_asked: the one-time name prompt (gate) was answered or skipped — never
+# nag again on this device, on any later role switch
+st.session_state.setdefault("name_asked", bool(_ck.get("asked")))
 st.session_state.setdefault("service_type", "סדיר")
 st.session_state.setdefault("service_track", "")
 st.session_state.setdefault("profile_customized", False)
@@ -499,8 +523,18 @@ components.html(
             };
             document.addEventListener("click", function (e) {
                 try {
-                    if (e.target && e.target.closest && e.target.closest(
-                        ".st-key-role_soldier, .st-key-role_commander, .st-key-role_reserve"))
+                    if (!e.target || !e.target.closest) return;
+                    // name-gate continue/skip always leads to the chat screen
+                    // (the only buttons inside the gate card are the two submits;
+                    // keyed forms carry no st-key class in 1.58)
+                    if (e.target.closest(".st-key-cai_name_card button")) { veil(); return; }
+                    // a role tap veils ONLY when it goes straight to the chat;
+                    // on a first visit (#cai-gate-pending) it opens the name
+                    // gate, which has no .cai-header — the veil would hang
+                    // opaque until its 4s timeout
+                    if (e.target.closest(
+                        ".st-key-role_soldier, .st-key-role_commander, .st-key-role_reserve")
+                        && !document.getElementById("cai-gate-pending"))
                         veil();
                 } catch (err) {}
             }, true);
@@ -692,6 +726,13 @@ ROLE_META = {
 }
 role_meta = ROLE_META.get(st.session_state.role, ROLE_META["soldier"])
 role_label = role_meta["label"]
+
+
+def _display_name() -> str:
+    """First name for the greeting/pill/avatars — display-only; the full
+    profile_name stays a settings field and is never sent to the API."""
+    n = (st.session_state.get("profile_name") or "").strip()
+    return n.split()[0][:20] if n else ""
 ACCENT = role_meta["accent"]
 ACCENT_HOVER = role_meta["accent_hover"]
 ACCENT_SOFT = role_meta["soft"]
@@ -704,7 +745,10 @@ ACCENT_RGB = ",".join(str(int(ACCENT.lstrip("#")[i:i + 2], 16)) for i in (0, 2, 
 # chat screen needs room under the fixed header band; entry has no header.
 # --cai-sat is the iOS status-bar inset (measured on the shell doc, pushed
 # into this frame by the PWA script) — the band grew by it, so clear it too.
-MAIN_TOP_PADDING = "12px" if st.session_state.role is None else "calc(72px + var(--cai-sat, 0px))"
+# entry-like also covers the name gate (role picked, name not yet asked):
+# the real entry screen keeps rendering under the gate overlay
+_entry_like = st.session_state.role is None or not st.session_state.get("name_asked")
+MAIN_TOP_PADDING = "12px" if _entry_like else "calc(72px + var(--cai-sat, 0px))"
 
 # entry elements stagger in around the boot splash curtain lift (delay 1.15s
 # + .65s travel). 1.35s meant nothing STARTED fading until the lift was 30%
@@ -1123,6 +1167,79 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
 }}
 .st-key-role_soldier button p strong, .st-key-role_commander button p strong, .st-key-role_reserve button p strong {{
     display: block; font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 2px;
+}}
+
+/* ── Name gate (one-time, over the live entry screen): fixed scrim + card.
+   Scrim sits under the splash/veil (9999xx) but over everything else; the
+   entry buttons beneath stay rendered yet unreachable. Card is top-anchored
+   (~15vh) so the iOS keyboard never covers the input. No entrance animation:
+   Streamlit may replace the keyed VB on the text-commit rerun, and a replay
+   would read as a blink. ── */
+.st-key-cai_name_gate {{
+    position: fixed; inset: 0; z-index: 999950;
+    background: rgba(8,10,5,.62);
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: flex-start;
+    padding: calc(var(--cai-sat, 0px) + 15vh) 24px 0;
+}}
+.st-key-cai_name_card {{
+    width: min(320px, 100%); flex: none;
+    background: #1A1E12;
+    border: 1px solid rgba(239,240,232,.14);
+    border-radius: 18px;
+    padding: 20px 18px 16px;
+}}
+.cai-gate-title {{ font: 600 17px Heebo, sans-serif; color: var(--text); text-align: right; }}
+.cai-gate-sub {{ font: 400 12px Heebo, sans-serif; color: rgba(239,240,232,.5);
+    margin: 5px 0 0; text-align: right; line-height: 1.5; }}
+.st-key-cai_name_card [data-testid="stTextInput"] {{ margin: 12px 0 14px; }}
+.st-key-cai_name_card [data-testid="stTextInput"] div[data-baseweb="input"],
+.st-key-cai_name_card [data-testid="stTextInput"] div[data-baseweb="base-input"] {{
+    background-color: rgba(239,240,232,.045) !important;
+    border: 1px solid rgba(239,240,232,.16) !important;
+    border-radius: 14px !important;
+}}
+.st-key-cai_name_card [data-testid="stTextInput"] div[data-baseweb="base-input"] {{ border: none !important; background: transparent !important; }}
+.st-key-cai_name_card [data-testid="stTextInput"] input {{
+    background: transparent !important; color: var(--text) !important;
+    font: 400 15px Heebo, sans-serif !important; direction: rtl;
+    padding: 12px 14px !important;
+}}
+.st-key-cai_name_card [data-testid="stTextInput"] input::placeholder {{
+    color: rgba(239,240,232,.38) !important;
+}}
+/* המשך/דלג side by side even on phones (Streamlit stacks columns <640px) */
+.st-key-cai_name_card [data-testid="stHorizontalBlock"] {{
+    flex-wrap: nowrap !important; gap: 10px !important;
+}}
+.st-key-cai_name_card [data-testid="stHorizontalBlock"] [data-testid="stColumn"] {{
+    width: auto !important; min-width: 0 !important; flex: 1 1 0 !important;
+}}
+/* keep the 5:3 המשך/דלג ratio the nowrap override flattened */
+.st-key-cai_name_card [data-testid="stHorizontalBlock"] [data-testid="stColumn"]:last-child {{
+    flex: .62 1 0 !important;
+}}
+/* the gate form is layout-only: kill the stForm frame (keyed FORMS don't
+   get an st-key-* class in 1.58 — scope through the card container) */
+.st-key-cai_name_card [data-testid="stForm"] {{ border: none !important; padding: 0 !important; }}
+.st-key-cai_name_card [data-testid="stFormSubmitButton"] button {{
+    justify-content: center !important; text-align: center !important;
+    margin-bottom: 0 !important; padding: 11px 0 !important;
+    border-radius: 12px !important;
+}}
+.st-key-cai_name_card button[kind="primaryFormSubmit"] {{
+    background-color: var(--accent) !important;
+    border: 1px solid var(--accent) !important;
+}}
+.st-key-cai_name_card button[kind="primaryFormSubmit"] p {{ color: #14170E !important; font-weight: 600 !important; }}
+.st-key-cai_name_card button[kind="secondaryFormSubmit"] {{
+    background-color: transparent !important;
+    border: 1px solid rgba(239,240,232,.16) !important;
+}}
+.st-key-cai_name_card button[kind="secondaryFormSubmit"] p {{ color: rgba(239,240,232,.6) !important; }}
+@media (hover: hover) {{
+    .st-key-cai_name_card button[kind="primaryFormSubmit"]:hover {{ background-color: var(--accent-hover) !important; border-color: var(--accent-hover) !important; }}
+    .st-key-cai_name_card button[kind="secondaryFormSubmit"]:hover {{ border-color: rgba(239,240,232,.3) !important; }}
 }}
 
 /* ── Chat header: FIXED top bar (sticky can't work here — Streamlit wraps
@@ -1995,8 +2112,35 @@ if _pwa:
         height=0,
     )
 
-# ── Entry / role gate ──
-if st.session_state.role is None:
+# ── Device profile cookie sync — rendered EVERY run (entry, gate and chat)
+# so the cookie always mirrors the live state: role picks, settings name
+# edits, switch-role/logout (role=None) and wipes all land on the next
+# handshake. Also refreshes the 400-day expiry on each visit, which resets
+# Safari's 7-day ITP clock for browser-tab users (installed PWAs are exempt).
+# window.top: the component iframe is sandboxed but same-origin — the cookie
+# must live on the APP document, whose host the WebSocket handshake carries.
+_ck_payload = urllib.parse.quote(json.dumps({
+    "v": 1,
+    "role": st.session_state.role,
+    "name": (st.session_state.get("profile_name") or "")[:40],
+    "asked": bool(st.session_state.get("name_asked")),
+}, ensure_ascii=False), safe="")
+components.html(
+    "<script>try{window.top.document.cookie="
+    f"'cai_profile={_ck_payload};max-age=34560000;path=/;SameSite=Lax'"
+    ";}catch(e){}</script>",
+    height=0,
+)
+
+# ── Entry / role gate + one-time name gate ──
+# The name gate is deliberately NOT st.dialog (dialog close skips the full
+# rerun — the bug that once left the drawer dead). It's an app-owned
+# overlay: the real entry screen keeps rendering underneath, and a fixed
+# scrim + card sit above it. The gate derives from name_asked rather than
+# a session flag so a mid-gate refresh lands back IN the gate (cookie
+# already carries the role) instead of silently dropping the question.
+_name_gate = st.session_state.role is not None and not st.session_state.get("name_asked")
+if st.session_state.role is None or _name_gate:
     st.markdown(
         "<div class='cai-entry'>"
         "<div class='cai-entry-classif'>מערכת פקודות · בלמ\"ס</div>"
@@ -2005,7 +2149,12 @@ if st.session_state.role is None:
         "<div class='cai-entry-sub'>העוזר החכם לפקודות מטכ\"ל</div>"
         "<div class='cai-entry-divider'></div>"
         "<div class='cai-entry-choose'>בחר את סוג הכניסה שלך</div>"
-        "</div>",
+        # marker for the injected nav-veil: a role tap that leads to the name
+        # gate (first visit) must NOT raise the veil — the gate has no
+        # .cai-header, so the veil would sit opaque until its 4s timeout
+        + ("<span id='cai-gate-pending'></span>"
+           if not st.session_state.get("name_asked") else "")
+        + "</div>",
         unsafe_allow_html=True,
     )
 
@@ -2020,6 +2169,42 @@ if st.session_state.role is None:
         st.rerun()
 
     st.markdown("<div class='cai-entry-footer'>בלמ\"ס · לשימוש פנימי בלבד</div>", unsafe_allow_html=True)
+
+    if _name_gate:
+        # scrim (outer container) + card (inner) — plain keyed containers, no
+        # entrance animation on purpose: Streamlit may replace the keyed VB
+        # node on a rerun, which would replay the animation.
+        # st.form is essential, not cosmetic: a bare st.button tap right
+        # after typing loses the race with the text_input blur-commit rerun
+        # (the tap lands on a replaced node — first tap swallowed). The form
+        # bundles the field value and the press into ONE event, and Enter
+        # submits too.
+        with st.container(key="cai_name_gate"):
+            with st.container(key="cai_name_card"):
+                st.markdown(
+                    "<div class='cai-gate-title'>איך קוראים לך?</div>"
+                    "<div class='cai-gate-sub'>לברכה אישית בכניסה · נשמר במכשיר בלבד</div>",
+                    unsafe_allow_html=True,
+                )
+                with st.form(key="cai_name_form", border=False):
+                    st.text_input("שם פרטי", key="gate_name_w",
+                                  label_visibility="collapsed",
+                                  placeholder="השם הפרטי שלך", max_chars=20)
+                    _gc1, _gc2 = st.columns([5, 3], gap="small")
+                    _gate_go = _gc1.form_submit_button(
+                        "המשך", use_container_width=True, type="primary")
+                    _gate_skip = _gc2.form_submit_button(
+                        "דלג", use_container_width=True)
+                if _gate_go or _gate_skip:
+                    if _gate_go:
+                        _nm = (st.session_state.get("gate_name_w") or "").strip()
+                        if _nm:
+                            # display-only: feeds the greeting/pill and seeds
+                            # the settings "שם מלא" field; never sent to the API
+                            st.session_state.profile_name = _nm[:40]
+                    st.session_state.name_asked = True
+                    st.rerun()
+
     st.stop()
 
 # UI-only fallback for the moment the question pool is empty (documents
@@ -3272,10 +3457,21 @@ def _wipe_all():
     st.session_state.profile_saved = []
     st.session_state.profile_customized = False
     st.session_state.profile_name = ""
+    # a wiped device is a fresh device: back to the role picker, and the
+    # one-time name prompt asks again on the next role pick (the cookie
+    # sync mirrors the cleared state this same run). Without role=None the
+    # gate (derived from name_asked) would pop over the settings screen.
+    st.session_state.name_asked = False
+    st.session_state.role = None
+    st.session_state.pending_question = None
+    st.session_state.pop("suggested", None)
+    st.session_state.pop("orders_search", None)
+    st.session_state.show_settings = False
+    st.session_state.drawer_open = False
     st.session_state.service_track = ""
     st.session_state.service_type = "סדיר"
     # drop the settings widgets' keys so they reseed from the reset mirrors
-    for _k in ("profile_statuses", "pf_name_w", "pf_type_w", "pf_track_w"):
+    for _k in ("profile_statuses", "pf_name_w", "pf_type_w", "pf_track_w", "gate_name_w"):
         st.session_state.pop(_k, None)
 
 
@@ -3286,10 +3482,14 @@ def _settings_hub():
     _pills = st.session_state.get("profile_saved") or []
     if _pills:
         _sub.append(_pills[0])
+    # saved name leads the card; the role slides into the subtitle
+    _dnh = _display_name()
+    if _dnh:
+        _sub.insert(0, role_label)
     st.markdown(
         "<div class='cai-set-profile'>"
-        f"<div class='av'>{html.escape(role_label[:1])}</div>"
-        f"<div class='m'><div class='nm'>{html.escape(role_label)}</div>"
+        f"<div class='av'>{html.escape((_dnh or role_label)[:1])}</div>"
+        f"<div class='m'><div class='nm'>{html.escape(_dnh or role_label)}</div>"
         f"<div class='sub'>{html.escape(' · '.join(_sub))}</div></div>"
         "</div>", unsafe_allow_html=True)
 
@@ -3348,7 +3548,7 @@ def _settings_personal():
     """8b — personal details: name, service type/track, status pills."""
     st.markdown(
         "<div class='cai-set-avwrap'>"
-        f"<div class='cai-set-avbig'>{html.escape(role_label[:1])}</div>"
+        f"<div class='cai-set-avbig'>{html.escape((_display_name() or role_label)[:1])}</div>"
         "<div class='cai-set-changephoto'>שינוי תמונה <span class='cai-bakrov'>בקרוב</span></div>"
         "</div>", unsafe_allow_html=True)
 
@@ -3734,12 +3934,18 @@ if st.session_state.drawer_open:
         # ── role card (display only; role switching lives in Settings) ──
         _svc_type = st.session_state.get("service_type") or "סדיר"
         _role_badge = "שירות חובה" if _svc_type == "סדיר" else _svc_type
+        # with a saved name: initial + name up front, role folds into the
+        # small key line ("מחובר כ־חייל"); without — exactly the old card
+        _dnd = _display_name()
+        _card_av = (_dnd or role_label)[:1]
+        _card_k = f"מחובר כ־{role_label}" if _dnd else "מחובר כ־"
+        _card_nm = _dnd or role_label
         st.markdown(
             "<div class='cai-role-card'>"
-            f"<div class='cai-role-av'>{html.escape(role_label[:1])}</div>"
+            f"<div class='cai-role-av'>{html.escape(_card_av)}</div>"
             "<div class='cai-role-meta'>"
-            "<div class='cai-role-k'>מחובר כ־</div>"
-            f"<div class='cai-role-nm'>{html.escape(role_label)}</div></div>"
+            f"<div class='cai-role-k'>{html.escape(_card_k)}</div>"
+            f"<div class='cai-role-nm'>{html.escape(_card_nm)}</div></div>"
             f"<span class='cai-role-badge'>{html.escape(_role_badge)}</span>"
             "</div>",
             unsafe_allow_html=True,
@@ -3869,10 +4075,12 @@ if st.session_state.get("show_settings"):
     _render_settings()
 
 # ── Header: wordmark + role pill ──
+_dn = _display_name()
+_pill_text = f"{html.escape(_dn)} · {html.escape(role_label)}" if _dn else f"מחובר כ־{html.escape(role_label)}"
 st.markdown(
     f"<div class='cai-header'>"
     f"<span class='cai-wordmark'>Command<span class='cai-wm-ai'>AI</span></span>"
-    f"<span class='cai-pill'>מחובר כ־{role_label}</span>"
+    f"<span class='cai-pill'>{_pill_text}</span>"
     f"</div>",
     unsafe_allow_html=True,
 )
@@ -4579,8 +4787,9 @@ for msg_i, msg in enumerate(st.session_state.messages):
 
 # ── Greeting + suggested questions (only when no conversation yet) ──
 if not st.session_state.messages:
+    _greet = f"היי {html.escape(_dn)}, במה אפשר לעזור?" if _dn else "במה אפשר לעזור?"
     st.markdown(
-        f"<div class='cai-greet'>במה אפשר לעזור?</div>"
+        f"<div class='cai-greet'>{_greet}</div>"
         f"<div class='cai-greet-sub'>שאלות נפוצות מפקודות המטכ\"ל במערכת</div>",
         unsafe_allow_html=True,
     )
