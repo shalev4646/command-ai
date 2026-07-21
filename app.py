@@ -3410,13 +3410,16 @@ _DS_CSS = """
 .cai-set-foot .a { font: 600 9px ui-monospace, Menlo, monospace; letter-spacing: 2px; color: rgba(236,237,230,.35); }
 .cai-set-foot .b { font: 400 10.5px Heebo; color: rgba(236,237,230,.3); margin-top: 8px; line-height: 1.5; }
 
-/* save / danger buttons */
-.st-key-save_profile button {
+/* save / danger buttons — save is a form_submit_button (the form kills the
+   blur-commit tap race); keyed forms get no st-key-* class in 1.58, so scope
+   through the cai_pf_form wrapper and kill the layout-only stForm frame */
+.st-key-cai_pf_form [data-testid="stForm"] { border: none !important; padding: 0 !important; }
+.st-key-cai_pf_form [data-testid="stFormSubmitButton"] button {
   background: var(--accent) !important; border: none !important; color: #171A12 !important;
   border-radius: 13px !important; font: 700 14px Heebo !important; padding: 13px !important; margin-top: 22px !important;
 }
-.st-key-save_profile button p { color: #171A12 !important; font-weight: 700 !important; text-align: center !important; }
-@media (hover: hover) { .st-key-save_profile button:hover { background: #A6AF76 !important; } }
+.st-key-cai_pf_form [data-testid="stFormSubmitButton"] button p { color: #171A12 !important; font-weight: 700 !important; text-align: center !important; }
+@media (hover: hover) { .st-key-cai_pf_form [data-testid="stFormSubmitButton"] button:hover { background: #A6AF76 !important; } }
 [class*="st-key-danger_"] button {
   background: rgba(198,120,110,.1) !important; border: 1px solid rgba(198,120,110,.35) !important;
   color: #D89189 !important; border-radius: 13px !important; font: 600 13.5px Heebo !important;
@@ -3622,37 +3625,49 @@ def _settings_personal():
     # reads are committed on Save. Seed each widget from its mirror on first
     # render — on close the widget key drops (widget not rendered) and reopen
     # reseeds it, so an unsaved edit is discarded rather than leaking.
-    st.markdown("<div class='cai-set-seclabel'>פרטי זיהוי</div>", unsafe_allow_html=True)
-    st.markdown("<div class='cai-fld-label'>שם מלא</div>", unsafe_allow_html=True)
-    if "pf_name_w" not in st.session_state:
-        st.session_state.pf_name_w = st.session_state.get("profile_name", "")
-    st.text_input("שם מלא", key="pf_name_w",
-                  label_visibility="collapsed", placeholder="ישראל ישראלי")
+    # st.form, not bare widgets + st.button (same fix as the name gate): a
+    # save tap right after typing lost the race with the text_input
+    # blur-commit rerun — the tap landed on a replaced node, so users tapped
+    # twice and could commit stale values. The form bundles every field value
+    # and the press into ONE event. Safe to defer widget commits to submit:
+    # all option lists are static and nothing reads the pf_* keys mid-edit.
+    # Keyed forms get no st-key-* class in 1.58 — the cai_pf_form wrapper
+    # carries the key the CSS scopes through.
+    with st.container(key="cai_pf_form"):
+        with st.form(key="pf_form", border=False):
+            st.markdown("<div class='cai-set-seclabel'>פרטי זיהוי</div>", unsafe_allow_html=True)
+            st.markdown("<div class='cai-fld-label'>שם מלא</div>", unsafe_allow_html=True)
+            if "pf_name_w" not in st.session_state:
+                st.session_state.pf_name_w = st.session_state.get("profile_name", "")
+            st.text_input("שם מלא", key="pf_name_w",
+                          label_visibility="collapsed", placeholder="ישראל ישראלי")
 
-    st.markdown("<div class='cai-fld-label'>סוג שירות</div>", unsafe_allow_html=True)
-    if "pf_type_w" not in st.session_state:
-        st.session_state.pf_type_w = st.session_state.get("service_type", "סדיר")
-    st.segmented_control("סוג שירות", _SERVICE_TYPES, key="pf_type_w",
-                         selection_mode="single", label_visibility="collapsed")
+            st.markdown("<div class='cai-fld-label'>סוג שירות</div>", unsafe_allow_html=True)
+            if "pf_type_w" not in st.session_state:
+                st.session_state.pf_type_w = st.session_state.get("service_type", "סדיר")
+            st.segmented_control("סוג שירות", _SERVICE_TYPES, key="pf_type_w",
+                                 selection_mode="single", label_visibility="collapsed")
 
-    st.markdown("<div class='cai-fld-label'>מסלול השירות</div>", unsafe_allow_html=True)
-    _tracks = ["בחר/י מסלול…"] + _SERVICE_TRACKS
-    if "pf_track_w" not in st.session_state:
-        _cur = st.session_state.get("service_track", "")
-        st.session_state.pf_track_w = _cur if _cur in _SERVICE_TRACKS else _tracks[0]
-    st.selectbox("מסלול השירות", _tracks, key="pf_track_w", label_visibility="collapsed")
+            st.markdown("<div class='cai-fld-label'>מסלול השירות</div>", unsafe_allow_html=True)
+            _tracks = ["בחר/י מסלול…"] + _SERVICE_TRACKS
+            if "pf_track_w" not in st.session_state:
+                _cur = st.session_state.get("service_track", "")
+                st.session_state.pf_track_w = _cur if _cur in _SERVICE_TRACKS else _tracks[0]
+            st.selectbox("מסלול השירות", _tracks, key="pf_track_w", label_visibility="collapsed")
 
-    st.markdown("<div class='cai-set-seclabel'>התאמה אישית · סטטוס</div>", unsafe_allow_html=True)
-    st.markdown("<div class='cai-lang-note'>בחירת הסטטוס מתאימה את החישובים והתשובות עבורך.</div>", unsafe_allow_html=True)
-    if "profile_statuses" not in st.session_state and st.session_state.get("profile_saved"):
-        st.session_state.profile_statuses = st.session_state.profile_saved
-    st.pills("סטטוס", _STATUS_PILLS, selection_mode="multi",
-             key="profile_statuses", label_visibility="collapsed")
+            st.markdown("<div class='cai-set-seclabel'>התאמה אישית · סטטוס</div>", unsafe_allow_html=True)
+            st.markdown("<div class='cai-lang-note'>בחירת הסטטוס מתאימה את החישובים והתשובות עבורך.</div>", unsafe_allow_html=True)
+            if "profile_statuses" not in st.session_state and st.session_state.get("profile_saved"):
+                st.session_state.profile_statuses = st.session_state.profile_saved
+            st.pills("סטטוס", _STATUS_PILLS, selection_mode="multi",
+                     key="profile_statuses", label_visibility="collapsed")
+
+            _save = st.form_submit_button("שמירת שינויים", use_container_width=True)
 
     # Save COMMITS the widgets to their mirrors and flips profile_customized —
     # only now do the service fields reach the answer. An untouched user's API
     # turn stays byte-identical (see handle_question).
-    if st.button("שמירת שינויים", key="save_profile", use_container_width=True):
+    if _save:
         st.session_state.profile_name = st.session_state.get("pf_name_w", "") or ""
         st.session_state.service_type = st.session_state.get("pf_type_w") or "סדיר"
         _tr = st.session_state.get("pf_track_w")
