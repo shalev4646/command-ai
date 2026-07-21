@@ -22,3 +22,5 @@ New Text Document.txt
 docs/
 *.zip
 *.html
+# ...except Streamlit component sources — these ARE source and must deploy
+!components/**/*.html

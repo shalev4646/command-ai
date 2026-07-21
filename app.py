@@ -97,10 +97,22 @@ st.set_page_config(
 
 _patch_boot_shell()
 
+# ── Device-profile probe component (declared here, rendered after the boot
+# splash). Community Cloud's edge strips custom cookies from the WebSocket
+# handshake, so st.context.cookies below stays empty THERE (verified live:
+# cookie present in document.cookie, absent server-side) — this tiny
+# bidirectional component reads localStorage/cookie on the client and hands
+# the payload back through the component channel instead. ──
+_profile_probe = components.declare_component(
+    "cai_profile_probe",
+    path=str(Path(__file__).parent / "components" / "profile_probe"),
+)
+
 # ── Device profile cookie (cai_profile) — the app's only cross-visit memory.
-# Written by a tiny JS component every run (see _sync_profile_cookie); read
-# here from the WebSocket handshake via st.context.cookies, so a returning
-# visitor lands straight in the chat ("היי שלו") instead of the role picker.
+# Written by a tiny JS component every run (see the sync block); read here
+# from the WebSocket handshake via st.context.cookies where the platform
+# passes it (local / self-hosted Fly), so a returning visitor lands straight
+# in the chat ("היי שלו") instead of the role picker.
 # Display-only data: the name never reaches the Anthropic API or the server
 # logs. Seeded ONCE per session ("role" key absent) — switch-role/logout set
 # role=None in-session and must not be re-overridden by the stale handshake
@@ -613,6 +625,30 @@ components.html(
     }</script>""",
     height=0,
 )
+
+# ── Device-profile probe render — only where the cookie fast-path came up
+# empty (Community Cloud, or genuinely new device). Placed BEFORE the heavy
+# startup so the client round-trip overlaps ingestion; the value arriving
+# triggers one extra rerun, masked by the boot curtain. A live user choice
+# always outranks the late-arriving probe: role is only seeded while still
+# unset, and an in-session name is never overwritten.
+if not st.session_state.get("cai_probe_done") and not _ck:
+    _pv = _profile_probe(default=None)
+    if _pv is not None:
+        st.session_state.cai_probe_done = True
+        try:
+            _pd = json.loads(urllib.parse.unquote(_pv)) if _pv else {}
+        except Exception:
+            _pd = {}
+        if isinstance(_pd, dict):
+            if (st.session_state.role is None
+                    and _pd.get("role") in ("soldier", "commander", "reserve")):
+                st.session_state.role = _pd["role"]
+            if (not (st.session_state.get("profile_name") or "").strip()
+                    and _pd.get("name")):
+                st.session_state.profile_name = str(_pd["name"])[:40]
+            if _pd.get("asked"):
+                st.session_state.name_asked = True
 
 _startup_ingest()
 
@@ -2135,9 +2171,11 @@ _ck_payload = urllib.parse.quote(json.dumps({
     "asked": bool(st.session_state.get("name_asked")),
 }, ensure_ascii=False), safe="")
 components.html(
-    "<script>try{window.top.document.cookie="
-    f"'cai_profile={_ck_payload};max-age=34560000;path=/;SameSite=Lax'"
-    ";}catch(e){}</script>",
+    "<script>try{"
+    f"var v='{_ck_payload}';"
+    "window.top.document.cookie='cai_profile='+v+';max-age=34560000;path=/;SameSite=Lax';"
+    "try{window.top.localStorage.setItem('cai_profile',v);}catch(e2){}"
+    "}catch(e){}</script>",
     height=0,
 )
 

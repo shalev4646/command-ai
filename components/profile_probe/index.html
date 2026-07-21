@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<!-- cai_profile_probe: reads the device profile (localStorage first, cookie
+     fallback) from the TOP document and returns it to Python through the
+     component protocol. This is the ONLY transport that works on Streamlit
+     Community Cloud: the platform edge strips custom cookies from the
+     WebSocket handshake, so st.context.cookies never sees cai_profile there
+     (verified 2026-07-21 — cookie present in document.cookie, absent
+     server-side). Plain-JS component protocol, no npm build. -->
+<body>
+<script>
+(function () {
+    "use strict";
+    function send(type, data) {
+        var msg = { isStreamlitMessage: true, type: type };
+        if (data) { for (var k in data) { msg[k] = data[k]; } }
+        window.parent.postMessage(msg, "*");
+    }
+    function readProfile() {
+        var raw = null;
+        try { raw = window.top.localStorage.getItem("cai_profile"); } catch (e) {}
+        if (!raw) {
+            try {
+                var m = window.top.document.cookie.match(/(?:^|;\s*)cai_profile=([^;]+)/);
+                raw = m ? m[1] : null;
+            } catch (e) {}
+        }
+        return raw || "";
+    }
+    window.addEventListener("message", function (ev) {
+        var d = ev.data || {};
+        if (d.type === "streamlit:render") {
+            send("streamlit:setFrameHeight", { height: 0 });
+            send("streamlit:setComponentValue", { dataType: "json", value: readProfile() });
+        }
+    });
+    send("streamlit:componentReady", { apiVersion: 1 });
+})();
+</script>
+</body>
+</html>
