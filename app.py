@@ -1467,6 +1467,25 @@ html.cai-standalone [data-testid="stAppViewContainer"]:has(.cai-greet) [data-tes
     font: 400 10.5px Heebo, sans-serif; color: var(--text-faint);
 }}
 
+/* ── "thinking" indicator (in-bubble, until the first answer token) ── */
+@keyframes caiThinkPulse {{
+    0%, 80%, 100% {{ opacity:.25; transform:scale(.62); }}
+    40% {{ opacity:1; transform:scale(1); }}
+}}
+.cai-thinking {{
+    display:flex; align-items:center; gap:10px; direction:rtl;
+    padding:3px 2px 5px; color:var(--text-dim);
+    font:500 13.5px Heebo, sans-serif;
+}}
+.cai-thinking .cai-think-dots {{ display:inline-flex; gap:5px; }}
+.cai-thinking .cai-think-dots i {{
+    width:6px; height:6px; border-radius:50%;
+    background:var(--accent);
+    animation:caiThinkPulse 1.15s infinite ease-in-out;
+}}
+.cai-thinking .cai-think-dots i:nth-child(2) {{ animation-delay:.16s; }}
+.cai-thinking .cai-think-dots i:nth-child(3) {{ animation-delay:.32s; }}
+
 /* ── Chat messages ── */
 [data-testid="stChatMessage"] {{
     background-color: var(--surface);
@@ -4260,6 +4279,17 @@ def _verdict_chip(content: str) -> tuple[str | None, str]:
     return None, content
 
 
+# Shown inside the assistant bubble while the model reasons before its first
+# token. Opus runs adaptive thinking with no deltas yielded, so the bubble
+# would otherwise sit blank for several seconds after the retrieval spinner
+# cleared — the "dead empty bubble" the 2026-07-21 phone video caught (~7s).
+_THINKING_HTML = (
+    '<div class="cai-thinking"><span class="cai-think-dots">'
+    '<i></i><i></i><i></i></span>'
+    '<span>מנסח תשובה מהפקודות…</span></div>'
+)
+
+
 def _stream_answer(text_gen) -> str:
     """Render the live answer chip-first: hold the stream until the first
     line is complete; when it is a recognizable **פסיקה:** line, draw the
@@ -4269,6 +4299,11 @@ def _stream_answer(text_gen) -> str:
     text — session state and the copy/share payload keep the ruling line.
     """
     it = iter(text_gen)
+    # animated placeholder until the first real content is ready to paint —
+    # covers both the pre-first-token thinking pause and the first-line buffer
+    # below; cleared the moment we render the chip/stream.
+    think = st.empty()
+    think.markdown(_THINKING_HTML, unsafe_allow_html=True)
     buf = ""
     ended = True
     for chunk in it:
@@ -4276,6 +4311,7 @@ def _stream_answer(text_gen) -> str:
         if "\n" in buf or len(buf) > 400:
             ended = False
             break
+    think.empty()
     chip, lead = None, buf
     # parse once the first line is DECIDED: a newline landed, the stream is
     # already over, or the 400-char spill guard hit — past 400 the chip
