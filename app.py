@@ -326,15 +326,35 @@ components.html(
                 }
             } catch (e) {}
         };
-        // heal = measurement + keyboard-scroll-residue reset. iOS pans/
-        // scrolls the page for the keyboard and does not always restore it
-        // on close ("send" taps especially): every fixed element (header,
-        // composer strip) then sits mid-screen while the streamed answer
-        // flows below it, until something re-layouts (2026-07-21 phone
-        // report). The app never scrolls the BODY legitimately — all
-        // scrolling is inner-section — so with the keyboard closed any
-        // residual window/visual-viewport offset is keyboard debris and is
-        // safe to zero.
+        // kick = forced UIKit re-layout, callable repeatedly (unlike the
+        // once-gated boot nudge): after the keyboard closes, iOS sometimes
+        // leaves the LAYOUT viewport at the shrunken keyboard height while
+        // the visual viewport is already full — every bottom-anchored fixed
+        // element (the composer strip) then sits mid-screen with the streamed
+        // answer flowing below it, and only a re-layout snaps it back
+        // (2026-07-21 phone check: header stayed put = not a scroll offset).
+        // Re-stamping the viewport meta makes iOS re-evaluate the viewport.
+        var kick = function () {
+            try {
+                if (!window.__caiSA) return;
+                var now = Date.now();
+                if (window.__caiKickAt && now - window.__caiKickAt < 900) return;
+                window.__caiKickAt = now;
+                window.scrollTo(0, 1); window.scrollTo(0, 0);
+                var vp = document.querySelector('meta[name="viewport"]');
+                if (vp) {
+                    var c = vp.getAttribute("content") || "";
+                    vp.setAttribute("content", c + ", minimum-scale=1");
+                    setTimeout(function () { try { vp.setAttribute("content", c); } catch (e) {} }, 60);
+                }
+            } catch (e) {}
+        };
+        // heal = measurement + keyboard-debris repair. With the keyboard
+        // closed: zero any residual window/visual-viewport offset (the app
+        // never scrolls the BODY legitimately), and if the composer strip's
+        // bottom sits far above the visual bottom — the stuck-layout-viewport
+        // signature — kick a re-layout instead of waiting for the answer
+        // stream to finish.
         var heal = function () {
             setH();
             try {
@@ -343,6 +363,11 @@ components.html(
                 if (ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName) && vvNow() < glassH() * 0.95) return;
                 var vv = window.visualViewport;
                 if ((window.scrollY || 0) > 2 || (vv && vv.offsetTop > 2)) window.scrollTo(0, 0);
+                var sb = document.querySelector('[data-testid="stBottom"]');
+                if (sb) {
+                    var gap = vvNow() - sb.getBoundingClientRect().bottom;
+                    if (gap > 60) kick();
+                }
             } catch (e) {}
         };
         if (!window.__caiVVH) {
@@ -350,7 +375,7 @@ components.html(
             [0, 300, 700, 1300, 2200, 3500, 5200, 7500].forEach(function (ms) { setTimeout(setH, ms); });
             setTimeout(nudge, 350);
             setTimeout(nudge, 1500);
-            var iv = setInterval(setH, 600);
+            var iv = setInterval(heal, 600);
             setTimeout(function () {
                 clearInterval(iv);
                 // permanent slow resync: a mid-session stuck state (--cai-vvh
