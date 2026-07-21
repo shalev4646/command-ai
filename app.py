@@ -2176,27 +2176,38 @@ if _pwa:
         height=0,
     )
 
-# ── Device profile cookie sync — rendered EVERY run (entry, gate and chat)
-# so the cookie always mirrors the live state: role picks, settings name
-# edits, switch-role/logout (role=None) and wipes all land on the next
-# handshake. Also refreshes the 400-day expiry on each visit, which resets
-# Safari's 7-day ITP clock for browser-tab users (installed PWAs are exempt).
-# window.top: the component iframe is sandboxed but same-origin — the cookie
-# must live on the APP document, whose host the WebSocket handshake carries.
+# ── Device profile cookie sync — mirrors the live state to cookie+localStorage:
+# role picks, settings name edits, switch-role/logout and wipes. Also
+# refreshes the 400-day expiry on each visit (resets Safari's 7-day ITP
+# clock for browser-tab users; installed PWAs are exempt).
+# CRITICAL GATE: rendered only once there is real state to remember (or an
+# explicit wipe). On a cloud cold boot the session starts EMPTY (the edge
+# strips cookies, so nothing is seeded yet) while the probe is still
+# round-tripping — an unconditional writer here raced the probe and wiped
+# the device memory with {role:null} before it could be read (verified live
+# on Community Cloud). window.top: the component iframe is sandboxed but
+# same-origin — the store must live on the APP document.
+_sync_settled = (
+    st.session_state.role is not None
+    or st.session_state.get("name_asked")
+    or bool((st.session_state.get("profile_name") or "").strip())
+    or st.session_state.get("cai_wipe_pending")
+)
 _ck_payload = urllib.parse.quote(json.dumps({
     "v": 1,
     "role": st.session_state.role,
     "name": (st.session_state.get("profile_name") or "")[:40],
     "asked": bool(st.session_state.get("name_asked")),
 }, ensure_ascii=False), safe="")
-components.html(
-    "<script>try{"
-    f"var v='{_ck_payload}';"
-    "window.top.document.cookie='cai_profile='+v+';max-age=34560000;path=/;SameSite=Lax';"
-    "try{window.top.localStorage.setItem('cai_profile',v);}catch(e2){}"
-    "}catch(e){}</script>",
-    height=0,
-)
+if _sync_settled:
+    components.html(
+        "<script>try{"
+        f"var v='{_ck_payload}';"
+        "window.top.document.cookie='cai_profile='+v+';max-age=34560000;path=/;SameSite=Lax';"
+        "try{window.top.localStorage.setItem('cai_profile',v);}catch(e2){}"
+        "}catch(e){}</script>",
+        height=0,
+    )
 
 # ── Entry / role gate + one-time name gate ──
 # The name gate is deliberately NOT st.dialog (dialog close skips the full
@@ -3527,10 +3538,13 @@ def _wipe_all():
     st.session_state.profile_customized = False
     st.session_state.profile_name = ""
     # a wiped device is a fresh device: back to the role picker, and the
-    # one-time name prompt asks again on the next role pick (the cookie
-    # sync mirrors the cleared state this same run). Without role=None the
-    # gate (derived from name_asked) would pop over the settings screen.
+    # one-time name prompt asks again on the next role pick. Without
+    # role=None the gate (derived from name_asked) would pop over the
+    # settings screen. cai_wipe_pending lets the sync writer render the
+    # all-empty payload — its settled-gate otherwise skips empty states
+    # (the guard that stops a cold cloud boot from clobbering the store).
     st.session_state.name_asked = False
+    st.session_state.cai_wipe_pending = True
     st.session_state.role = None
     st.session_state.pending_question = None
     st.session_state.pop("suggested", None)
