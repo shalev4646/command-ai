@@ -387,6 +387,49 @@ components.html(
                 }
             } catch (e) {}
         };
+        // keyboard glue (.cai-kb): while the composer textarea is focused
+        // and the pane is keyboard-shrunken, the strip must ride the LIVE
+        // keyboard top — iOS otherwise pans the whole layout viewport to
+        // reveal the caret (chips under the clock, strip mid-air, canvas
+        // band above the keyboard: the 21.7 phone report). --cai-kbb is the
+        // keyboard top in layout coords (vv.offsetTop + vv.height); with
+        // the strip self-glued, any reveal-pan is debris and gets zeroed.
+        var kbSync = function () {
+            try {
+                if (!window.__caiSA) return;
+                var vv = window.visualViewport;
+                if (!vv) return;
+                var ae = document.activeElement;
+                var inComposer = !!(ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName) &&
+                    ae.closest && ae.closest('[data-testid="stBottom"]'));
+                var g = glassH();
+                if (inComposer && g >= 400 && vv.height < g * 0.8) {
+                    aroot.classList.add("cai-kb");
+                    aroot.style.setProperty("--cai-kbb",
+                        Math.round(vv.offsetTop + vv.height) + "px");
+                    if ((window.scrollY || 0) > 1) window.scrollTo(0, 0);
+                    [document.documentElement, document.body,
+                     document.querySelector('.stApp'),
+                     document.querySelector('[data-testid="stAppViewContainer"]')
+                    ].forEach(function (el) {
+                        if (el && el.scrollTop > 0) el.scrollTop = 0;
+                    });
+                } else if (aroot.classList.contains("cai-kb")) {
+                    aroot.classList.remove("cai-kb");
+                    aroot.style.removeProperty("--cai-kbb");
+                }
+            } catch (e) {}
+        };
+        // the open/close animation reports geometry sparsely (often a single
+        // resize at the end) — ride through it frame-by-frame
+        var kbBurst = function () {
+            var t0 = Date.now();
+            var step = function () {
+                kbSync();
+                if (Date.now() - t0 < 900) requestAnimationFrame(step);
+            };
+            requestAnimationFrame(step);
+        };
         if (!window.__caiVVH) {
             window.__caiVVH = true;
             [0, 300, 700, 1300, 2200, 3500, 5200, 7500].forEach(function (ms) { setTimeout(setH, ms); });
@@ -407,14 +450,19 @@ components.html(
             // the send/✓-dismiss taps blur the composer — remeasure AND clear
             // the keyboard's scroll residue right after, so the composer is
             // back at the bottom for the whole streamed answer
+            window.addEventListener("focusin", kbBurst, true);
             window.addEventListener("focusout", function () {
+                kbBurst();
                 [80, 350, 800].forEach(function (ms) { setTimeout(heal, ms); });
             }, true);
             if (window.visualViewport) {
-                window.visualViewport.addEventListener("resize", setH);
+                window.visualViewport.addEventListener("resize", function () {
+                    setH(); kbSync();
+                });
                 // the keyboard pan fires vv-scroll; once focus is gone the
                 // trailing offset is debris — heal shortly after it settles
                 window.visualViewport.addEventListener("scroll", function () {
+                    kbSync();
                     clearTimeout(window.__caiHealT);
                     window.__caiHealT = setTimeout(heal, 250);
                 });
@@ -798,6 +846,38 @@ html.cai-standalone [data-testid="stBottom"] {{
 }}
 html.cai-standalone .stMain {{
     padding-bottom: var(--cai-sbh, 134px) !important;
+}}
+/* ── keyboard mode (html.cai-kb) — armed by the engine while the composer
+   textarea is focused AND the pane is keyboard-shrunken. The strip glues
+   to the LIVE keyboard top (--cai-kbb = vv.offsetTop + vv.height, layout-
+   viewport coords, restamped on every visual-viewport event), so it rides
+   the keyboard instead of hiding behind it / floating mid-screen. ── */
+html.cai-standalone.cai-kb [data-testid="stBottom"] {{
+    top: var(--cai-kbb, calc(var(--cai-vvh, 100svh) - var(--cai-vvoff, 0px))) !important;
+    /* iOS often reports the pane in ONE resize at animation end — animate
+       the jump so the strip rides up instead of teleporting */
+    transition: top .18s cubic-bezier(.2,.7,.2,1);
+}}
+/* a residual reveal-pan uncovers the canvas below the fixed underlay —
+   match it to the gradient tail so it can never read as a black band
+   (!important: the splash darkener pins html/body dark with !important) */
+html.cai-standalone.cai-kb {{ background-color: #20270F !important; }}
+/* focus dim: a fixed wash between content and chrome (content z-auto <
+   60 < strip 99 < header 100); taps pass through so the sample chips stay
+   live; overdrawn 40vh past both edges to cover pan reveals */
+html.cai-standalone body::after {{
+    content: ""; position: fixed; inset: -40vh 0; z-index: 60;
+    background: rgba(11,13,7,0); pointer-events: none;
+    transition: background .22s ease;
+}}
+html.cai-standalone.cai-kb body::after {{ background: rgba(11,13,7,.5); }}
+/* typing emphasis: the translucent pill goes near-opaque over the wash,
+   and the disclaimer clears the strip (tighter hug, less noise) */
+html.cai-standalone.cai-kb [data-testid="stChatInput"] {{
+    background-color: rgba(26,30,15,.92) !important;
+}}
+html.cai-standalone.cai-kb [data-testid="stBottomBlockContainer"]::after {{
+    display: none;
 }}
 /* iOS Safari "text autosizing" inflates long text blocks (cards, title,
    disclaimer) on the phone only — desktop matched the mock, iPhone didn't.
