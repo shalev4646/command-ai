@@ -5,14 +5,14 @@
     "marker": null
   },
   "05.104": {
-    "date": "2020-09-17",
-    "raw": "17/09/2020",
-    "marker": "published-line"
+    "date": "2026-05-20",
+    "raw": "20 במאי2026",
+    "marker": "update-dates-list"
   },
   "2.0101": {
-    "date": null,
-    "raw": null,
-    "marker": null
+    "date": "2025-06-04",
+    "raw": "2025ביוני4",
+    "marker": "published-line"
   },
   "20.0502": {
     "date": null,
@@ -305,9 +305,9 @@
     "marker": null
   },
   "58.0202": {
-    "date": "2023-04-19",
-    "raw": "19 באפריל2023",
-    "marker": "tokef-clause"
+    "date": "2026-03-01",
+    "raw": "במרץ 2026",
+    "marker": "update-dates-list;month-precision"
   },
   "61.0104": {
     "date": "2024-05-12",
@@ -335,9 +335,9 @@
     "marker": null
   },
   "PM-33.0207": {
-    "date": "2017-12-01",
-    "raw": "2017 בדצמבר",
-    "marker": "updated-line;month-precision"
+    "date": "2026-02-03",
+    "raw": "3 בפברואר 2026",
+    "marker": "header-window"
   },
   "PM-33.0213": {
     "date": "2020-04-19",
