@@ -1,7 +1,7 @@
 # deploy-reboot marker: bump the comment below to force Streamlit Cloud to
 # rebuild the environment and restart the python process (a plain code push
 # reloads app.py but can keep an old backend module cached in memory)
-# reboot: 2026-07-21-d
+# reboot: 2026-07-21-e
 streamlit==1.58.0
 anthropic==0.112.0
 chromadb==1.5.9
