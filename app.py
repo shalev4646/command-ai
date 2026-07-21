@@ -996,12 +996,15 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     /* no entrance animation: a transform on a fixed element re-anchors it
        and Streamlit can freeze the animation at its from-state (top: 18px) */
 }}
-/* flows in the header row right after the hamburger (right-of-center), per
-   the design — space-between flow puts the wordmark next to the menu button,
-   cx≈258 on a 390 viewport. NOT screen-centered. */
-.cai-wordmark {{ font: 400 20px 'Suez One', serif; color: var(--text); }}
-/* 9a: two-tone wordmark — "Command" light, "AI" olive */
-.cai-wordmark .cai-wm-ai {{ color: var(--accent); }}
+/* screen-centered in the fixed band: absolute, so the asymmetric side
+   paddings (72px hamburger side vs 18px) and the pill's auto margin can't
+   pull it off true center; line-height fills the 64px strip below the
+   status-bar inset */
+.cai-wordmark {{ font: 400 20px 'Suez One', serif; color: var(--text);
+    position: absolute; left: 50%; transform: translateX(-50%);
+    top: var(--cai-sat, 0px); line-height: 64px; white-space: nowrap; }}
+/* 9a: two-tone wordmark — "Command" light, "AI" olive (header + entry title) */
+.cai-wordmark .cai-wm-ai, .cai-entry-title .cai-wm-ai {{ color: var(--accent); }}
 .cai-pill {{
     margin-inline-start: auto;
     font: 600 12px Heebo, sans-serif; color: var(--accent);
@@ -1847,7 +1850,7 @@ if st.session_state.role is None:
         "<div class='cai-entry'>"
         "<div class='cai-entry-classif'>מערכת פקודות · בלמ\"ס</div>"
         "<div class='cai-entry-chev'><span></span><span></span></div>"
-        "<div class='cai-entry-title'>CommandAI</div>"
+        "<div class='cai-entry-title'>Command<span class='cai-wm-ai'>AI</span></div>"
         "<div class='cai-entry-sub'>העוזר החכם לפקודות מטכ\"ל</div>"
         "<div class='cai-entry-divider'></div>"
         "<div class='cai-entry-choose'>בחר את סוג הכניסה שלך</div>"
