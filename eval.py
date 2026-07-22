@@ -167,6 +167,14 @@ GOLDEN = [
     ("commander", "איך עובד הסדר הפנסיה למשרתי הקבע החדשים?", "36.0106"),
     ("commander", "אני בקבע ושוכר דירה — מגיעה לי השתתפות בשכר הדירה?", "36.0513"),
     ("commander", "חייל שהיה במעצר וזוכה בדין — מקבל חזרה את השכר שנוכה לו?", "35.0227"),
+    # batch 10 (2026-07-22): demand-gap additions — the deposit/grant law
+    # (civil source, the most-asked discharge question), public-inquiries
+    # response duty, fine/debt collection, private-equipment compensation
+    ("soldier",   "כמה כסף מקבלים מהצבא אחרי השחרור ומה זה הפיקדון?", "חוק-קליטת-חיילים"),
+    ("soldier",   "אפשר להשתמש בפיקדון של הצבא לרישיון נהיגה?", "חוק-קליטת-חיילים"),
+    ("soldier",   "שלחתי פנייה בכתב לגורם בצבא ואף אחד לא עונה — מה עושים?", "8.0101"),
+    ("soldier",   "איך גובים ממני קנס שקיבלתי בדין משמעתי?", "35.0221"),
+    ("soldier",   "הציוד הפרטי שלי ניזוק במהלך פעילות — הצבא מפצה על זה?", "35.0223"),
 ]
 
 # (role, question, expected_doc_id) — same contract as GOLDEN, but phrased the
@@ -189,7 +197,10 @@ DIRTY = [
     ("soldier",   "מותר עגיל בצבא?", "33-05-01"),
     ("commander", "חייל שלי מאיים שיפגע בעצמו, מה אני עושה?", "33.0219"),
     ("reserve",   "מילואימניק צריך להגיד לצבא לפני שהוא טס לחול?", "31.0703"),
-    ("reserve",   "כמה כסף מקבלים על מילואים חוץ מהמשכורת?", "013.3"),
+    # vague money question — three orders answer it legitimately (תגמול נוסף,
+    # תשלומי מילואים, תגמול מיוחד); widened to a tuple when the 2026-07-22
+    # money-vocabulary docs (חוק הפיקדון, 35.0221) shifted the ranking
+    ("reserve",   "כמה כסף מקבלים על מילואים חוץ מהמשכורת?", ("013.3", "35.0206", "35.0209")),
     # batch 6 (2026-07-20): slang phrasings for the newest orders
     ("soldier",   "אפשר להוריד פרופיל בצבא?", "32.0402"),
     ("soldier",   "עשיתי תאונה עם רכב צבאי, יקחו לי את הרישיון?", "33.1104"),
@@ -410,23 +421,38 @@ FACTS = [
     # six-month revocation of the military licence
     ("soldier", "צברתי שלוש הרשעות על עבירות תנועה ברכב צבאי בתוך שנתיים — מה יקרה לרישיון הצבאי שלי?", "58.0202",
      [["שישה חודשים", "6 חודשים", "חצי שנה"], ["58.0202", "רישיון נהיגה"]]),
+    # batch 10 (2026-07-22): the demand-gap additions — deposit/grant law
+    # (rates are May-2026, indexed monthly; the numeric asserts pin the rate
+    # PREFIXES so a monthly index update doesn't break the eval), public
+    # inquiries, fine collection, equipment compensation, sick-days (ג')
+    ("soldier", "מה גובה הפיקדון והמענק שמקבלים אחרי השחרור, ומתי הכסף נכנס לחשבון?", "חוק-קליטת-חיילים",
+     [["990"], ["684", "685"], ["60"], ["חוק", "מקור אזרחי"]]),
+    ("soldier", "שלחתי פנייה בכתב לגורם בצבא ולא ענו לי — תוך כמה זמן חייבים להשיב?", "8.0101",
+     [["45"], ["8.0101", "והנמקה"]]),
+    ("soldier", "קיבלתי קנס בדין משמעתי — כמה מותר להוריד לי מהמשכורת כל חודש?", "35.0221",
+     [["50"], ["35.0221", "הפקעת משכורת", "גביית קנסות"]]),
+    # moved from OBSERVE: was a corpus gap, now 35.0221 covers the collection
+    # route (clause 41: shortage-in-equipment payment deducted from pay)
+    ("commander", "מה הנוהל לחיוב חייל על אובדן ציוד צבאי?", "35.0221",
+     [["ינוכה", "ניכוי", "מהשכר", "מן השכר"], ["35.0221", "52.0301"]]),
+    ("soldier", "הטלפון הפרטי שלי נשבר במהלך אימון — אפשר לקבל פיצוי מהצבא?", "35.0223",
+     [["לפנים משורת הדין", "הצהרה", "30"], ["35.0223", "ציוד אזרחי", "ציוד פרטי"]]),
+    # the real-user gimel question (metrics 2026-07-11): a ג' day exists only
+    # by a doctor's determination — the refreshed clean 61.0104 must say so
+    ("soldier", "אני מרגיש חולה — מותר לי להישאר בבית בגימלים בלי אישור מרופא?", "61.0104",
+     [["רופא"], ["מנוחה", "אינו כשיר", "בלתי כשיר", "גורם מוסמך"], ["61.0104", "טיפול רפואי"]]),
 ]
 
 # שאלות אמת עמומות — נדפסות לקריאה ידנית בלבד (אין להן pass/fail חד):
 # חלקן פער-קורפוס אמיתי, חלקן תשובה חלקית לגיטימית (כלל 2 בפרומפט).
+# (2026-07-22: שלוש שאלות עברו ל-FACTS אחרי שנסגר הפער — פיקדון/מענק ל"חוק-
+# קליטת-חיילים", נשק-הביתה ל-2.0101, חיוב-על-אובדן-ציוד ל-35.0221.)
 OBSERVE = [
-    # likely corpus gap: פניות הציבור procedure isn't the קבילות order
+    # 8.0101 covers the 45-day duty; whether the commander gets updated is a
+    # nuance the order doesn't state — keep as a human-judgement read
     ("soldier", "פניתי לפניות הציבור בגלל מצוקה שקשורה ליחס המפקד — הם חייבים לעדכן את המפקד?"),
-    # amounts are civil law (out of corpus) but 35.0234 states the timing —
-    # rule 2 expects a partial answer, not a bare refusal
-    ("soldier", "כמה כסף אני אמור לקבל מענק שחרור ואחרי כמה זמן הוא יכנס לחשבון הבנק?"),
     # pilot, downvoted: club hours are unit-set (35.0818), Shabbat rules in PM-34.0101
     ("soldier", "האם מותר לראות טלוויזיה במועדון בשבת?"),
-    # pilot, refused: 2.0101 covers approvals (purpose-bound, ≤6 months)
-    ("soldier", "מסוכן באזור שאני גר — אפשר לבקש אישור לשאת נשק הביתה גם אם אני לא חייב?"),
-    # ex-NOSCOPE (see there): rule-2 partial answers are the right behaviour
-    ("soldier", "מה גובה הפיקדון והמענק שמקבלים אחרי השחרור?"),
-    ("commander", "מה הנוהל לחיוב חייל על אובדן ציוד צבאי?"),
 ]
 
 TOP_K = 3

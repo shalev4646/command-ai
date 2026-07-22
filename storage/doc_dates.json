@@ -204,6 +204,16 @@
     "raw": "מאי96",
     "marker": "tokef-clause;2digit-year;month-precision"
   },
+  "35.0221": {
+    "date": null,
+    "raw": null,
+    "marker": null
+  },
+  "35.0223": {
+    "date": "2020-12-27",
+    "raw": "27 בדצמבר2020",
+    "marker": "tokef-clause"
+  },
   "35.0227": {
     "date": "2020-06-25",
     "raw": "25.06.2020",
@@ -318,6 +328,11 @@
     "date": null,
     "raw": null,
     "marker": null
+  },
+  "8.0101": {
+    "date": "2002-07-01",
+    "raw": "יולי2002",
+    "marker": "standalone-stamp;month-precision"
   },
   "PM-33.0137": {
     "date": "1958-03-01",
