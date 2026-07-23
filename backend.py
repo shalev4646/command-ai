@@ -324,6 +324,10 @@ def _sources_from_chunks(chunks: list[dict]) -> list[dict]:
                     highlight = cc.get("text", "")
                     break
             sources.append({
+                # civil-law sources (חוק, not a פ"מ) must not be labelled as an
+                # order in the UI — the source dialog drops the "פ״מ" prefix for
+                # these and shows "מקור אזרחי" instead.
+                "civil_source": bool((doc or {}).get("civil_source")),
                 "doc_id": doc_id,
                 "title": doc.get("title", c.get("title", "")),
                 "source_file": source_file,
