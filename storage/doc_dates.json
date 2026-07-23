@@ -96,7 +96,7 @@
   },
   "31.0701": {
     "date": "2020-09-17",
-    "raw": "17 בספטמבר 2020",
+    "raw": "2020 בספטמבר17",
     "marker": "tokef-clause"
   },
   "31.0703": {
@@ -130,9 +130,9 @@
     "marker": "update-dates-list"
   },
   "33.0115": {
-    "date": "2008-03-10",
-    "raw": "10 במארס 2008",
-    "marker": "tokef-clause"
+    "date": null,
+    "raw": null,
+    "marker": null
   },
   "33.0120": {
     "date": null,
@@ -388,5 +388,10 @@
     "date": "2026-05-20",
     "raw": "20 במאי2026",
     "marker": "update-dates-list"
+  },
+  "חוק-קליטת-חיילים": {
+    "date": "2000-12-01",
+    "raw": "דצמבר2000",
+    "marker": "updated-line;month-precision"
   }
 }
