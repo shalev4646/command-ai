@@ -1,0 +1,23 @@
+# Keep the build context lean and secrets OUT of the image.
+.git
+.gitignore
+venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# Secrets never go in the image — Fly injects them as runtime env/secrets.
+.env
+.streamlit/secrets.toml
+
+# Rebuilt inside the image at build time (see Dockerfile).
+storage/chroma_db/
+
+# Local-only noise.
+docs/
+*.zip
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
