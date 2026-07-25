@@ -468,11 +468,19 @@ def retrieve(
     _lexical_rerank(query, candidates)
 
     # Fold suggested-question anchors into their document's real chunks: a
-    # strong question-to-question match lifts the doc's best real chunk to
+    # strong question-to-question match lifts one of the doc's real chunks to
     # the anchor's rank, and the anchor itself is dropped — it carries no
     # answer content, so it must never be handed to the LLM as context.
+    # The lift lands on the doc's best KEY-FACTS chunk when one exists, not
+    # on its best raw chunk: an anchor win means the raw chunks all scored
+    # poorly (a long anecdotal question dilutes cosine), and the best raw
+    # chunk at that point is arbitrary noise — the live "לאיים במשפט" miss
+    # handed the model a colophon/dates chunk while the curated offense
+    # summary sat at rank 404. Curated key-facts are the answers the anchor
+    # questions were written against, so they are the doc's representative.
     sq_best: dict[str, float] = {}
     best_real: dict[str, dict] = {}
+    best_kf: dict[str, dict] = {}
     real_candidates = []
     for c in candidates:
         if c["section"] == "sq":
@@ -482,11 +490,15 @@ def retrieve(
             cur = best_real.get(c["doc_id"])
             if cur is None or c["score"] > cur["score"]:
                 best_real[c["doc_id"]] = c
+            if c["section"].startswith("key-facts"):
+                cur_kf = best_kf.get(c["doc_id"])
+                if cur_kf is None or c["score"] > cur_kf["score"]:
+                    best_kf[c["doc_id"]] = c
     candidates = real_candidates
     for doc_id, anchor_score in sq_best.items():
         best = best_real.get(doc_id)
         if best is not None and anchor_score > best["score"]:
-            best["score"] = anchor_score
+            best_kf.get(doc_id, best)["score"] = anchor_score
 
     chunks = []
     per_doc_count: dict[str, int] = {}
