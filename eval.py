@@ -12,6 +12,9 @@
 2. שאלות "מלוכלכות" (DIRTY) — אותם נושאים בניסוח של חייל אמיתי: סלנג,
    שגיאות כתיב קלות, שאלות קצרות ומעורפלות. רץ בלי LLM כמו סט הזהב —
    בודק מה האינדקס סופג גולמי, בלי נרמול.
+2א. שאלות-בוחן (ADVERSARIAL, ‏eval_adversarial.json) — 3 שאלות לכל פקודה
+   בקורפוס מהזוויות שהאנקורים נוטים לפספס (איסור, סמכות, ביטול, מגבלת-זמן,
+   מקרה-קצה). רץ בחינם כמו סט הזהב; כל פקודה חדשה מחייבת 3 שאלות בקובץ.
 2ב. שגיאות הקלדה (TYPOS) — טיפו כבד במסלול הייצור של שאלה ראשונה: נרמול
    Haiku ואז אחזור; + חוזה NOCHANGE — שאלות נקיות חוזרות מהנרמול כלשונן.
    קריאת Haiku לשאלה (זניח), לכן בשכבת ה-LLM ולא ב---no-llm.
@@ -127,6 +130,13 @@ GOLDEN = [
     # regression: the release-leave annex table is RTL-mangled in raw_text —
     # answered "not found" until the key-facts clauses (2026-07-11)
     ("soldier",   "כמה ימי חופשת שחרור מקבלים לפני השחרור?", "PM-35.0402"),
+    # regression (2026-07-24): a live pilot question about a commander
+    # revoking a het-tash went unanswered — 35.0807's anchors all spoke from
+    # the requesting-soldier's perspective, so the revocation/authority angle
+    # never retrieved. Kept verbatim as asked. The systemic fix is the
+    # ADVERSARIAL set (eval_adversarial.json) — angle-gap probes over the
+    # whole corpus.
+    ("commander", "האם מותר למפקד לבטל ת\"ש פיקודי של המג\"ד", "35.0807"),
     # batch 6 (2026-07-20): the 7 orders of the 2026-07-12 corpus expansion
     # shipped with no eval coverage at all (raw_text-only ingestion). The
     # medical-profile question moved here FROM NOSCOPE — it was hallucination
@@ -492,6 +502,24 @@ def run_golden() -> int:
     return _run_retrieval_set("סט זהב", GOLDEN)
 
 
+# ── שכבת ADVERSARIAL: 237 שאלות-בוחן מכל הזוויות (eval_adversarial.json) ──
+# נולד מרגרסיית 2026-07-24 (ביטול-הת"ש): אנקורים שנוסחו רק מזווית החייל-
+# המבקש הפילו שאלות מהזווית ההפוכה. לכל פקודה בקורפוס נוסחו 3 שאלות-בוחן
+# בזוויות שאנקוריה לא כיסו — איסור, סמכות/דרגה, ביטול/שלילה, מגבלת-זמן,
+# מקרה-קצה — בניסוח יומיומי שאינו חופף לכותרת. רץ בחינם (אחזור בלבד),
+# ולכן חלק מהשער הקבוע: כל הרחבת-קורפוס חייבת לעבור גם אותו, וכל פקודה
+# חדשה מחייבת 3 שאלות-בוחן חדשות בקובץ.
+def run_adversarial() -> int:
+    import json as _json
+    path = Path(__file__).parent / "eval_adversarial.json"
+    if not path.exists():
+        print("✗ eval_adversarial.json חסר — סט שאלות-הבוחן לא נבדק")
+        return 1
+    probes = _json.loads(path.read_text(encoding="utf-8"))
+    cases = [(p["role"], p["question"], p["expected"]) for p in probes]
+    return _run_retrieval_set("שאלות-בוחן (זוויות)", cases)
+
+
 def run_dirty() -> int:
     return _run_retrieval_set("שאלות מלוכלכות", DIRTY)
 
@@ -833,6 +861,7 @@ def main() -> int:
     failures = run_structural()
     failures += run_golden()
     failures += run_dirty()
+    failures += run_adversarial()
     if "--no-llm" not in sys.argv:
         failures += run_typos()
         failures += run_followup()
