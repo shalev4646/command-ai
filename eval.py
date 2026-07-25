@@ -185,6 +185,12 @@ GOLDEN = [
     ("soldier",   "שלחתי פנייה בכתב לגורם בצבא ואף אחד לא עונה — מה עושים?", "8.0101"),
     ("soldier",   "איך גובים ממני קנס שקיבלתי בדין משמעתי?", "35.0221"),
     ("soldier",   "הציוד הפרטי שלי ניזוק במהלך פעילות — הצבא מפצה על זה?", "35.0223"),
+    # batch 11 (2026-07-26): pilot demand gap — a live reserve user asked when
+    # the vacation voucher arrives and got a refusal; covered by the vouchers
+    # doc built from miluim.idf.il (government decisions; civil source like
+    # the deposit law)
+    ("reserve",   "מתי מקבלים את שובר הנופש על ימי המילואים?", "שוברי-נופש-מילואים"),
+    ("commander", "משרת מילואים ביחידה שואל על שובר החופשה — מה תנאי הזכאות?", "שוברי-נופש-מילואים"),
 ]
 
 # (role, question, expected_doc_id) — same contract as GOLDEN, but phrased the
@@ -211,6 +217,8 @@ DIRTY = [
     # תשלומי מילואים, תגמול מיוחד); widened to a tuple when the 2026-07-22
     # money-vocabulary docs (חוק הפיקדון, 35.0221) shifted the ranking
     ("reserve",   "כמה כסף מקבלים על מילואים חוץ מהמשכורת?", ("013.3", "35.0206", "35.0209")),
+    # the live pilot phrasing that produced the "not found" refusal (2026-07-26)
+    ("reserve",   "אם עשיתי 40 ימי מילואים ב2025 ו160 ימים ב2026 מתי אני אמור לקבל את שובר החופשות", "שוברי-נופש-מילואים"),
     # batch 6 (2026-07-20): slang phrasings for the newest orders
     ("soldier",   "אפשר להוריד פרופיל בצבא?", "32.0402"),
     ("soldier",   "עשיתי תאונה עם רכב צבאי, יקחו לי את הרישיון?", "33.1104"),
@@ -451,6 +459,15 @@ FACTS = [
     # by a doctor's determination — the refreshed clean 61.0104 must say so
     ("soldier", "אני מרגיש חולה — מותר לי להישאר בבית בגימלים בלי אישור מרופא?", "61.0104",
      [["רופא"], ["מנוחה", "אינו כשיר", "בלתי כשיר", "גורם מוסמך"], ["61.0104", "טיפול רפואי"]]),
+    # batch 11 (2026-07-26): the vouchers doc, added for the live pilot refusal
+    # ("מתי אני אמור לקבל את שובר החופשות"). A when-do-I-get-it answer must
+    # carry the 45-day 2026 threshold, the two-month rule and the summer-2026
+    # rollout — all live in one key-facts clause, so this also guards chunk
+    # ranking staying intact
+    ("reserve", "אם עשיתי 40 ימי מילואים ב-2025 ו-160 ימים ב-2026 — מתי אני אמור לקבל את שובר החופשות?", "שוברי-נופש-מילואים",
+     [["45", "ארבעים וחמישה"], ["חודשיים"], ["קיץ"]]),
+    ("reserve", "עשיתי 60 ימי מילואים בצו 8 — כמה כסף מגיע לי בשובר הנופש?", "שוברי-נופש-מילואים",
+     [["4,500", "4500"], ["לוחם"], ["ילד"]]),
 ]
 
 # שאלות אמת עמומות — נדפסות לקריאה ידנית בלבד (אין להן pass/fail חד):

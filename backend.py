@@ -328,6 +328,7 @@ def _sources_from_chunks(chunks: list[dict]) -> list[dict]:
                 # order in the UI — the source dialog drops the "פ״מ" prefix for
                 # these and shows "מקור אזרחי" instead.
                 "civil_source": bool((doc or {}).get("civil_source")),
+                "civil_label": (doc or {}).get("civil_label") or "",
                 "doc_id": doc_id,
                 "title": doc.get("title", c.get("title", "")),
                 "source_file": source_file,

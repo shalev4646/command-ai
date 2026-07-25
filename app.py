@@ -4739,10 +4739,13 @@ def _clause_dialog(primary: dict, page: int | None, full_href: str | None) -> No
     did = (primary.get("doc_id") or "").strip()
     order = did[3:] if did.upper().startswith("PM-") else did
     sub_parts = []
-    # civil-law sources are a חוק, not a פקודת מטכ"ל — never label them "פ״מ"
-    # (the doc_id there is a slug, not an order number). Show "מקור אזרחי".
+    # civil sources (חוק, החלטת ממשלה) are not a פקודת מטכ"ל — never label
+    # them "פ״מ" (the doc_id there is a slug, not an order number). Show
+    # "מקור אזרחי · {kind}"; kind comes from the doc's civil_label and
+    # defaults to "חוק" (the pre-existing single civil doc).
     if primary.get("civil_source"):
-        sub_parts.append("מקור אזרחי · חוק")
+        kind = (primary.get("civil_label") or "חוק").strip() or "חוק"
+        sub_parts.append(f"מקור אזרחי · {html.escape(kind)}")
     elif order:
         sub_parts.append(f"פ״מ {html.escape(order)}")
     if page:
