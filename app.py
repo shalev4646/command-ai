@@ -313,6 +313,30 @@ components.html(
         };
         if ((navigator.standalone === true) ||
             (matchMedia && matchMedia("(display-mode: standalone)").matches)) window.__caiSA = true;
+        // CONFIRM GATE (2026-07-26 video). Every measurement used to reach the
+        // DOM immediately. On a cold standalone launch iOS reports the geometry
+        // differently from one sample to the next while it settles, so the ~15
+        // boot samples each stamped a DIFFERENT --cai-vvh/--cai-vvoff and
+        // relaid out the whole column: the role picker jumps vertically for
+        // ~7s after it first paints, and one of those frames is the one that
+        // sits under the status bar. Proof it is the stamping and not the
+        // safe-area: env(safe-area-inset-top) is static and cannot oscillate.
+        // Confirmed on the live desktop page (healthy geometry): 6 restamps in
+        // 9s, all 812px, one real change — so the repeats are harmless and it
+        // is the VALUES that differ on device. The noise is iOS's; trusting
+        // every single sample was ours. A candidate must now be repeated by the
+        // next sample before it is applied, so transients never reach the DOM
+        // and the layout moves once — when it has converged.
+        var TOL = 2; // px: sub-pixel viewport jitter is not a real change
+        var applyPin = function (h, off) {
+            var hs = Math.round(h) + "px", os = off + "px";
+            // write only on a real change — never rely on the engine to dedup
+            // an identical restamp into a no-op
+            if (aroot.style.getPropertyValue("--cai-vvh") !== hs)
+                aroot.style.setProperty("--cai-vvh", hs);
+            if (aroot.style.getPropertyValue("--cai-vvoff") !== os)
+                aroot.style.setProperty("--cai-vvoff", os);
+        };
         var setH = function () {
             try {
                 var g = glassH();
@@ -333,7 +357,6 @@ components.html(
                 if (g >= 400 && h < g * 0.8) return;
                 if (g >= 400) h = Math.min(h, g); // ghost-viewport clamp (see above)
                 if (h < 400) return;
-                aroot.style.setProperty("--cai-vvh", Math.round(h) + "px");
                 // empirical overflow corrective: where does the composer strip
                 // REALLY end? Add back the already-applied offset so the
                 // comparison sees the uncorrected position (fixpoint-stable).
@@ -344,7 +367,14 @@ components.html(
                     var ex = Math.round(sb.getBoundingClientRect().bottom + cur - h);
                     if (ex >= 12 && ex <= 120) off = ex;
                 }
-                if (off !== Math.round(cur)) aroot.style.setProperty("--cai-vvoff", off + "px");
+                // hold the candidate; apply only once the NEXT sample agrees.
+                // `cur` above is deliberately the APPLIED offset, not the
+                // pending one — the fixpoint correction has to add back what
+                // the strip is actually positioned by.
+                var prev = window.__caiCand;
+                window.__caiCand = { h: h, off: off };
+                if (!prev || Math.abs(prev.h - h) > TOL || prev.off !== off) return;
+                applyPin(h, off);
             } catch (e) {}
         };
         // synthetic re-layout kick — the keyboard cycle fixes the native
@@ -480,9 +510,14 @@ components.html(
                 // viewport event ever fires again
                 setInterval(heal, 1500);
             }, 30000);
-            window.addEventListener("orientationchange", function () { setTimeout(setH, 400); });
+            // a LONE setH can never clear the confirm gate, so the single-shot
+            // triggers fire a short burst instead — a genuine change still
+            // lands within ~260ms. `resize` needs none: it arrives in streaks
+            // and self-confirms.
+            var resample = function () { setH(); setTimeout(setH, 120); setTimeout(setH, 260); };
+            window.addEventListener("orientationchange", function () { setTimeout(resample, 400); });
             window.addEventListener("resize", setH);
-            window.addEventListener("pageshow", setH);
+            window.addEventListener("pageshow", resample);
             // the send/✓-dismiss taps blur the composer — remeasure AND clear
             // the keyboard's scroll residue right after, so the composer is
             // back at the bottom for the whole streamed answer
@@ -590,12 +625,19 @@ components.html(
         };
         if (!window.__caiDbg && /[?&]caidbg=1/.test(window.location.search || "")) {
             window.__caiDbg = true;
-            [3000, 6500, 10500, 15000].forEach(function (ms, i) {
-                setTimeout(function () { dbg("d6." + (i + 1)); }, ms);
-            });
+            // Round 7 films the SETTLING, not the settled state: rounds 5-6
+            // sampled from 3s, by which time the cold-launch geometry has
+            // already healed, so the frames that decide between "vvoff was
+            // over-applied" and "env read 0" were never captured. These
+            // straddle each setH tick ([0,300,700,1300,2200,3500,5200,7500])
+            // and the two nudges (350, 1500).
+            [250, 500, 900, 1500, 2400, 3600, 5400, 7800, 11000, 15000, 20000]
+                .forEach(function (ms, i) {
+                    setTimeout(function () { dbg("d7." + (i + 1)); }, ms);
+                });
             setTimeout(function () {
                 try { var b0 = document.getElementById("cai-dbg"); if (b0) b0.remove(); } catch (e) {}
-            }, 21000);
+            }, 26000);
         }
     };
     var hostDoc = window.top.document;
@@ -2022,6 +2064,11 @@ def _startup_png(w: int, h: int, dpr: int) -> bytes:
     return buf.getvalue()
 
 
+def _dbg_start_url() -> str:
+    base = "/~/+/" if _ON_CLOUD else "/"
+    return f"{base}?caidbg=1" if st.query_params.get("caidbg") == "1" else base
+
+
 def _pwa_assets() -> dict | None:
     """Register the PWA assets (icons + web-app manifest) with the media
     file manager and return their URLs. Called EVERY rerun — entries whose
@@ -2053,7 +2100,14 @@ def _pwa_assets() -> dict | None:
             # page, no shell JS bundle, no viewer badges — the boot goes
             # launch-image → olive loading theme → splash. Locally the app
             # really is served at /.
-            "start_url": "/~/+/" if _ON_CLOUD else "/",
+            # A ?caidbg=1 load gets its OWN manifest, whose start_url keeps
+            # the flag. iOS launches a home-screen icon at the manifest's
+            # start_url, so without this the query is dropped and the badge
+            # can never arm on the COLD launch that is the thing we need to
+            # film. "Add to Home Screen" from /?caidbg=1 therefore yields a
+            # separate diagnostic icon; every other visitor's manifest —
+            # and icon — is unchanged.
+            "start_url": _dbg_start_url(),
             "scope": "/",
             "display": "standalone",
             "background_color": "#99A26B",  # the boot-splash olive

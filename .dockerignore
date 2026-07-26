@@ -14,7 +14,17 @@ __pycache__/
 # Rebuilt inside the image at build time (see Dockerfile).
 storage/chroma_db/
 
+# static/*.pdf is a byte-identical mirror of pdf-ldf_law/ (37 files, 35 MB),
+# left over from serving PDFs at /app/static/. That path never worked behind
+# the Streamlit shell, so _pdf_media_url now streams the bytes straight from
+# pdf-ldf_law/ via the media file manager (app.py) — nothing reads static/.
+static/*.pdf
+
 # Local-only noise.
+# .claude/ is Claude Code's session data — 151 MB of transcripts that `COPY . .`
+# would otherwise bake into the image and re-upload on every deploy.
+.claude/
+scratchpad/
 docs/
 *.zip
 .DS_Store

@@ -54,11 +54,21 @@ fly secrets set ANTHROPIC_API_KEY="sk-ant-...your key from .env..."
 
 Optional — only if you want the admin dashboard (`?admin=1`) and Google Sheets
 metrics logging. This ships your whole local `.streamlit/secrets.toml` as one
-secret; the container writes it back to a file at startup:
+secret; the container writes it back to a file at startup.
+
+**Send it base64-encoded.** `secrets.toml` contains double quotes (the Google
+service-account key), and PowerShell 5.1 drops the quoting when it passes such
+a value to a native exe — `fly secrets set` then sees the TOML split into words
+and fails with `could not parse secrets: 'PRIVATE'`. Base64 is one quote-free
+token, so it arrives intact:
 
 ```powershell
-fly secrets set STREAMLIT_SECRETS_TOML="$(Get-Content -Raw .streamlit/secrets.toml)"
+$b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes(".streamlit\secrets.toml"))
+fly secrets set STREAMLIT_SECRETS_TOML_B64=$b64
 ```
+
+(`docker-entrypoint.sh` decodes it. The un-encoded `STREAMLIT_SECRETS_TOML`
+still works on shells that pass the value cleanly.)
 
 ## 5. Deploy
 
