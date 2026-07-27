@@ -32,7 +32,7 @@ import streamlit as st
 # STRIPPED and re-injected rather than nursed along with targeted swaps: a
 # long-lived dev venv keeps its patched index.html forever, and silently
 # testing last week's boot shell is worse than the cost of a rewrite.
-_VERSION = "v6"
+_VERSION = "v7"
 
 
 def _font_data_uri() -> str:
@@ -123,10 +123,14 @@ _BODY_ADD = """
         // glass and the app is simply there behind it.
         var lift = function () {
           if (gone) return; gone = true;
-          el.style.transition = 'transform .6s cubic-bezier(.7,0,.3,1), opacity .6s ease';
-          el.style.transform = 'translateY(-101%)';
-          el.style.opacity = '0';
-          setTimeout(function () { el.remove(); }, 680);
+          // SLIDE ONLY — never fade while sliding: a curtain whose opacity
+          // drops mid-motion is see-through, and the app showed THROUGH the
+          // moving splash as a smeared double-exposure (two crossing
+          // wordmarks, 2026-07-27 video #5, t≈11s). The curtain stays fully
+          // opaque and simply leaves the glass.
+          el.style.transition = 'transform .55s cubic-bezier(.7,0,.3,1)';
+          el.style.transform = 'translateY(-102%)';
+          setTimeout(function () { el.remove(); }, 620);
         };
         // Wait for a COMPLETE screen, not for any markdown: the app emits its
         // CSS as a markdown element long before it renders anything a person
