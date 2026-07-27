@@ -1295,7 +1295,20 @@ header {{ visibility: hidden; }}
 @media (hover: hover) {{
     .st-key-drawer_open_btn button:hover {{ background-color: rgba(163,174,110,.24) !important; }}
 }}
-.st-key-drawer_backdrop {{ position: fixed; inset: 0; z-index: 125; }}
+/* THE SCRIM MUST ACTUALLY BE THE SCREEN. Streamlit stamps an INLINE width on
+   every stElementContainer (here: 32px, the width of a button with no visible
+   label), and an explicit width beats left+right on an out-of-flow box — so
+   `inset: 0` never widened this one. The result was a 32×28 dark box in the
+   top corner: the "small black square" from the 2026-07-27 phone report, and
+   the reason tapping outside the drawer never closed it — only that square
+   did. Force the whole chain to the viewport. */
+.st-key-drawer_backdrop {{
+    position: fixed; inset: 0; z-index: 125;
+    width: 100% !important; height: 100% !important;
+}}
+.st-key-drawer_backdrop div[data-testid="stButton"] {{
+    width: 100% !important; height: 100% !important; margin: 0 !important;
+}}
 .st-key-drawer_backdrop button {{
     width: 100% !important; height: 100% !important; min-height: 100% !important;
     background: rgba(9, 11, 7, .62) !important;
@@ -2228,6 +2241,170 @@ components.html(
 )
 
 
+# ── Drawer gesture engine (swipe + tap, all client-side) ──
+# Everything about opening and closing the drawer happens in the browser: the
+# panel and the backdrop are always in the DOM (see the drawer section below)
+# and one class on <html> decides whether they are on screen. That is the
+# whole point — the server never hears about it, so nothing repaints. The old
+# server-state version reran the script on every open AND every close, and on
+# device that reads as the entire app reloading each time the menu moves
+# (2026-07-27 phone video).
+#
+#   SWIPE OPEN   — start on the right edge (RTL: the drawer's own side) and
+#                  drag inward; the real panel is pinned to the finger 1:1.
+#   SWIPE CLOSE  — drag it back out from anywhere over the panel/backdrop.
+#                  Either way, releasing past the commit point hands over to
+#                  the CSS transition, which finishes the throw from wherever
+#                  the finger left it; short of it, it springs back.
+#   TAPS         — the hamburger, the « button and the backdrop are ordinary
+#                  st.buttons (they keep their styling and their place in the
+#                  layout), but their clicks are swallowed in the CAPTURE
+#                  phase before React ever sees them, so a tap toggles the
+#                  class instead of triggering a rerun.
+#   ACTION TAPS  — "שיחה חדשה" and a conversation row DO rerun (they change
+#                  real state); those are closed client-side first, so the
+#                  panel is already gone when the rerun lands.
+#   SAFETY NET   — if the hamburger is not in the DOM the drawer cannot be
+#                  open (entry screen, name gate, after a logout), so the
+#                  class is force-cleared. This is what replaces every
+#                  drawer_open=False the server used to do.
+#
+# Serialized into a real <script> on the app document for the same reason as
+# the viewport engine above: anything registered from a component iframe dies
+# when Streamlit replaces that iframe on the next rerun.
+components.html(
+    r"""<script>
+    var swipeFn = function () {
+        if (window.__caiSwipe) return;
+        window.__caiSwipe = true;
+        var doc = document, root = doc.documentElement;
+        var EDGE = 30;   // px of right edge that arms the open gesture
+        var SLOP = 12;   // px before the gesture commits to an axis
+
+        var drawer = function () { return doc.querySelector(".st-key-cai_drawer"); };
+        var backdrop = function () { return doc.querySelector(".st-key-drawer_backdrop"); };
+        var hamburger = function () { return doc.querySelector(".st-key-drawer_open_btn button"); };
+        var isOpen = function () { return root.classList.contains("cai-drawer-open"); };
+        var W = function () {
+            var d = drawer();
+            var w = d ? d.getBoundingClientRect().width : 0;
+            return w || Math.min(window.innerWidth * 0.85, 320);
+        };
+        // hand the panel back to CSS: drop the inline transform and the drag
+        // class in the same frame, so the transition picks the throw up from
+        // wherever the finger let go instead of jumping
+        var settle = function (open) {
+            var d = drawer(), b = backdrop();
+            root.classList.toggle("cai-drawer-open", !!open);
+            root.classList.remove("cai-drawer-drag");
+            if (d) d.style.transform = "";
+            if (b) b.style.opacity = "";
+        };
+
+        // a live drag ends in a click on whatever was under the finger.
+        // Swallow the next real one — isTrusted keeps synthetic clicks alive.
+        var swallowClick = function () {
+            var kill = function (ev) {
+                if (!ev.isTrusted) return;
+                ev.stopPropagation();
+                ev.preventDefault();
+            };
+            doc.addEventListener("click", kill, true);
+            setTimeout(function () { doc.removeEventListener("click", kill, true); }, 400);
+        };
+
+        // ── swipe ──
+        var g = null;   // the active gesture
+
+        doc.addEventListener("touchstart", function (e) {
+            g = null;
+            if (e.touches.length !== 1) return;
+            // a dialog or the settings overlay owns the screen
+            if (doc.querySelector('[data-testid="stDialog"], .st-key-cai_settings')) return;
+            if (!hamburger()) return;                                    // no drawer on this screen
+            var t = e.touches[0];
+            // never steal a caret drag inside the composer
+            if (t.target && t.target.closest && t.target.closest("input, textarea, [contenteditable]")) return;
+            if (isOpen()) {
+                g = { mode: "close", x: t.clientX, y: t.clientY, live: false, travel: 0, w: W() };
+            } else if (t.clientX >= window.innerWidth - EDGE) {
+                g = { mode: "open", x: t.clientX, y: t.clientY, live: false, travel: 0, w: W() };
+            }
+        }, { passive: true, capture: true });
+
+        doc.addEventListener("touchmove", function (e) {
+            if (!g || !e.touches.length) return;
+            var t = e.touches[0], dx = t.clientX - g.x, dy = t.clientY - g.y;
+            if (!g.live) {
+                if (Math.abs(dx) < SLOP) { if (Math.abs(dy) > SLOP) g = null; return; }
+                if (Math.abs(dy) > Math.abs(dx)) { g = null; return; }         // vertical scroll wins
+                if (g.mode === "open" ? dx > 0 : dx < 0) { g = null; return; } // wrong way
+                if (!drawer()) { g = null; return; }
+                g.live = true;
+                root.classList.add("cai-drawer-drag");
+            }
+            g.travel = Math.max(0, Math.min(g.mode === "open" ? -dx : dx, g.w));
+            var off = g.mode === "open" ? g.w - g.travel : g.travel;
+            var d = drawer(), b = backdrop();
+            if (d) d.style.transform = "translateX(" + off + "px)";
+            if (b) b.style.opacity = String(1 - (off / g.w) * 0.9);
+            e.preventDefault();
+        }, { passive: false, capture: true });
+
+        var finish = function () {
+            var cur = g;
+            g = null;
+            if (!cur || !cur.live) return;
+            swallowClick();
+            var commit = cur.travel > Math.min(90, cur.w * 0.3);
+            settle(cur.mode === "open" ? commit : !commit);
+        };
+        doc.addEventListener("touchend", finish, { passive: true, capture: true });
+        doc.addEventListener("touchcancel", function () {
+            if (g) g.travel = 0;   // an interrupted drag always springs back
+            finish();
+        }, { passive: true, capture: true });
+
+        // ── taps ──
+        var TOGGLES = ".st-key-drawer_open_btn button";
+        var CLOSERS = ".st-key-drawer_close button, .st-key-drawer_backdrop button";
+        // these DO rerun (they change real state) — close first, don't block
+        var ACTIONS = '.st-key-new_chat button, [class*="st-key-hist_"] button';
+        doc.addEventListener("click", function (e) {
+            var el = e.target;
+            if (!el || !el.closest) return;
+            if (el.closest(TOGGLES)) {
+                e.preventDefault(); e.stopPropagation();   // capture phase: React never sees it
+                settle(!isOpen());
+            } else if (el.closest(CLOSERS)) {
+                e.preventDefault(); e.stopPropagation();
+                settle(false);
+            } else if (el.closest(ACTIONS)) {
+                settle(false);
+            }
+        }, true);
+
+        // ── safety net ──
+        // no hamburger in the DOM (entry screen, name gate, post-logout) means
+        // the drawer cannot legitimately be open
+        var sweep = function () { if (isOpen() && !hamburger()) settle(false); };
+        new MutationObserver(sweep).observe(doc.body, { childList: true, subtree: true });
+        sweep();
+    };
+    try {
+        var adoc = window.parent.document;   // the app document, one level up
+        if (!adoc.getElementById("cai-swipe-js")) {
+            var s = adoc.createElement("script");
+            s.id = "cai-swipe-js";
+            s.textContent = "(" + swipeFn.toString() + ")();";
+            adoc.body.appendChild(s);
+        }
+    } catch (e) {}
+    </script>""",
+    height=0,
+)
+
+
 # ── PWA: home-screen metadata (icon, standalone, manifest) ──
 @st.cache_data(show_spinner=False)
 def _icon_bytes(name: str) -> bytes | None:
@@ -2626,6 +2803,13 @@ suggested_questions = st.session_state.get("suggested") or _FALLBACK_QUESTIONS.g
 
 def queue_question(q: str):
     st.session_state.pending_question = q
+    # Collapse the orders list. It is not cosmetic: the drawer now renders on
+    # EVERY run (its open state is a CSS class, not server state), and an
+    # expanded list re-registers all ~80 order PDFs with the media manager per
+    # run — bytes hashed on the request path of every question, for a list
+    # nobody is looking at. Asking a question is the one high-frequency full
+    # rerun, so that is where the list goes back to its default.
+    st.session_state.orders_open = False
 
 
 def archive_current_conversation():
@@ -3383,6 +3567,38 @@ _ICON = {
 # braces); icon data-URIs are spliced in by token so the CSS body stays literal.
 _DS_CSS = """
 <style id="cai-ds">
+/* ═══ DRAWER — open/closed state (client-side) ═══
+   The panel and its backdrop are ALWAYS rendered; one class on <html> —
+   flipped by the gesture engine, never by the server — decides whether they
+   are on screen. That is what makes open/close instant and repaint-free.
+   visibility (not display) so the closed panel is out of the tab order and
+   the hit-testing tree while the transform stays animatable; it flips at the
+   END of the close transition (0s delay on open) so the slide-out is seen. */
+.st-key-cai_drawer {
+  transform: translateX(100%);
+  visibility: hidden;
+  transition: transform .26s cubic-bezier(.2,.7,.2,1), visibility 0s linear .26s;
+}
+.st-key-drawer_backdrop {
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity .26s ease, visibility 0s linear .26s;
+}
+html.cai-drawer-open .st-key-cai_drawer {
+  transform: none; visibility: visible;
+  transition: transform .26s cubic-bezier(.2,.7,.2,1), visibility 0s;
+}
+html.cai-drawer-open .st-key-drawer_backdrop {
+  opacity: 1; visibility: visible; pointer-events: auto;
+  transition: opacity .26s ease, visibility 0s;
+}
+/* mid-drag: the panel is pinned to the finger by an inline transform, so
+   every transition must be off or it would lag behind by a quarter second */
+html.cai-drawer-drag .st-key-cai_drawer,
+html.cai-drawer-drag .st-key-drawer_backdrop {
+  transition: none !important; visibility: visible !important;
+}
+html.cai-drawer-drag .st-key-drawer_backdrop { pointer-events: none !important; }
+
 /* ═══ DRAWER — redesigned (mockup 2a) ═══ */
 .st-key-cai_drawer {
   width: min(85vw, 320px) !important;
@@ -3597,7 +3813,16 @@ _DS_CSS = """
 }
 
 /* ═══ SETTINGS overlay (mockup 8a–8e) ═══ */
-.st-key-settings_backdrop { position: fixed; inset: 0; z-index: 135; }
+/* same inline-width collapse as the drawer backdrop (see the base CSS): the
+   element container is stamped with width:32px, so inset:0 never widened it
+   and the scrim was a 32×28 dark box in the corner instead of the screen */
+.st-key-settings_backdrop {
+  position: fixed; inset: 0; z-index: 135;
+  width: 100% !important; height: 100% !important;
+}
+.st-key-settings_backdrop div[data-testid="stButton"] {
+  width: 100% !important; height: 100% !important; margin: 0 !important;
+}
 .st-key-settings_backdrop button {
   width: 100% !important; height: 100% !important; min-height: 100% !important;
   background: rgba(9,11,7,.85) !important; border: none !important;
@@ -3883,7 +4108,6 @@ def _wipe_all():
     st.session_state.pop("suggested", None)
     st.session_state.pop("orders_search", None)
     st.session_state.show_settings = False
-    st.session_state.drawer_open = False
     st.session_state.service_track = ""
     st.session_state.service_type = "סדיר"
     # drop the settings widgets' keys so they reseed from the reset mirrors
@@ -3955,7 +4179,6 @@ def _settings_hub():
         st.session_state.pop("suggested", None)
         st.session_state.pop("orders_search", None)
         st.session_state.show_settings = False
-        st.session_state.drawer_open = False
         st.rerun()
     st.markdown("<div class='cai-drawer-foot'>בלמ\"ס · לשימוש פנימי בלבד</div>", unsafe_allow_html=True)
 
@@ -4364,176 +4587,173 @@ def _order_link(title: str, url: str | None, date_badge: str | None = None) -> s
 # with a MutationObserver across the whole role-pick transition, on a build
 # whose config.toml carries no toolbarMode override), even though the same
 # code mounts it locally — the platform's client flags outrank config.toml.
-# So the drawer is app-owned: an st.button hamburger toggles a fixed-position
-# keyed container through session state. No stSidebar machinery anywhere, so
-# no platform build can take it away again.
-if "drawer_open" not in st.session_state:
-    st.session_state.drawer_open = False
+# So the drawer is app-owned: a plain keyed container, fixed-positioned by our
+# own CSS. No stSidebar machinery anywhere, so no platform build can take it
+# away again.
+# OPEN/CLOSE IS CLIENT-SIDE (2026-07-27 phone video). It used to be server
+# state — drawer_open + st.rerun() — and every single open and close therefore
+# repainted the entire app: component iframes reload, the conversation
+# re-renders, the composer re-mounts. On device that reads as the whole screen
+# reloading each time the menu moves. So the panel is now ALWAYS in the DOM and
+# its state is one class on <html> (cai-drawer-open), flipped by the gesture
+# engine — CSS does the sliding, the server is never told, nothing repaints.
+# The three buttons below are pure tap targets: the engine intercepts their
+# clicks in the capture phase, so their Python bodies never run.
+st.button("תפריט", key="drawer_open_btn")
+# full-viewport click-catcher UNDER the panel — tapping outside closes.
+# Hidden (visibility + pointer-events) while the drawer is closed, so it
+# cannot eat taps meant for the app.
+st.button("סגירת התפריט", key="drawer_backdrop")
+st.markdown(_DS_CSS, unsafe_allow_html=True)
+with st.container(key="cai_drawer"):
+    # ── top row: settings gear (right/leading) + close « (left/trailing) ──
+    _c_gear, _c_close = st.columns(2)
+    with _c_gear:
+        # the dialog overlays a live drawer that stays open behind it —
+        # the open class survives this rerun (it lives on <html>, which
+        # Streamlit never replaces), so dismissing returns to the drawer
+        if st.button("⚙", key="open_settings"):
+            st.session_state.show_settings = True
+            st.session_state.settings_screen = "hub"
+            st.rerun()
+    with _c_close:
+        st.button("«", key="drawer_close")
 
-if st.button("תפריט", key="drawer_open_btn"):
-    st.session_state.drawer_open = True
-    st.rerun()
+    # ── role card (display only; role switching lives in Settings) ──
+    _svc_type = st.session_state.get("service_type") or "סדיר"
+    _role_badge = "שירות חובה" if _svc_type == "סדיר" else _svc_type
+    # with a saved name: initial + name up front, role folds into the
+    # small key line ("מחובר כ־חייל"); without — exactly the old card
+    _dnd = _display_name()
+    _card_av = (_dnd or role_label)[:1]
+    _card_k = f"מחובר כ־{role_label}" if _dnd else "מחובר כ־"
+    _card_nm = _dnd or role_label
+    st.markdown(
+        "<div class='cai-role-card'>"
+        f"<div class='cai-role-av'>{html.escape(_card_av)}</div>"
+        "<div class='cai-role-meta'>"
+        f"<div class='cai-role-k'>{html.escape(_card_k)}</div>"
+        f"<div class='cai-role-nm'>{html.escape(_card_nm)}</div></div>"
+        f"<span class='cai-role-badge'>{html.escape(_role_badge)}</span>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
-if st.session_state.drawer_open:
-    # full-viewport click-catcher UNDER the panel — tapping outside closes
-    if st.button("סגירת התפריט", key="drawer_backdrop"):
-        st.session_state.drawer_open = False
-        st.rerun()
-    st.markdown(_DS_CSS, unsafe_allow_html=True)
-    with st.container(key="cai_drawer"):
-        # ── top row: settings gear (right/leading) + close « (left/trailing) ──
-        _c_gear, _c_close = st.columns(2)
-        with _c_gear:
-            # opening settings keeps drawer_open=True on purpose — a dialog
-            # dismiss doesn't rerun the full script, so flipping a layout flag
-            # here would strand the drawer (painted, but its widgets no longer
-            # render → the next tap inside it is silently lost).
-            if st.button("⚙", key="open_settings"):
-                st.session_state.show_settings = True
-                st.session_state.settings_screen = "hub"
-                st.rerun()
-        with _c_close:
-            if st.button("«", key="drawer_close"):
-                st.session_state.drawer_open = False
-                st.rerun()
-
-        # ── role card (display only; role switching lives in Settings) ──
-        _svc_type = st.session_state.get("service_type") or "סדיר"
-        _role_badge = "שירות חובה" if _svc_type == "סדיר" else _svc_type
-        # with a saved name: initial + name up front, role folds into the
-        # small key line ("מחובר כ־חייל"); without — exactly the old card
-        _dnd = _display_name()
-        _card_av = (_dnd or role_label)[:1]
-        _card_k = f"מחובר כ־{role_label}" if _dnd else "מחובר כ־"
-        _card_nm = _dnd or role_label
+    # ── knowledge base — orders list (expander styled as the accent card) ──
+    st.markdown("<div class='cai-sec-label'>מאגר הידע</div>", unsafe_allow_html=True)
+    docs = get_loaded_docs_info(role=st.session_state.role)
+    if "orders_open" not in st.session_state:
+        st.session_state.orders_open = False
+    with st.container(key="cai_kb"):
+        # The card visual carries the olive count PILL + the ‹ chevron —
+        # a plain st.button/expander label can't style a badge, so we draw
+        # the card in HTML and overlay a transparent st.button to capture
+        # the tap (CSS positions it over the card).
         st.markdown(
-            "<div class='cai-role-card'>"
-            f"<div class='cai-role-av'>{html.escape(_card_av)}</div>"
-            "<div class='cai-role-meta'>"
-            f"<div class='cai-role-k'>{html.escape(_card_k)}</div>"
-            f"<div class='cai-role-nm'>{html.escape(_card_nm)}</div></div>"
-            f"<span class='cai-role-badge'>{html.escape(_role_badge)}</span>"
-            "</div>",
+            "<div class='cai-kb-card" + (" open" if st.session_state.orders_open else "") + "'>"
+            "<span class='kb-ic'></span>"
+            "<span class='kb-title'>פקודות מטכ\"ל במערכת</span>"
+            f"<span class='kb-badge'>{len(docs)}</span>"
+            "<span class='kb-chev'></span></div>",
+            unsafe_allow_html=True)
+        if st.button("פקודות מטכ\"ל במערכת", key="toggle_orders", use_container_width=True):
+            st.session_state.orders_open = not st.session_state.orders_open
+            st.rerun()
+        if st.session_state.orders_open:
+            if docs:
+                search = _search_norm(st.text_input(
+                    "חיפוש פקודה",
+                    key="orders_search",
+                    label_visibility="collapsed",
+                    placeholder="🔎 חיפוש פקודה...",
+                ))
+                # media URLs are registered for ALL docs, filtered or not: a
+                # media-manager entry whose coord isn't re-registered during a
+                # rerun is purged at that rerun's end — filtering registration
+                # would 404 a PDF the user already opened in another tab
+                rows = [
+                    (doc, _pdf_media_url(doc["source_file"], f"pdfside_{doc['id']}")
+                     if doc.get("source_file") else None)
+                    for doc in docs
+                ]
+                shown = [
+                    (doc, url) for doc, url in rows
+                    if not search
+                    or search in _search_norm(doc["title"])
+                    or search in _search_norm(str(doc["id"]))
+                ]
+                if not shown:
+                    st.caption("לא נמצאו פקודות מתאימות")
+                # each title is itself the tap target that opens the order's
+                # PDF inline (styled as a flat list line, not a button).
+                # ONE markdown for the whole list: the wrapper div is the
+                # inner scroll region — per-row st.markdown calls would each
+                # be siblings in the drawer flow and stretch it viewport-long
+                else:
+                    st.markdown(
+                        "<div class='cai-orders-scroll'>"
+                        + "".join(_order_link(doc["title"], url, _doc_date_badge(doc["id"]))
+                                  for doc, url in shown)
+                        + "</div>",
+                        unsafe_allow_html=True,
+                    )
+            else:
+                st.caption("אין פקודות טעונות")
+
+    # ── tools (grouped card) ──
+    st.markdown("<div class='cai-sec-label'>כלים</div>", unsafe_allow_html=True)
+    with st.container(key="cai_tools"):
+        # the tool dialogs overlay a live drawer that stays open behind
+        # them (same as the gear above), so dismissing one returns the
+        # user straight to the menu.
+        if LETTER_TYPES and st.button("מחולל מכתבים", key="open_letters", use_container_width=True):
+            _letters_dialog()
+        # deterministic tools, zero-token, no quota — each gated on its module
+        if _pa and st.button("בודק סמכות עונש", key="open_punishment", use_container_width=True):
+            _punishment_dialog()
+        if entitlements and st.button("מחשבון זכאויות", key="open_entitlements", use_container_width=True):
+            _entitlements_dialog()
+
+    # ── recent conversations — only this role's (restoring a cross-role
+    # chat would mix personas/doc scopes in one thread) ──
+    role_history = [
+        (i, conv) for i, conv in enumerate(st.session_state.conversation_history)
+        if conv.get("role") == st.session_state.role
+    ]
+    _rc_head, _rc_clear = st.columns([3, 1])
+    with _rc_head:
+        st.markdown(
+            "<div class='cai-recent-head'><span class='cai-recent-t'>שיחות אחרונות</span>"
+            f"<span class='cai-recent-n'>{len(role_history)}</span></div>",
             unsafe_allow_html=True,
         )
-
-        # ── knowledge base — orders list (expander styled as the accent card) ──
-        st.markdown("<div class='cai-sec-label'>מאגר הידע</div>", unsafe_allow_html=True)
-        docs = get_loaded_docs_info(role=st.session_state.role)
-        if "orders_open" not in st.session_state:
-            st.session_state.orders_open = False
-        with st.container(key="cai_kb"):
-            # The card visual carries the olive count PILL + the ‹ chevron —
-            # a plain st.button/expander label can't style a badge, so we draw
-            # the card in HTML and overlay a transparent st.button to capture
-            # the tap (CSS positions it over the card).
-            st.markdown(
-                "<div class='cai-kb-card" + (" open" if st.session_state.orders_open else "") + "'>"
-                "<span class='kb-ic'></span>"
-                "<span class='kb-title'>פקודות מטכ\"ל במערכת</span>"
-                f"<span class='kb-badge'>{len(docs)}</span>"
-                "<span class='kb-chev'></span></div>",
-                unsafe_allow_html=True)
-            if st.button("פקודות מטכ\"ל במערכת", key="toggle_orders", use_container_width=True):
-                st.session_state.orders_open = not st.session_state.orders_open
-                st.rerun()
-            if st.session_state.orders_open:
-                if docs:
-                    search = _search_norm(st.text_input(
-                        "חיפוש פקודה",
-                        key="orders_search",
-                        label_visibility="collapsed",
-                        placeholder="🔎 חיפוש פקודה...",
-                    ))
-                    # media URLs are registered for ALL docs, filtered or not: a
-                    # media-manager entry whose coord isn't re-registered during a
-                    # rerun is purged at that rerun's end — filtering registration
-                    # would 404 a PDF the user already opened in another tab
-                    rows = [
-                        (doc, _pdf_media_url(doc["source_file"], f"pdfside_{doc['id']}")
-                         if doc.get("source_file") else None)
-                        for doc in docs
-                    ]
-                    shown = [
-                        (doc, url) for doc, url in rows
-                        if not search
-                        or search in _search_norm(doc["title"])
-                        or search in _search_norm(str(doc["id"]))
-                    ]
-                    if not shown:
-                        st.caption("לא נמצאו פקודות מתאימות")
-                    # each title is itself the tap target that opens the order's
-                    # PDF inline (styled as a flat list line, not a button).
-                    # ONE markdown for the whole list: the wrapper div is the
-                    # inner scroll region — per-row st.markdown calls would each
-                    # be siblings in the drawer flow and stretch it viewport-long
-                    else:
-                        st.markdown(
-                            "<div class='cai-orders-scroll'>"
-                            + "".join(_order_link(doc["title"], url, _doc_date_badge(doc["id"]))
-                                      for doc, url in shown)
-                            + "</div>",
-                            unsafe_allow_html=True,
-                        )
-                else:
-                    st.caption("אין פקודות טעונות")
-
-        # ── tools (grouped card) ──
-        st.markdown("<div class='cai-sec-label'>כלים</div>", unsafe_allow_html=True)
-        with st.container(key="cai_tools"):
-            # the tool buttons deliberately leave drawer_open=True (same reason
-            # as the gear above — the dialog overlays a live, state-consistent
-            # drawer, and closing it returns the user straight to it).
-            if LETTER_TYPES and st.button("מחולל מכתבים", key="open_letters", use_container_width=True):
-                _letters_dialog()
-            # deterministic tools, zero-token, no quota — each gated on its module
-            if _pa and st.button("בודק סמכות עונש", key="open_punishment", use_container_width=True):
-                _punishment_dialog()
-            if entitlements and st.button("מחשבון זכאויות", key="open_entitlements", use_container_width=True):
-                _entitlements_dialog()
-
-        # ── recent conversations — only this role's (restoring a cross-role
-        # chat would mix personas/doc scopes in one thread) ──
-        role_history = [
-            (i, conv) for i, conv in enumerate(st.session_state.conversation_history)
-            if conv.get("role") == st.session_state.role
-        ]
-        _rc_head, _rc_clear = st.columns([3, 1])
-        with _rc_head:
-            st.markdown(
-                "<div class='cai-recent-head'><span class='cai-recent-t'>שיחות אחרונות</span>"
-                f"<span class='cai-recent-n'>{len(role_history)}</span></div>",
-                unsafe_allow_html=True,
-            )
-        with _rc_clear:
-            if role_history and st.button("נקה הכל", key="clear_recent"):
-                # drop only this role's archived conversations
-                st.session_state.conversation_history = [
-                    c for c in st.session_state.conversation_history
-                    if c.get("role") != st.session_state.role
-                ]
-                st.rerun()
-        with st.container(key="cai_recent"):
-            if role_history:
-                for i, conv in role_history:
-                    if st.button(f"💬 {conv['title']}", key=f"hist_{i}", use_container_width=True):
-                        # archive the active chat first, exactly like "שיחה חדשה"
-                        # and logout do — otherwise switching conversations drops
-                        # the current one for good
-                        archive_current_conversation()
-                        st.session_state.messages = conv["messages"].copy()
-                        st.session_state.drawer_open = False
-                        st.rerun()
-            else:
-                st.caption("אין שיחות קודמות")
-
-        # ── footer CTA ──
-        if st.button("שיחה חדשה", key="new_chat", use_container_width=True):
-            archive_current_conversation()
-            st.session_state.messages = []
-            st.session_state.drawer_open = False
+    with _rc_clear:
+        if role_history and st.button("נקה הכל", key="clear_recent"):
+            # drop only this role's archived conversations
+            st.session_state.conversation_history = [
+                c for c in st.session_state.conversation_history
+                if c.get("role") != st.session_state.role
+            ]
             st.rerun()
-        st.markdown("<div class='cai-drawer-foot'>בלמ\"ס · לשימוש פנימי בלבד</div>", unsafe_allow_html=True)
+    with st.container(key="cai_recent"):
+        if role_history:
+            for i, conv in role_history:
+                if st.button(f"💬 {conv['title']}", key=f"hist_{i}", use_container_width=True):
+                    # archive the active chat first, exactly like "שיחה חדשה"
+                    # and logout do — otherwise switching conversations drops
+                    # the current one for good
+                    archive_current_conversation()
+                    st.session_state.messages = conv["messages"].copy()
+                    st.rerun()
+        else:
+            st.caption("אין שיחות קודמות")
+
+    # ── footer CTA ──
+    if st.button("שיחה חדשה", key="new_chat", use_container_width=True):
+        archive_current_conversation()
+        st.session_state.messages = []
+        st.rerun()
+    st.markdown("<div class='cai-drawer-foot'>בלמ\"ס · לשימוש פנימי בלבד</div>", unsafe_allow_html=True)
 
 # settings overlay (state machine) — shown whenever the flag is set; opening it
 # leaves the drawer open underneath so closing returns there.
