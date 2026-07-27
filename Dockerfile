@@ -38,6 +38,11 @@ ENV STREAMLIT_SERVER_PORT=8080 \
 EXPOSE 8080
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+# Strip CR: a Windows checkout (git autocrlf, e.g. a fresh deploy worktree)
+# ships the script with CRLF, the shebang becomes "bash\r", and the container
+# crash-loops with exit 127 — took prod down for ~6min on 2026-07-27.
+# .gitattributes now pins *.sh to LF; this is the belt to that suspender.
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
+    && chmod +x /usr/local/bin/docker-entrypoint.sh
 ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["streamlit", "run", "app.py"]
