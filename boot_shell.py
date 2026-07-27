@@ -32,7 +32,7 @@ import streamlit as st
 # STRIPPED and re-injected rather than nursed along with targeted swaps: a
 # long-lived dev venv keeps its patched index.html forever, and silently
 # testing last week's boot shell is worse than the cost of a rewrite.
-_VERSION = "v4"
+_VERSION = "v5"
 
 
 def _font_data_uri() -> str:
@@ -80,25 +80,14 @@ _HEAD_TEMPLATE = """
       #cai-boot-splash .s { font: 600 11px ui-monospace, Menlo, monospace; letter-spacing: 3px;
         color: rgba(23,26,18,.6);
         animation: caiBootFade .8s ease both; }
-      /* ── Lift cascade ── the app's chat-home elements hold at opacity 0
-         under the curtain and enter in a stagger the moment the lift starts
-         (html.cai-lifted, set by lift() below) — the Claude-app reveal. The
-         boot-done class arms 2.5s later and RETIRES the whole choreography:
-         without it every Streamlit rerun that recreates these nodes would
-         replay the entrance. No shell → none of this CSS exists → the app
-         renders plainly. */
-      html:not(.cai-lifted) .cai-header, html:not(.cai-lifted) .cai-greet,
-      html:not(.cai-lifted) .cai-greet-sub, html:not(.cai-lifted) [class*="st-key-sug_"],
-      html:not(.cai-lifted) .cai-entry, html:not(.cai-lifted) [data-testid="stBottom"] {
-        opacity: 0; }
-      @keyframes caiLiftIn { from { opacity: 0; transform: translateY(14px); }
-                             to { opacity: 1; transform: none; } }
-      html.cai-lifted:not(.cai-boot-done) .cai-header { animation: caiLiftIn .5s ease .0s both; }
-      html.cai-lifted:not(.cai-boot-done) .cai-entry { animation: caiLiftIn .5s ease .08s both; }
-      html.cai-lifted:not(.cai-boot-done) .cai-greet { animation: caiLiftIn .5s ease .12s both; }
-      html.cai-lifted:not(.cai-boot-done) .cai-greet-sub { animation: caiLiftIn .5s ease .2s both; }
-      html.cai-lifted:not(.cai-boot-done) [class*="st-key-sug_"] { animation: caiLiftIn .5s ease .28s both; }
-      html.cai-lifted:not(.cai-boot-done) [data-testid="stBottom"] { animation: caiLiftIn .5s ease .38s both; }
+      /* NO lift choreography. A staggered per-element entrance was tried
+         (2026-07-27, shell v4) and it FOUGHT Streamlit: reruns replace the
+         DOM mid-cascade, so the curtain lifted onto a dark screen of
+         opacity-0 elements and the composer popped in ~1.5s late (video #3,
+         "פותח ומעלים את השאלה"). The Claude-app smoothness comes from the
+         opposite move — the curtain waits until the screen is COMPLETE and
+         geometrically settled (see ready()/stability in the script below),
+         then lifts once over a finished static page. */
       /* Bottom-anchored waiting ring, matching .cai-splash-wait in app.py so the
          hand-off does not move it. Fades in at 2.5s: a fast load never shows it,
          a slow one stops looking frozen. This is the ONLY moving thing on screen
@@ -134,33 +123,40 @@ _BODY_ADD = """
         // glass and the app is simply there behind it.
         var lift = function () {
           if (gone) return; gone = true;
-          // arm the lift cascade (see the CSS above) the instant the curtain
-          // starts moving, and retire it once the entrance has played out —
-          // later reruns must not replay the choreography
-          var root = document.documentElement;
-          root.classList.add('cai-lifted');
-          setTimeout(function () { root.classList.add('cai-boot-done'); }, 2500);
           el.style.transition = 'transform .6s cubic-bezier(.7,0,.3,1), opacity .6s ease';
           el.style.transform = 'translateY(-101%)';
           el.style.opacity = '0';
           setTimeout(function () { el.remove(); }, 680);
         };
-        // Wait for a real SCREEN, not for any markdown: the app emits its CSS
-        // as a markdown element long before it renders anything a person can
-        // read, and lifting on that would expose a half-painted app — the
-        // "Missing Submit Button" frame in the 2026-07-27 video came from
-        // exactly that kind of early reveal.
+        // Wait for a COMPLETE screen, not for any markdown: the app emits its
+        // CSS as a markdown element long before it renders anything a person
+        // can read, and lifting early exposes a half-painted app (the
+        // "Missing Submit Button" frame, video #1). On the chat home the
+        // composer must exist too — a reveal without the question bar reads
+        // as broken (video #3). The anchor element doubles as the stability
+        // probe below.
         var ready = function () {
-          return document.querySelector(
-            '.cai-entry, .cai-greet, .cai-header, .st-key-cai_name_card, .cai-splash');
+          var scr = document.querySelector('.cai-entry, .st-key-cai_name_card, .cai-splash');
+          if (scr) return scr;
+          var chat = document.querySelector('.cai-greet, .cai-header');
+          if (!chat) return null;
+          return document.querySelector('[data-testid="stChatInput"]') ? chat : null;
         };
+        // Lift only once the layout is SETTLED: the anchor's position must
+        // hold still for 3 consecutive samples (~450ms) — a Streamlit rerun
+        // replacing the DOM mid-boot resets the count, so the curtain never
+        // rises over a page that is still being rebuilt (the dark-flash +
+        // popping-in reveal of video #3).
+        var lastY = -1e9, stable = 0;
         var tick = setInterval(function () {
-          if (!ready()) return;
-          clearInterval(tick);
-          // let the screen finish its own first paint under the curtain, so
-          // the lift reveals a settled layout rather than one still arriving
-          setTimeout(lift, 320);
-        }, 120);
+          var a = ready();
+          if (!a) { lastY = -1e9; stable = 0; return; }
+          var y = 0;
+          try { y = a.getBoundingClientRect().top; } catch (e) {}
+          stable = (Math.abs(y - lastY) < 1) ? stable + 1 : 0;
+          lastY = y;
+          if (stable >= 3) { clearInterval(tick); setTimeout(lift, 150); }
+        }, 150);
         setTimeout(function () { clearInterval(tick); lift(); }, 90000);
       })();
     </script>
