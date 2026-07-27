@@ -652,12 +652,27 @@ components.html(
                         }
                         window.__caiKbBusy = true;
                         var card = document.querySelector(".cai-kb-card");
-                        if (card) card.classList.toggle("open");
+                        var wantOpen = !(card && card.classList.contains("open"));
+                        if (card) { card.classList.add("busy"); card.classList.toggle("open"); }
                         kb.style.opacity = ".55";
-                        setTimeout(function () {
+                        // Release on the SERVER's answer, never on a timer. v1
+                        // waited a flat 1400ms; the device round-trip is ~3.5s,
+                        // so the guard reopened while the app was still working
+                        // and the next tap closed what the first had opened —
+                        // 2026-07-27 12:42 video: tap t=13.5, list t=17.0, gone
+                        // again t=19.0. The search field is the authoritative
+                        // signal: it exists exactly when the list is open.
+                        var t0 = Date.now();
+                        var poll = setInterval(function () {
+                            var landed =
+                                !!document.querySelector(".st-key-orders_search") === wantOpen;
+                            if (!landed && Date.now() - t0 <= 9000) return;
+                            clearInterval(poll);
                             window.__caiKbBusy = false;
+                            var c = document.querySelector(".cai-kb-card");
+                            if (c) c.classList.remove("busy");
                             try { kb.style.opacity = ""; } catch (e2) {}
-                        }, 1400);
+                        }, 120);
                     }
                 } catch (err) {}
             }, true);
@@ -3358,6 +3373,19 @@ _DS_CSS = """
 .cai-kb-card .kb-chev { flex: none; color: rgba(196,206,146,.8); font-size: 15px; direction: ltr; transition: transform .18s ease; }
 .cai-kb-card .kb-chev::before { content: "‹"; }
 .cai-kb-card.open .kb-chev { transform: rotate(90deg); }
+/* While the server is still answering the toggle the chevron becomes a
+   spinner. The round-trip is ~3.5s on the phone, and a card that looks idle
+   for that long invites a second tap — which is exactly what used to close
+   what the first tap had opened. No !important on transform: an animation
+   already outranks a normal declaration, and !important would freeze it. */
+@keyframes caiKbSpin { to { transform: rotate(360deg); } }
+.cai-kb-card.busy .kb-chev::before { content: ""; }
+.cai-kb-card.busy .kb-chev {
+  width: 13px; height: 13px; border-radius: 50%;
+  border: 2px solid rgba(196,206,146,.25);
+  border-top-color: rgba(196,206,146,.9);
+  animation: caiKbSpin .7s linear infinite;
+}
 .st-key-toggle_orders { position: absolute !important; top: 0; inset-inline: 0; margin: 0 !important; z-index: 3; }
 .st-key-toggle_orders button { opacity: 0 !important; height: 52px !important; min-height: 52px !important; padding: 0 !important; margin: 0 !important; border: none !important; }
 .st-key-cai_kb [data-testid="stTextInput"] { margin-top: 10px; }
