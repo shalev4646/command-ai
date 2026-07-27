@@ -33,10 +33,18 @@ except Exception:
     def _doc_date_badge(_id):
         return None
 try:
-    from verdict import verdict_clauses as _verdict_clauses
+    from verdict import verdict_clauses as _verdict_clauses, chip_clause as _chip_clause
+    from verdict import CHIP_TERM_RE as _VERDICT_TERM_RE, QUAL_CONFLICT_RE as _QUAL_CONFLICT_RE
 except Exception:
     def _verdict_clauses(_content):
         return []
+
+    def _chip_clause(_clause, stacked=False):
+        return None
+    # never-matching stand-ins: every chip gate fails closed, the ruling
+    # line stays body text — the same graceful "feature hides" degradation
+    # as the sibling modules above
+    _VERDICT_TERM_RE = _QUAL_CONFLICT_RE = re.compile(r"(?!x)x")
 # Deterministic, order-cited lookup tools (no LLM, no quota). Defensive
 # imports like the sibling modules above: a stale cached cloud build pairing
 # a new app.py with an older tree just hides the tool's button.
@@ -153,6 +161,15 @@ st.session_state.setdefault("profile_name", str(_ck.get("name") or "")[:40])
 # name_asked: the one-time name prompt (gate) was answered or skipped — never
 # nag again on this device, on any later role switch
 st.session_state.setdefault("name_asked", bool(_ck.get("asked")))
+# role_picked_here: the role was chosen by a TAP in THIS session, not restored
+# from the device cookie. The name gate is a first-run prompt that belongs after
+# that tap — a remembered device (role in the cookie, name never answered) used
+# to open the gate over the entry screen on the very first paint, before the
+# user touched anything (2026-07-27 video, t=13). Trade-off, deliberate: a
+# refresh in the middle of the gate now lands in the chat instead of back in the
+# gate. The name is optional and settable in הגדרות, so a dropped prompt costs
+# less than a gate that appears unprompted on every launch.
+st.session_state.setdefault("role_picked_here", False)
 st.session_state.setdefault("service_type", "סדיר")
 st.session_state.setdefault("service_track", "")
 st.session_state.setdefault("profile_customized", False)
@@ -825,7 +842,12 @@ ACCENT_RGB = ",".join(str(int(ACCENT.lstrip("#")[i:i + 2], 16)) for i in (0, 2, 
 # into this frame by the PWA script) — the band grew by it, so clear it too.
 # entry-like also covers the name gate (role picked, name not yet asked):
 # the real entry screen keeps rendering under the gate overlay
-_entry_like = st.session_state.role is None or not st.session_state.get("name_asked")
+# single source of truth for "the name gate is up" — the CSS padding below and
+# the render at the entry gate must never disagree about it
+_name_gate = (bool(st.session_state.get("role_picked_here"))
+              and st.session_state.role is not None
+              and not st.session_state.get("name_asked"))
+_entry_like = st.session_state.role is None or _name_gate
 MAIN_TOP_PADDING = "12px" if _entry_like else "calc(72px + var(--cai-sat, 0px))"
 
 # entry elements stagger in around the boot splash curtain lift (delay 1.15s
@@ -1309,6 +1331,14 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
 /* the gate form is layout-only: kill the stForm frame (keyed FORMS don't
    get an st-key-* class in 1.58 — scope through the card container) */
 .st-key-cai_name_card [data-testid="stForm"] {{ border: none !important; padding: 0 !important; }}
+/* Streamlit's own "Press Enter to submit form" hint (InputInstructions) is
+   laid out in the field row and lands ON the RTL placeholder / typed text
+   (2026-07-27 video, t=16-19.5). It also happens to be the only English
+   string on the screen, and the card already has explicit המשך/דלג buttons —
+   so it carries no information here. Same widget-in-a-form shape in the
+   settings card, same collision, killed together. */
+.st-key-cai_name_card [data-testid="InputInstructions"],
+.st-key-cai_pf_form [data-testid="InputInstructions"] {{ display: none !important; }}
 .st-key-cai_name_card [data-testid="stFormSubmitButton"] button {{
     justify-content: center !important; text-align: center !important;
     margin-bottom: 0 !important; padding: 11px 0 !important;
@@ -1634,6 +1664,23 @@ html.cai-standalone [data-testid="stAppViewContainer"]:has(.cai-greet) [data-tes
 .verdict-cond {{ color:#D9B36A; background:rgba(217,179,106,.12); border-color:rgba(217,179,106,.4); }}
 .verdict-no   {{ color:#D68C77; background:rgba(208,124,102,.12); border-color:rgba(208,124,102,.4); }}
 .verdict-none {{ color:rgba(236,237,230,.6); background:rgba(236,237,230,.05); border-color:rgba(236,237,230,.2); }}
+/* two-sided ruling (conflict questions): chips stack vertically, aligned
+   to the reading edge — each clause keeps its own colour */
+.verdict-stack {{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    direction: rtl;
+}}
+/* the "לא נמצא..." no-rule clause carries a short sentence, not a badge
+   term — let it wrap to two lines instead of overflowing the bubble */
+.verdict-wrap {{
+    white-space: normal;
+    line-height: 1.45;
+    border-radius: 16px;
+    text-align: right;
+}}
 
 /* ── Escalation strip — "למי פונים": one quiet line between the answer
    body and the action pills (deterministic lookup, see escalation_paths.py
@@ -2270,7 +2317,6 @@ if _sync_settled:
 # scrim + card sit above it. The gate derives from name_asked rather than
 # a session flag so a mid-gate refresh lands back IN the gate (cookie
 # already carries the role) instead of silently dropping the question.
-_name_gate = st.session_state.role is not None and not st.session_state.get("name_asked")
 if st.session_state.role is None or _name_gate:
     st.markdown(
         "<div class='cai-entry'>"
@@ -2289,14 +2335,19 @@ if st.session_state.role is None or _name_gate:
         unsafe_allow_html=True,
     )
 
+    # role_picked_here arms the name gate — see the setdefault near the top.
+    # Set it on the tap, never on the cookie restore.
     if st.button("**כניסת חיילים**  \nחובה / סדיר", key="role_soldier", use_container_width=True):
         st.session_state.role = "soldier"
+        st.session_state.role_picked_here = True
         st.rerun()
     if st.button("**כניסת מפקדים**  \nקבע", key="role_commander", use_container_width=True):
         st.session_state.role = "commander"
+        st.session_state.role_picked_here = True
         st.rerun()
     if st.button("**כניסת מילואים**  \nמערך המילואים", key="role_reserve", use_container_width=True):
         st.session_state.role = "reserve"
+        st.session_state.role_picked_here = True
         st.rerun()
 
     st.markdown("<div class='cai-entry-footer'>בלמ\"ס · לשימוש פנימי בלבד</div>", unsafe_allow_html=True)
@@ -4246,30 +4297,12 @@ _VERDICT_RE = re.compile(
     r"^\s*[" + _BIDI_MARKS + r"]*\*\*פסיקה:\*\*\s*(.+?)[^\S\n]*$", re.MULTILINE
 )
 _REFUSAL_SENTENCE = "המידע לא קיים בפקודות שסופקו"  # mandated verbatim by _COMMON_RULES
-# A verdict must OPEN with one of these terms. The model sometimes opens
-# the ruling line with a TOPIC ("בנוגע למסדר בוקר — ייתכן שאתה פטור...") —
-# chipping that fragment produced a meaningless green badge on the pilot
-# phone check (2026-07-10), so a non-term opener keeps the line as body
-# text. A short qualifier may follow the term ("אסור בתנועה רגלית",
-# pilot 2026-07-11). The qualifier bars ';' (a mid-list cut) and '*'
-# (markdown residue), and its cap keeps the chip badge-sized: .verdict-chip
-# is a nowrap pill with no max-width, and term+18 chars still fits the
-# 290px breakpoint — this cap IS the overflow guard.
-_VERDICT_TERM_RE = re.compile(
-    r"^(?P<neg>לא\s+)?"
-    r"(?P<term>מותר|אסור|מוסמך|רשאי|זכאי|פטור|חייב|ניתן|אפשר|מגיע(?:\s+ל[ךי])?)"
-    r"(?P<qual>\s+[^;*]{1,18})?$"
-)
-# A qualifier that itself cites a verdict/ruling verb or a negation is a
-# COMPOUND ruling ("מותר אך אסור במדים", "ניתן צו האוסר...") — one color
-# would misstate it, so the line stays body text. Substring matching
-# over-catches Hebrew prefixed forms (ואסור, שמותר); the failure mode is
-# "no chip", the safe one. לא/אין are matched as words with ו/ש/כ/ב
-# prefixes — bare substrings would hit מלא, אלא, לאחר.
-_QUAL_CONFLICT_RE = re.compile(
-    r"מותר|אסור|אוסר|מתיר|מוסמך|רשאי|זכאי|פטור|חייב|ניתן|אפשר|מגיע"
-    r"|(?:^|\s)[ושכב]?(?:לא|אין)(?=\s|$)"
-)
+# _VERDICT_TERM_RE / _QUAL_CONFLICT_RE — the chip's term gate and the
+# compound-qualifier bar — moved to verdict.py (CHIP_TERM_RE /
+# QUAL_CONFLICT_RE, imported at the top with the sibling defensive
+# fallback) so the gate is unit-tested in eval's structural suite and
+# shared with chip_clause(), the two-sided stacked-chip path's gate.
+# Their full rationale (topic openers, the 18-char badge cap) lives there.
 
 
 def _verdict_chip(content: str) -> tuple[str | None, str]:
@@ -4294,6 +4327,36 @@ def _verdict_chip(content: str) -> tuple[str | None, str]:
         # ./:/; split only before whitespace, so סעיף 3.4 or 14:30 stay
         # whole; ־ only spaced, so חד־פעמי stays whole.
         raw = m.group(1).strip("* " + _BIDI_MARKS)
+        # Two-sided ruling — conflict questions where the asker's own
+        # conduct is judged alongside the asked question (pilot feedback
+        # 2026-07-27): exactly two ';'-separated clauses, EACH independently
+        # badge-worthy on its own (chip_clause: a verdict term + short
+        # qualifier, or a ≤60-char "לא נמצא..." no-rule clause), render as
+        # stacked chips with nothing returning to the body. Any clause that
+        # can't stand alone falls through to the single-clause path below
+        # unchanged. The 400-char stream spill guard in _stream_answer stays
+        # sound: both chip caps (18-char qualifier / 60-char none clause)
+        # sit far below 400, so a mid-line cut can never produce two valid
+        # chips that the full-line rerun parse would reject.
+        clauses = [c for c in raw.split(";") if c.strip()]
+        if len(clauses) == 2:
+            chips = [_chip_clause(c, stacked=True) for c in clauses]
+            if all(chips):
+                remainder = content[m.end():]
+                body = content[: m.start()]
+                if remainder:
+                    body += "\n\n" + remainder.lstrip("\n")
+                # .verdict-wrap by LENGTH, not clause kind: stacked term
+                # clauses may now carry a long qualifier (see verdict.py's
+                # CHIP_TERM_STACKED_RE) and a nowrap pill would overflow the
+                # 290px breakpoint; short pills keep the tighter nowrap look.
+                stack = '<div class="verdict-stack">' + "".join(
+                    f'<span class="verdict-chip verdict-{cls}'
+                    f'{" verdict-wrap" if len(text) > 28 else ""}">'
+                    f"{icon} {html.escape(text)}</span>"
+                    for cls, icon, text in chips
+                ) + "</div>"
+                return stack, body.lstrip()
         parts = re.split(r"\s*(—|–| - | ־ |[.:;](?=\s))\s*", raw, maxsplit=1)
         verdict = parts[0].strip("* ." + _BIDI_MARKS)
         sep = parts[1] if len(parts) > 2 else ""

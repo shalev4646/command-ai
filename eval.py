@@ -829,10 +829,47 @@ def run_structural() -> int:
         ("**פסיקה:** לא אסור", ["accent"]),                # double negative → neutral
         ("**פסיקה:** לא נמצא במאגר", ["none"]),
         ("**פסיקה:** אסור אם א-ג; מותר אם ד", ["no", "yes"]),  # compound split
+        # two-sided conflict ruling: asked question + asker's own conduct
+        ("**פסיקה:** אסור; לא נמצאה בפקודות חובה למצוא מחליף מיידי", ["no", "none"]),
         ("אין כאן פסיקה", []),
     ]
     vc_ok = all([c["cls"] for c in verdict.verdict_clauses(t)] == exp for t, exp in vc_cases)
     checks.append(("סיווג צבעי פסיקה (verdict.py)", vc_ok, ""))
+
+    # chat-chip clause gate (verdict.chip_clause) — the two-sided stacked-chip
+    # path's per-clause gate; expected is (cls, icon) or None (must not chip)
+    cc_cases = [
+        ("אסור", ("no", "✗")),
+        ("מותר בתנאים מסוימים", ("cond", "⚠")),
+        ("זכאי לתשלום מלא", ("yes", "✓")),
+        ("לא נמצאה בפקודות חובה למצוא מחליף מיידי", ("none", "ⓘ")),
+        ("מוסמך", None),                          # bare authority — answers nothing
+        ("מוסמך להטיל עד 7 ימים", ("yes", "✓")),  # authority + object, within the badge cap
+        ("מותר אך אסור במדים", None),              # compound qualifier
+        ("לא אסור", None),                         # double negative
+        ("בנוגע למסדר בוקר", None),                # topic opener, no term
+        ("לא נמצאה בפקודות חובה " + "ארוכה מאוד " * 5, None),  # over the none-clause cap
+    ]
+    cc_ok = all(
+        (r[:2] if (r := verdict.chip_clause(t)) else None) == exp
+        for t, exp in cc_cases
+    )
+    # stacked mode relaxes only the qualifier cap (wrappable pill) — every
+    # other guard must hold. The first case is the round-5 live-smoke clause
+    # (24-char qualifier) that used to collapse the stack to a bare "✗ אסור".
+    cs_cases = [
+        ("אסור — איום הוא עבירה משמעתית", ("no", "✗")),
+        ("זכאי לתשלום מלא עבור ימי המילואים שבוצעו", ("yes", "✓")),
+        ("מותר אך אסור במדים", None),               # compound stays barred
+        ("בנוגע למסדר בוקר", None),                 # topic opener stays barred
+        ("מוסמך", None),                            # bare authority stays barred
+        ("אסור " + "סייג ארוך מאוד " * 5, None),    # over the stacked cap too
+    ]
+    cs_ok = all(
+        (r[:2] if (r := verdict.chip_clause(t, stacked=True)) else None) == exp
+        for t, exp in cs_cases
+    )
+    checks.append(("שער צ'יפ-הסעיף (verdict.chip_clause)", cc_ok and cs_ok, ""))
 
     # clause-image pipeline (fitz render + highlight + crop): a real answer's
     # top source must produce non-trivial PNG bytes on its mapped page. Guards
