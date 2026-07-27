@@ -103,7 +103,9 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-_patch_boot_shell()
+# True when the served index.html carries our boot shell — i.e. the shell IS
+# the loading screen and the app must not draw a second one (see splash_active).
+_shell_ok = _patch_boot_shell()
 
 # ── Device-profile probe component (declared here, rendered after the boot
 # splash). Community Cloud's edge strips custom cookies from the WebSocket
@@ -197,7 +199,19 @@ _is_admin = st.query_params.get("admin") == "1"
 # made the entrance animation look "skipped", because it never ran. A returning
 # visitor waits exactly as long as a new one and needs the cover more, not less;
 # splash_shown alone is the right guard — once per session, not once per role.
-splash_active = not _is_admin and not st.session_state.get("splash_shown")
+#
+# AND NOT when the boot shell is in place (2026-07-27 13:02 video). The shell in
+# index.html and this splash draw almost the same picture, so the boot ran three
+# near-identical olive screens in a row — OS launch image, shell, then this — and
+# every hand-off showed: at t=2.8 the wordmark ghosted through the crossfade, at
+# t=3.5 the subtitle blinked out and back as the shell faded while this one lit
+# up. That IS the "it keeps switching screens" the user reported. So there is now
+# exactly ONE loading screen: the shell, which holds until a real screen exists
+# and then lifts as a curtain. This block survives only as the fallback for a
+# host where the patch cannot be applied (Community Cloud serves its own HTML).
+splash_active = (not _is_admin
+                 and not st.session_state.get("splash_shown")
+                 and not _shell_ok)
 if not _is_admin:
     st.session_state.splash_shown = True
 if splash_active:

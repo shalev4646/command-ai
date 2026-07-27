@@ -32,7 +32,7 @@ import streamlit as st
 # STRIPPED and re-injected rather than nursed along with targeted swaps: a
 # long-lived dev venv keeps its patched index.html forever, and silently
 # testing last week's boot shell is worse than the cost of a rewrite.
-_VERSION = "v2"
+_VERSION = "v3"
 
 
 def _font_data_uri() -> str:
@@ -70,8 +70,17 @@ _HEAD_TEMPLATE = """
         border-top: 6px solid #171A12; border-left: 6px solid #171A12; transform: rotate(45deg); }
       #cai-boot-splash .chev span + span { border-color: rgba(23,26,18,.45); margin-top: -9px; }
       #cai-boot-splash .t { font: 400 34px 'Suez One', serif; color: #171A12; }
+      /* The OS launch image shows the chevron and the wordmark and NOTHING
+         else. Whatever this shell paints on top of them at t=0 pops into
+         existence during iOS's crossfade from that image — which is exactly
+         what read as "it keeps switching screens". So the subtitle enters
+         AFTER the handoff has settled: at t=0 the shell is pixel-identical to
+         the image, and the subtitle then arrives as a deliberate entrance. */
+      @keyframes caiBootEnter { from { opacity: 0; transform: translateY(14px); }
+                                to { opacity: 1; transform: none; } }
       #cai-boot-splash .s { font: 600 11px ui-monospace, Menlo, monospace; letter-spacing: 3px;
-        color: rgba(23,26,18,.6); }
+        color: rgba(23,26,18,.6);
+        animation: caiBootEnter .55s cubic-bezier(.2,.7,.2,1) both; animation-delay: .45s; }
       /* Bottom-anchored waiting ring, matching .cai-splash-wait in app.py so the
          hand-off does not move it. Fades in at 2.5s: a fast load never shows it,
          a slow one stops looking frozen. This is the ONLY moving thing on screen
@@ -100,17 +109,34 @@ _BODY_ADD = """
         var el = document.getElementById('cai-boot-splash');
         if (!el) return;
         var gone = false;
+        // Curtain, not a fade. This shell is now the ONE loading screen — the
+        // app no longer draws a second, near-identical splash underneath it
+        // (see splash_active in app.py), so there is nothing to cross-fade to
+        // and the reveal can be the real thing: the screen slides up off the
+        // glass and the app is simply there behind it.
         var lift = function () {
           if (gone) return; gone = true;
+          el.style.transition = 'transform .6s cubic-bezier(.7,0,.3,1), opacity .6s ease';
+          el.style.transform = 'translateY(-101%)';
           el.style.opacity = '0';
-          setTimeout(function () { el.remove(); }, 450);
+          setTimeout(function () { el.remove(); }, 680);
         };
-        // first real content: the app's own boot splash (identical olive, so
-        // the hand-off is invisible) or any rendered markdown (admin view)
+        // Wait for a real SCREEN, not for any markdown: the app emits its CSS
+        // as a markdown element long before it renders anything a person can
+        // read, and lifting on that would expose a half-painted app — the
+        // "Missing Submit Button" frame in the 2026-07-27 video came from
+        // exactly that kind of early reveal.
         var ready = function () {
-          return document.querySelector('.cai-splash, [data-testid="stAppViewContainer"] .stMarkdown');
+          return document.querySelector(
+            '.cai-entry, .cai-greet, .cai-header, .st-key-cai_name_card, .cai-splash');
         };
-        var tick = setInterval(function () { if (ready()) { clearInterval(tick); lift(); } }, 120);
+        var tick = setInterval(function () {
+          if (!ready()) return;
+          clearInterval(tick);
+          // let the screen finish its own first paint under the curtain, so
+          // the lift reveals a settled layout rather than one still arriving
+          setTimeout(lift, 320);
+        }, 120);
         setTimeout(function () { clearInterval(tick); lift(); }, 90000);
       })();
     </script>
