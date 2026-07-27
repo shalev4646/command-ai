@@ -32,7 +32,7 @@ import streamlit as st
 # STRIPPED and re-injected rather than nursed along with targeted swaps: a
 # long-lived dev venv keeps its patched index.html forever, and silently
 # testing last week's boot shell is worse than the cost of a rewrite.
-_VERSION = "v5"
+_VERSION = "v6"
 
 
 def _font_data_uri() -> str:
@@ -149,6 +149,14 @@ _BODY_ADD = """
         // popping-in reveal of video #3).
         var lastY = -1e9, stable = 0;
         var tick = setInterval(function () {
+          // a rerun mid-boot dims the whole app (stale elements) — lifting
+          // during one reveals a grey half-page; hold until the script run
+          // settles. Attribute absent (older Streamlit) → never 'running',
+          // check degrades to geometry-only.
+          var app = document.querySelector('.stApp');
+          if (app && app.getAttribute('data-test-script-state') === 'running') {
+            stable = 0; return;
+          }
           var a = ready();
           if (!a) { lastY = -1e9; stable = 0; return; }
           var y = 0;
