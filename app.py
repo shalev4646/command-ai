@@ -189,9 +189,15 @@ st.session_state.setdefault("settings_screen", "hub")
 # holds until the entry screen has actually rendered, then lifts after the
 # standard 1.15s choreography.
 _is_admin = st.query_params.get("admin") == "1"
-splash_active = (not _is_admin
-                 and st.session_state.role is None
-                 and not st.session_state.get("splash_shown"))
+# NOT gated on `role is None` any more (2026-07-27 video). A device that
+# remembers its role got no splash at all — so the ~11s boot was covered by
+# nothing, and the user watched Streamlit paint itself raw: unstyled entry
+# text, then a red "Missing Submit Button" frame (a transient of progressive
+# rendering — both forms do have submit buttons), then the styled app. It also
+# made the entrance animation look "skipped", because it never ran. A returning
+# visitor waits exactly as long as a new one and needs the cover more, not less;
+# splash_shown alone is the right guard — once per session, not once per role.
+splash_active = not _is_admin and not st.session_state.get("splash_shown")
 if not _is_admin:
     st.session_state.splash_shown = True
 if splash_active:
@@ -214,22 +220,40 @@ if splash_active:
     animation: bootCurtainUp .65s cubic-bezier(.7,0,.3,1) both; animation-delay: 30s;
     pointer-events: none;
 }
-/* NO entrance animation on the chevron: the OS launch image already shows
-   it at this exact spot (see _startup_png) — a scale-in here reads as the
-   logo "popping" during the image→splash handoff; only the text enters */
+/* NO entrance animation on the chevron OR the wordmark: the OS launch image
+   already paints both at these exact spots (see _startup_png) — animating
+   them here reads as the logo "popping" during the image→splash handoff.
+   The subtitle is the only element that enters, which is what turns the
+   handoff into a deliberate reveal instead of a jump. */
 .cai-splash-chev { display:flex; flex-direction:column; align-items:center; }
 .cai-splash-chev span { display:block; width:26px; height:26px;
     border-top:6px solid #171A12; border-left:6px solid #171A12; transform:rotate(45deg); }
 .cai-splash-chev span + span { border-color: rgba(23,26,18,.45); margin-top: -9px; }
-.cai-splash-title { font: 400 34px 'Suez One', serif; color: #171A12;
-    animation: bootEnterUp .6s cubic-bezier(.2,.7,.2,1) both; animation-delay: .3s; }
+.cai-splash-title { font: 400 34px 'Suez One', serif; color: #171A12; }
 .cai-splash-sub { font: 600 11px ui-monospace, Menlo, monospace; letter-spacing: 3px; color: rgba(23,26,18,.6);
     animation: bootEnterUp .6s cubic-bezier(.2,.7,.2,1) both; animation-delay: .45s; }
+/* Waiting ring, bottom-anchored (margin-top:auto against the flex-start
+   column). Measured on the live app 2026-07-27: domComplete 8.6s and the last
+   Streamlit chunk at 11.4s — the wait is latency-bound waves of tiny lazy
+   chunks, so it cannot be engineered away from here. Past ~2.5s a motionless
+   splash reads as a hang; the ring only says "still working" and is deliberately
+   quiet — it fades in late so a fast load never shows it at all. */
+@keyframes bootSpin { to { transform: rotate(360deg); } }
+@keyframes bootFadeIn { from { opacity: 0; } to { opacity: 1; } }
+.cai-splash-wait {
+    width: 22px; height: 22px; margin: auto auto 14vh;
+    border: 2px solid rgba(23,26,18,.20);
+    border-top-color: rgba(23,26,18,.55);
+    border-radius: 50%;
+    animation: bootSpin .9s linear infinite, bootFadeIn .5s ease both;
+    animation-delay: 0s, 2.5s;
+}
 </style>
 <div class='cai-splash'>
 <div class='cai-splash-chev'><span></span><span></span></div>
 <div class='cai-splash-title'>CommandAI</div>
 <div class='cai-splash-sub'>מערכת פקודות · בלמ"ס</div>
+<div class='cai-splash-wait'></div>
 </div>""", unsafe_allow_html=True)
 
 # In-browser Safari tints its top/bottom chrome from <meta name="theme-color">;
@@ -2106,6 +2130,33 @@ def _startup_png(w: int, h: int, dpr: int) -> bytes:
              (cx + dd, ay + dd + tv), (cx, ay + tv), (cx - dd, ay + dd + tv)],
             fill=color,
         )
+    # ── wordmark ──────────────────────────────────────────────────────────
+    # The launch image used to be chevron-only, on the theory that the splash
+    # would supply the wordmark a moment later. On a phone that moment is
+    # SIX AND A HALF SECONDS (2026-07-27 video: launch image t=3.5-10.0, splash
+    # at t=11.0) — the user stares at a near-empty olive field for most of the
+    # boot. Painting the wordmark here makes the very first frame the finished
+    # splash instead of a fragment of it.
+    #
+    # Geometry is exact, not eyeballed. Measured in the browser against the
+    # live .cai-splash (364x904, sat=0): the chevron box is 43px tall from
+    # padding-top = sat + 14vh, the flex gap is 18px, so the title's line box
+    # starts at sat + 14vh + 61. Pillow reports ascent 34 / descent 11 for
+    # Suez One at 34px — a 45px sum that equals the browser's line box to the
+    # pixel, so half-leading is zero and the baseline sits exactly one ascent
+    # below the box top. Advance width agrees too (PIL 205px vs browser 205.1),
+    # which is what lets a centred draw land on the CSS-centred text.
+    try:
+        from PIL import ImageFont
+        fp = Path(__file__).parent / "branding" / "fonts" / "SuezOne-Regular.ttf"
+        font = ImageFont.truetype(str(fp), int(round(34 * dpr)))
+        baseline = (sat + 0.14 * (h / dpr) + 61 + 34) * dpr
+        draw.text((cx, baseline), "CommandAI", font=font,
+                  fill=(23, 26, 18, 255), anchor="ms")
+    except Exception:
+        # a missing/unreadable font must never break the launch image — the
+        # chevron alone is exactly the old behaviour
+        pass
     buf = io.BytesIO()
     img.save(buf, "PNG", optimize=True)
     return buf.getvalue()
