@@ -42,7 +42,10 @@ class MultilingualMiniLM(EmbeddingFunction):
     """
 
     _REPO = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-    _BATCH = 16
+    # 8, not 16: the batch is a cache-miss/boot path only, and one 16×512
+    # padded batch was the transient allocation peak that (kept alive by the
+    # ORT arena, see below) parked the process ~500MB higher for life.
+    _BATCH = 8
 
     def __init__(self):
         from huggingface_hub import hf_hub_download
@@ -61,7 +64,19 @@ class MultilingualMiniLM(EmbeddingFunction):
         self._tokenizer = Tokenizer.from_file(tok_path)
         self._tokenizer.enable_truncation(max_length=512)
         self._tokenizer.enable_padding()
-        self._session = ort.InferenceSession(model_path, providers=["CPUExecutionProvider"])
+        # The default CPU memory arena never returns freed activation memory
+        # to the OS: one full-length embed batch grew RSS by ~500MB and it
+        # stayed for the life of the process (measured 2026-07-27, the day a
+        # single question OOM-killed the 1024MB Fly machine at 871MB). With
+        # the arena off the same batch releases back to ~baseline; per-query
+        # embeds are unaffected and batch embeds only run at boot/cache-miss,
+        # where the extra seconds don't matter.
+        so = ort.SessionOptions()
+        so.enable_cpu_mem_arena = False
+        so.enable_mem_pattern = False
+        self._session = ort.InferenceSession(
+            model_path, sess_options=so, providers=["CPUExecutionProvider"]
+        )
         self._input_names = {i.name for i in self._session.get_inputs()}
 
     @staticmethod
@@ -95,12 +110,26 @@ class MultilingualMiniLM(EmbeddingFunction):
 
 
 def _get_ef() -> MultilingualMiniLM:
-    """Single shared embedding function — the ONNX session is ~120MB, so it
-    must never be instantiated twice (collection + query paths share it)."""
+    """Single shared embedding function — tokenizer + ONNX session cost ~430MB
+    resident (the 250K-vocab tokenizer alone is ~260MB), so it must never be
+    instantiated twice. The lock is load-bearing, not defensive: two cold
+    sessions' first questions used to race the None-check and build TWO
+    stacks — +800MB on a 1024MB machine, instant OOM."""
     global _ef
     if _ef is None:
-        _ef = MultilingualMiniLM()
+        with _index_lock:
+            if _ef is None:
+                _ef = MultilingualMiniLM()
     return _ef
+
+
+def warm_ef() -> None:
+    """Load the embedding stack and run one dummy query at BOOT, behind the
+    platform health check — not inside the first soldier's question. Before
+    this, boot sat at ~190MB and the first retrieve() jumped the process by
+    ~430MB mid-request; combined with the answer pipeline's own allocations
+    that is exactly the 871MB profile the 2026-07-27 OOM kill showed."""
+    _get_ef()(["חימום"])
 
 
 # ── Precomputed-embedding cache ──────────────────────────────────────────

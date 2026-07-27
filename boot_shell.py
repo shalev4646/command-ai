@@ -32,7 +32,7 @@ import streamlit as st
 # STRIPPED and re-injected rather than nursed along with targeted swaps: a
 # long-lived dev venv keeps its patched index.html forever, and silently
 # testing last week's boot shell is worse than the cost of a rewrite.
-_VERSION = "v3"
+_VERSION = "v4"
 
 
 def _font_data_uri() -> str:
@@ -72,15 +72,33 @@ _HEAD_TEMPLATE = """
       #cai-boot-splash .t { font: 400 34px 'Suez One', serif; color: #171A12; }
       /* The OS launch image shows the chevron and the wordmark and NOTHING
          else. Whatever this shell paints on top of them at t=0 pops into
-         existence during iOS's crossfade from that image — which is exactly
-         what read as "it keeps switching screens". So the subtitle enters
-         AFTER the handoff has settled: at t=0 the shell is pixel-identical to
-         the image, and the subtitle then arrives as a deliberate entrance. */
-      @keyframes caiBootEnter { from { opacity: 0; transform: translateY(14px); }
-                                to { opacity: 1; transform: none; } }
+         existence during iOS's crossfade from that image. A delayed slide-up
+         entrance was tried first — the pilot read THAT as another screen
+         switch (2026-07-27 video #2). So: pure opacity, starting at once —
+         the subtitle emerges inside the OS's own ~300ms crossfade window and
+         nothing on the splash ever MOVES. */
       #cai-boot-splash .s { font: 600 11px ui-monospace, Menlo, monospace; letter-spacing: 3px;
         color: rgba(23,26,18,.6);
-        animation: caiBootEnter .55s cubic-bezier(.2,.7,.2,1) both; animation-delay: .45s; }
+        animation: caiBootFade .8s ease both; }
+      /* ── Lift cascade ── the app's chat-home elements hold at opacity 0
+         under the curtain and enter in a stagger the moment the lift starts
+         (html.cai-lifted, set by lift() below) — the Claude-app reveal. The
+         boot-done class arms 2.5s later and RETIRES the whole choreography:
+         without it every Streamlit rerun that recreates these nodes would
+         replay the entrance. No shell → none of this CSS exists → the app
+         renders plainly. */
+      html:not(.cai-lifted) .cai-header, html:not(.cai-lifted) .cai-greet,
+      html:not(.cai-lifted) .cai-greet-sub, html:not(.cai-lifted) [class*="st-key-sug_"],
+      html:not(.cai-lifted) .cai-entry, html:not(.cai-lifted) [data-testid="stBottom"] {
+        opacity: 0; }
+      @keyframes caiLiftIn { from { opacity: 0; transform: translateY(14px); }
+                             to { opacity: 1; transform: none; } }
+      html.cai-lifted:not(.cai-boot-done) .cai-header { animation: caiLiftIn .5s ease .0s both; }
+      html.cai-lifted:not(.cai-boot-done) .cai-entry { animation: caiLiftIn .5s ease .08s both; }
+      html.cai-lifted:not(.cai-boot-done) .cai-greet { animation: caiLiftIn .5s ease .12s both; }
+      html.cai-lifted:not(.cai-boot-done) .cai-greet-sub { animation: caiLiftIn .5s ease .2s both; }
+      html.cai-lifted:not(.cai-boot-done) [class*="st-key-sug_"] { animation: caiLiftIn .5s ease .28s both; }
+      html.cai-lifted:not(.cai-boot-done) [data-testid="stBottom"] { animation: caiLiftIn .5s ease .38s both; }
       /* Bottom-anchored waiting ring, matching .cai-splash-wait in app.py so the
          hand-off does not move it. Fades in at 2.5s: a fast load never shows it,
          a slow one stops looking frozen. This is the ONLY moving thing on screen
@@ -116,6 +134,12 @@ _BODY_ADD = """
         // glass and the app is simply there behind it.
         var lift = function () {
           if (gone) return; gone = true;
+          // arm the lift cascade (see the CSS above) the instant the curtain
+          // starts moving, and retire it once the entrance has played out —
+          // later reruns must not replay the choreography
+          var root = document.documentElement;
+          root.classList.add('cai-lifted');
+          setTimeout(function () { root.classList.add('cai-boot-done'); }, 2500);
           el.style.transition = 'transform .6s cubic-bezier(.7,0,.3,1), opacity .6s ease';
           el.style.transform = 'translateY(-101%)';
           el.style.opacity = '0';

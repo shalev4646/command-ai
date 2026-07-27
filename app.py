@@ -75,6 +75,43 @@ def _startup_ingest():
 
 
 @st.cache_resource(show_spinner=False)
+def _start_media_reaper() -> bool:
+    """Reap media-manager entries of dead sessions, every 5 minutes.
+
+    Streamlit 1.58 parks a dropped WebSocket's session in a 120s TTL cache
+    WITHOUT calling session.shutdown() when the TTL evicts it — and shutdown
+    is the only path that releases the session's media registrations. Every
+    iPhone PWA visit ends by backgrounding (never a clean close), so each
+    visit that opened the orders accordion pinned its ~52MB of PDF bytes in
+    RAM forever (2026-07-27 OOM audit). The reaper does what the missing
+    shutdown would have: drop media refs of sessions the runtime no longer
+    knows, then purge orphans. Private-API use is deliberate and fully
+    guarded — on any AttributeError the reaper silently stops costing us
+    nothing, and the leak returns to being bounded by machine restarts."""
+    import threading
+
+    def _reap():
+        while True:
+            time.sleep(300)
+            try:
+                from streamlit.runtime import get_instance
+                rt = get_instance()
+                mgr = rt.media_file_mgr
+                live = {s.session.id for s in rt._session_mgr.list_sessions()}
+                dead = [sid for sid in list(mgr._files_by_session_and_coord)
+                        if sid not in live]
+                for sid in dead:
+                    mgr.clear_session_refs(sid)
+                if dead:
+                    mgr.remove_orphaned_files()
+            except Exception:
+                pass
+
+    threading.Thread(target=_reap, daemon=True, name="cai-media-reaper").start()
+    return True
+
+
+@st.cache_resource(show_spinner=False)
 def _patch_boot_shell() -> bool:
     """Brand Streamlit's static index.html with the instant olive splash.
 
@@ -90,11 +127,15 @@ def _patch_boot_shell() -> bool:
     return patch_index_html()
 
 # PDF bytes are re-read on every rerun to keep their media-manager entries
-# alive (see _pdf_media_url); cache the disk reads — ~40 multi-hundred-KB
-# files per rerun otherwise. ttl bounds staleness: on Streamlit Cloud the
-# process outlives git pulls, and a cache keyed only by filename would serve
-# an order's OLD bytes forever after its PDF is updated in place.
-_pdf_bytes_cached = st.cache_data(show_spinner=False, ttl=3600)(get_pdf_bytes)
+# alive (see _pdf_media_url); cache the disk reads — the corpus is 80 PDFs /
+# ~52MB per full pass otherwise. cache_RESOURCE, not cache_data: bytes are
+# immutable so sharing the object is safe, while cache_data kept a pickled
+# copy AND unpickled a fresh 52MB set on every rerun with the accordion open
+# — three corpus copies + per-rerun churn on the 1024MB machine (2026-07-27
+# OOM audit). ttl bounds staleness: the process outlives deploys/git pulls,
+# and a cache keyed only by filename would serve an order's OLD bytes
+# forever after its PDF is updated in place.
+_pdf_bytes_cached = st.cache_resource(show_spinner=False, ttl=3600)(get_pdf_bytes)
 
 st.set_page_config(
     page_title="CommandAI",
@@ -628,6 +669,37 @@ components.html(
                     }, 80);
                 } catch (e) {}
             };
+            // ── composer keyboard manners (pilot feedback 2026-07-27) ──
+            // (a) On touch devices Return inserts a NEWLINE instead of
+            //     sending — soldiers write multi-line questions and the
+            //     stock chat_input fired the send on every Return. Sending
+            //     is the arrow button's job. execCommand keeps the React
+            //     controlled-textarea state in sync (fires a real input
+            //     event); desktop keeps Enter-to-send.
+            // (b) The send tap blurs the composer so the iOS keyboard drops
+            //     on its own — the pilot had to tap ✓ to dismiss it before
+            //     seeing the answer. Capture-phase, after the click lands.
+            var coarse = matchMedia && matchMedia("(pointer: coarse)").matches;
+            document.addEventListener("keydown", function (e) {
+                try {
+                    if (!coarse || e.key !== "Enter" || e.shiftKey) return;
+                    var t = e.target;
+                    if (!t || !t.matches ||
+                        !t.matches('[data-testid="stChatInput"] textarea')) return;
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    document.execCommand("insertText", false, "\n");
+                } catch (err) {}
+            }, true);
+            document.addEventListener("click", function (e) {
+                try {
+                    if (!e.target || !e.target.closest) return;
+                    if (e.target.closest('[data-testid="stChatInputSubmitButton"]')) {
+                        var ta = document.querySelector('[data-testid="stChatInput"] textarea');
+                        if (ta) setTimeout(function () { try { ta.blur(); } catch (er) {} }, 40);
+                    }
+                } catch (err) {}
+            }, true);
             document.addEventListener("click", function (e) {
                 try {
                     if (!e.target || !e.target.closest) return;
@@ -798,6 +870,7 @@ if not st.session_state.get("cai_probe_done") and not _ck:
                 st.session_state.name_asked = True
 
 _startup_ingest()
+_start_media_reaper()
 
 
 def _secret(name: str, default: str = "") -> str:
@@ -1491,6 +1564,17 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
 .cai-greet {{ font: 400 30px 'Suez One', serif; color: var(--text); margin: 0 0 7px;
     text-align: center;
     animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .08s; }}
+/* Stale-greeting guard: the greeting + suggestion cards are gated in Python
+   (they don't re-render once a question exists), but Streamlit prunes
+   un-re-rendered elements only when the SCRIPT RUN ENDS — and the first
+   answer streams for ~20-30s, so the pilot saw the suggestion list sitting
+   under the live answer the whole time (2026-07-27 video). The moment any
+   chat message exists in the DOM, hide them by CSS instead of waiting. */
+[data-testid="stAppViewContainer"]:has([data-testid="stChatMessage"]) .cai-greet,
+[data-testid="stAppViewContainer"]:has([data-testid="stChatMessage"]) .cai-greet-sub,
+[data-testid="stAppViewContainer"]:has([data-testid="stChatMessage"]) [class*="st-key-sug_"] {{
+    display: none !important;
+}}
 .cai-greet-sub {{ font: 400 13.5px Heebo, sans-serif; color: var(--text-dim); margin-bottom: 0;
     text-align: center;
     animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .16s; }}
@@ -1578,9 +1662,15 @@ html.cai-standalone [data-testid="stAppViewContainer"]:has(.cai-greet) [data-tes
 [data-testid="stChatInput"] {{
     background-color: rgba(239,240,232,.06) !important; /* 9a translucent pill */
     border: 1px solid var(--border-strong) !important;
-    border-radius: 99px !important;
+    /* 27px, not 99px: with one line (~54px tall) this IS the capsule, but a
+       long pasted question grows the textarea and a 99px radius kept drawing
+       a squeezed capsule while the text painted past the top edge (pilot
+       video 2026-07-27). 27px stays a rounded card at any height. */
+    border-radius: 27px !important;
     padding: 5px 6px 5px 5px !important; /* 9a: 5/6/5/5, text carries its own 14px inset */
-    align-items: center !important;
+    /* flex-end, not center: as the textarea grows the send arrow hugs the
+       bottom edge (the Claude-app composer behavior) instead of floating */
+    align-items: flex-end !important;
     transition: border-color .15s ease;
 }}
 /* the baseweb wrapper adds 12px 16px of its own — it ballooned the pill;
@@ -1606,6 +1696,10 @@ html.cai-standalone [data-testid="stAppViewContainer"]:has(.cai-greet) [data-tes
 [data-testid="stChatInputTextArea"] {{
     color: var(--text) !important; font: 400 15px Heebo, sans-serif !important; direction: rtl;
     padding: 0 14px !important;
+    /* a pasted multi-line question must scroll INSIDE the pill, not paint
+       over the header (pilot video 2026-07-27): ~6 lines, then scroll */
+    max-height: 132px !important;
+    overflow-y: auto !important;
 }}
 [data-testid="stChatInput"] textarea::placeholder {{ color: rgba(239,240,232,.4) !important; }}
 [data-testid="stChatInputSubmitButton"] {{
@@ -4059,7 +4153,11 @@ def _render_settings():
 def handle_question(question: str):
     quota = metrics.reserve(st.session_state.session_id)
     if quota != "ok":
-        st.session_state.messages.append({"role": "user", "content": question})
+        # error on the USER turn too: an unanswered question replayed into
+        # the next request rides as a second consecutive user turn — the API
+        # merges them and the model answers the stale question (bug-sweep
+        # 2026-07-27). Same for every failure path below.
+        st.session_state.messages.append({"role": "user", "content": question, "error": True})
         st.session_state.messages.append({
             "role": "assistant",
             "content": _QUOTA_NOTICES[quota],
@@ -4105,6 +4203,15 @@ def handle_question(question: str):
             if _track:
                 _injected.append(f"מסלול שירות: {_track}")
         profile_kw["profile"] = _injected or None
+    # chunks received so far, tapped by _stream_answer as they arrive: when a
+    # RerunException detonates mid-stream (any widget event during the 15-30s
+    # answer — a feedback thumb, the drawer, a second submit, an iOS reconnect
+    # rerun), write_stream dies with the text unreachable and the tokens
+    # already billed. The tap makes the partial salvageable (bug-sweep
+    # 2026-07-27, CONFIRMED against streamlit 1.58 sources: RerunException
+    # inherits BaseException precisely to bypass `except Exception`).
+    acc: list[str] = []
+    sources: list = []
     try:
         with st.spinner("מחפש בפקודות..."):
             result = stream_ai_answer(question, history, role=st.session_state.role, **profile_kw)
@@ -4115,8 +4222,9 @@ def handle_question(question: str):
             if len(result) > 2:
                 user_msg["api_content"] = result[2]
         with st.chat_message("assistant"):
-            text = _stream_answer(text_gen)
+            text = _stream_answer(text_gen, acc)
     except (APIConnectionError, APITimeoutError):
+        user_msg["error"] = True
         metrics.refund(st.session_state.session_id)  # failures don't burn quota
         st.session_state.messages.append({
             "role": "assistant",
@@ -4129,6 +4237,7 @@ def handle_question(question: str):
         # the monthly console spend limit returns a 400 with this exact
         # phrasing (hit live 2026-07-10); "try again" would gaslight the
         # user into resending a question that cannot succeed
+        user_msg["error"] = True
         metrics.refund(st.session_state.session_id)
         if "usage limits" in str(e):
             msg = ("⏸️ **המערכת בהשהיה זמנית עקב מגבלת שימוש.**\n\n"
@@ -4141,6 +4250,7 @@ def handle_question(question: str):
         # last-resort catch: the refund + generic message already cover the
         # user, but without a log a real production fault leaves no trace
         safe_print(f"[chat] answer failed: {e!r}")
+        user_msg["error"] = True
         metrics.refund(st.session_state.session_id)
         st.session_state.messages.append({
             "role": "assistant",
@@ -4149,6 +4259,28 @@ def handle_question(question: str):
             "error": True,
         })
         return
+    except BaseException:
+        # RerunException / StopException land here (they bypass the handlers
+        # above by design). Settle state before letting them propagate: with
+        # received chunks — keep the partial answer (rendered on the rerun
+        # under the existing truncation warning); with none — the user paid
+        # quota for nothing, refund and leave a visible retry notice.
+        if acc:
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": "".join(acc),
+                "sources": sources,
+                "truncated": True,
+            })
+        else:
+            user_msg["error"] = True
+            metrics.refund(st.session_state.session_id)
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": "⚠️ **התשובה נקטעה באמצע.**\n\nשלח את השאלה שוב.",
+                "error": True,
+            })
+        raise
     st.session_state.messages.append({
         "role": "assistant",
         "content": text,
@@ -4570,14 +4702,24 @@ _THINKING_HTML = (
 )
 
 
-def _stream_answer(text_gen) -> str:
+def _stream_answer(text_gen, acc: list[str] | None = None) -> str:
     """Render the live answer chip-first: hold the stream until the first
     line is complete; when it is a recognizable **פסיקה:** line, draw the
     chip immediately and stream only the body under it. Without this the
     raw ruling line flashes mid-stream and then jumps into a chip on the
     rerun (pilot phone feedback, 2026-07-10). Returns the FULL original
     text — session state and the copy/share payload keep the ruling line.
+
+    `acc` collects every chunk AS RECEIVED (including the first-line buffer):
+    when a mid-stream RerunException kills write_stream, the caller salvages
+    the partial answer from it — the only copy that survives the unwind.
     """
+    if acc is not None:
+        def _tap(g):
+            for c in g:
+                acc.append(c)
+                yield c
+        text_gen = _tap(text_gen)
     it = iter(text_gen)
     # animated placeholder until the first real content is ready to paint —
     # covers both the pre-first-token thinking pause and the first-line buffer

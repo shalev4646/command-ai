@@ -29,6 +29,13 @@ primary_region = "fra"
     method = "GET"
     path = "/_stcore/health"
 
+# Swap is the OOM airbag, not a fix: 2026-07-27 12:08Z the kernel killed
+# streamlit at 871MB anon-RSS while ONE user asked ONE question — the machine
+# rebooted mid-answer and the question was lost. With swap the same spike
+# slows down instead of dying. The actual allocations are being trimmed in
+# app code; swap stays as insurance. Costs nothing (disk-backed).
+swap_size_mb = 768
+
 [[vm]]
   size = "shared-cpu-1x"
   memory = "1gb"

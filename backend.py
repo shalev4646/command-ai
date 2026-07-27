@@ -1,5 +1,6 @@
 import json
 import os
+import threading
 from pathlib import Path
 
 from anthropic import Anthropic
@@ -133,17 +134,35 @@ SYSTEM_PROMPTS = {
 ALL_ROLES = ROLES
 
 
+# Parsed-docs process cache: load_documents ran on EVERY question (twice with
+# the dual retrieval, again for the sources footer) and re-parsed 2.5MB of
+# JSON into ~15MB of fresh objects each time — pure allocation churn on the
+# 1024MB machine (2026-07-27 OOM audit). Keyed on the newest json mtime, so
+# a runtime ingest/edit still invalidates; guarded for Streamlit's threads.
+# A plain module cache, NOT st.cache_data — that would pickle-copy per call,
+# recreating the exact churn this removes.
+_docs_cache: tuple[float, list[dict]] | None = None
+_docs_lock = threading.Lock()
+
+
 def load_documents() -> list[dict]:
+    global _docs_cache
     json_dir = Path(__file__).parent / "storage" / "json_store"
-    docs = []
-    for f in sorted(json_dir.glob("*.json")):
-        try:
-            docs.append(apply_overrides(json.loads(f.read_text(encoding="utf-8"))))
-        except Exception as e:
-            # a corrupt JSON silently drops one order from the whole retrieval
-            # corpus; log which file so it doesn't vanish without a trace
-            safe_print(f"[backend] skipping unreadable doc {f.name}: {e!r}")
-    return docs
+    files = sorted(json_dir.glob("*.json"))
+    stamp = max((f.stat().st_mtime for f in files), default=0.0)
+    with _docs_lock:
+        if _docs_cache and _docs_cache[0] == stamp:
+            return _docs_cache[1]
+        docs = []
+        for f in files:
+            try:
+                docs.append(apply_overrides(json.loads(f.read_text(encoding="utf-8"))))
+            except Exception as e:
+                # a corrupt JSON silently drops one order from the whole retrieval
+                # corpus; log which file so it doesn't vanish without a trace
+                safe_print(f"[backend] skipping unreadable doc {f.name}: {e!r}")
+        _docs_cache = (stamp, docs)
+        return docs
 
 
 def _docs_for_role(role: str | None) -> list[dict]:
@@ -538,8 +557,16 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
             c for c in retrieve_for_role(question, role)
             if (c["doc_id"], c.get("section"), c.get("clause")) not in seen
         ]
-        merged = sorted(chunks + extra, key=lambda c: c.get("score", 0), reverse=True)
-        chunks = merged[:MAX_CONTEXT_CHUNKS]
+        # RESERVED SLOTS, not a global score sort: the two retrievals' scores
+        # aren't on one scale (each call's lexical bonus and anchor-lift are
+        # normalized against its own query), so sorting the union let an
+        # inflated rewrite-side ranking crowd out every raw-phrasing chunk —
+        # silently reverting to rewrite-only retrieval, the exact failure
+        # this merge exists to prevent. The raw question always keeps its
+        # top chunks in the context.
+        if extra:
+            keep = max(2, MAX_CONTEXT_CHUNKS - len(chunks))
+            chunks = chunks[:MAX_CONTEXT_CHUNKS - keep] + extra[:keep]
     context = _context_from_chunks(chunks)
     system_prompt = SYSTEM_PROMPTS.get(role, SYSTEM_PROMPT_SOLDIER)
 
@@ -549,6 +576,12 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
     ]
     while len(past) > _HISTORY_MAX:
         past = past[_HISTORY_DROP:]
+    # the fixed-size cut assumes strict user/assistant pairs; any history-shape
+    # drift (e.g. an orphaned turn) can land it on an assistant message, and the
+    # API rejects assistant-first history — every later question then 400s and
+    # the session is bricked (bug-sweep 2026-07-27). Trim forward to a user turn.
+    while past and past[0]["role"] != "user":
+        past = past[1:]
 
     user_content = _compose_user_content(question, context, profile)
 
@@ -701,8 +734,11 @@ def ensure_pdfs_ingested(pdf_dir: Path | None = None) -> list[str]:
 
 
 def warm_index() -> int:
-    """Eagerly build the in-memory vector index (embedding-model download +
-    chunk embedding). Called at app startup so the one-time cost lands at boot
-    instead of inside the first user's question. Returns the chunk count."""
-    from storage.vector_store import get_index_stats
-    return get_index_stats()["total_chunks"]
+    """Eagerly build the in-memory vector index AND load the embedding stack
+    (tokenizer + ONNX session, ~430MB) at app startup, so both one-time costs
+    land at boot — behind the health check — instead of inside the first
+    user's question (the 2026-07-27 OOM profile). Returns the chunk count."""
+    from storage.vector_store import get_index_stats, warm_ef
+    n = get_index_stats()["total_chunks"]
+    warm_ef()
+    return n
