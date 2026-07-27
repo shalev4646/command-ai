@@ -203,7 +203,12 @@ if not _is_admin:
 if splash_active:
     st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Suez+One&display=swap');
+/* No @import here any more: boot_shell inlines Suez One as a data: URI in the
+   served index.html, so the family is already defined by the time this block
+   renders. A remote @import would be one more blocking fetch on the boot path
+   — the very thing that was costing ~8s (see boot_shell._font_data_uri). The
+   main CSS block still imports it as a fallback for hosts where the shell
+   patch cannot be applied. */
 @keyframes bootEnterUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:none; } }
 @keyframes bootEnterScale { from { opacity:0; transform:scale(.6); } to { opacity:1; transform:none; } }
 /* the parked curtain must END invisible: it stays in the DOM above the
@@ -624,6 +629,36 @@ components.html(
                         ".st-key-role_soldier, .st-key-role_commander, .st-key-role_reserve")
                         && !document.getElementById("cai-gate-pending"))
                         veil();
+                    // ── orders accordion: optimistic open/close ──
+                    // Toggling it is a full server round-trip. Measured locally
+                    // 458-1092ms, and on the phone (round-trip to fra) closer to
+                    // two seconds — during which Streamlit dims the whole app and
+                    // NOTHING about the card changes. The 2026-07-27 video shows
+                    // the result: the tap reads as ignored, the user taps again,
+                    // and the second tap closes what the first one just opened —
+                    // the list flapping open/closed for ~8s. The cost is not the
+                    // 64 PDF registrations (closing, which registers nothing, is
+                    // no cheaper) — it is the rerun itself, i.e. not something a
+                    // tweak here can remove. So: flip the card's own class at
+                    // once for immediate feedback, and swallow further taps until
+                    // the server has had time to answer. The rerun renders the
+                    // authoritative state and overwrites whatever we guessed.
+                    var kb = e.target.closest(".st-key-toggle_orders");
+                    if (kb) {
+                        // busy check FIRST: a swallowed tap must not flip the
+                        // card either, or the guess and the server disagree
+                        if (window.__caiKbBusy) {
+                            e.stopPropagation(); e.preventDefault(); return;
+                        }
+                        window.__caiKbBusy = true;
+                        var card = document.querySelector(".cai-kb-card");
+                        if (card) card.classList.toggle("open");
+                        kb.style.opacity = ".55";
+                        setTimeout(function () {
+                            window.__caiKbBusy = false;
+                            try { kb.style.opacity = ""; } catch (e2) {}
+                        }, 1400);
+                    }
                 } catch (err) {}
             }, true);
         }
