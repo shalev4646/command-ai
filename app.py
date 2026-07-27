@@ -1746,6 +1746,12 @@ html.cai-standalone [data-testid="stAppViewContainer"]:has(.cai-greet) [data-tes
     align-items: flex-start;
     gap: 6px;
     direction: rtl;
+    /* Streamlit's stMarkdownContainer carries margin-bottom:-1rem (offsets a
+       <p>'s 16px). The stack is a raw <div> — no <p>, nothing cancels it, and
+       the NEXT markdown block climbed 16px onto the second chip (phone
+       screenshot, 2026-07-27). Padding, not margin: margins collapse.
+       16px cancel + 6px real gap below the pills. */
+    padding-bottom: 22px;
 }}
 /* the "לא נמצא..." no-rule clause carries a short sentence, not a badge
    term — let it wrap to two lines instead of overflowing the bubble */
