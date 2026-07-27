@@ -525,6 +525,21 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
     # Haiku rewrite/normalization, but answer the original question
     search_query = _standalone_question(question, history)
     chunks = retrieve_for_role(search_query, role)
+    # The rewrite is a retrieval AID, never a gatekeeper: when it changed the
+    # question, retrieve on the RAW phrasing too and merge by best score. A
+    # paraphrased rewrite silently dropped the דין-משמעתי threat chunk on the
+    # live pilot question (2026-07-27 phone, "להעמיד גורם אחר לדין") while the
+    # raw phrasing retrieved it — the union is immune to a bad rewrite draw.
+    # Skipped for follow-ups: their raw text ("ומה לגבי מילואים?") is the
+    # unsearchable case the rewrite exists to fix, and its chunks are noise.
+    if not history and search_query.strip() != question.strip():
+        seen = {(c["doc_id"], c.get("section"), c.get("clause")) for c in chunks}
+        extra = [
+            c for c in retrieve_for_role(question, role)
+            if (c["doc_id"], c.get("section"), c.get("clause")) not in seen
+        ]
+        merged = sorted(chunks + extra, key=lambda c: c.get("score", 0), reverse=True)
+        chunks = merged[:MAX_CONTEXT_CHUNKS]
     context = _context_from_chunks(chunks)
     system_prompt = SYSTEM_PROMPTS.get(role, SYSTEM_PROMPT_SOLDIER)
 
