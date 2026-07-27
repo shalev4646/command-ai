@@ -1,5 +1,13 @@
-# Shell scripts run inside the Linux container — a CRLF checkout (Windows
-# autocrlf, including fresh worktrees) turns the shebang into "bash\r" and
-# crash-loops the Fly machine (2026-07-27). Pin them to LF everywhere.
+# The app deploys into a Linux container — a CRLF checkout (Windows autocrlf,
+# including fresh deploy-worktrees) turned the entrypoint shebang into
+# "bash\r" and crash-looped the Fly machine (2026-07-27, ~6min outage), and
+# the same worktree build showed a retrieval anomaly that vanished on an
+# LF main-tree build. Pin every text file to LF; binaries stay untouched.
+* text=auto eol=lf
 *.sh text eol=lf
 docker-entrypoint.sh text eol=lf
+*.npz -text
+*.pdf -text
+*.png -text
+*.ttf -text
+*.zip -text
