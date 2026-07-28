@@ -132,9 +132,23 @@ _HEAD_TEMPLATE = """
          makes it blink out and back at the exact moment the hand-off has to
          be invisible. (The .8s fade this replaces was itself the fix for an
          earlier slide-up that the pilot read as a screen switch — 2026-07-27
-         video #2. Neither is needed once the two screens are identical.) */
-      #cai-boot-splash .s { font: 400 11px 'Suez One', serif; letter-spacing: 4.8px;
-        color: rgba(23,26,18,.4); }
+         video #2. Neither is needed once the two screens are identical.)
+
+         Layout D, the user's pick from four rendered candidates (2026-07-28
+         evening): "מערכת פקודות" flanked by thin rules, "בלמ״ס" spaced out
+         beneath. The rules are ::before/::after on .s1 — flex children, so
+         they stay symmetric in RTL and the trailing-letter-spacing quirk
+         (see app._draw_subtitle) affects only the TEXT ink inside the row,
+         exactly as the PNG reproduces it. */
+      #cai-boot-splash .s { display: flex; flex-direction: column; align-items: center;
+        gap: 6px; }
+      #cai-boot-splash .s1 { display: flex; align-items: center; gap: 12px;
+        font: 400 13px 'Suez One', serif; letter-spacing: 2px;
+        color: rgba(23,26,18,.59); }
+      #cai-boot-splash .s1::before, #cai-boot-splash .s1::after {
+        content: ''; width: 26px; height: 1px; background: rgba(23,26,18,.31); }
+      #cai-boot-splash .s2 { font: 400 9.5px 'Suez One', serif; letter-spacing: 7px;
+        color: rgba(23,26,18,.37); }
       /* NO lift choreography. A staggered per-element entrance was tried
          (2026-07-27, shell v4) and it FOUGHT Streamlit: reruns replace the
          DOM mid-cascade, so the curtain lifted onto a dark screen of
@@ -197,7 +211,7 @@ _BODY_ADD = """
     <div id="cai-boot-splash" dir="rtl">
       <div class="chev"><span></span><span></span></div>
       <div class="t">CommandAI</div>
-      <div class="s">מערכת פקודות · בלמ"ס</div>
+      <div class="s"><span class="s1">מערכת פקודות</span><span class="s2">בלמ"ס</span></div>
       <div class="wait">
         <div class="m"></div>
         <button class="r" type="button">נסה שוב</button>

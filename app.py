@@ -315,7 +315,13 @@ if splash_active:
     border-top:6px solid #171A12; border-left:6px solid #171A12; transform:rotate(45deg); }
 .cai-splash-chev span + span { border-color: rgba(23,26,18,.45); margin-top: -9px; }
 .cai-splash-title { font: 400 34px 'Suez One', serif; color: #171A12; }
-.cai-splash-sub { font: 400 11px 'Suez One', serif; letter-spacing: 4.8px; color: rgba(23,26,18,.4); }
+/* layout D — mirrors #cai-boot-splash .s/.s1/.s2 in boot_shell exactly */
+.cai-splash-sub { display:flex; flex-direction:column; align-items:center; gap:6px; }
+.cai-splash-sub .s1 { display:flex; align-items:center; gap:12px;
+    font: 400 13px 'Suez One', serif; letter-spacing: 2px; color: rgba(23,26,18,.59); }
+.cai-splash-sub .s1::before, .cai-splash-sub .s1::after {
+    content:''; width:26px; height:1px; background: rgba(23,26,18,.31); }
+.cai-splash-sub .s2 { font: 400 9.5px 'Suez One', serif; letter-spacing: 7px; color: rgba(23,26,18,.37); }
 /* Waiting ring, bottom-anchored (margin-top:auto against the flex-start
    column). Measured on the live app 2026-07-27: domComplete 8.6s and the last
    Streamlit chunk at 11.4s — the wait is latency-bound waves of tiny lazy
@@ -336,7 +342,7 @@ if splash_active:
 <div class='cai-splash'>
 <div class='cai-splash-chev'><span></span><span></span></div>
 <div class='cai-splash-title'>CommandAI</div>
-<div class='cai-splash-sub'>מערכת פקודות · בלמ"ס</div>
+<div class='cai-splash-sub'><span class='s1'>מערכת פקודות</span><span class='s2'>בלמ"ס</span></div>
 <div class='cai-splash-wait'></div>
 </div>""", unsafe_allow_html=True)
 
@@ -2369,9 +2375,24 @@ components.html(
             // never steal a caret drag inside the composer
             if (t.target && t.target.closest && t.target.closest("input, textarea, [contenteditable]")) return;
             if (isOpen()) {
-                g = { mode: "close", x: t.clientX, y: t.clientY, live: false, travel: 0, w: W() };
+                // a touch that STARTS on a tap target inside the panel (the
+                // orders card, a tool button, an order link) is almost always
+                // a tap, and a thumb tap rolls 10-20px sideways as it lifts.
+                // At the flat 12px slop that roll went live as a micro-drag:
+                // the panel jerked with the finger, sprang back, and the tap's
+                // click died (no click after a prevented touchmove, and
+                // swallowClick kills any straggler) — the 2026-07-28 "פקודות
+                // מטכ"ל goes crazy and won't open" report, reproduced in DOM.
+                // 30px still fires a real swipe (travel is 60px+) but no tap
+                // reaches it; bare panel surface keeps the snappy 12.
+                var onTap = t.target && t.target.closest &&
+                    t.target.closest(".st-key-cai_drawer") &&
+                    t.target.closest("button, a");
+                g = { mode: "close", x: t.clientX, y: t.clientY, live: false,
+                      travel: 0, w: W(), slop: onTap ? 30 : SLOP };
             } else if (t.clientX >= window.innerWidth - EDGE) {
-                g = { mode: "open", x: t.clientX, y: t.clientY, live: false, travel: 0, w: W() };
+                g = { mode: "open", x: t.clientX, y: t.clientY, live: false,
+                      travel: 0, w: W(), slop: SLOP };
             }
         }, { passive: true, capture: true });
 
@@ -2379,7 +2400,7 @@ components.html(
             if (!g || !e.touches.length) return;
             var t = e.touches[0], dx = t.clientX - g.x, dy = t.clientY - g.y;
             if (!g.live) {
-                if (Math.abs(dx) < SLOP) { if (Math.abs(dy) > SLOP) g = null; return; }
+                if (Math.abs(dx) < g.slop) { if (Math.abs(dy) > SLOP) g = null; return; }
                 if (Math.abs(dy) > Math.abs(dx)) { g = null; return; }         // vertical scroll wins
                 if (g.mode === "open" ? dx > 0 : dx < 0) { g = null; return; } // wrong way
                 if (!drawer()) { g = null; return; }
@@ -2487,72 +2508,93 @@ _STARTUP_SAT = {
 }
 
 
-# Subtitle metrics, READ OUT OF A BROWSER, not derived. Measured 2026-07-28 in
-# the patched index.html at 375x812 with sat=0, which is why every number here
-# is exact rather than fitted:
+# Subtitle metrics, READ OUT OF A BROWSER, not derived. Measured 2026-07-28
+# (evening, layout D — the user's pick of four rendered candidates) in the
+# patched index.html at 375x812 with sat=0. Layout D is two tiers:
 #
-#   chevron top      = 14vh                     (padding-top, sat=0)
-#   line box top     = 14vh + 124               (chev 43 + gap 18 + title 45 + gap 18)
-#   ascent 11 + descent 4 = line box 15         => half-leading is ZERO
-#   baseline         = line box top + 11        => 14vh + 135
-#   layout width     = 197.70                   (advance 101.695 + 20 x 4.8 tracking)
+#   line 1  "מערכת פקודות"  13px, ls 2, rgba(23,26,18,.59), flanked by
+#           26x1px rules (rgba .31) at a 12px gap
+#   line 2  "בלמ״ס"          9.5px, ls 7, rgba(23,26,18,.37)
 #
-# The subtitle is the one splash element the launch image used to omit, which is
-# what made the hand-off read as a second screen (2026-07-28 device video: the
-# line materialises at t=11.88 as the shell takes over). Painting it here closes
+# Browser truth (pad = sat + 14vh):
+#   .s1 flex row box: top pad+124, h 17 (asc 13 + desc 4, half-leading ZERO)
+#       -> text baseline pad+137;  rules flex-centred -> y [pad+132, pad+133]
+#       text item box w 100.953 (advance 76.947 + 12 x 2 tracking), box
+#       centred; rules symmetric about the centre (measured 99.031/275.984
+#       about a 187.5 centre)
+#   .s2 box: top pad+147 (s1 bottom 141 + 6 flex gap), h 12, asc 9
+#       -> baseline pad+156;  box w 60.141 (advance 25.137 + 5 x 7 tracking)
+#
+# The subtitle is the one splash element the launch image used to omit, which
+# is what made the hand-off read as a second screen. Painting it here closes
 # that, but only if it lands on the shell's copy to the pixel — hence measured
-# constants and the matching font in boot_shell._HEAD_TEMPLATE. Change one side
+# constants and the matching CSS in boot_shell._HEAD_TEMPLATE. Change one side
 # and you must change the other.
-_SUB_TEXT = 'מערכת פקודות · בלמ"ס'
-_SUB_PX = 11            # font-size
-_SUB_WIDTH = 197.70     # layout width, INCLUDING the trailing letter-spacing
-_SUB_BASELINE = 135     # baseline below sat + 14vh  (= line box 124 + ascent 11)
-# round(255 * .4), matching the shell's rgba(23,26,18,.4). The .4 is measured,
-# not chosen: Suez One's stroke is far heavier than the system Hebrew face the
-# subtitle used to fall back to, and at the old .6 it read as bold. Bisected
-# against the ink energy of the real line in the 2026-07-28 device video —
-# 16421 units — which .4 reproduces to within 1%.
-_SUB_ALPHA = 102
+_SUB1_TEXT = 'מערכת פקודות'
+_SUB1_PX = 13
+_SUB1_WIDTH = 100.953    # layout width INCLUDING the trailing letter-spacing
+_SUB1_BASELINE = 137     # below sat + 14vh
+_SUB1_ALPHA = 150        # round(255 * .59)
+_RULE_W, _RULE_GAP = 26, 12          # the flanking rules, from .s1::before CSS
+_RULE_TOP, _RULE_ALPHA = 132, 79     # y below pad; round(255 * .31)
+_SUB2_TEXT = 'בלמ"ס'
+_SUB2_PX = 9.5
+_SUB2_WIDTH = 60.141
+_SUB2_BASELINE = 156
+_SUB2_ALPHA = 94         # round(255 * .37)
 
 
-def _draw_subtitle(img, font, cx: float, baseline: float, dpr: int) -> None:
-    """Lay the subtitle out the way CSS lays out an RTL run with letter-spacing.
+def _draw_subtitle(img, fp: str, cx: float, pad_px: float, dpr: int) -> None:
+    """Lay layout D out the way CSS lays out RTL runs with letter-spacing.
 
     CSS adds the tracking AFTER every character including the last, so in RTL
     the leftover spacing lands on the run's visual LEFT — inside the layout box
-    but outside the ink. The BOX is what gets centred, so the INK ends up
-    letter-spacing/2 to the RIGHT of the viewport centre. Measured in the
-    browser at a 375px viewport: box centre 187.508, ink [93.456, 286.359],
-    ink centre +2.408 from the viewport centre = half of 4.8. Reproducing that
-    means walking right to left from the layout box's right edge, which is what
-    this does — do not "fix" it by centring the ink.
+    but outside the ink. The BOX is what gets centred, so each line's INK ends
+    up letter-spacing/2 to the RIGHT of the viewport centre (verified per
+    character in the browser). The RULES, by contrast, are flex siblings and
+    sit symmetric about the true centre. Reproducing all of that means walking
+    right to left from each layout box's right edge — do not "fix" it by
+    centring the ink.
 
-    The tracking is recomputed from THIS font's advances rather than hardcoded at
-    4.8px. Pillow hints glyph advances to whole pixels (all integers at 33px)
-    while the browser lays out fractionally, so the two disagree by ~0.3px over
-    the string; solving for the spacing that reproduces the measured 197.70px
-    layout width pins both ends of the run and leaves only sub-pixel jitter in
-    between. Verified against the browser's own per-character rects: worst-case
-    glyph offset 0.22 CSS px (0.66 device px at dpr 3), both ends within 0.02.
+    Tracking is recomputed from THIS font's advances rather than hardcoded:
+    Pillow hints advances to whole pixels while the browser lays out
+    fractionally; solving for the spacing that reproduces the measured layout
+    width pins both ends of each run (v9 verification: worst glyph 0.22 CSS px,
+    ends within 0.02).
 
-    Composited through an L mask rather than drawn with an RGBA fill because
-    ImageDraw.text() SILENTLY IGNORES the alpha channel — unlike polygon(),
-    which is why the chevron's faded second stroke works and a first attempt at
-    this line came out at full opacity. Drawing the glyphs into an L image at
-    ink=alpha gives coverage x alpha, and pasting through it is precisely what
+    Composited through an L mask because ImageDraw.text() SILENTLY IGNORES the
+    alpha channel of an RGBA fill — unlike polygon(), which is why the
+    chevron's faded second stroke works while a first attempt at the subtitle
+    came out at full opacity. Coverage x alpha through a mask is precisely what
     CSS does with color: rgba().
     """
-    from PIL import Image, ImageDraw
+    from PIL import Image, ImageDraw, ImageFont
 
-    adv = [font.getlength(ch) for ch in _SUB_TEXT]
-    ls = (_SUB_WIDTH * dpr - sum(adv)) / len(_SUB_TEXT)
     mask = Image.new("L", img.size, 0)
     mdraw = ImageDraw.Draw(mask)
-    x = cx + _SUB_WIDTH * dpr / 2          # right edge of the layout box
-    for ch, a in zip(_SUB_TEXT, adv):
-        x -= a
-        mdraw.text((x, baseline), ch, font=font, fill=_SUB_ALPHA, anchor="ls")
-        x -= ls
+
+    def run(text, px, width, baseline, alpha):
+        font = ImageFont.truetype(fp, int(px * dpr + 0.5))
+        adv = [font.getlength(ch) for ch in text]
+        ls = (width * dpr - sum(adv)) / len(text)
+        x = cx + width * dpr / 2           # right edge of the layout box
+        for ch, a in zip(text, adv):
+            x -= a
+            mdraw.text((x, pad_px + baseline * dpr), ch,
+                       font=font, fill=alpha, anchor="ls")
+            x -= ls
+
+    run(_SUB1_TEXT, _SUB1_PX, _SUB1_WIDTH, _SUB1_BASELINE, _SUB1_ALPHA)
+    run(_SUB2_TEXT, _SUB2_PX, _SUB2_WIDTH, _SUB2_BASELINE, _SUB2_ALPHA)
+    # the flanking rules: symmetric about cx, 1 CSS px tall, flex-centred on
+    # line 1's optical middle
+    half = _SUB1_WIDTH * dpr / 2
+    y0, y1 = pad_px + _RULE_TOP * dpr, pad_px + (_RULE_TOP + 1) * dpr - 1
+    for sgn in (1, -1):
+        inner = cx + sgn * (half + _RULE_GAP * dpr)
+        outer = inner + sgn * _RULE_W * dpr
+        mdraw.rectangle([min(inner, outer), y0, max(inner, outer), y1],
+                        fill=_RULE_ALPHA)
     img.paste((23, 26, 18), (0, 0), mask)
 
 
@@ -2606,9 +2648,8 @@ def _startup_png(w: int, h: int, dpr: int) -> bytes:
         baseline = (sat + 0.14 * (h / dpr) + 61 + 34) * dpr
         draw.text((cx, baseline), "CommandAI", font=font,
                   fill=(23, 26, 18, 255), anchor="ms")
-        sub = ImageFont.truetype(str(fp), int(round(_SUB_PX * dpr)))
-        _draw_subtitle(img, sub, cx,
-                       (sat + 0.14 * (h / dpr) + _SUB_BASELINE) * dpr, dpr)
+        _draw_subtitle(img, str(fp), cx,
+                       (sat + 0.14 * (h / dpr)) * dpr, dpr)
     except Exception:
         # a missing/unreadable font must never break the launch image — the
         # chevron alone is exactly the old behaviour
@@ -4772,6 +4813,14 @@ with st.container(key="cai_drawer"):
         # a plain st.button/expander label can't style a badge, so we draw
         # the card in HTML and overlay a transparent st.button to capture
         # the tap (CSS positions it over the card).
+        # The button renders BEFORE the card so the toggle lands in the same
+        # run that paints it — with the markdown first, the card's class was
+        # already out when the button toggled, forcing an st.rerun() whose
+        # second full render DOUBLED every toggle's wait (~3.5s on device,
+        # 2026-07-28). Source order is free here: the overlay is absolutely
+        # positioned over the card either way.
+        if st.button("פקודות מטכ\"ל במערכת", key="toggle_orders", use_container_width=True):
+            st.session_state.orders_open = not st.session_state.orders_open
         st.markdown(
             "<div class='cai-kb-card" + (" open" if st.session_state.orders_open else "") + "'>"
             "<span class='kb-ic'></span>"
@@ -4779,9 +4828,6 @@ with st.container(key="cai_drawer"):
             f"<span class='kb-badge'>{len(docs)}</span>"
             "<span class='kb-chev'></span></div>",
             unsafe_allow_html=True)
-        if st.button("פקודות מטכ\"ל במערכת", key="toggle_orders", use_container_width=True):
-            st.session_state.orders_open = not st.session_state.orders_open
-            st.rerun()
         if st.session_state.orders_open:
             if docs:
                 search = _search_norm(st.text_input(
