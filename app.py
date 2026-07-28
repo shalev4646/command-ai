@@ -2711,7 +2711,15 @@ if _pwa:
                 // its chrome live off this meta
                 var tc = doc.querySelector('meta[name="theme-color"]');
                 if (!tc) {{ tc = doc.createElement("meta"); tc.setAttribute("name", "theme-color"); doc.head.appendChild(tc); }}
-                tc.setAttribute("content", "#14170E");
+                // write ONLY on change: boot_shell now ships this meta
+                // statically, and on iOS standalone a theme-color TRANSITION
+                // resizes the web view a few px — which yanked the splash's
+                // bottom-anchored wait block mid-boot (2026-07-28, t=13.9s).
+                // Idempotent writes keep the reconnect-protection this line
+                // exists for without ever re-triggering that resize.
+                if (tc.getAttribute("content") !== "#14170E") {{
+                    tc.setAttribute("content", "#14170E");
+                }}
                 if (doc.getElementById("cai-pwa-manifest")) return;
                 var loc = window.parent.location;
                 var dir = loc.pathname.endsWith("/") ? loc.pathname : loc.pathname + "/";

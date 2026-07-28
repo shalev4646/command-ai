@@ -58,9 +58,26 @@ def _font_data_uri() -> str:
     the user stares at the frozen OS launch image with nothing moving on it.
     Inlining the bytes deletes the whole chain: the shell paints as soon as
     index.html lands, and the spinner below can actually spin during the wait.
+
+    SUBSET woff2, not the full TTF — and the size is the whole point. The full
+    face inlined as base64 was 92KB inside <head>, which made index.html 111KB,
+    served UNCOMPRESSED (Tornado sends no content-encoding). The 2026-07-28
+    evening device video shows what that costs: on a cellular link the page
+    could not paint until ~8.5s after the tap, iOS gave up waiting, started
+    dissolving the launch image into a still-unpainted (white) web view, and
+    the first olive frame landed ONE FRAME after the dissolve peak. That is
+    the residual white flash — an OS-level composite (the status bar washes
+    out with it), unfixable by any CSS, only by painting sooner.
+
+    branding/fonts/SuezOne-boot.woff2 is the same face subset to the ~30
+    glyphs the splash can use (wordmark latin + full Hebrew + punctuation):
+    6.6KB, base64 8.8KB, glyph rasters and advances verified pixel-identical
+    to the full TTF — so every measured geometry constant survives. The PNG
+    side (app._startup_png) keeps drawing with the full TTF via Pillow, which
+    never travels over the network.
     """
     try:
-        p = Path(__file__).parent / "branding" / "fonts" / "SuezOne-Regular.ttf"
+        p = Path(__file__).parent / "branding" / "fonts" / "SuezOne-boot.woff2"
         return base64.b64encode(p.read_bytes()).decode("ascii")
     except Exception:
         return ""
@@ -68,7 +85,20 @@ def _font_data_uri() -> str:
 
 # __FACE__ is substituted at patch time. A plain placeholder, not an f-string:
 # this block is nearly all CSS braces and escaping them all would bury it.
+#
+# The <meta name="theme-color"> is HERE, statically, and not only in the
+# runtime PWA injector — that placement is a bug fix, not tidiness. When the
+# meta first appears at runtime (the Streamlit component lands ~3.5s after
+# first paint), iOS standalone re-evaluates the status-bar treatment and
+# RESIZES the web view by a few px. The splash's wait block is bottom-anchored,
+# so it jumped: 2026-07-28 evening video, t=13.91s — a 57px one-frame spasm,
+# settling 7px higher, logo rows untouched (the top anchor never moved, which
+# is what pins the cause to a viewport-height change, not a scroll or rerun).
+# Present from the first byte, the value never transitions and the viewport
+# never steps. The runtime injector still exists for reruns, but writes only
+# when the value actually differs.
 _HEAD_TEMPLATE = """
+    <meta id="cai-theme" name="theme-color" content="#14170E">
     <style id="cai-boot" data-cai-ver="__VER__">
       __FACE__
       html, body { background: #99A26B; }
@@ -402,6 +432,7 @@ def _strip(src: str) -> str:
     <link id="cai-boot-font"> is exactly what v2 exists to delete.
     """
     src = re.sub(r'\s*<link id="cai-boot-font"[^>]*>', "", src)
+    src = re.sub(r'\s*<meta id="cai-theme"[^>]*>', "", src)
     src = re.sub(r'\s*<style id="cai-boot".*?</style>', "", src, flags=re.S)
     # the trailing \n? matters: _BODY_ADD ends in a newline of its own, so
     # without it every strip+repatch cycle leaves one more blank line before
@@ -428,8 +459,8 @@ def patch_index_html() -> bool:
         b64 = _font_data_uri()
         if b64:
             face = ("@font-face { font-family: 'Suez One'; font-style: normal; "
-                    "font-weight: 400; src: url(data:font/ttf;base64," + b64 +
-                    ") format('truetype'); }")
+                    "font-weight: 400; src: url(data:font/woff2;base64," + b64 +
+                    ") format('woff2'); }")
         head_raw = _HEAD_TEMPLATE.replace("__FACE__", face)
         # stamped with a hash of exactly what is about to be written — including
         # the font bytes — so a swapped font file re-patches too
