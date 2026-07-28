@@ -32,7 +32,7 @@ import streamlit as st
 # STRIPPED and re-injected rather than nursed along with targeted swaps: a
 # long-lived dev venv keeps its patched index.html forever, and silently
 # testing last week's boot shell is worse than the cost of a rewrite.
-_VERSION = "v7"
+_VERSION = "v8"
 
 
 def _font_data_uri() -> str:
@@ -94,11 +94,45 @@ _HEAD_TEMPLATE = """
          during the wait — the OS launch image before it cannot animate at all. */
       @keyframes caiBootSpin { to { transform: rotate(360deg); } }
       @keyframes caiBootFade { from { opacity: 0; } to { opacity: 1; } }
-      #cai-boot-splash .w { width: 22px; height: 22px; margin: auto auto 14vh;
+      /* The wait stack is bottom-anchored and GROWS UPWARD: the ring is its
+         last child, so its distance from the bottom (14vh) is identical
+         whether or not the long-wait copy above it is showing. The ring
+         must not move — a splash element that shifts position mid-wait is
+         exactly the "it keeps switching screens" the pilot reported. */
+      #cai-boot-splash .wait { margin: auto auto 14vh; display: flex;
+        flex-direction: column; align-items: center; gap: 13px; }
+      #cai-boot-splash .w { width: 22px; height: 22px; margin: 0;
         border: 2px solid rgba(23,26,18,.20); border-top-color: rgba(23,26,18,.55);
         border-radius: 50%;
         animation: caiBootSpin .9s linear infinite, caiBootFade .5s ease both;
         animation-delay: 0s, 2.5s; }
+      /* SAY SOMETHING when the boot drags. 2026-07-28 device video: 51s of
+         splash with a silent spinner (index.html alone took 13.7s to land)
+         — indistinguishable from a hang, and the pilot had no way to tell
+         whether to keep waiting or force-quit. Hidden until armed, so a
+         normal load never sees it and the geometry is untouched. */
+      #cai-boot-splash .m { display: none; max-width: 78vw; text-align: center;
+        font: 600 12px ui-monospace, Menlo, monospace; line-height: 1.7;
+        color: rgba(23,26,18,.62); opacity: 0; transition: opacity .5s ease; }
+      #cai-boot-splash .m.on { opacity: 1; }
+      #cai-boot-splash .r { display: none; pointer-events: auto;
+        font: 700 12px ui-monospace, Menlo, monospace; color: #171A12;
+        background: rgba(23,26,18,.10); border: 1px solid rgba(23,26,18,.30);
+        border-radius: 999px; padding: 8px 20px;
+        animation: caiBootFade .4s ease both; }
+      /* Connection bar — see the watchdog in the script below for WHY. Lives
+         outside #root, so no Streamlit rerender can take it away. */
+      #cai-net-bar { position: fixed; z-index: 2147483100;
+        top: calc(env(safe-area-inset-top, 0px) + 8px); left: 10px; right: 10px;
+        display: none; align-items: center; justify-content: space-between; gap: 10px;
+        padding: 10px 14px; border-radius: 14px;
+        background: #2B1E12; border: 1px solid rgba(236,237,230,.16);
+        box-shadow: 0 10px 30px rgba(0,0,0,.45);
+        font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; color: #F0E7D8; }
+      #cai-net-bar.on { display: flex; }
+      #cai-net-bar button { flex: none; border: 0; border-radius: 999px;
+        font: 700 13px system-ui, -apple-system, "Segoe UI", sans-serif;
+        color: #171A12; background: #E8D9A8; padding: 7px 16px; }
       [data-testid="stSkeleton"], [data-testid="stAppSkeleton"],
       [data-testid="stStatusWidget"], [data-testid="stDecoration"] { display: none !important; }
     </style>
@@ -109,9 +143,90 @@ _BODY_ADD = """
       <div class="chev"><span></span><span></span></div>
       <div class="t">CommandAI</div>
       <div class="s">מערכת פקודות · בלמ"ס</div>
-      <div class="w"></div>
+      <div class="wait">
+        <div class="m"></div>
+        <button class="r" type="button">נסה שוב</button>
+        <div class="w"></div>
+      </div>
     </div>
     <script id="cai-boot-js">
+      // ── connection watchdog ──
+      // A dropped websocket was COMPLETELY invisible. Streamlit's only
+      // disconnect indicator is [data-testid="stStatusWidget"], and both
+      // this shell and the app CSS hide it with display:none to keep the
+      // platform chrome off the screen. Verified live on the deployed app
+      // 2026-07-28: close the socket and the page stays fully painted,
+      // undimmed, with no toast and no dialog — the widget is there,
+      // reading "Connecting", invisible — while every server-backed
+      // control is dead. The drawer keeps sliding because it is pure
+      // client-side JS. That is precisely the "the whole screen was stuck,
+      // nothing was clickable except moving the menu tab" report from that
+      // morning, and why closing the tab and reopening it fixed it.
+      //
+      // This script is a CLASSIC script inside <body>, so it runs during
+      // parsing — before Streamlit's deferred <script type="module">
+      // bundle. Wrapping window.WebSocket here is therefore guaranteed to
+      // catch the app's socket, no matter when the bundle opens it.
+      (function () {
+        try {
+          var OW = window.WebSocket;
+          if (!OW || OW.__cai) return;
+          var live = 0, armed = false, timer = null, bar = null;
+          var show = function () {
+            // never over the curtain — the boot splash speaks for itself
+            if (document.getElementById('cai-boot-splash')) {
+              setTimeout(show, 1000); return;
+            }
+            if (!bar) {
+              bar = document.createElement('div');
+              bar.id = 'cai-net-bar';
+              bar.setAttribute('dir', 'rtl');
+              var t = document.createElement('span');
+              t.textContent = 'אין חיבור לשרת — מנסים להתחבר מחדש…';
+              var b = document.createElement('button');
+              b.type = 'button';
+              b.textContent = 'רענון';
+              b.addEventListener('click', function () { location.reload(); });
+              bar.appendChild(t); bar.appendChild(b);
+              document.body.appendChild(bar);
+            }
+            if (live <= 0) bar.classList.add('on');
+          };
+          var arm = function () {
+            clearTimeout(timer);
+            // a rerun-time blip reconnects in well under a second; only a
+            // real outage survives this
+            timer = setTimeout(function () { if (live <= 0) show(); }, 4000);
+          };
+          var CW = function (url, protocols) {
+            var w = (protocols === undefined) ? new OW(url) : new OW(url, protocols);
+            try {
+              if (String(url).indexOf('_stcore/stream') >= 0) {
+                var up = false;
+                w.addEventListener('open', function () {
+                  up = true; armed = true; live++;
+                  clearTimeout(timer);
+                  if (bar) bar.classList.remove('on');
+                });
+                w.addEventListener('close', function () {
+                  if (up) { up = false; live--; }
+                  if (armed) arm();
+                });
+                w.addEventListener('error', function () { if (armed) arm(); });
+              }
+            } catch (e) {}
+            return w;
+          };
+          CW.prototype = OW.prototype;
+          CW.__cai = true;
+          ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'].forEach(function (k) { CW[k] = OW[k]; });
+          window.WebSocket = CW;
+          // a FIRST connection that never lands must also speak up — armed
+          // only ever flips on a successful open, so without this the bar
+          // could never appear on a boot that fails outright
+          setTimeout(function () { if (live <= 0) { armed = true; arm(); } }, 25000);
+        } catch (e) {}
+      })();
       (function () {
         var el = document.getElementById('cai-boot-splash');
         if (!el) return;
@@ -121,8 +236,26 @@ _BODY_ADD = """
         // (see splash_active in app.py), so there is nothing to cross-fade to
         // and the reveal can be the real thing: the screen slides up off the
         // glass and the app is simply there behind it.
+        // Escalating copy for a boot that drags. On the 2026-07-28 launch
+        // index.html alone took 13.7s (365ms warm) and the first complete
+        // screen 51s; the splash said nothing the whole time. These fire
+        // only past the point where the load is already abnormal, so a
+        // healthy boot never shows any of them.
+        var msg = el.querySelector('.m'), rtry = el.querySelector('.r');
+        var say = function (t) {
+          if (!msg || gone) return;
+          msg.textContent = t; msg.style.display = 'block';
+          setTimeout(function () { msg.classList.add('on'); }, 20);
+        };
+        if (rtry) rtry.addEventListener('click', function () { location.reload(); });
+        var slow = [
+          setTimeout(function () { say('מכינים את המערכת…'); }, 12000),
+          setTimeout(function () { say('החיבור איטי מהרגיל — עדיין טוענים'); }, 28000),
+          setTimeout(function () { if (!gone && rtry) rtry.style.display = 'block'; }, 45000)
+        ];
         var lift = function () {
           if (gone) return; gone = true;
+          slow.forEach(clearTimeout);
           // SLIDE ONLY — never fade while sliding: a curtain whose opacity
           // drops mid-motion is see-through, and the app showed THROUGH the
           // moving splash as a smeared double-exposure (two crossing

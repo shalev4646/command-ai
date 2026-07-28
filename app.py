@@ -14,6 +14,31 @@ import streamlit as st
 import streamlit.components.v1 as components
 from anthropic import APIConnectionError, APITimeoutError, BadRequestError
 
+# KEEP THE LOGS USABLE. Streamlit 1.58 logs a two-line "replace
+# st.components.v1.html with st.iframe" deprecation notice PER CALL, PER
+# RERUN — this app makes ~8 component calls per run, so a few minutes of use
+# buries everything else. On 2026-07-28 the whole retrievable Fly log buffer
+# for the incident window was that one warning, repeated, and there was
+# nothing left to diagnose with. Not migrating: st.iframe renders an HTML
+# string in a sandboxed frame, and every engine here (viewport pin, drawer
+# gestures, PWA metadata) reaches window.parent.document to install itself on
+# the app page — that access dies in a sandbox and would take the whole
+# client layer with it.
+def _mute_component_deprecation() -> None:
+    import logging
+
+    class _Mute(logging.Filter):
+        def filter(self, record: logging.LogRecord) -> bool:
+            try:
+                return "st.components.v1.html" not in record.getMessage()
+            except Exception:
+                return True
+
+    logging.getLogger("streamlit.deprecation_util").addFilter(_Mute())
+
+
+_mute_component_deprecation()
+
 import metrics
 import escalation_paths
 from escalation_paths import path_for
@@ -456,6 +481,25 @@ components.html(
                 // shrunken pane, even when focus tracking failed (Streamlit
                 // replaces the focused textarea without a focusout)
                 if (g >= 400 && h < g * 0.8) return;
+                // GLASS-SHORTFALL GUARD (2026-07-28 device video). The app
+                // came up with the composer strip and the disclaimer pinned
+                // ~100px above the bottom of the screen, and it stayed that
+                // way for the whole session. In standalone the web view IS
+                // the glass, so with no keyboard up the visible pane can
+                // only be the full screen height; anything meaningfully
+                // shorter is iOS reporting a layout viewport that got stuck
+                // during a slow launch. The keyboard guard above is no help
+                // — it only catches a >20% shortfall, and this was ~12%.
+                // Worse, the old code PINNED that reading and then could
+                // never recover: the strip sits exactly ON the wrong value,
+                // so heal()'s gap check finds nothing to disagree with. So:
+                // force a real re-layout instead, and only accept a short
+                // pane once it has survived the kicks (some other device
+                // geometry might legitimately read short).
+                if (g >= 400 && h < g - 24) {
+                    window.__caiShort = (window.__caiShort || 0) + 1;
+                    if (window.__caiShort <= 8) { kick(); return; }
+                } else { window.__caiShort = 0; }
                 if (g >= 400) h = Math.min(h, g); // ghost-viewport clamp (see above)
                 if (h < 400) return;
                 // empirical overflow corrective: where does the composer strip
