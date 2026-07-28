@@ -289,8 +289,6 @@ if splash_active:
    — the very thing that was costing ~8s (see boot_shell._font_data_uri). The
    main CSS block still imports it as a fallback for hosts where the shell
    patch cannot be applied. */
-@keyframes bootEnterUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:none; } }
-@keyframes bootEnterScale { from { opacity:0; transform:scale(.6); } to { opacity:1; transform:none; } }
 /* the parked curtain must END invisible: it stays in the DOM above the
    viewport, and iOS Safari (no theme-color meta yet) SAMPLES it when tinting
    its chrome — an olive ghost kept the bars olive after the lift */
@@ -305,18 +303,19 @@ if splash_active:
     animation: bootCurtainUp .65s cubic-bezier(.7,0,.3,1) both; animation-delay: 30s;
     pointer-events: none;
 }
-/* NO entrance animation on the chevron OR the wordmark: the OS launch image
-   already paints both at these exact spots (see _startup_png) — animating
-   them here reads as the logo "popping" during the image→splash handoff.
-   The subtitle is the only element that enters, which is what turns the
-   handoff into a deliberate reveal instead of a jump. */
+/* NO entrance animation on ANY of the three: the OS launch image now paints
+   the chevron, the wordmark AND the subtitle at these exact spots (see
+   _startup_png) — animating them here reads as the logo "popping" during the
+   image→splash handoff. The subtitle used to be the one element that entered,
+   on the theory that the launch image lacked it; now that the image has it,
+   an entrance would make it blink out and back. Typography mirrors
+   boot_shell._HEAD_TEMPLATE exactly, for the same reason. */
 .cai-splash-chev { display:flex; flex-direction:column; align-items:center; }
 .cai-splash-chev span { display:block; width:26px; height:26px;
     border-top:6px solid #171A12; border-left:6px solid #171A12; transform:rotate(45deg); }
 .cai-splash-chev span + span { border-color: rgba(23,26,18,.45); margin-top: -9px; }
 .cai-splash-title { font: 400 34px 'Suez One', serif; color: #171A12; }
-.cai-splash-sub { font: 600 11px ui-monospace, Menlo, monospace; letter-spacing: 3px; color: rgba(23,26,18,.6);
-    animation: bootEnterUp .6s cubic-bezier(.2,.7,.2,1) both; animation-delay: .45s; }
+.cai-splash-sub { font: 400 11px 'Suez One', serif; letter-spacing: 4.8px; color: rgba(23,26,18,.4); }
 /* Waiting ring, bottom-anchored (margin-top:auto against the flex-start
    column). Measured on the live app 2026-07-27: domComplete 8.6s and the last
    Streamlit chunk at 11.4s — the wait is latency-bound waves of tiny lazy
@@ -2488,6 +2487,75 @@ _STARTUP_SAT = {
 }
 
 
+# Subtitle metrics, READ OUT OF A BROWSER, not derived. Measured 2026-07-28 in
+# the patched index.html at 375x812 with sat=0, which is why every number here
+# is exact rather than fitted:
+#
+#   chevron top      = 14vh                     (padding-top, sat=0)
+#   line box top     = 14vh + 124               (chev 43 + gap 18 + title 45 + gap 18)
+#   ascent 11 + descent 4 = line box 15         => half-leading is ZERO
+#   baseline         = line box top + 11        => 14vh + 135
+#   layout width     = 197.70                   (advance 101.695 + 20 x 4.8 tracking)
+#
+# The subtitle is the one splash element the launch image used to omit, which is
+# what made the hand-off read as a second screen (2026-07-28 device video: the
+# line materialises at t=11.88 as the shell takes over). Painting it here closes
+# that, but only if it lands on the shell's copy to the pixel — hence measured
+# constants and the matching font in boot_shell._HEAD_TEMPLATE. Change one side
+# and you must change the other.
+_SUB_TEXT = 'מערכת פקודות · בלמ"ס'
+_SUB_PX = 11            # font-size
+_SUB_WIDTH = 197.70     # layout width, INCLUDING the trailing letter-spacing
+_SUB_BASELINE = 135     # baseline below sat + 14vh  (= line box 124 + ascent 11)
+# round(255 * .4), matching the shell's rgba(23,26,18,.4). The .4 is measured,
+# not chosen: Suez One's stroke is far heavier than the system Hebrew face the
+# subtitle used to fall back to, and at the old .6 it read as bold. Bisected
+# against the ink energy of the real line in the 2026-07-28 device video —
+# 16421 units — which .4 reproduces to within 1%.
+_SUB_ALPHA = 102
+
+
+def _draw_subtitle(img, font, cx: float, baseline: float, dpr: int) -> None:
+    """Lay the subtitle out the way CSS lays out an RTL run with letter-spacing.
+
+    CSS adds the tracking AFTER every character including the last, so in RTL
+    the leftover spacing lands on the run's visual LEFT — inside the layout box
+    but outside the ink. The BOX is what gets centred, so the INK ends up
+    letter-spacing/2 to the RIGHT of the viewport centre. Measured in the
+    browser at a 375px viewport: box centre 187.508, ink [93.456, 286.359],
+    ink centre +2.408 from the viewport centre = half of 4.8. Reproducing that
+    means walking right to left from the layout box's right edge, which is what
+    this does — do not "fix" it by centring the ink.
+
+    The tracking is recomputed from THIS font's advances rather than hardcoded at
+    4.8px. Pillow hints glyph advances to whole pixels (all integers at 33px)
+    while the browser lays out fractionally, so the two disagree by ~0.3px over
+    the string; solving for the spacing that reproduces the measured 197.70px
+    layout width pins both ends of the run and leaves only sub-pixel jitter in
+    between. Verified against the browser's own per-character rects: worst-case
+    glyph offset 0.22 CSS px (0.66 device px at dpr 3), both ends within 0.02.
+
+    Composited through an L mask rather than drawn with an RGBA fill because
+    ImageDraw.text() SILENTLY IGNORES the alpha channel — unlike polygon(),
+    which is why the chevron's faded second stroke works and a first attempt at
+    this line came out at full opacity. Drawing the glyphs into an L image at
+    ink=alpha gives coverage x alpha, and pasting through it is precisely what
+    CSS does with color: rgba().
+    """
+    from PIL import Image, ImageDraw
+
+    adv = [font.getlength(ch) for ch in _SUB_TEXT]
+    ls = (_SUB_WIDTH * dpr - sum(adv)) / len(_SUB_TEXT)
+    mask = Image.new("L", img.size, 0)
+    mdraw = ImageDraw.Draw(mask)
+    x = cx + _SUB_WIDTH * dpr / 2          # right edge of the layout box
+    for ch, a in zip(_SUB_TEXT, adv):
+        x -= a
+        mdraw.text((x, baseline), ch, font=font, fill=_SUB_ALPHA, anchor="ls")
+        x -= ls
+    img.paste((23, 26, 18), (0, 0), mask)
+
+
 @st.cache_data(show_spinner=False)
 def _startup_png(w: int, h: int, dpr: int) -> bytes:
     """Olive launch screen with the double-chevron mark at the SPLASH's
@@ -2538,6 +2606,9 @@ def _startup_png(w: int, h: int, dpr: int) -> bytes:
         baseline = (sat + 0.14 * (h / dpr) + 61 + 34) * dpr
         draw.text((cx, baseline), "CommandAI", font=font,
                   fill=(23, 26, 18, 255), anchor="ms")
+        sub = ImageFont.truetype(str(fp), int(round(_SUB_PX * dpr)))
+        _draw_subtitle(img, sub, cx,
+                       (sat + 0.14 * (h / dpr) + _SUB_BASELINE) * dpr, dpr)
     except Exception:
         # a missing/unreadable font must never break the launch image — the
         # chevron alone is exactly the old behaviour

@@ -22,17 +22,27 @@ never the one delivered. It only bites on a host where we own the served file
 build runs it. See the git history for the long Community-Cloud boot saga.
 """
 import base64
+import hashlib
 import inspect
 import re
 from pathlib import Path
 
 import streamlit as st
 
-# Bump when the injected markup changes. A patch carrying an older version is
-# STRIPPED and re-injected rather than nursed along with targeted swaps: a
-# long-lived dev venv keeps its patched index.html forever, and silently
-# testing last week's boot shell is worse than the cost of a rewrite.
-_VERSION = "v8"
+# Human-readable half of the stamp. The machine half is a hash of the injected
+# markup itself (computed in patch_index_html), so ANY edit below re-patches
+# automatically and this only has to move when you want the version legible in
+# a bug report.
+#
+# The hash is not belt-and-braces. Bumping by hand was the rule until
+# 2026-07-28, when editing the subtitle's colour without touching this constant
+# left the dev venv serving the previous markup — patch_index_html returned True
+# and changed nothing, and the browser measurement that followed was quietly
+# taken against stale CSS. A patch carrying any other stamp is STRIPPED and
+# re-injected rather than nursed along with targeted swaps: a long-lived dev venv
+# keeps its patched index.html forever, and silently testing last week's boot
+# shell is worse than the cost of a rewrite.
+_VERSION = "v9"
 
 
 def _font_data_uri() -> str:
@@ -70,16 +80,31 @@ _HEAD_TEMPLATE = """
         border-top: 6px solid #171A12; border-left: 6px solid #171A12; transform: rotate(45deg); }
       #cai-boot-splash .chev span + span { border-color: rgba(23,26,18,.45); margin-top: -9px; }
       #cai-boot-splash .t { font: 400 34px 'Suez One', serif; color: #171A12; }
-      /* The OS launch image shows the chevron and the wordmark and NOTHING
-         else. Whatever this shell paints on top of them at t=0 pops into
-         existence during iOS's crossfade from that image. A delayed slide-up
-         entrance was tried first — the pilot read THAT as another screen
-         switch (2026-07-27 video #2). So: pure opacity, starting at once —
-         the subtitle emerges inside the OS's own ~300ms crossfade window and
-         nothing on the splash ever MOVES. */
-      #cai-boot-splash .s { font: 600 11px ui-monospace, Menlo, monospace; letter-spacing: 3px;
-        color: rgba(23,26,18,.6);
-        animation: caiBootFade .8s ease both; }
+      /* SUEZ ONE, NOT ui-monospace — and this is load-bearing, not taste.
+         The launch image now paints this line too (see _startup_png), so the
+         two must agree to the pixel or the hand-off shows the subtitle
+         swapping typefaces. Menlo and friends carry NO Hebrew: iOS silently
+         fell back to its system Hebrew face, which Pillow cannot reproduce
+         server-side, so identity was unreachable while this said monospace.
+         Suez One is already inlined above as a data URI — same file the PNG
+         draws with, zero extra bytes on the critical path.
+
+         The numbers follow from that swap. Tracking 4.8px (was 3px) keeps the
+         line at the ~192px width the layout was composed around, since Suez
+         One is the narrower face. Alpha .4 (was .6) because its stroke is
+         markedly heavier at this size — .6 read as bold next to the old line.
+         The .4 is bisected, not eyeballed: it reproduces the ink energy of the
+         real subtitle in the 2026-07-28 device video to within 1%. It must stay
+         in step with app._SUB_ALPHA (round(255 * .4) = 102).
+
+         NO entrance animation. The subtitle is already on screen, painted
+         into the launch image, before this stylesheet exists; fading it in
+         makes it blink out and back at the exact moment the hand-off has to
+         be invisible. (The .8s fade this replaces was itself the fix for an
+         earlier slide-up that the pilot read as a screen switch — 2026-07-27
+         video #2. Neither is needed once the two screens are identical.) */
+      #cai-boot-splash .s { font: 400 11px 'Suez One', serif; letter-spacing: 4.8px;
+        color: rgba(23,26,18,.4); }
       /* NO lift choreography. A staggered per-element entrance was tried
          (2026-07-27, shell v4) and it FOUGHT Streamlit: reruns replace the
          DOM mid-cascade, so the curtain lifted onto a dark screen of
@@ -249,7 +274,13 @@ _BODY_ADD = """
         };
         if (rtry) rtry.addEventListener('click', function () { location.reload(); });
         var slow = [
-          setTimeout(function () { say('מכינים את המערכת…'); }, 12000),
+          // 2.5s, together with the ring — deliberately NOT the "only past
+          // the point where the load is abnormal" threshold this used to sit
+          // at (12s). On the pilot's phone a cold boot is 25-37s, so abnormal
+          // IS normal, and 12s of a silent spinner was the complaint. Both
+          // fade in on the same tick, so the wait acquires a voice in one
+          // move instead of two.
+          setTimeout(function () { say('מכינים את המערכת…'); }, 2500),
           setTimeout(function () { say('החיבור איטי מהרגיל — עדיין טוענים'); }, 28000),
           setTimeout(function () { if (!gone && rtry) rtry.style.display = 'block'; }, 45000)
         ];
@@ -312,6 +343,57 @@ def _index_path() -> Path:
     return Path(inspect.getfile(st)).parent / "static" / "index.html"
 
 
+# Streamlit's own stylesheet link, matched attribute-order-agnostically because
+# the bundle hash — and, across versions, the attribute order — moves.
+_CSS_LINK_RE = re.compile(
+    r'<link\b(?=[^>]*\brel="stylesheet")'
+    r'(?=[^>]*\bhref="(?P<href>\./static/css/[^"]+)")[^>]*>'
+)
+# ...and the swapped form this module leaves in its place, with the untouched
+# original parked inside the <noscript> so _strip can put it back verbatim.
+_CSS_SWAP_RE = re.compile(
+    r'<link\b[^>]*\bid="cai-css-swap"[^>]*>\s*<noscript>(?P<orig><link\b[^>]*>)</noscript>'
+)
+
+
+def _deblock_css(src: str) -> str:
+    """Make Streamlit's stylesheet non-render-blocking.
+
+    THE white-flash fix. index.html ships
+
+        <link rel="stylesheet" crossorigin href="./static/css/index.<hash>.css">
+
+    in <head>, and a render-blocking stylesheet means the browser paints NOTHING
+    — not even a background colour — until it resolves. On a cold PWA launch iOS
+    dismisses its launch image on its own schedule, so it hands over to a web
+    view that has not painted yet: white. Measured on the 2026-07-28 device video
+    at 60fps, mean frame brightness runs 128 (olive) → 205 → snaps back to 127
+    over 130ms at t=11.75s, right where the launch image gives way. Same shape of
+    bug as the render-blocking Google Fonts <link> deleted on 2026-07-27, and the
+    last one left on the boot path.
+
+    preload+swap rather than the media="print" trick: both are non-blocking, but
+    media="print" also drops the request's priority, and this stylesheet is
+    wanted as soon as possible — just not *before the first pixel*. The
+    <noscript> copy keeps the page styled with JS off and doubles as _strip's
+    restore source.
+
+    Streamlit mounting for a moment without its CSS is invisible: the boot splash
+    is an opaque full-screen curtain at z-index 2147483000, and the lift waits on
+    three consecutive stable geometry samples — the reflow when the CSS lands
+    resets that counter instead of revealing a half-styled page.
+    """
+    def swap(m: re.Match) -> str:
+        href = m.group("href")
+        return (
+            '<link id="cai-css-swap" rel="preload" as="style" crossorigin '
+            f'href="{href}" onload="this.onload=null;this.rel=\'stylesheet\'">'
+            f'<noscript>{m.group(0)}</noscript>'
+        )
+
+    return _CSS_LINK_RE.sub(swap, src, count=1)
+
+
 def _strip(src: str) -> str:
     """Remove any previously injected boot shell, of any version.
 
@@ -321,7 +403,13 @@ def _strip(src: str) -> str:
     """
     src = re.sub(r'\s*<link id="cai-boot-font"[^>]*>', "", src)
     src = re.sub(r'\s*<style id="cai-boot".*?</style>', "", src, flags=re.S)
-    src = re.sub(r'\s*<div id="cai-boot-splash".*?</script>', "", src, flags=re.S)
+    # the trailing \n? matters: _BODY_ADD ends in a newline of its own, so
+    # without it every strip+repatch cycle leaves one more blank line before
+    # </body> and the round-trip stops being byte-exact
+    src = re.sub(r'\s*<div id="cai-boot-splash".*?</script>\n?', "", src, flags=re.S)
+    # restore Streamlit's stylesheet link from the <noscript> copy, so a
+    # re-patch starts from pristine markup instead of stacking swaps
+    src = _CSS_SWAP_RE.sub(lambda m: m.group("orig"), src)
     return src
 
 
@@ -336,19 +424,31 @@ def patch_index_html() -> bool:
     try:
         index = _index_path()
         src = index.read_text(encoding="utf-8")
-        if f'data-cai-ver="{_VERSION}"' in src:
-            return True
-        src = _strip(src)
-        if "</head>" not in src or '<div id="root"></div>' not in src:
-            return False
         face = ""
         b64 = _font_data_uri()
         if b64:
             face = ("@font-face { font-family: 'Suez One'; font-style: normal; "
                     "font-weight: 400; src: url(data:font/ttf;base64," + b64 +
                     ") format('truetype'); }")
-        head = _HEAD_TEMPLATE.replace("__VER__", _VERSION).replace("__FACE__", face)
+        head_raw = _HEAD_TEMPLATE.replace("__FACE__", face)
+        # stamped with a hash of exactly what is about to be written — including
+        # the font bytes — so a swapped font file re-patches too
+        stamp = _VERSION + "-" + hashlib.sha256(
+            (head_raw + _BODY_ADD).encode("utf-8")).hexdigest()[:8]
+        if f'data-cai-ver="{stamp}"' in src:
+            return True
+        src = _strip(src)
+        if "</head>" not in src or '<div id="root"></div>' not in src:
+            return False
+        head = head_raw.replace("__VER__", stamp)
+        # The style block stays at the END of <head>, on purpose. Hoisting it to
+        # the top would push Streamlit's <meta charset="UTF-8"> past the 1024
+        # bytes browsers scan for it — this block carries ~92KB of base64 font —
+        # and Tornado's static handler does not always send a charset header, so
+        # the Hebrew could mojibake. Position buys nothing now that _deblock_css
+        # has removed the only thing in <head> that was holding up the paint.
         patched = src.replace("</head>", head + "  </head>", 1)
+        patched = _deblock_css(patched)
         patched = patched.replace('<div id="root"></div>',
                                   '<div id="root"></div>' + _BODY_ADD, 1)
         index.write_text(patched, encoding="utf-8")
