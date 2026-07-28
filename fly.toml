@@ -38,4 +38,14 @@ swap_size_mb = 768
 
 [[vm]]
   size = "shared-cpu-1x"
-  memory = "1gb"
+  # 2GB, not 1GB. At 1GB the app rested at ~664-727MB anon with ~56MB
+  # available — a 6% margin on a process whose answer path allocates in
+  # hundreds of MB. That margin is what killed it on 2026-07-27 (OOM at
+  # 871MB, mid-answer) and what made the 2026-07-28 morning launch crawl.
+  # The trims (chromadb/sentencepiece, ~330MB) are still worth doing; this
+  # buys the headroom now for ~$1.8/mo instead of waiting for them.
+  #
+  # NOTE: a live machine's memory does NOT follow this file on its own —
+  # verify with `fly machine status <id> -d` after every deploy, exactly
+  # like swap_size_mb below, which silently never applied at all.
+  memory = "2gb"
