@@ -2568,20 +2568,20 @@ if _pwa:
                        {{ name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" }});
                 upsert('meta[name="apple-mobile-web-app-title"]', "meta",
                        {{ name: "apple-mobile-web-app-title", content: "CommandAI" }});
-                // black-translucent needs the layout viewport to cover the
-                // safe area, else env(safe-area-inset-top) stays 0. boot_shell
-                // now ships viewport-fit=cover STATICALLY, so this is only a
-                // fallback for a host document we did not patch — and it must
-                // stay conditional. Mutating the viewport after first paint
-                // RESIZES the web view, which is exactly what made the splash
-                // jump up and drop back down on every launch the pilot filmed
-                // (2026-07-29: chevron ink row 171 -> 164 -> 171).
-                var vp = doc.querySelector('meta[name="viewport"]');
-                if (vp) {{
-                    var vc = vp.getAttribute("content") || "";
-                    if (!/viewport-fit/.test(vc))
-                        vp.setAttribute("content", vc + ", viewport-fit=cover");
-                }}
+                // NO viewport-fit=cover. It was added here for years so that
+                // black-translucent would give env(safe-area-inset-top) a real
+                // value — but it was applied AFTER first paint, which resized
+                // the web view mid-boot and made the splash jump up and drop
+                // back down on every launch the pilot filmed (2026-07-29:
+                // chevron ink row 171 -> 164 -> 171). Shipping it statically
+                // instead fixed the jump and then broke something worse: with
+                // cover the app's own layout, tuned for years against the
+                // inset viewport, ended ~48px short of the bottom — content
+                // shifted up, dead band under the disclaimer, for the whole
+                // session. Both directions are regressions, so the viewport is
+                // now left exactly as Streamlit ships it and the splash aligns
+                // itself instead (boot_shell._PAD_JS). --cai-sat below already
+                // supplies the real inset to everything that needs it.
                 // env(safe-area-inset-top) reads 0 inside the app iframe, so
                 // measure it HERE (the top/shell doc, where it's real) and push
                 // it into the app frame's :root as --cai-sat. The header band,

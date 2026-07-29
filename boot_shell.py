@@ -42,7 +42,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v12"
+_VERSION = "v13"
 
 
 # Streamlit ships `width=device-width, initial-scale=1, shrink-to-fit=no` — no
@@ -70,12 +70,40 @@ _VIEWPORT_RE = re.compile(
 )
 
 
-# maximum-scale=1 rides along for the same reason: app.py appends it at runtime
-# to kill iOS's focus auto-zoom, and every runtime write to this meta is a
-# viewport re-evaluation during boot. Shipping both tokens statically means the
-# meta is never touched after parse — app.py's guards are all `if not already
-# present`, so they become no-ops rather than mutations.
-_STATIC_VIEWPORT_TOKENS = (", viewport-fit=cover", ", maximum-scale=1")
+# viewport-fit=cover is NOT here, and that is the whole lesson of v12.
+#
+# Shipping it made the splash and the launch image agree perfectly — measured
+# on device, chevron ink row 171 -> 172 across the hand-off, no jump at all.
+# It also RESIZED THE APP. With cover the web view owns the full screen, and
+# the app's layout — which had been tuned against the inset viewport for
+# months — ended ~48px short of the bottom: content shifted up, a dead black
+# band under the disclaimer, and it stayed that way for the whole session
+# (2026-07-29 14:33 video, side by side against the 13:53 one). The pilot's
+# words were "the whole screen went up and stays stuck", and he was right.
+#
+# So the viewport goes back to what the app expects, and the splash is aligned
+# the other way round — by _PAD_JS below, which changes only the splash.
+# maximum-scale=1 stays: it caps zoom, never geometry, and shipping it here
+# spares one more runtime write to this meta during boot.
+_STATIC_VIEWPORT_TOKENS = (", maximum-scale=1",)
+
+# The alignment fix, replacing viewport-fit=cover. In an iOS standalone web app
+# WITHOUT cover, the web view starts exactly at the top safe-area inset and
+# env(safe-area-inset-top) reads 0 — so the splash's `env(top) + 14vh` lands at
+# `sat + 0.14 * (screen - sat)` on screen, while _startup_png draws at
+# `sat + 0.14 * screen`. That difference is the ~8px jump, and it is 0.14*sat:
+# 8.26px predicted for the pilot's phone, 7.7-8.2 measured.
+#
+# screen.height is the FULL screen height in CSS px in either mode, so
+# `0.14 * screen.height` as the web-view-relative padding puts the content at
+# `sat + 0.14 * screen` — the launch image's formula exactly, with no device
+# table and no magic numbers. Gated on navigator.standalone, which is true in
+# precisely the case that has a launch image at all; everywhere else the CSS
+# fallback keeps today's behaviour. Synchronous and in <head>, so it lands
+# before first layout and cannot itself cause a reflow.
+_PAD_JS = ('<script id="cai-pad">try{if(navigator.standalone){'
+           'document.documentElement.style.setProperty('
+           '"--cai-pad",(0.14*screen.height)+"px")}}catch(e){}</script>')
 
 _VIEWPORT_RE = re.compile(
     r'(<meta[^>]*\bname="viewport"[^>]*\bcontent=")(?P<val>[^"]*)(")'
@@ -83,7 +111,7 @@ _VIEWPORT_RE = re.compile(
 
 
 def _cover_viewport(src: str) -> str:
-    """Add viewport-fit=cover + maximum-scale=1 to the viewport meta, in place."""
+    """Add the static viewport tokens to Streamlit's viewport meta, in place."""
     def add(m: re.Match) -> str:
         val = m.group("val")
         for tok in _STATIC_VIEWPORT_TOKENS:
@@ -94,11 +122,18 @@ def _cover_viewport(src: str) -> str:
     return _VIEWPORT_RE.sub(add, src, count=1)
 
 
+# Tokens THIS version never writes but older ones did. Without these a v12
+# file could not be stripped back to pristine, so patch_index_html would see a
+# leftover viewport-fit, trip its own guard and refuse to upgrade — a
+# permanently stuck dev venv. Retired tokens go here, they never come out.
+_LEGACY_VIEWPORT_TOKENS = (", viewport-fit=cover",)
+
+
 def _uncover_viewport(src: str) -> str:
     """Inverse of _cover_viewport, so the patch round-trips byte-exactly."""
     def rm(m: re.Match) -> str:
         val = m.group("val")
-        for tok in _STATIC_VIEWPORT_TOKENS:
+        for tok in _STATIC_VIEWPORT_TOKENS + _LEGACY_VIEWPORT_TOKENS:
             val = val.replace(tok, "")
         return m.group(1) + val + m.group(3)
 
@@ -198,7 +233,7 @@ _HEAD_TEMPLATE = """
       html, body { background: #99A26B; }
       #cai-boot-splash { position: fixed; inset: 0; z-index: 2147483000; background: #99A26B;
         display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-        padding-top: calc(env(safe-area-inset-top, 0px) + 14vh);
+        padding-top: var(--cai-pad, calc(env(safe-area-inset-top, 0px) + 14vh));
         gap: 18px; transition: opacity .4s ease; pointer-events: none; }
       #cai-boot-splash .chev span { display: block; width: 26px; height: 26px;
         border-top: 6px solid #171A12; border-left: 6px solid #171A12; transform: rotate(45deg); }
@@ -657,6 +692,7 @@ def _strip(src: str) -> str:
     src = re.sub(r'\s*<meta id="cai-theme"[^>]*>', "", src)
     src = re.sub(r'\s*<meta id="cai-scheme"[^>]*>', "", src)
     src = re.sub(r'<style id="cai-micro"[^>]*>.*?</style>', "", src, flags=re.S)
+    src = re.sub(r'<script id="cai-pad">.*?</script>', "", src, flags=re.S)
     src = re.sub(r'\s*<style id="cai-boot".*?</style>', "", src, flags=re.S)
     if "<!--/cai-boot-splash-->" in src:
         # v10+: markup (to its end-comment anchor) and script, separately.
@@ -700,8 +736,8 @@ def patch_index_html() -> bool:
         # stamped with a hash of exactly what is about to be written — including
         # the font bytes — so a swapped font file re-patches too
         stamp = _VERSION + "-" + hashlib.sha256(
-            (_MICRO + head_raw + _SPLASH_HTML + _BOOT_JS
-             + "viewport-fit=cover").encode("utf-8")
+            (_MICRO + _PAD_JS + head_raw + _SPLASH_HTML + _BOOT_JS
+             + "".join(_STATIC_VIEWPORT_TOKENS)).encode("utf-8")
         ).hexdigest()[:8]
         if f'data-cai-ver="{stamp}"' in src:
             return True
@@ -721,7 +757,7 @@ def patch_index_html() -> bool:
         # script at the END of <body> where the DOM it touches exists.
         patched = _cover_viewport(src)
         patched = patched.replace('<meta charset="UTF-8" />',
-                                  '<meta charset="UTF-8" />' + _MICRO, 1)
+                                  '<meta charset="UTF-8" />' + _MICRO + _PAD_JS, 1)
         patched = patched.replace("</head>", head + "  </head>", 1)
         patched = _deblock_css(patched)
         patched = patched.replace("<body>", "<body>" + _SPLASH_HTML, 1)
@@ -731,11 +767,15 @@ def patch_index_html() -> bool:
         # caught by the byte-exact round-trip test
         patched = re.sub(r"([ \t]*)</body>",
                          lambda m: _BOOT_JS + m.group(0), patched, count=1)
-        for marker in ('id="cai-micro"', 'id="cai-boot"',
+        for marker in ('id="cai-micro"', 'id="cai-pad"', 'id="cai-boot"',
                        'id="cai-boot-splash"', 'id="cai-boot-js"',
-                       "viewport-fit=cover"):
+                       "maximum-scale=1", "var(--cai-pad"):
             if marker not in patched:
                 return False
+        # cover would resize the app, not just the splash — see the comment on
+        # _STATIC_VIEWPORT_TOKENS. Assert it never creeps back in.
+        if "viewport-fit" in patched:
+            return False
         index.write_text(patched, encoding="utf-8")
         return True
     except Exception:
