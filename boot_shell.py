@@ -42,7 +42,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v15"
+_VERSION = "v16"
 
 
 # Streamlit ships `width=device-width, initial-scale=1, shrink-to-fit=no` — no
@@ -549,24 +549,19 @@ _BOOT_JS = """
             document.documentElement.style.setProperty('background', '#14170E', 'important');
             document.body.style.setProperty('background', '#14170E', 'important');
           } catch (e) {}
-          // The slide stays — the pilot asked for this animation back by name
-          // (2026-07-29) — but its TAIL had to go. A curtain moving upward
-          // uncovers the screen bottom-first, so the strip behind the status
-          // bar is the very last thing it frees: the app sat fully visible
-          // with a thin olive band still dragging across the top. Measured on
-          // the 15:22 video — app revealed at t=4.377, band gone only at
-          // t=4.826, and it went precisely when the ELEMENT WAS REMOVED, which
-          // is what identifies the band as the curtain itself rather than any
-          // background colour. 449ms of "stuck at the top", every launch.
+          // THE ORIGINAL SLIDE — .55s on cubic-bezier(.7,0,.3,1), fully
+          // opaque, nothing else. v15 replaced it with a .38s accelerating
+          // curve plus a tail fade while chasing the stuck strip, and the
+          // pilot read the result immediately: "the curtain rises strangely"
+          // (2026-07-29). Those two changes were never what fixed the strip —
+          // the TRANSLATE DISTANCE below is — so they are gone and the motion
+          // is byte-for-byte the one that was asked for back by name.
           //
-          // Two changes, both aimed at the tail. The easing now ACCELERATES
-          // out (was ease-in-out, which spends its final third crawling —
-          // exactly the frames that read as stuck), and the last stretch
-          // fades. The fade is safe here in a way it was not in 2026-07-27
-          // video #5: it starts at 250ms, by which point the wordmark has long
-          // left the screen (it clears the top after ~29% of the travel), so
-          // what dissolves is a plain olive rectangle, not a second logo
-          // smearing over the app's.
+          // Do not reintroduce a fade here as insurance. It is not needed
+          // (the geometry clears the tallest safe area we ship for by 28px)
+          // and a translucent curtain mid-slide smears the app through it as
+          // a double exposure — two crossing wordmarks, 2026-07-27 video #5.
+          //
           // -102% WAS NOT ENOUGH, and that is the whole bug. This element is
           // inset:0, so it fills the LAYOUT VIEWPORT — which in an iOS
           // standalone web app starts BELOW the top safe area (the same fact
@@ -580,19 +575,15 @@ _BOOT_JS = """
           // t=4.826, the moment of removal, 449ms after the app was already
           // on screen.
           //
-          // calc(-100% - 90px) clears the tallest safe area we ship for
-          // (62px) with room to spare, so the travel genuinely takes the
-          // curtain off the glass. The fade is kept as the belt to that
-          // braces: it retires the strip on a fixed 150-350ms schedule no
-          // easing curve can drag out, and starting at 150ms is late enough
-          // that the wordmark (bottom edge ~250px) has already left the top
-          // of the screen — which is what makes fading safe here, unlike
-          // 2026-07-27 video #5.
-          el.style.transition =
-            'transform .38s cubic-bezier(.4,0,.2,1), opacity .2s linear .15s';
+          // calc(-100% - 90px) clears the tallest safe area we ship for by
+          // 28px (the _STARTUP_SAT table tops out at 62), so the travel alone
+          // genuinely takes the curtain off the glass on every device — which
+          // is why the fade could go. Keep the pixel term whenever the
+          // percentage term is a percentage of an element that does not span
+          // the screen.
+          el.style.transition = 'transform .55s cubic-bezier(.7,0,.3,1)';
           el.style.transform = 'translateY(calc(-100% - 90px))';
-          el.style.opacity = '0';
-          setTimeout(function () { el.remove(); }, 420);
+          setTimeout(function () { el.remove(); }, 620);
         };
         // Wait for a COMPLETE screen, not for any markdown: the app emits its
         // CSS as a markdown element long before it renders anything a person
