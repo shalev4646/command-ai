@@ -42,7 +42,7 @@ _mute_component_deprecation()
 import metrics
 import escalation_paths
 from escalation_paths import path_for
-from boot_shell import patch_index_html
+from boot_shell import patch_index_html, publish_static
 from common import safe_print
 
 # letters/doc_dates are sibling new modules — a cached cloud build can pair
@@ -2665,24 +2665,29 @@ def _dbg_start_url() -> str:
 
 
 def _pwa_assets() -> dict | None:
-    """Register the PWA assets (icons + web-app manifest) with the media
-    file manager and return their URLs. Called EVERY rerun — entries whose
-    coord isn't re-registered are purged at the rerun's end (same rule as
-    the PDFs). The manifest's icon srcs are the icons' BASENAMES: manifest
-    and icons are served from the same /media/ directory, so relative
-    resolution works identically locally and behind the cloud shell (whose
-    app base path differs). Media ids are content hashes, so the URLs — and
-    therefore the manifest bytes — are stable across reruns.
+    """Publish the PWA assets (icons, manifest, launch images) and return
+    their URLs.
+
+    These live at fixed /static/cai/... paths, NOT in the media file manager.
+    The media manager was the obvious home — content-hashed ids, stable across
+    reruns — but "stable across reruns" is not the requirement. iOS records
+    the manifest URL when the icon is added to the home screen and re-reads it
+    on later launches, and a MediaFileManager entry is per-process and
+    garbage-collected: the URL the pilot's icon carried answered 404 by the
+    next deploy. See boot_shell.publish_static for what that cost.
     """
     try:
-        from streamlit.runtime import get_instance
-        mgr = get_instance().media_file_mgr
+        # NOTE: no media manager here any more — see the docstring. The import
+        # stays out deliberately so a future edit does not quietly reintroduce
+        # ephemeral URLs.
         urls = {}
         for size in (180, 192, 512):
             data = _icon_bytes(f"icon-{size}.png")
             if not data:
                 return None
-            urls[size] = mgr.add(data, "image/png", f"pwa_icon_{size}")
+            urls[size] = publish_static(f"icon-{size}.png", data)
+            if not urls[size]:
+                return None
         manifest = {
             "name": "CommandAI — עוזר הפקודות של צה\"ל",
             "short_name": "CommandAI",
@@ -2707,20 +2712,27 @@ def _pwa_assets() -> dict | None:
             "display": "standalone",
             "background_color": "#99A26B",  # the boot-splash olive
             "theme_color": "#14170E",
+            # absolute /static/cai/... paths — the manifest lives at a fixed
+            # URL now, so relative icon srcs would resolve against it rather
+            # than against the app frame's directory
             "icons": [
-                {"src": urls[192].rsplit("/", 1)[-1], "sizes": "192x192",
+                {"src": urls[192], "sizes": "192x192",
                  "type": "image/png", "purpose": "any maskable"},
-                {"src": urls[512].rsplit("/", 1)[-1], "sizes": "512x512",
+                {"src": urls[512], "sizes": "512x512",
                  "type": "image/png", "purpose": "any maskable"},
             ],
         }
         data = json.dumps(manifest, ensure_ascii=False).encode("utf-8")
-        urls["manifest"] = mgr.add(data, "application/json", "pwa_manifest")
+        urls["manifest"] = publish_static("manifest.json", data)
+        if not urls["manifest"]:
+            return None
         urls["startup"] = [
-            (w, h, r, mgr.add(_startup_png(w, h, r), "image/png",
-                              f"pwa_launch_{w}x{h}"))
+            (w, h, r, publish_static(f"launch-{w}x{h}@{r}.png",
+                                                _startup_png(w, h, r)))
             for (w, h, r) in _STARTUP_SIZES
         ]
+        if any(not u for (_, _, _, u) in urls["startup"]):
+            return None
         return urls
     except Exception:
         return None
@@ -2765,7 +2777,15 @@ if _pwa:
                 var loc = window.parent.location;
                 var dir = loc.pathname.endsWith("/") ? loc.pathname : loc.pathname + "/";
                 var base = loc.origin + dir;
-                var abs = function (u) {{ return base + String(u).replace(/^\\//, ""); }};
+                // /static/cai/... paths are ORIGIN-absolute and stable (see
+                // boot_shell.publish_static) — they must not be rebased onto
+                // the app frame's directory the way the old /media/<hash>
+                // URLs were. Anything else still gets the legacy treatment.
+                var abs = function (u) {{
+                    u = String(u);
+                    if (u.charAt(0) === "/") return loc.origin + u;
+                    return base + u;
+                }};
                 var head = doc.head;
                 var upsert = function (sel, tag, attrs) {{
                     var el = head.querySelector(sel);
@@ -2789,8 +2809,13 @@ if _pwa:
                 upsert('meta[name="apple-mobile-web-app-title"]', "meta",
                        {{ name: "apple-mobile-web-app-title", content: "CommandAI" }});
                 // black-translucent needs the layout viewport to cover the
-                // safe area, else env(safe-area-inset-top) stays 0 even here on
-                // the top doc. Extend the existing viewport meta, don't clobber.
+                // safe area, else env(safe-area-inset-top) stays 0. boot_shell
+                // now ships viewport-fit=cover STATICALLY, so this is only a
+                // fallback for a host document we did not patch — and it must
+                // stay conditional. Mutating the viewport after first paint
+                // RESIZES the web view, which is exactly what made the splash
+                // jump up and drop back down on every launch the pilot filmed
+                // (2026-07-29: chevron ink row 171 -> 164 -> 171).
                 var vp = doc.querySelector('meta[name="viewport"]');
                 if (vp) {{
                     var vc = vp.getAttribute("content") || "";

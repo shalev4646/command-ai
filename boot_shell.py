@@ -42,7 +42,67 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v11"
+_VERSION = "v12"
+
+
+# Streamlit ships `width=device-width, initial-scale=1, shrink-to-fit=no` — no
+# viewport-fit. On iOS standalone that means the web view is INSET into the safe
+# area, so env(safe-area-inset-*) all resolve to 0 and 100vh is the inset height,
+# not the screen height. app.py has been patching `, viewport-fit=cover` onto
+# this meta AT RUNTIME since the PWA work — from a Streamlit component that
+# mounts long after first paint — and that single line is the source of the
+# "screen jumps up then comes back down" the pilot filmed three rounds running:
+#
+#   * launch image: drawn at sat + 0.14 * SCREEN height (full screen, from
+#     _STARTUP_SAT) => chevron ink at video row 171
+#   * shell, pre-mutation: env()=0, vh = inset height => same chevron at row
+#     164 — the content JUMPS UP ~8px the instant the shell takes over
+#   * shell, post-mutation: cover applies, the web view grows to full screen,
+#     env(top) becomes real, vh becomes the screen height => the content drops
+#     back DOWN to where the launch image had it
+#
+# Applying it here, statically, collapses all three into one geometry: the shell
+# and the launch image compute the identical offset from byte zero, there is no
+# mid-boot web-view resize, and the 18 env(safe-area-inset-*) rules in app.py
+# finally mean what they were written to mean.
+_VIEWPORT_RE = re.compile(
+    r'(<meta[^>]*\bname="viewport"[^>]*\bcontent=")(?P<val>[^"]*)(")'
+)
+
+
+# maximum-scale=1 rides along for the same reason: app.py appends it at runtime
+# to kill iOS's focus auto-zoom, and every runtime write to this meta is a
+# viewport re-evaluation during boot. Shipping both tokens statically means the
+# meta is never touched after parse — app.py's guards are all `if not already
+# present`, so they become no-ops rather than mutations.
+_STATIC_VIEWPORT_TOKENS = (", viewport-fit=cover", ", maximum-scale=1")
+
+_VIEWPORT_RE = re.compile(
+    r'(<meta[^>]*\bname="viewport"[^>]*\bcontent=")(?P<val>[^"]*)(")'
+)
+
+
+def _cover_viewport(src: str) -> str:
+    """Add viewport-fit=cover + maximum-scale=1 to the viewport meta, in place."""
+    def add(m: re.Match) -> str:
+        val = m.group("val")
+        for tok in _STATIC_VIEWPORT_TOKENS:
+            if tok.split("=")[0].lstrip(", ") not in val:
+                val += tok
+        return m.group(1) + val + m.group(3)
+
+    return _VIEWPORT_RE.sub(add, src, count=1)
+
+
+def _uncover_viewport(src: str) -> str:
+    """Inverse of _cover_viewport, so the patch round-trips byte-exactly."""
+    def rm(m: re.Match) -> str:
+        val = m.group("val")
+        for tok in _STATIC_VIEWPORT_TOKENS:
+            val = val.replace(tok, "")
+        return m.group(1) + val + m.group(3)
+
+    return _VIEWPORT_RE.sub(rm, src, count=1)
 
 
 def _font_data_uri() -> str:
@@ -491,6 +551,41 @@ def _index_path() -> Path:
     return Path(inspect.getfile(st)).parent / "static" / "index.html"
 
 
+def publish_static(name: str, data: bytes) -> str:
+    """Write a PWA asset beside Streamlit's bundle and return its STABLE URL.
+
+    Streamlit's MediaFileManager hands out /media/<content-hash>.<ext>, and
+    those URLs are per-process and garbage-collected — which is fine for an
+    image inside a running session and completely wrong for anything the
+    OPERATING SYSTEM remembers. iOS snapshots the manifest URL at
+    add-to-home-screen time and re-reads it on later launches; ours was
+    already dead by the next deploy (verified 2026-07-29: the exact URL the
+    pilot's icon was installed with answered 404). A standalone web app with
+    an unreachable manifest has no background_color, so iOS falls back to a
+    WHITE web-view backdrop — and the launch-image dissolve then blends into
+    white instead of olive. That is the residual flash, and no amount of
+    paint-timing work could have fixed it.
+
+    Streamlit's document root is the directory holding index.html, and the
+    bundle it references as ./static/js/... lives one level deeper — so the
+    URL /static/cai/<name> maps to <docroot>/static/cai/<name>, NOT to
+    <docroot>/cai/<name>. Writing to the shallower path silently produced a
+    directory nothing served: every probe came back 200 with index.html,
+    because Streamlit's handler falls back to the SPA document for unknown
+    paths. A 200 is therefore NOT proof an asset exists — always compare the
+    bytes or the content-type.
+    """
+    try:
+        d = _index_path().parent / "static" / "cai"
+        d.mkdir(parents=True, exist_ok=True)
+        p = d / name
+        if not p.exists() or p.read_bytes() != data:
+            p.write_bytes(data)
+        return "/static/cai/" + name
+    except Exception:
+        return ""
+
+
 # Streamlit's own stylesheet link, matched attribute-order-agnostically because
 # the bundle hash — and, across versions, the attribute order — moves.
 _CSS_LINK_RE = re.compile(
@@ -580,6 +675,7 @@ def _strip(src: str) -> str:
     # restore Streamlit's stylesheet link from the <noscript> copy, so a
     # re-patch starts from pristine markup instead of stacking swaps
     src = _CSS_SWAP_RE.sub(lambda m: m.group("orig"), src)
+    src = _uncover_viewport(src)
     return src
 
 
@@ -604,7 +700,8 @@ def patch_index_html() -> bool:
         # stamped with a hash of exactly what is about to be written — including
         # the font bytes — so a swapped font file re-patches too
         stamp = _VERSION + "-" + hashlib.sha256(
-            (_MICRO + head_raw + _SPLASH_HTML + _BOOT_JS).encode("utf-8")
+            (_MICRO + head_raw + _SPLASH_HTML + _BOOT_JS
+             + "viewport-fit=cover").encode("utf-8")
         ).hexdigest()[:8]
         if f'data-cai-ver="{stamp}"' in src:
             return True
@@ -622,8 +719,9 @@ def patch_index_html() -> bool:
         # Hebrew could mojibake; splash markup at the TOP of <body> so the
         # complete splash is paintable at ~15KB into the stream; the wiring
         # script at the END of <body> where the DOM it touches exists.
-        patched = src.replace('<meta charset="UTF-8" />',
-                              '<meta charset="UTF-8" />' + _MICRO, 1)
+        patched = _cover_viewport(src)
+        patched = patched.replace('<meta charset="UTF-8" />',
+                                  '<meta charset="UTF-8" />' + _MICRO, 1)
         patched = patched.replace("</head>", head + "  </head>", 1)
         patched = _deblock_css(patched)
         patched = patched.replace("<body>", "<body>" + _SPLASH_HTML, 1)
@@ -634,7 +732,8 @@ def patch_index_html() -> bool:
         patched = re.sub(r"([ \t]*)</body>",
                          lambda m: _BOOT_JS + m.group(0), patched, count=1)
         for marker in ('id="cai-micro"', 'id="cai-boot"',
-                       'id="cai-boot-splash"', 'id="cai-boot-js"'):
+                       'id="cai-boot-splash"', 'id="cai-boot-js"',
+                       "viewport-fit=cover"):
             if marker not in patched:
                 return False
         index.write_text(patched, encoding="utf-8")
