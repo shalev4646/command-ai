@@ -42,7 +42,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v10"
+_VERSION = "v11"
 
 
 def _font_data_uri() -> str:
@@ -83,6 +83,18 @@ def _font_data_uri() -> str:
         return ""
 
 
+# The color-scheme meta above is the LAST piece of the white-flash story. The
+# 27KB diet and the progressive splash each shrank the flash (device videos:
+# white peak 205 → 190 → 181 → 170 across four rounds) but could not zero it:
+# the residue is 2-3 frames of Safari's paint-pipeline warm-up AFTER parsing,
+# during which the compositor shows the DOCUMENT CANVAS — which defaults to
+# WHITE no matter what CSS says, because CSS has not painted yet. color-scheme
+# dark is the one lever that recolours that pre-paint canvas: the same 2-3
+# frames become dark, and a dark blink inside an olive→olive dissolve reads as
+# a shadow, not a flash. It also matches the app (dark theme, dark iOS
+# keyboard). Applies at PARSE time, before any style resolution — which is the
+# whole point.
+
 # Micro-style, injected right after <meta charset> — the FIRST paintable rule
 # in the document. The 2026-07-29 device video (three launches) showed the
 # white flash surviving the 27KB diet for a subtle reason: shrinking the file
@@ -95,7 +107,14 @@ def _font_data_uri() -> str:
 # even mid-stream with only the head parsed, is already olive; and the splash
 # markup now sits at the TOP of <body> (see patch_index_html) so the full
 # splash is paintable at ~15KB into the stream instead of at the very end.
-_MICRO = '<style id="cai-micro">html,body{background:#99A26B;margin:0}</style>'
+# :root{color-scheme:dark} rides in the SAME first-KB style: the meta version
+# of the signal (id=cai-scheme, further down in <head>) declares the scheme at
+# parse time, but the CSS property is what actually flips the computed value —
+# verified in-browser: with the meta alone, getComputedStyle(:root).colorScheme
+# stayed "normal"; with the property it reads "dark", and the pre-paint canvas
+# follows the used scheme.
+_MICRO = ('<style id="cai-micro">:root{color-scheme:dark}'
+          'html,body{background:#99A26B;margin:0}</style>')
 
 # __FACE__ is substituted at patch time. A plain placeholder, not an f-string:
 # this block is nearly all CSS braces and escaping them all would bury it.
@@ -113,6 +132,7 @@ _MICRO = '<style id="cai-micro">html,body{background:#99A26B;margin:0}</style>'
 # when the value actually differs.
 _HEAD_TEMPLATE = """
     <meta id="cai-theme" name="theme-color" content="#14170E">
+    <meta id="cai-scheme" name="color-scheme" content="dark">
     <style id="cai-boot" data-cai-ver="__VER__">
       __FACE__
       html, body { background: #99A26B; }
@@ -218,21 +238,13 @@ _HEAD_TEMPLATE = """
         color: #171A12; background: #E8D9A8; padding: 7px 16px; }
       [data-testid="stSkeleton"], [data-testid="stAppSkeleton"],
       [data-testid="stStatusWidget"], [data-testid="stDecoration"] { display: none !important; }
-      /* Lift phase 1: the curtain DIMS IN PLACE — background eases to the
-         app's own dark and the splash content fades with it, all while the
-         curtain is still fully opaque. The 2026-07-29 video showed why: the
-         old single-step slide swapped a bright olive screen for the near-
-         black app in ~350ms, and the pilot read the abrupt dark, motionless
-         result as "a black screen that gets stuck" — on every single entry.
-         Dimming first makes the darkness arrive ON the splash, with the
-         wordmark still anchoring it as it fades; the slide that follows is
-         then dark-over-dark and nearly invisible. This is deliberately NOT
-         opacity-on-the-curtain: a translucent curtain smears the app through
-         it as a double exposure (2026-07-27 video #5). */
-      #cai-boot-splash { transition: background-color .32s ease; }
-      #cai-boot-splash > * { transition: opacity .26s ease; }
-      #cai-boot-splash.cai-dim { background: #14170E; }
-      #cai-boot-splash.cai-dim > * { opacity: 0; }
+      /* NO dim-before-lift. A two-beat lift (curtain darkens in place, then
+         slides) was tried in v10 as a fix for "a black screen that gets
+         stuck" — and the user rejected it on sight: the original single
+         slide "looked much better" (2026-07-29). The "stuck black screen"
+         itself turned out to be the keyboard-pan bounce, fixed at the
+         source by the focus freeze in the boot script — so the dim never
+         had a job. Do not bring it back. */
     </style>
 """
 
@@ -334,16 +346,35 @@ _BOOT_JS = """
           setTimeout(function () { if (live <= 0) { armed = true; arm(); } }, 25000);
         } catch (e) {}
       })();
-      // ── keyboard-pan guard, curtain scope only ──
-      // 2026-07-29 video, entry 1, t=6.3s: the WHOLE splash shifted upward
-      // while still covering the screen, and the app behind stayed shifted
-      // for the entire session. That is iOS's keyboard pan: something in the
-      // booting app (Streamlit's chat input) grabbed focus behind the
-      // curtain, iOS panned the web view to reveal it, the keyboard never
-      // came up, and the pan stuck. Entries 2-3 dodged it by timing alone.
-      // While the curtain is up, no focus outside it is legitimate: blur it
-      // and put the viewport back. The guard self-destructs after the lift,
-      // so real keyboard use in the app is untouched.
+      // ── focus freeze, curtain scope only ──
+      // PREVENTION, not correction. v10's guard blurred the focus and
+      // snapped the viewport back AFTER iOS had already panned — which
+      // traded "the screen sticks shifted" (2026-07-29 morning video) for
+      // "the screen hops up and back down" (same day, 13:19 videos: an
+      // identical diff signature at t=3.95 in one and t=45.2 in the other —
+      // both the moment Streamlit mounts its chat input behind the curtain
+      // and calls .focus() on it). The only version with NO visible artifact
+      // is the one where the pan never starts: while the splash exists,
+      // .focus() on anything outside it is a no-op. The wrapper delegates
+      // untouched once the splash is gone, so real keyboard use after boot
+      // is unaffected. __caiFocusFrozen counts suppressions — a debug
+      // window into whether the app really does grab focus mid-boot.
+      (function () {
+        try {
+          var OF = HTMLElement.prototype.focus;
+          window.__caiFocusFrozen = 0;
+          HTMLElement.prototype.focus = function () {
+            var sp = document.getElementById('cai-boot-splash');
+            if (sp && !sp.contains(this)) { window.__caiFocusFrozen++; return; }
+            return OF.apply(this, arguments);
+          };
+        } catch (e) {}
+      })();
+      // ── keyboard-pan backstop, curtain scope only ──
+      // The freeze above stops focus() calls; this catches what it cannot —
+      // an autofocus attribute processed by the UA, or focus from inside an
+      // iframe — and repairs the pan before it can stick. With the freeze in
+      // place this should never fire; it is insurance, not the mechanism.
       (function () {
         var unpan = function () {
           if (window.scrollX || window.scrollY) window.scrollTo(0, 0);
@@ -403,19 +434,15 @@ _BOOT_JS = """
         var lift = function () {
           if (gone) return; gone = true;
           slow.forEach(clearTimeout);
-          // Two beats (CSS in .cai-dim): first the curtain dims in place to
-          // the app's dark — fully opaque throughout, so no double-exposure
-          // (2026-07-27 video #5) — and only then slides off, dark over
-          // dark. One beat was tried and read as "a black screen that gets
-          // stuck" on every entry (2026-07-29 video): a bright olive screen
-          // swapped for a near-black motionless app in 350ms is a
-          // malfunction to the eye, not an arrival.
-          el.classList.add('cai-dim');
-          setTimeout(function () {
-            el.style.transition = 'transform .5s cubic-bezier(.7,0,.3,1)';
-            el.style.transform = 'translateY(-102%)';
-            setTimeout(function () { el.remove(); }, 560);
-          }, 340);
+          // SLIDE ONLY — never fade while sliding: a curtain whose opacity
+          // drops mid-motion is see-through, and the app showed THROUGH the
+          // moving splash as a smeared double-exposure (two crossing
+          // wordmarks, 2026-07-27 video #5). A dim-before-slide variant was
+          // also tried (v10) and the user asked for THIS animation back by
+          // name (2026-07-29) — the single opaque slide is the keeper.
+          el.style.transition = 'transform .55s cubic-bezier(.7,0,.3,1)';
+          el.style.transform = 'translateY(-102%)';
+          setTimeout(function () { el.remove(); }, 620);
         };
         // Wait for a COMPLETE screen, not for any markdown: the app emits its
         // CSS as a markdown element long before it renders anything a person
@@ -533,6 +560,7 @@ def _strip(src: str) -> str:
     """
     src = re.sub(r'\s*<link id="cai-boot-font"[^>]*>', "", src)
     src = re.sub(r'\s*<meta id="cai-theme"[^>]*>', "", src)
+    src = re.sub(r'\s*<meta id="cai-scheme"[^>]*>', "", src)
     src = re.sub(r'<style id="cai-micro"[^>]*>.*?</style>', "", src, flags=re.S)
     src = re.sub(r'\s*<style id="cai-boot".*?</style>', "", src, flags=re.S)
     if "<!--/cai-boot-splash-->" in src:
