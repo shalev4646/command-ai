@@ -42,7 +42,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v16"
+_VERSION = "v17"
 
 
 # Streamlit ships `width=device-width, initial-scale=1, shrink-to-fit=no` — no
@@ -575,14 +575,28 @@ _BOOT_JS = """
           // t=4.826, the moment of removal, 449ms after the app was already
           // on screen.
           //
-          // calc(-100% - 90px) clears the tallest safe area we ship for by
-          // 28px (the _STARTUP_SAT table tops out at 62), so the travel alone
-          // genuinely takes the curtain off the glass on every device — which
-          // is why the fade could go. Keep the pixel term whenever the
-          // percentage term is a percentage of an element that does not span
-          // the screen.
+          // PIXELS, COMPUTED HERE — no percentages, no calc(). calc(-100% -
+          // 90px) was the v15/v16 attempt and it silently did not work: the
+          // 2026-07-29 16:33 device video, shot six minutes after v16 went
+          // live, shows the curtain travelling exactly 100% of its height and
+          // parking with a status-bar-tall olive band across the top for
+          // 283ms until el.remove() killed it. WebKit will not interpolate a
+          // transform transition whose end value mixes % and px in calc(); it
+          // falls back to the percentage term alone. Nothing in the console,
+          // nothing in the computed style — only the phone shows it.
+          //
+          // Why 100% is not enough in the first place: with
+          // apple-mobile-web-app-status-bar-style: black-translucent the WEB
+          // VIEW spans the whole screen, but the LAYOUT viewport this inset:0
+          // element fills starts below the status bar. So the element is a
+          // safe-area shorter than the glass AND sits a safe-area down it:
+          // moving it by its own height leaves exactly a safe-area band lit
+          // at the top. screen.height + 40 clears that on any device without
+          // knowing the inset at all, and the extra travel happens entirely
+          // off-screen so the motion still reads as the .55s slide.
+          var travel = ((window.screen && screen.height) || window.innerHeight) + 40;
           el.style.transition = 'transform .55s cubic-bezier(.7,0,.3,1)';
-          el.style.transform = 'translateY(calc(-100% - 90px))';
+          el.style.transform = 'translateY(-' + travel + 'px)';
           setTimeout(function () { el.remove(); }, 620);
         };
         // Wait for a COMPLETE screen, not for any markdown: the app emits its
