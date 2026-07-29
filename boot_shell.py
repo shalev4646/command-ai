@@ -42,7 +42,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v13"
+_VERSION = "v14"
 
 
 # Streamlit ships `width=device-width, initial-scale=1, shrink-to-fit=no` — no
@@ -529,6 +529,26 @@ _BOOT_JS = """
         var lift = function () {
           if (gone) return; gone = true;
           slow.forEach(clearTimeout);
+          // Hand the DOCUMENT background over to the app's dark, now, while
+          // the curtain still covers the screen — so the change itself is
+          // invisible and what the curtain uncovers is one consistent colour.
+          //
+          // The document is olive for the whole boot (see _MICRO), and with
+          // black-translucent the web view extends UNDER the status bar into
+          // a strip the app does not paint. So the olive survived the lift:
+          // a green band stuck behind the clock until app.py's darkenShell
+          // component mounted and set html/body to #14170E. Measured on the
+          // 2026-07-29 14:55 video — app goes dark at t=3.84, the band only
+          // follows at t=4.24. 400ms of a stale splash colour framing a dark
+          // app, on every single launch.
+          //
+          // !important because darkenShell sets it that way too; matching
+          // colour and priority means its later write is a no-op rather than
+          // a second repaint.
+          try {
+            document.documentElement.style.setProperty('background', '#14170E', 'important');
+            document.body.style.setProperty('background', '#14170E', 'important');
+          } catch (e) {}
           // SLIDE ONLY — never fade while sliding: a curtain whose opacity
           // drops mid-motion is see-through, and the app showed THROUGH the
           // moving splash as a smeared double-exposure (two crossing
