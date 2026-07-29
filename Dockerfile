@@ -21,6 +21,12 @@ COPY . .
 
 # 1) Brand Streamlit's static index.html — olive splash from t=0, every request.
 RUN python -c "import boot_shell, sys; sys.exit(0 if boot_shell.patch_index_html() else 1)"
+# Bake the PWA assets into the image. Doing this at runtime instead means a
+# freshly deployed container answers 404 for /static/cai/manifest.json until
+# the first live session writes it — and iOS asks for the manifest exactly on
+# that first launch. A missing manifest costs background_color, which is what
+# turned the launch-image dissolve white. Fails the build if generation fails.
+RUN python -m pwa_assets
 
 # 2) Prebuild the vector index: downloads the ~120MB multilingual-MiniLM ONNX
 #    model into the image and validates the ingest pipeline, so the always-on
