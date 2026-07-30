@@ -42,7 +42,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v17"
+_VERSION = "v18"
 
 
 # Streamlit ships `width=device-width, initial-scale=1, shrink-to-fit=no` — no
@@ -594,10 +594,52 @@ _BOOT_JS = """
           // at the top. screen.height + 40 clears that on any device without
           // knowing the inset at all, and the extra travel happens entirely
           // off-screen so the motion still reads as the .55s slide.
-          var travel = ((window.screen && screen.height) || window.innerHeight) + 40;
+          // Math.max, not ||, and a floor: a hidden/backgrounded web view can
+          // report screen.height AND innerHeight as 0 (reproduced in a hidden
+          // browser pane), and `(0 || 0) + 40` would have produced a 40px
+          // "slide" that never leaves the glass — the curtain would then hang
+          // there until the safety-net timer. The element's own measured
+          // height is the last resort, and 900 covers every phone we ship for.
+          var travel = Math.max(
+            (window.screen && screen.height) || 0,
+            window.innerHeight || 0,
+            el.offsetHeight || 0,
+            900) + 40;
           el.style.transition = 'transform .55s cubic-bezier(.7,0,.3,1)';
           el.style.transform = 'translateY(-' + travel + 'px)';
-          setTimeout(function () { el.remove(); }, 620);
+          // REAP AS SOON AS IT IS OFF THE VISIBLE VIEWPORT — not on a timer.
+          //
+          // This is the actual fix for "the top stays stuck for a second", and
+          // it is a different layer from everything v15-v17 changed. Proof
+          // from the 2026-07-30 10:24 video: while the curtain slid from page
+          // row 823 all the way to row 69, the status-bar strip's brightness
+          // held at 99.9-100.0 — DEAD CONSTANT. The curtain never painted
+          // there at all, because a position:fixed element is clipped to the
+          // layout viewport and under black-translucent that viewport starts
+          // BELOW the status bar. The strip is the document canvas, and it
+          // went dark at exactly 620ms into the lift: el.remove(). Not the
+          // transition end, not the background handover above — the removal.
+          //
+          // So the curtain's travel was never what held the strip (chasing it
+          // through -102%, calc(-100% - 90px) and pixel travel was chasing the
+          // wrong layer); the REMOVAL DELAY was. The transform needs ~72% of
+          // its 550ms to carry the box out of the visible area, and the old
+          // fixed 620ms then sat on a stale olive raster for another ~220ms
+          // with the app already fully revealed underneath.
+          //
+          // rAF-polling the rect removes it on the first frame it is genuinely
+          // gone, so the canvas repaints a frame later instead of a third of a
+          // second later. The timer stays as a safety net for the case where
+          // the transition never fires (backgrounded tab, reduced motion).
+          var reap = function () {
+            if (!el.parentNode) return;
+            var b = 1;
+            try { b = el.getBoundingClientRect().bottom; } catch (e) { b = -1; }
+            if (b <= 0) { el.remove(); return; }
+            requestAnimationFrame(reap);
+          };
+          requestAnimationFrame(reap);
+          setTimeout(function () { if (el.parentNode) el.remove(); }, 700);
         };
         // Wait for a COMPLETE screen, not for any markdown: the app emits its
         // CSS as a markdown element long before it renders anything a person
