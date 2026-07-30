@@ -14,10 +14,11 @@ __pycache__/
 # Rebuilt inside the image at build time (see Dockerfile).
 storage/chroma_db/
 
-# static/*.pdf is a byte-identical mirror of pdf-ldf_law/ (37 files, 35 MB),
-# left over from serving PDFs at /app/static/. That path never worked behind
-# the Streamlit shell, so _pdf_media_url now streams the bytes straight from
-# pdf-ldf_law/ via the media file manager (app.py) — nothing reads static/.
+# static/*.pdf is a mirror of pdf-ldf_law/ and IS what serves the orders list
+# now (self-hosting made /app/static/ real — it never worked behind the old
+# Streamlit Cloud shell). It stays out of the build CONTEXT because the mirror
+# is regenerated inside the image by `python -m pdf_static`, as hard links, so
+# shipping the copies would upload and store 52 MB twice.
 static/*.pdf
 
 # Local-only noise.

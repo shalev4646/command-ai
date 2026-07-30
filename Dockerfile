@@ -28,6 +28,11 @@ RUN python -c "import boot_shell, sys; sys.exit(0 if boot_shell.patch_index_html
 # turned the launch-image dissolve white. Fails the build if generation fails.
 RUN python -m pwa_assets
 
+# Mirror the corpus PDFs into static/ so the drawer's orders list can link them
+# as ordinary static assets. app.py does this at import too, but baking it means
+# a cold container is not doing 80 hard links on the first user's request.
+RUN python -m pdf_static
+
 # 2) Prebuild the vector index: downloads the ~120MB multilingual-MiniLM ONNX
 #    model into the image and validates the ingest pipeline, so the always-on
 #    container never fetches the model at runtime. Embedding is fully local —

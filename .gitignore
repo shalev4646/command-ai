@@ -14,6 +14,10 @@ static/*
 !static/.gitkeep
 New Text Document.txt
 .claude/
+# throwaway analysis output (eval logs, probe dumps, frame grabs). Ignored for
+# the same reason as docs/ below: push.bat runs `git add .`, so anything left
+# here would otherwise ride into the next commit.
+scratchpad/
 
 # Design/handoff artifacts — mockups & zips dropped in for reference, not
 # source. Ignoring them also stops push.bat's `git add .` from sweeping them

@@ -43,6 +43,7 @@ import metrics
 import escalation_paths
 from escalation_paths import path_for
 from boot_shell import patch_index_html
+import pdf_static
 import pwa_assets
 from common import safe_print
 
@@ -152,16 +153,24 @@ def _patch_boot_shell() -> bool:
     """
     return patch_index_html()
 
-# PDF bytes are re-read on every rerun to keep their media-manager entries
-# alive (see _pdf_media_url); cache the disk reads — the corpus is 80 PDFs /
-# ~52MB per full pass otherwise. cache_RESOURCE, not cache_data: bytes are
-# immutable so sharing the object is safe, while cache_data kept a pickled
-# copy AND unpickled a fresh 52MB set on every rerun with the accordion open
-# — three corpus copies + per-rerun churn on the 1024MB machine (2026-07-27
-# OOM audit). ttl bounds staleness: the process outlives deploys/git pulls,
-# and a cache keyed only by filename would serve an order's OLD bytes
-# forever after its PDF is updated in place.
+# PDF bytes for the ANSWER's source card, which still goes through the media
+# manager and so must re-register (and therefore re-read) its one PDF on every
+# rerun. The orders LIST used to come through here too — 80 files / 52MB per
+# pass — until it moved to static links; see _pdf_static_url for the numbers.
+# cache_RESOURCE, not cache_data: bytes are immutable so sharing the object is
+# safe, while cache_data kept a pickled copy AND unpickled a fresh set on every
+# rerun — three corpus copies + per-rerun churn on the 1024MB machine
+# (2026-07-27 OOM audit). ttl bounds staleness: the process outlives
+# deploys/git pulls, and a cache keyed only by filename would serve an order's
+# OLD bytes forever after its PDF is updated in place.
 _pdf_bytes_cached = st.cache_resource(show_spinner=False, ttl=3600)(get_pdf_bytes)
+
+# The ORDERS LIST no longer goes through the media manager at all — it links
+# the same PDFs as plain static assets, which is what makes drawing 80 rows
+# free (see _pdf_static_url). Mirroring is idempotent and already baked into
+# the image by the Dockerfile, so this is ~80 stat() calls at import; it is
+# kept at runtime anyway so a locally added order shows up without a rebuild.
+_STATIC_PDFS = pdf_static.sync()
 
 st.set_page_config(
     page_title="CommandAI",
@@ -765,51 +774,6 @@ components.html(
                         ".st-key-role_soldier, .st-key-role_commander, .st-key-role_reserve")
                         && !document.getElementById("cai-gate-pending"))
                         veil();
-                    // ── orders accordion: optimistic open/close ──
-                    // Toggling it is a full server round-trip. Measured locally
-                    // 458-1092ms, and on the phone (round-trip to fra) closer to
-                    // two seconds — during which Streamlit dims the whole app and
-                    // NOTHING about the card changes. The 2026-07-27 video shows
-                    // the result: the tap reads as ignored, the user taps again,
-                    // and the second tap closes what the first one just opened —
-                    // the list flapping open/closed for ~8s. The cost is not the
-                    // 64 PDF registrations (closing, which registers nothing, is
-                    // no cheaper) — it is the rerun itself, i.e. not something a
-                    // tweak here can remove. So: flip the card's own class at
-                    // once for immediate feedback, and swallow further taps until
-                    // the server has had time to answer. The rerun renders the
-                    // authoritative state and overwrites whatever we guessed.
-                    var kb = e.target.closest(".st-key-toggle_orders");
-                    if (kb) {
-                        // busy check FIRST: a swallowed tap must not flip the
-                        // card either, or the guess and the server disagree
-                        if (window.__caiKbBusy) {
-                            e.stopPropagation(); e.preventDefault(); return;
-                        }
-                        window.__caiKbBusy = true;
-                        var card = document.querySelector(".cai-kb-card");
-                        var wantOpen = !(card && card.classList.contains("open"));
-                        if (card) { card.classList.add("busy"); card.classList.toggle("open"); }
-                        kb.style.opacity = ".55";
-                        // Release on the SERVER's answer, never on a timer. v1
-                        // waited a flat 1400ms; the device round-trip is ~3.5s,
-                        // so the guard reopened while the app was still working
-                        // and the next tap closed what the first had opened —
-                        // 2026-07-27 12:42 video: tap t=13.5, list t=17.0, gone
-                        // again t=19.0. The search field is the authoritative
-                        // signal: it exists exactly when the list is open.
-                        var t0 = Date.now();
-                        var poll = setInterval(function () {
-                            var landed =
-                                !!document.querySelector(".st-key-orders_search") === wantOpen;
-                            if (!landed && Date.now() - t0 <= 9000) return;
-                            clearInterval(poll);
-                            window.__caiKbBusy = false;
-                            var c = document.querySelector(".cai-kb-card");
-                            if (c) c.classList.remove("busy");
-                            try { kb.style.opacity = ""; } catch (e2) {}
-                        }, 120);
-                    }
                 } catch (err) {}
             }, true);
         }
@@ -2057,27 +2021,86 @@ body:has([data-testid="stExpandSidebarButton"]) [data-testid="stSidebar"] {{ dis
 .cai-drawer-section .dot {{ width: 13px; height: 13px; border: 1.5px solid var(--accent); border-radius: 50%; display: inline-block; }}
 [data-testid="stSidebar"] hr {{ border-color: rgba(236,237,230,.1) !important; margin: 20px 0 !important; }}
 
-/* ── Profile pills (התאמה אישית) — personal statuses that change
-   entitlements. Same outline-pill chrome as the answer action row;
-   selected = accent, so the active statuses read at a glance. ── */
+/* ── Status tick-chips (סטטוס) — the four personal statuses that unlock
+   entitlement calculations. Boxes you tick on a form, and what you tick is
+   printed on the service card above: NOT toggle switches (a switch reads as a
+   preference you flip often; these are facts you set once and never revisit)
+   and NOT a third grouped card, which turned the screen monotonous right where
+   the eye should still be holding onto the hero.
+
+   The selected state is carried by a SOLID accent square. Measured in this
+   palette: accent-soft over the chip composites to #383E27 against an
+   unselected #262C1C = 1.29:1, and over the bare ground 1.00:1 — so the fill
+   the previous rule leaned on as its state signal was invisible. The solid
+   square is 6.05:1 on the chip and 7.63:1 on the ground (WCAG 1.4.11 asks for
+   >= 3:1 on non-text state). On four booleans that release money, a tick that
+   missed must not look like one that landed.
+
+   Geometry is deliberately identical in both states — no weight bump, no
+   padding change — so ticking one can never re-wrap the row under the thumb. */
 .cai-profile-label {{ font: 400 12.5px Heebo, sans-serif; color: var(--text-dim); margin: 2px 0 4px; }}
-.st-key-profile_statuses [data-testid="stPills"] {{ direction: rtl; gap: 6px; }}
+/* never flex/grid stButtonGroup itself: it also holds the collapsed <label>,
+   the same trap that stacked the service-type control into a 107px column */
+.st-key-profile_statuses [data-testid="stButtonGroup"] {{ width: 100% !important; display: block !important; }}
+.st-key-profile_statuses [role="group"] {{
+    width: 100% !important; direction: rtl;
+    display: flex !important; flex-wrap: wrap !important;
+    gap: 8px !important; justify-content: flex-start !important;
+}}
 .st-key-profile_statuses button {{
-    background: rgba(239,240,232,.045) !important;
-    border: 1px solid rgba(239,240,232,.22) !important;
-    border-radius: 99px !important;
-    color: rgba(239,240,232,.75) !important;
-    min-height: 0 !important;
-    padding: 3px 12px !important;
+    min-height: 44px !important;          /* was 32px — under the thumb floor */
+    width: auto !important;
+    padding: 0 13px 0 14px !important;
+    border-radius: 12px !important;
+    background: transparent !important;
+    border: 1px solid rgba(239,240,232,.12) !important;
+    box-shadow: none !important;
+    display: flex !important; align-items: center !important;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color .13s linear, border-color .13s linear;
 }}
-.st-key-profile_statuses button p {{ font: 500 12px Heebo, sans-serif !important; }}
-.st-key-profile_statuses button:hover {{ border-color: var(--accent) !important; color: var(--accent) !important; }}
+/* the tick box. ::before is the RIGHTMOST child of an RTL flex row, so the box
+   sits at the reading edge beside its own label instead of stranded at the far
+   end of the chip. Physical margin-left on purpose — a stray direction:ltr
+   must not flip it back through the label. */
+.st-key-profile_statuses button::before {{
+    content: ""; flex: none; width: 17px; height: 17px;
+    border-radius: 5px; margin-left: 9px;
+    border: 1.5px solid rgba(239,240,232,.40); background: transparent;
+    transition: background-color .13s linear, border-color .13s linear;
+}}
+.st-key-profile_statuses button p {{
+    font: 500 14px Heebo, sans-serif !important;
+    color: rgba(239,240,232,.72) !important; margin: 0 !important; white-space: nowrap;
+}}
+/* hover only where hovering exists — the previous unguarded :hover left an
+   accent border and accent label stuck on an untapped chip after an iOS tap */
+@media (hover: hover) {{
+    .st-key-profile_statuses button:hover {{ border-color: rgba(var(--accent-rgb),.5) !important; }}
+}}
 .st-key-profile_statuses button[data-testid="stBaseButton-pillsActive"] {{
-    background: var(--accent-soft) !important;
+    background: rgba(var(--accent-rgb),.14) !important;
     border-color: var(--accent) !important;
-    color: var(--accent) !important;
 }}
-.st-key-profile_statuses button[data-testid="stBaseButton-pillsActive"] p {{ color: var(--accent) !important; }}
+.st-key-profile_statuses button[data-testid="stBaseButton-pillsActive"] p {{ color: var(--accent-bright) !important; }}
+.st-key-profile_statuses button[data-testid="stBaseButton-pillsActive"]::before {{
+    background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.3 L5 8.6 L9.5 3.4' fill='none' stroke='%2314170E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 11px no-repeat;
+    border-color: var(--accent);
+}}
+/* the register line: one element that either explains that ticking nothing is
+   fine, or reads back what is now printed on the card. .has-marks is set by
+   pfSync — not :has() — because pfSync already knows the answer. */
+.cai-pf-reg {{
+    font: 500 12px/1.4 Heebo, sans-serif; color: rgba(239,240,232,.55);
+    margin: 0 2px 11px; min-height: 17px; text-align: right;
+}}
+.cai-pf-reg .p {{ display: none; }}
+.cai-pf-reg b {{ font-weight: 700; color: var(--accent-bright); }}
+.st-key-cai_pf_status.has-marks .cai-pf-reg .z {{ display: none; }}
+.st-key-cai_pf_status.has-marks .cai-pf-reg .p {{ display: inline; }}
+.st-key-cai_pf_status {{ margin-bottom: 6px; }}
+/* what the ticks put on the card */
+.cai-svc-marks {{ color: var(--accent); font-weight: 500; }}
 
 /* ── Letters dialog — the modal portals outside the chat column, so the
    app-wide RTL/font treatment doesn't reach it ── */
@@ -2449,10 +2472,138 @@ components.html(
             }
         }, true);
 
+        // ── orders accordion (same contract as the drawer: client-side only) ──
+        // Expanding "פקודות מטכ״ל במערכת" and searching it used to be server
+        // state. Every open, every close and every committed query was a full
+        // rerun — ~3.5s on device — and the FIRST open additionally blocked the
+        // server ~2.9s reading all 80 PDFs to mint media URLs (2026-07-30
+        // "sometimes it just hangs"). The rows are now static links that are
+        // always in the DOM, so both are a class flip and a substring test.
+        var ORDERS_OPEN = "cai-orders-open";
+        // must mirror _search_norm server-side: mobile keyboards emit ״/׳
+        // where the titles store ASCII quotes
+        var normQ = function (s) {
+            return (s || "").replace(/״/g, '"').replace(/׳/g, "'")
+                            .trim().toLowerCase();
+        };
+        var filterOrders = function (q) {
+            var rows = doc.querySelectorAll(".cai-orders-scroll .cai-order-link");
+            var hit = 0;
+            for (var i = 0; i < rows.length; i++) {
+                var on = !q || (rows[i].getAttribute("data-q") || "").indexOf(q) !== -1;
+                rows[i].hidden = !on;
+                if (on) hit++;
+            }
+            var none = doc.querySelector(".cai-orders-empty[data-none]");
+            if (none) none.hidden = !(q && !hit);
+        };
+        doc.addEventListener("click", function (e) {
+            var card = e.target && e.target.closest && e.target.closest(".cai-kb-card");
+            if (!card) return;
+            e.preventDefault();
+            var open = root.classList.toggle(ORDERS_OPEN);
+            card.setAttribute("aria-expanded", open ? "true" : "false");
+        });
+        // The query lives on <html> too, because Streamlit replaces the drawer
+        // node on any rerun (asking a question, opening a tool) and a fresh
+        // <input> would come back blank with the list still filtered by the
+        // class-driven CSS. Re-applied by the observer below.
+        doc.addEventListener("input", function (e) {
+            var box = e.target;
+            if (!box || !box.classList || !box.classList.contains("cai-orders-q")) return;
+            var q = normQ(box.value);
+            root.dataset.caiOrdersQ = q;
+            filterOrders(q);
+        });
+
+        // ── personal details: live service card + save bar ──
+        // The fields sit inside an st.form, so nothing they hold reaches the
+        // server until submit — which is exactly why the card that mirrors them
+        // has to be updated here. Reading the widgets is also how the save bar
+        // knows whether anything actually changed.
+        var pfShortTrack = function (t) {
+            if (!t || t.indexOf("בחר") === 0) return "";
+            return t.split(" (")[0].trim();
+        };
+        var pfRead = function () {
+            var nm  = doc.querySelector(".st-key-pf_name_w input");
+            if (!nm) return null;                       // form not mounted
+            var seg = doc.querySelector('.st-key-pf_type_w [data-testid$="segmented_controlActive"]');
+            var trk = doc.querySelector(".st-key-pf_track_w [data-baseweb='select']");
+            var on  = doc.querySelectorAll('.st-key-profile_statuses [data-testid="stBaseButton-pillsActive"]');
+            var marks = [];
+            for (var i = 0; i < on.length; i++) marks.push(on[i].innerText.trim());
+            return {
+                name:  nm.value.trim(),
+                type:  seg ? seg.innerText.trim() : "",
+                track: pfShortTrack(trk ? trk.innerText.trim() : ""),
+                // list keeps SELECTION ORDER for display; marks is the sorted
+                // form the save bar diffs against — do not merge the two
+                list:  marks,
+                marks: marks.slice().sort().join("|")
+            };
+        };
+        // never assign an unchanged value: the MutationObserver below calls this,
+        // and writing textContent replaces a text node — an unguarded write would
+        // re-trigger the observer forever
+        var setText = function (el, v) { if (el && el.textContent !== v) el.textContent = v; };
+        var pfSync = function () {
+            var card = doc.querySelector(".cai-svc");
+            if (!card) return;                        // not on this screen
+            var s = pfRead();
+            if (!s) return;
+            var fallback = card.getAttribute("data-svc-fallback") || "";
+            var shown = s.name || fallback;
+            setText(card.querySelector("[data-svc-mono]"), shown.slice(0, 1));
+            setText(card.querySelector("[data-svc-nm]"), shown);
+            setText(card.querySelector("[data-svc-meta]"),
+                    [s.type, s.track].filter(Boolean).join(" · "));
+
+            // the ticks land on the card's footer — the slot has shipped empty
+            // since the direction was chosen, and filling it is what turns the
+            // status block from the one section that ignores the card into the
+            // one that visibly amends it. Capped at two so a soldier who ticks
+            // all four cannot overflow the footer at 320px.
+            var lbl = s.list.length > 2
+                ? s.list.slice(0, 2).join(" · ") + " +" + (s.list.length - 2)
+                : s.list.join(" · ");
+            setText(card.querySelector("[data-svc-marks]"), lbl);
+            setText(doc.querySelector("[data-pf-reg]"), lbl);
+            var statusBox = doc.querySelector(".st-key-cai_pf_status");
+            if (statusBox && statusBox.classList.contains("has-marks") !== (s.list.length > 0))
+                statusBox.classList.toggle("has-marks", s.list.length > 0);
+
+            // diff against the SERVER's saved state, not a DOM snapshot
+            var bar = doc.querySelector(".st-key-cai_pf_save");
+            if (!bar) return;
+            var base;
+            try { base = JSON.parse(card.getAttribute("data-svc-base") || "null"); } catch (e) { base = null; }
+            if (!base) return;                        // no baseline: never claim dirty
+            var dirty = s.name !== base.name || s.type !== base.type ||
+                        s.track !== base.track || s.marks !== base.marks;
+            if (bar.classList.contains("dirty") !== dirty) bar.classList.toggle("dirty", dirty);
+        };
+        doc.addEventListener("input", pfSync);
+        doc.addEventListener("click", function () { setTimeout(pfSync, 0); });
+
         // ── safety net ──
         // no hamburger in the DOM (entry screen, name gate, post-logout) means
-        // the drawer cannot legitimately be open
-        var sweep = function () { if (isOpen() && !hamburger()) settle(false); };
+        // the drawer cannot legitimately be open. Same pass restores the
+        // orders query into a freshly re-rendered search box and re-syncs the
+        // personal-details card after Streamlit replaces its node.
+        var restoreOrders = function () {
+            var box = doc.querySelector(".cai-orders-q");
+            if (!box) return;
+            var q = root.dataset.caiOrdersQ || "";
+            if (box.value === q) return;   // in sync — costs one querySelector
+            if (box !== doc.activeElement) box.value = q;
+            filterOrders(q);
+        };
+        var sweep = function () {
+            if (isOpen() && !hamburger()) settle(false);
+            restoreOrders();
+            pfSync();
+        };
         new MutationObserver(sweep).observe(doc.body, { childList: true, subtree: true });
         sweep();
     };
@@ -2752,14 +2903,6 @@ suggested_questions = st.session_state.get("suggested") or _FALLBACK_QUESTIONS.g
 
 def queue_question(q: str):
     st.session_state.pending_question = q
-    # Collapse the orders list. It is not cosmetic: the drawer now renders on
-    # EVERY run (its open state is a CSS class, not server state), and an
-    # expanded list re-registers all ~80 order PDFs with the media manager per
-    # run — bytes hashed on the request path of every question, for a list
-    # nobody is looking at. Asking a question is the one high-frequency full
-    # rerun, so that is where the list goes back to its default.
-    st.session_state.orders_open = False
-
 
 def archive_current_conversation():
     """Save the active conversation into history before it's cleared."""
@@ -2808,7 +2951,6 @@ def _letters_dialog():
     budget. The draft lands in an editable textarea; the download button
     exports whatever the user edited, not the raw model text.
     """
-    st.markdown(_MODAL_CSS, unsafe_allow_html=True)
     # inline header (not _modal_header) so this feature's document emblem lives
     # entirely in the letters region — the shared header keeps its chevron
     st.markdown(
@@ -2904,9 +3046,11 @@ def _letters_dialog():
 
 # ── Shared "premium modal" design system ──────────────────────────────────
 # One scoped stylesheet for all three side-drawer dialogs (letters, punishment
-# authority, entitlements). Injected inside each dialog rather than into the
-# global f-string block so each feature stays self-contained and we avoid that
-# block's {{ }} escaping. :root tokens (--accent / --accent-bright / --surface /
+# authority, entitlements) plus the clause dialog. Kept as its own constant
+# rather than folded into the global f-string block so each feature stays
+# readable and we avoid that block's {{ }} escaping — but it is emitted ONCE at
+# page level next to _DS_CSS, never from inside a dialog body (see there for
+# why). :root tokens (--accent / --accent-bright / --surface /
 # --text*) are global, so the whole modal re-tints per role (חייל / מפקד /
 # מילואים) automatically. Rebuilt from design_handoff_entitlements_calculator:
 # dark-olive surface, chevron-emblem header, segmented control, styled fields
@@ -3254,7 +3398,6 @@ def _punishment_dialog():
     """
     if not _pa:
         return
-    st.markdown(_MODAL_CSS, unsafe_allow_html=True)
     st.markdown(_modal_header("בודק סמכות עונש"), unsafe_allow_html=True)
     st.markdown(
         "<div class='cai-pa-intro'>בחר את סוג קצין השיפוט כדי לראות אילו עונשים "
@@ -3457,7 +3600,6 @@ def _entitlements_dialog():
     No daily quota and NO Anthropic call — it only reads curated, order-cited
     data from entitlements.py, so it can't burn budget or hallucinate a figure.
     """
-    st.markdown(_MODAL_CSS, unsafe_allow_html=True)
     st.markdown(_modal_header("מחשבון זכאויות"), unsafe_allow_html=True)
     calc = st.radio(
         "מה לחשב?", ["leave", "pay"],
@@ -3638,47 +3780,55 @@ html.cai-drawer-drag .st-key-drawer_backdrop { pointer-events: none !important; 
 }
 .cai-recent-head { direction: rtl; }
 
-/* knowledge-base card — custom accent card (icon + title + count pill + ‹) with
-   a transparent st.button overlaying it to capture the tap */
-.st-key-cai_kb { position: relative; }
+/* knowledge-base card — custom accent card (icon + title + count pill + ‹).
+   A REAL <button>, for two reasons: the swipe engine's tap heuristic keys off
+   `button, a` to grant the generous 30px thumb-roll slop, and it keeps the
+   accordion keyboard-operable. Expansion is driven by one class on <html>
+   (like the drawer itself) so it survives Streamlit replacing this node. */
 .cai-kb-card {
   display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-radius: 14px;
   background: linear-gradient(135deg,rgba(var(--accent-rgb),.18),rgba(var(--accent-rgb),.05));
   border: 1px solid rgba(var(--accent-rgb),.34);
+  width: 100%; text-align: right; font: inherit; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 .cai-kb-card .kb-ic { width: 18px; height: 18px; flex: none; background: url("ICON_BOOK") center / 18px no-repeat; }
 .cai-kb-card .kb-title { flex: 1; font: 700 14px Heebo; color: #ECEDE6; }
 .cai-kb-card .kb-badge { flex: none; font: 800 11px Heebo; color: #171A12; background: var(--accent); border-radius: 99px; padding: 2px 9px; }
 .cai-kb-card .kb-chev { flex: none; color: rgba(196,206,146,.8); font-size: 15px; direction: ltr; transition: transform .18s ease; }
 .cai-kb-card .kb-chev::before { content: "‹"; }
-.cai-kb-card.open .kb-chev { transform: rotate(90deg); }
-/* While the server is still answering the toggle the chevron becomes a
-   spinner. The round-trip is ~3.5s on the phone, and a card that looks idle
-   for that long invites a second tap — which is exactly what used to close
-   what the first tap had opened. No !important on transform: an animation
-   already outranks a normal declaration, and !important would freeze it. */
-@keyframes caiKbSpin { to { transform: rotate(360deg); } }
-.cai-kb-card.busy .kb-chev::before { content: ""; }
-.cai-kb-card.busy .kb-chev {
-  width: 13px; height: 13px; border-radius: 50%;
-  border: 2px solid rgba(196,206,146,.25);
-  border-top-color: rgba(196,206,146,.9);
-  animation: caiKbSpin .7s linear infinite;
-}
-.st-key-toggle_orders { position: absolute !important; top: 0; inset-inline: 0; margin: 0 !important; z-index: 3; }
-.st-key-toggle_orders button { opacity: 0 !important; height: 52px !important; min-height: 52px !important; padding: 0 !important; margin: 0 !important; border: none !important; }
-.st-key-cai_kb [data-testid="stTextInput"] { margin-top: 10px; }
+html.cai-orders-open .cai-kb-card .kb-chev { transform: rotate(90deg); }
+/* the body is inert markup that is always present; only CSS decides whether
+   it is on screen, which is why opening costs no round-trip */
+.cai-kb-body { display: none; }
+html.cai-orders-open .cai-kb-body { display: block; }
 /* open state (mockup): card + search + list read as ONE bordered card with a
    darker well; the card head keeps only its top corners */
-.st-key-cai_kb:has(.cai-kb-card.open) {
+html.cai-orders-open .st-key-cai_kb .cai-kb {
   border: 1px solid rgba(var(--accent-rgb),.34); border-radius: 16px;
   background: rgba(0,0,0,.22);
 }
-.st-key-cai_kb:has(.cai-kb-card.open) .cai-kb-card {
+html.cai-orders-open .cai-kb-card {
   border: none; border-radius: 16px 16px 0 0;
   border-bottom: 1px solid rgba(var(--accent-rgb),.18);
 }
-.st-key-cai_kb:has(.cai-kb-card.open) [data-testid="stTextInput"] { margin: 10px 12px 0; }
+/* search box — a plain <input>, not st.text_input: a Streamlit widget commits
+   on blur and reruns the script, so every query cost the same ~3.5s as the
+   toggle used to. This one filters the rows already in the DOM. */
+.cai-orders-q {
+  display: block; width: calc(100% - 24px); margin: 10px 12px 0;
+  background: rgba(239,240,232,.045);
+  border: 1px solid var(--border-strong); border-radius: 10px;
+  color: var(--text); font: 400 13px Heebo, sans-serif;
+  direction: rtl; padding: 8px 12px; outline: none;
+}
+.cai-orders-q::placeholder { color: rgba(239,240,232,.4); }
+.cai-orders-q:focus { border-color: rgba(var(--accent-rgb),.5); }
+.cai-orders-q::-webkit-search-cancel-button { -webkit-appearance: none; }
+.cai-orders-empty { font: 400 12px Heebo; color: var(--text-faint); padding: 10px 14px; }
+/* [hidden] alone loses to .cai-order-link's display:block (author sheet beats
+   the UA rule), so the filter's hidden rows need an explicit override */
+.cai-order-link[hidden], .cai-orders-empty[hidden] { display: none !important; }
 /* the expanded orders list scrolls INSIDE the card region (mockup: search
    stays put, only the lines scroll) instead of stretching the whole drawer */
 .cai-orders-scroll {
@@ -3782,7 +3932,12 @@ html.cai-drawer-drag .st-key-drawer_backdrop { pointer-events: none !important; 
   position: fixed; inset: 0; z-index: 140;
   width: min(100vw, 440px); margin: 0 auto;
   background: linear-gradient(180deg,#141710 0%,#0E1007 100%);
-  padding: calc(env(safe-area-inset-top,0px) + 20px) 20px calc(env(safe-area-inset-bottom,0px) + 20px) !important;
+  /* top padding MUST clear the ::before status-bar mask below, and must be
+     built from the same max(--cai-sat, env()) expression: with the plain
+     env() the two diverged and the mask (sat + 26px) painted over the top
+     6px of the 36px ‹ back button, slicing its cap flat on device
+     (2026-07-30 report). mask + 8px keeps a hairline of breathing room. */
+  padding: calc(max(var(--cai-sat, 0px), env(safe-area-inset-top, 0px)) + 34px) 20px calc(env(safe-area-inset-bottom,0px) + 20px) !important;
   overflow-y: auto; overscroll-behavior: contain;
 }
 /* the settings overlay and the drawer are their own scroll containers —
@@ -3900,12 +4055,54 @@ html.cai-drawer-drag .st-key-drawer_backdrop { pointer-events: none !important; 
 .cai-info .ii { width: 16px; height: 16px; flex: none; background-image: url("ICON_INFO"); background-repeat: no-repeat; background-position: center; background-size: 16px; }
 .cai-info span { font: 400 11.5px Heebo; color: rgba(236,237,230,.6); line-height: 1.5; }
 
-/* personal: avatar + fields */
-.cai-set-avwrap { display: flex; flex-direction: column; align-items: center; gap: 11px; padding: 10px 0 18px; }
-.cai-set-avbig { width: 76px; height: 76px; border-radius: 22px; display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg,#AEB784,#8E9962); border: 1px solid rgba(196,206,146,.5);
-  font: 700 34px 'Suez One', serif; color: #171A12; box-shadow: 0 8px 20px -8px rgba(var(--accent-rgb),.6); }
-.cai-set-changephoto { display: flex; align-items: center; gap: 6px; font: 600 12px Heebo; color: rgba(196,206,146,.6); }
+/* ── personal: the "כרטיס חייל" hero ──────────────────────────────────────
+   A service-card object, not a form header. The olive rail is its spine and is
+   deliberately the ONLY rail on this screen. It replaced a 76px avatar whose
+   only action was "שינוי תמונה · בקרוב" — prime space spent on a feature that
+   does not exist (2026-07-30, direction ב chosen off the mockups). */
+.cai-svc {
+  position: relative; overflow: hidden;
+  border-radius: 16px; padding: 15px 16px 13px; margin-bottom: 9px;
+  background: linear-gradient(150deg,#252B1A 0%,#1A1E12 62%);
+  border: 1px solid rgba(var(--accent-rgb),.35);
+}
+.cai-svc::after {
+  content: ""; position: absolute; inset: 0 0 0 auto; width: 4px;
+  background: linear-gradient(180deg, var(--accent), rgba(var(--accent-rgb),.18));
+}
+.cai-svc-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.cai-svc-brand { font: 400 12px 'Suez One', serif; color: var(--accent-bright); letter-spacing: .04em; }
+.cai-svc-stamp {
+  font: 600 8.5px Heebo; letter-spacing: .2em; color: rgba(236,237,230,.4);
+  border: 1px solid rgba(236,237,230,.12); border-radius: 4px; padding: 4px 6px;
+}
+.cai-svc-id { display: flex; align-items: center; gap: 12px; }
+.cai-svc-mono {
+  width: 46px; height: 46px; border-radius: 12px; flex: none;
+  background: rgba(var(--accent-rgb),.14); border: 1px solid rgba(var(--accent-rgb),.35);
+  color: var(--accent-bright); font: 400 22px 'Suez One', serif;
+  display: flex; align-items: center; justify-content: center;
+}
+.cai-svc-txt { min-width: 0; }
+.cai-svc-nm { font: 400 20px 'Suez One', serif; color: #ECEDE6; line-height: 1.1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cai-svc-meta { font: 500 11.5px Heebo; color: rgba(236,237,230,.55); margin-top: 4px; }
+/* perforation: the one flourish, and it earns its place by reading as a card
+   edge rather than as a divider */
+.cai-svc-perf { margin: 14px 0 9px; height: 1px;
+  background: repeating-linear-gradient(90deg, rgba(236,237,230,.12) 0 4px, transparent 4px 9px); }
+.cai-svc-foot { display: flex; justify-content: space-between; gap: 10px;
+  font: 400 10.5px Heebo; color: rgba(236,237,230,.4); }
+.cai-svc-hint { font: 400 11.5px Heebo; color: rgba(236,237,230,.4); margin: 0 3px 4px; }
+
+/* personal: grouped identity fields — hairline-separated rows inside one card,
+   the same language as the settings hub so this screen belongs to it */
+.st-key-cai_pf_ident {
+  background: #21261A; border: 1px solid rgba(236,237,230,.1);
+  border-radius: 15px; overflow: hidden;
+}
+[class*="st-key-cai_pf_fld"] { padding: 12px 13px; }
+[class*="st-key-cai_pf_fld"] + [class*="st-key-cai_pf_fld"] { border-top: 1px solid rgba(236,237,230,.1); }
 .cai-fld-label { font: 600 11px Heebo; color: rgba(236,237,230,.45); margin: 0 0 7px; }
 .cai-lang-note { font: 400 11.5px Heebo; color: rgba(236,237,230,.5); margin: 6px 2px 14px; line-height: 1.55; }
 
@@ -3932,10 +4129,41 @@ html.cai-drawer-drag .st-key-drawer_backdrop { pointer-events: none !important; 
    blur-commit tap race); keyed forms get no st-key-* class in 1.58, so scope
    through the cai_pf_form wrapper and kill the layout-only stForm frame */
 .st-key-cai_pf_form [data-testid="stForm"] { border: none !important; padding: 0 !important; }
+/* the save bar sticks to the bottom of the settings overlay (its own scroll
+   container), so on this tall screen the action is always reachable and the
+   unsaved-changes line is always visible instead of below the fold */
+/* FIXED, not sticky. position:sticky is dead on arrival inside Streamlit 1.58:
+   every container is wrapped in a stLayoutWrapper that shrink-wraps to exactly
+   its child's height (measured 104px for a 104px bar), and a sticky element
+   cannot move inside a containing block with no slack. Same recipe as
+   .st-key-cai_settings::before instead — the panel is itself position:fixed
+   with no transformed ancestor, so a fixed child lands predictably and shares
+   the panel's stacking context. */
+.st-key-cai_pf_save {
+  position: fixed; z-index: 6; bottom: 0; left: 50%;
+  transform: translateX(-50%); width: min(100vw, 440px); margin: 0;
+  padding: 10px 20px calc(env(safe-area-inset-bottom,0px) + 20px);
+  background: linear-gradient(180deg, rgba(20,23,16,0) 0%, #141710 24%);
+}
+/* ...which takes the bar out of flow, so the form has to reserve its height or
+   the last field hides behind it */
+.st-key-cai_pf_form { padding-bottom: calc(env(safe-area-inset-bottom,0px) + 112px); }
+.cai-pf-savenote { text-align: center; margin-bottom: 8px; font: 500 11px Heebo; min-height: 15px; }
+.cai-pf-savenote .clean { color: rgba(236,237,230,.4); }
+.cai-pf-savenote .changed { color: var(--accent-bright); display: none; }
+.st-key-cai_pf_save.dirty .cai-pf-savenote .clean { display: none; }
+.st-key-cai_pf_save.dirty .cai-pf-savenote .changed { display: inline; }
 .st-key-cai_pf_form [data-testid="stFormSubmitButton"] button {
   background: var(--accent) !important; border: none !important; color: #171A12 !important;
-  border-radius: 13px !important; font: 700 14px Heebo !important; padding: 13px !important; margin-top: 22px !important;
+  border-radius: 13px !important; font: 700 14px Heebo !important; padding: 13px !important;
 }
+/* until something changes the save button is a quiet outline, so the loudest
+   thing on the screen stays the card — it fills in the moment there is
+   something to save */
+.st-key-cai_pf_save:not(.dirty) [data-testid="stFormSubmitButton"] button {
+  background: transparent !important; border: 1px solid rgba(var(--accent-rgb),.4) !important;
+}
+.st-key-cai_pf_save:not(.dirty) [data-testid="stFormSubmitButton"] button p { color: var(--accent) !important; }
 .st-key-cai_pf_form [data-testid="stFormSubmitButton"] button p { color: #171A12 !important; font-weight: 700 !important; text-align: center !important; }
 @media (hover: hover) { .st-key-cai_pf_form [data-testid="stFormSubmitButton"] button:hover { background: #A6AF76 !important; } }
 [class*="st-key-danger_"] button {
@@ -3966,8 +4194,15 @@ html.cai-drawer-drag .st-key-drawer_backdrop { pointer-events: none !important; 
   border-radius: 12px !important; min-height: 48px !important; }
 .st-key-pf_track_w [data-baseweb="select"] div, .st-key-pf_track_w [data-baseweb="select"] span {
   color: #ECEDE6 !important; font: 500 14px Heebo !important; }
-/* service-type: 3 equal separated tabs */
-.st-key-pf_type_w [data-testid="stButtonGroup"] {
+/* service-type: 3 equal separated tabs.
+   The grid MUST sit on the inner [role="radiogroup"], not on stButtonGroup:
+   in 1.58 stButtonGroup holds [collapsed <label>, radiogroup], so a
+   3-column grid there gave the radiogroup a single 1fr track — measured 107px
+   inside a 335px row — and the three buttons (width:100% of that) stacked
+   into a narrow left-leaning column. That is what made the whole screen read
+   as misaligned (2026-07-30 device video). */
+.st-key-pf_type_w [data-testid="stButtonGroup"] { width: 100% !important; display: block !important; }
+.st-key-pf_type_w [data-testid="stButtonGroup"] [role="radiogroup"] {
   width: 100% !important; display: grid !important;
   grid-template-columns: 1fr 1fr 1fr !important; gap: 7px !important; }
 .st-key-pf_type_w [data-testid="stButtonGroup"] button {
@@ -4055,7 +4290,6 @@ def _wipe_all():
     st.session_state.role = None
     st.session_state.pending_question = None
     st.session_state.pop("suggested", None)
-    st.session_state.pop("orders_search", None)
     st.session_state.show_settings = False
     st.session_state.service_track = ""
     st.session_state.service_type = "סדיר"
@@ -4126,19 +4360,68 @@ def _settings_hub():
         st.session_state.messages = []
         st.session_state.pending_question = None
         st.session_state.pop("suggested", None)
-        st.session_state.pop("orders_search", None)
         st.session_state.show_settings = False
         st.rerun()
     st.markdown("<div class='cai-drawer-foot'>בלמ\"ס · לשימוש פנימי בלבד</div>", unsafe_allow_html=True)
 
 
+def _service_card(name: str, svc: str, track: str, marks: list[str]) -> str:
+    """The "כרטיס חייל" hero — a service-card object, not a form header.
+
+    Replaces the 76px avatar + "שינוי תמונה בקרוב" block, which spent the screen's
+    best real estate on a feature that does not exist. The card shows what the
+    app actually knows about the user, and the fields below amend it live.
+
+    Live means CLIENT-side: the fields sit in an st.form, so their values do not
+    reach the server until submit. pfSync in the gesture engine reads the widgets
+    and writes the [data-svc-*] slots below.
+
+    data-svc-base carries the SAVED state in exactly the shape pfRead() builds,
+    which is what the save bar diffs against. Snapshotting the DOM instead raced
+    the mount — the segmented control gains its active-state testid a beat after
+    the input exists, so the first snapshot recorded an empty service type and
+    the bar came up already claiming unsaved changes.
+    """
+    short_track = track.split(" (")[0] if track else ""
+    initial = (name or role_label)[:1]
+    meta = " · ".join(x for x in (svc, short_track) if x)
+    base = json.dumps(
+        {"name": name.strip(), "type": svc, "track": short_track,
+         "marks": "|".join(sorted(marks))},
+        ensure_ascii=False, separators=(",", ":"))
+    return (
+        f"<div class='cai-svc' data-svc-fallback=\"{html.escape(role_label, quote=True)}\""
+        f" data-svc-base=\"{html.escape(base, quote=True)}\">"
+        "<div class='cai-svc-top'>"
+        "<span class='cai-svc-brand'>CommandAI</span>"
+        "<span class='cai-svc-stamp'>בלמ\"ס</span>"
+        "</div>"
+        "<div class='cai-svc-id'>"
+        f"<div class='cai-svc-mono' data-svc-mono>{html.escape(initial)}</div>"
+        "<div class='cai-svc-txt'>"
+        f"<div class='cai-svc-nm' data-svc-nm>{html.escape(name or role_label)}</div>"
+        f"<div class='cai-svc-meta' data-svc-meta>{html.escape(meta)}</div>"
+        "</div></div>"
+        "<div class='cai-svc-perf'></div>"
+        f"<div class='cai-svc-foot'><span>{html.escape(role_label)}</span>"
+        "<span class='cai-svc-marks' data-svc-marks></span></div>"
+        "</div>"
+    )
+
+
 def _settings_personal():
-    """8b — personal details: name, service type/track, status pills."""
+    """8b — personal details, "כרטיס חייל" direction: a live service card as the
+    hero, the identity fields grouped beneath it, then the status picker."""
+    # the card carries the FULL name (a service card would), while _display_name
+    # stays the first-name-only form used for greetings and the hub avatar
     st.markdown(
-        "<div class='cai-set-avwrap'>"
-        f"<div class='cai-set-avbig'>{html.escape((_display_name() or role_label)[:1])}</div>"
-        "<div class='cai-set-changephoto'>שינוי תמונה <span class='cai-bakrov'>בקרוב</span></div>"
-        "</div>", unsafe_allow_html=True)
+        _service_card((st.session_state.get("profile_name") or "").strip(),
+                      st.session_state.get("service_type") or "סדיר",
+                      st.session_state.get("service_track") or "",
+                      list(st.session_state.get("profile_saved") or [])),
+        unsafe_allow_html=True)
+    st.markdown("<div class='cai-svc-hint'>הכרטיס מתעדכן לפי מה שתמלא/י למטה.</div>",
+                unsafe_allow_html=True)
 
     # Widgets edit their OWN keys only; the stable mirrors that handle_question
     # reads are committed on Save. Seed each widget from its mirror on first
@@ -4154,34 +4437,59 @@ def _settings_personal():
     # carries the key the CSS scopes through.
     with st.container(key="cai_pf_form"):
         with st.form(key="pf_form", border=False):
-            st.markdown("<div class='cai-set-seclabel'>פרטי זיהוי</div>", unsafe_allow_html=True)
-            st.markdown("<div class='cai-fld-label'>שם מלא</div>", unsafe_allow_html=True)
-            if "pf_name_w" not in st.session_state:
-                st.session_state.pf_name_w = st.session_state.get("profile_name", "")
-            st.text_input("שם מלא", key="pf_name_w",
-                          label_visibility="collapsed", placeholder="ישראל ישראלי")
+            # ── זיהוי: one grouped card, hairline between fields — the same row
+            # language as the settings hub, so the screen reads as one product ──
+            st.markdown("<div class='cai-set-seclabel'>זיהוי</div>", unsafe_allow_html=True)
+            with st.container(key="cai_pf_ident"):
+                with st.container(key="cai_pf_fld_name"):
+                    st.markdown("<div class='cai-fld-label'>שם מלא</div>", unsafe_allow_html=True)
+                    if "pf_name_w" not in st.session_state:
+                        st.session_state.pf_name_w = st.session_state.get("profile_name", "")
+                    st.text_input("שם מלא", key="pf_name_w",
+                                  label_visibility="collapsed", placeholder="ישראל ישראלי")
 
-            st.markdown("<div class='cai-fld-label'>סוג שירות</div>", unsafe_allow_html=True)
-            if "pf_type_w" not in st.session_state:
-                st.session_state.pf_type_w = st.session_state.get("service_type", "סדיר")
-            st.segmented_control("סוג שירות", _SERVICE_TYPES, key="pf_type_w",
-                                 selection_mode="single", label_visibility="collapsed")
+                with st.container(key="cai_pf_fld_type"):
+                    st.markdown("<div class='cai-fld-label'>סוג שירות</div>", unsafe_allow_html=True)
+                    if "pf_type_w" not in st.session_state:
+                        st.session_state.pf_type_w = st.session_state.get("service_type", "סדיר")
+                    st.segmented_control("סוג שירות", _SERVICE_TYPES, key="pf_type_w",
+                                         selection_mode="single", label_visibility="collapsed")
 
-            st.markdown("<div class='cai-fld-label'>מסלול השירות</div>", unsafe_allow_html=True)
-            _tracks = ["בחר/י מסלול…"] + _SERVICE_TRACKS
-            if "pf_track_w" not in st.session_state:
-                _cur = st.session_state.get("service_track", "")
-                st.session_state.pf_track_w = _cur if _cur in _SERVICE_TRACKS else _tracks[0]
-            st.selectbox("מסלול השירות", _tracks, key="pf_track_w", label_visibility="collapsed")
+                with st.container(key="cai_pf_fld_track"):
+                    st.markdown("<div class='cai-fld-label'>מסלול השירות</div>", unsafe_allow_html=True)
+                    _tracks = ["בחר/י מסלול…"] + _SERVICE_TRACKS
+                    if "pf_track_w" not in st.session_state:
+                        _cur = st.session_state.get("service_track", "")
+                        st.session_state.pf_track_w = _cur if _cur in _SERVICE_TRACKS else _tracks[0]
+                    st.selectbox("מסלול השירות", _tracks, key="pf_track_w",
+                                 label_visibility="collapsed")
 
-            st.markdown("<div class='cai-set-seclabel'>התאמה אישית · סטטוס</div>", unsafe_allow_html=True)
-            st.markdown("<div class='cai-lang-note'>בחירת הסטטוס מתאימה את החישובים והתשובות עבורך.</div>", unsafe_allow_html=True)
-            if "profile_statuses" not in st.session_state and st.session_state.get("profile_saved"):
-                st.session_state.profile_statuses = st.session_state.profile_saved
-            st.pills("סטטוס", _STATUS_PILLS, selection_mode="multi",
-                     key="profile_statuses", label_visibility="collapsed")
+            st.markdown("<div class='cai-set-seclabel'>סטטוס</div>", unsafe_allow_html=True)
+            with st.container(key="cai_pf_status"):
+                # one line doing two jobs: it tells the ~70% who tick nothing
+                # that nothing is wrong, and otherwise reads back what is now
+                # printed on the card. pfSync swaps it and fills the <b>.
+                st.markdown(
+                    "<div class='cai-pf-reg'>"
+                    "<span class='z'>לא סומן סטטוס נוסף. סימון משנה חישובי זכאות וניסוח תשובות.</span>"
+                    "<span class='p'>רשום בכרטיס: <b data-pf-reg></b></span>"
+                    "</div>", unsafe_allow_html=True)
+                if "profile_statuses" not in st.session_state and st.session_state.get("profile_saved"):
+                    st.session_state.profile_statuses = st.session_state.profile_saved
+                st.pills("סטטוס", _STATUS_PILLS, selection_mode="multi",
+                         key="profile_statuses", label_visibility="collapsed")
 
-            _save = st.form_submit_button("שמירת שינויים", use_container_width=True)
+            # Save bar, pinned to the bottom of the settings overlay. The old
+            # button sat wherever the form happened to end, so on a screen this
+            # tall it was below the fold with no signal that anything was
+            # pending. caiPfDirty (gesture engine) flips .dirty on this bar.
+            with st.container(key="cai_pf_save"):
+                st.markdown(
+                    "<div class='cai-pf-savenote'>"
+                    "<span class='clean'>הפרטים נשמרים במכשיר בלבד</span>"
+                    "<span class='changed'>יש שינויים שלא נשמרו</span>"
+                    "</div>", unsafe_allow_html=True)
+                _save = st.form_submit_button("שמירת שינויים", use_container_width=True)
 
     # Save COMMITS the widgets to their mirrors and flips profile_customized —
     # only now do the service fields reach the answer. An untouched user's API
@@ -4195,9 +4503,6 @@ def _settings_personal():
         st.session_state.profile_customized = True
         st.session_state.settings_screen = "hub"
         st.rerun()
-    st.markdown(
-        "<div class='cai-lang-note' style='text-align:center'>הפרטים נשמרים במכשיר בלבד לצורך התאמת החישובים.</div>",
-        unsafe_allow_html=True)
 
 
 def _settings_language():
@@ -4512,22 +4817,85 @@ def _search_norm(s: str) -> str:
     return s.replace("״", "\"").replace("׳", "'").strip().casefold()
 
 
-def _order_link(title: str, url: str | None, date_badge: str | None = None) -> str:
+def _pdf_static_url(source_file: str | None) -> str | None:
+    """URL of an order's PDF, served straight off disk by Streamlit.
+
+    Replaces the media-file-manager route for the ORDERS LIST specifically.
+    That route needed the PDF's *bytes* in hand to mint a URL, so drawing a
+    list of 80 orders meant reading 52.5 MB — measured at ~2.9 s of blocking
+    I/O on a cold cache, and 52.5 MB resident afterwards. A static path costs
+    a dict lookup, which is what makes the list cheap enough to render on
+    every drawer paint (and therefore cheap enough to expand with no rerun).
+
+    Relative on purpose, exactly like the media URLs it replaces: the app
+    document sits at "/" here and at "/~/+/" inside the Streamlit Cloud
+    shell, and "app/static/..." resolves correctly against both.
+    """
+    if not source_file or source_file not in _STATIC_PDFS:
+        return None
+    return "app/static/" + urllib.parse.quote(source_file)
+
+
+def _order_link(title: str, url: str | None, date_badge: str | None = None,
+                doc_id: str = "") -> str:
     """One order line for the sidebar list. When the PDF is on disk the
     title itself is the tap target that opens it INLINE in a new tab.
 
-    The href is relative on purpose: the app document sits at "/" locally
-    but at "/~/+/" inside the Streamlit Cloud shell, and a relative
-    "media/..." resolves correctly against both. `date_badge` is the
-    order's own version date (doc_dates.badge) — orders without a
-    confident date get no badge rather than a made-up one.
+    `date_badge` is the order's own version date (doc_dates.badge) — orders
+    without a confident date get no badge rather than a made-up one.
+
+    data-q carries the row's searchable text, normalized server-side by the
+    SAME rules the search box applies client-side (_search_norm), so filtering
+    is a substring test in the browser instead of a round-trip per keystroke.
     """
     safe_title = html.escape(title)
     tail = f"<span class='cai-order-date'>נוסח {date_badge}</span>" if date_badge else ""
+    q = html.escape(_search_norm(f"{title} {doc_id}"), quote=True)
     if url:
-        return (f"<a class='cai-order-link' href='{url.lstrip('/')}'"
+        return (f"<a class='cai-order-link' data-q=\"{q}\" href='{url.lstrip('/')}'"
                 f" target='_blank' rel='noopener'>{safe_title}{tail}</a>")
-    return f"<div class='cai-order-link'>{safe_title}{tail}</div>"
+    return f"<div class='cai-order-link' data-q=\"{q}\">{safe_title}{tail}</div>"
+
+
+def _orders_panel(docs: list[dict]) -> str:
+    """The whole "פקודות מטכ״ל במערכת" accordion as ONE inert markup blob.
+
+    Nothing here talks to the server. The card is a real <button> (so the
+    swipe engine's tap heuristic, which keys off `button, a`, gives it the
+    generous 30px slop meant for thumb taps), expanding is a class on <html>,
+    and searching filters the rows in place. That is the entire fix for
+    "sometimes it just hangs / takes forever to open": the previous version
+    toggled st.session_state, and every open AND close paid a full rerun —
+    ~3.5 s on device — on top of the cold-cache PDF reads.
+
+    Rendering it unconditionally (open or closed) is only affordable because
+    _pdf_static_url costs nothing; the rows are ~80 anchors of markup.
+    """
+    rows = "".join(
+        _order_link(d["title"], _pdf_static_url(d.get("source_file")),
+                    _doc_date_badge(d["id"]), str(d["id"]))
+        for d in docs
+    )
+    if not docs:
+        body = "<div class='cai-orders-empty'>אין פקודות טעונות</div>"
+    else:
+        body = (
+            "<input class='cai-orders-q' type='search' autocomplete='off'"
+            " enterkeyhint='search' aria-label='חיפוש פקודה'"
+            " placeholder='🔎 חיפוש פקודה...'>"
+            f"<div class='cai-orders-scroll'>{rows}</div>"
+            "<div class='cai-orders-empty' data-none hidden>לא נמצאו פקודות מתאימות</div>"
+        )
+    return (
+        "<div class='cai-kb'>"
+        "<button type='button' class='cai-kb-card' aria-expanded='false'>"
+        "<span class='kb-ic'></span>"
+        "<span class='kb-title'>פקודות מטכ\"ל במערכת</span>"
+        f"<span class='kb-badge'>{len(docs)}</span>"
+        "<span class='kb-chev'></span></button>"
+        f"<div class='cai-kb-body'>{body}</div>"
+        "</div>"
+    )
 
 
 # ── Drawer (app-owned overlay) ──
@@ -4554,6 +4922,17 @@ st.button("תפריט", key="drawer_open_btn")
 # cannot eat taps meant for the app.
 st.button("סגירת התפריט", key="drawer_backdrop")
 st.markdown(_DS_CSS, unsafe_allow_html=True)
+# Modal stylesheet at PAGE level, not inside each dialog. Injected in the
+# dialog body it arrived one frame LATE: Streamlit mounted the dialog, painted
+# the card with the olive theme.backgroundColor at its default geometry, and
+# only then did the <style> stream in and repaint it dark — a wrong-looking
+# panel flashing on EVERY tool open (2026-07-30 device video, all three tools).
+# Emitted here it is already in the document before any dialog can mount, so
+# the first painted frame is the finished modal. Cost is one <style> per
+# rerun instead of one per dialog open, and the block is scoped to
+# stDialog/.cai-m* throughout (the only page-wide rules in it are the
+# baseweb popover ones, which were written to be global anyway).
+st.markdown(_MODAL_CSS, unsafe_allow_html=True)
 with st.container(key="cai_drawer"):
     # ── top row: settings gear (right/leading) + close « (left/trailing) ──
     _c_gear, _c_close = st.columns(2)
@@ -4588,71 +4967,16 @@ with st.container(key="cai_drawer"):
         unsafe_allow_html=True,
     )
 
-    # ── knowledge base — orders list (expander styled as the accent card) ──
+    # ── knowledge base — orders list ──
+    # Rendered whole on every drawer paint, open or closed: expanding it and
+    # searching it are both pure client-side (see _orders_panel and the swipe
+    # engine's accordion section). The server is never told, so neither costs
+    # a rerun. ONE markdown for the entire panel — per-row st.markdown calls
+    # would each be siblings in the drawer flow and stretch it viewport-long.
     st.markdown("<div class='cai-sec-label'>מאגר הידע</div>", unsafe_allow_html=True)
     docs = get_loaded_docs_info(role=st.session_state.role)
-    if "orders_open" not in st.session_state:
-        st.session_state.orders_open = False
     with st.container(key="cai_kb"):
-        # The card visual carries the olive count PILL + the ‹ chevron —
-        # a plain st.button/expander label can't style a badge, so we draw
-        # the card in HTML and overlay a transparent st.button to capture
-        # the tap (CSS positions it over the card).
-        # The button renders BEFORE the card so the toggle lands in the same
-        # run that paints it — with the markdown first, the card's class was
-        # already out when the button toggled, forcing an st.rerun() whose
-        # second full render DOUBLED every toggle's wait (~3.5s on device,
-        # 2026-07-28). Source order is free here: the overlay is absolutely
-        # positioned over the card either way.
-        if st.button("פקודות מטכ\"ל במערכת", key="toggle_orders", use_container_width=True):
-            st.session_state.orders_open = not st.session_state.orders_open
-        st.markdown(
-            "<div class='cai-kb-card" + (" open" if st.session_state.orders_open else "") + "'>"
-            "<span class='kb-ic'></span>"
-            "<span class='kb-title'>פקודות מטכ\"ל במערכת</span>"
-            f"<span class='kb-badge'>{len(docs)}</span>"
-            "<span class='kb-chev'></span></div>",
-            unsafe_allow_html=True)
-        if st.session_state.orders_open:
-            if docs:
-                search = _search_norm(st.text_input(
-                    "חיפוש פקודה",
-                    key="orders_search",
-                    label_visibility="collapsed",
-                    placeholder="🔎 חיפוש פקודה...",
-                ))
-                # media URLs are registered for ALL docs, filtered or not: a
-                # media-manager entry whose coord isn't re-registered during a
-                # rerun is purged at that rerun's end — filtering registration
-                # would 404 a PDF the user already opened in another tab
-                rows = [
-                    (doc, _pdf_media_url(doc["source_file"], f"pdfside_{doc['id']}")
-                     if doc.get("source_file") else None)
-                    for doc in docs
-                ]
-                shown = [
-                    (doc, url) for doc, url in rows
-                    if not search
-                    or search in _search_norm(doc["title"])
-                    or search in _search_norm(str(doc["id"]))
-                ]
-                if not shown:
-                    st.caption("לא נמצאו פקודות מתאימות")
-                # each title is itself the tap target that opens the order's
-                # PDF inline (styled as a flat list line, not a button).
-                # ONE markdown for the whole list: the wrapper div is the
-                # inner scroll region — per-row st.markdown calls would each
-                # be siblings in the drawer flow and stretch it viewport-long
-                else:
-                    st.markdown(
-                        "<div class='cai-orders-scroll'>"
-                        + "".join(_order_link(doc["title"], url, _doc_date_badge(doc["id"]))
-                                  for doc, url in shown)
-                        + "</div>",
-                        unsafe_allow_html=True,
-                    )
-            else:
-                st.caption("אין פקודות טעונות")
+        st.markdown(_orders_panel(docs), unsafe_allow_html=True)
 
     # ── tools (grouped card) ──
     st.markdown("<div class='cai-sec-label'>כלים</div>", unsafe_allow_html=True)
@@ -5298,7 +5622,6 @@ def _clause_dialog(primary: dict, page: int | None, full_href: str | None) -> No
     live between the card's caption bar and its border, and the seamless frame is
     the whole point of the redesign. Accent uses the role tokens, so it re-tints.
     """
-    st.markdown(_MODAL_CSS, unsafe_allow_html=True)
 
     # classification sub-label: "פ״מ {order} · עמוד {n} · בלמ״ס" (dynamic,
     # unlike the fixed sub on the side dialogs). doc_id is our own id ("35.0402"
