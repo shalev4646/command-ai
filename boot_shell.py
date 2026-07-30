@@ -42,32 +42,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v18"
-
-
-# Streamlit ships `width=device-width, initial-scale=1, shrink-to-fit=no` — no
-# viewport-fit. On iOS standalone that means the web view is INSET into the safe
-# area, so env(safe-area-inset-*) all resolve to 0 and 100vh is the inset height,
-# not the screen height. app.py has been patching `, viewport-fit=cover` onto
-# this meta AT RUNTIME since the PWA work — from a Streamlit component that
-# mounts long after first paint — and that single line is the source of the
-# "screen jumps up then comes back down" the pilot filmed three rounds running:
-#
-#   * launch image: drawn at sat + 0.14 * SCREEN height (full screen, from
-#     _STARTUP_SAT) => chevron ink at video row 171
-#   * shell, pre-mutation: env()=0, vh = inset height => same chevron at row
-#     164 — the content JUMPS UP ~8px the instant the shell takes over
-#   * shell, post-mutation: cover applies, the web view grows to full screen,
-#     env(top) becomes real, vh becomes the screen height => the content drops
-#     back DOWN to where the launch image had it
-#
-# Applying it here, statically, collapses all three into one geometry: the shell
-# and the launch image compute the identical offset from byte zero, there is no
-# mid-boot web-view resize, and the 18 env(safe-area-inset-*) rules in app.py
-# finally mean what they were written to mean.
-_VIEWPORT_RE = re.compile(
-    r'(<meta[^>]*\bname="viewport"[^>]*\bcontent=")(?P<val>[^"]*)(")'
-)
+_VERSION = "v19"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -549,97 +524,78 @@ _BOOT_JS = """
             document.documentElement.style.setProperty('background', '#14170E', 'important');
             document.body.style.setProperty('background', '#14170E', 'important');
           } catch (e) {}
-          // THE ORIGINAL SLIDE — .55s on cubic-bezier(.7,0,.3,1), fully
-          // opaque, nothing else. v15 replaced it with a .38s accelerating
-          // curve plus a tail fade while chasing the stuck strip, and the
-          // pilot read the result immediately: "the curtain rises strangely"
-          // (2026-07-29). Those two changes were never what fixed the strip —
-          // the TRANSLATE DISTANCE below is — so they are gone and the motion
-          // is byte-for-byte the one that was asked for back by name.
+          // ...and MAKE IOS ACT ON IT NOW, before the slide starts.
           //
-          // Do not reintroduce a fade here as insurance. It is not needed
-          // (the geometry clears the tallest safe area we ship for by 28px)
-          // and a translucent curtain mid-slide smears the app through it as
-          // a double exposure — two crossing wordmarks, 2026-07-27 video #5.
+          // Setting the colour is not enough on its own: measured on the
+          // 2026-07-30 10:58 video, the status-bar strip held its olive for
+          // the entire slide and only turned dark two frames after
+          // el.remove(). While an OPAQUE element covers the whole layout
+          // viewport, WebKit skips painting the canvas behind it — so the
+          // handover above sits queued and the strip keeps showing the stale
+          // olive raster until the element goes away. That is why the colour
+          // change kept landing AFTER the app was already revealed, which is
+          // exactly what reads as "the top is still settling".
           //
-          // -102% WAS NOT ENOUGH, and that is the whole bug. This element is
-          // inset:0, so it fills the LAYOUT VIEWPORT — which in an iOS
-          // standalone web app starts BELOW the top safe area (the same fact
-          // _PAD_JS above is built on). Its height is therefore a safe-area
-          // shorter than the screen, and a percentage translate is a
-          // percentage OF THE ELEMENT: on the pilot's phone 102% of 793px is
-          // 809px, leaving the curtain's bottom edge parked at y=43 with the
-          // status-bar strip still covered. The slide finished and an olive
-          // band simply stayed there until el.remove() fired 70ms later —
-          // which is exactly what the 15:22 video shows: the strip clears at
-          // t=4.826, the moment of removal, 449ms after the app was already
-          // on screen.
+          // Dropping opacity a hair below 1 for a single frame makes the
+          // curtain a non-opaque layer, which forces that skipped paint to
+          // happen. 0.999 is imperceptible (the app beneath shows at 0.1%) and
+          // it is set back before the transform starts, so the slide itself is
+          // fully opaque — no double exposure (2026-07-27 video #5). Cost: one
+          // frame, 16ms, before the motion begins.
           //
-          // PIXELS, COMPUTED HERE — no percentages, no calc(). calc(-100% -
-          // 90px) was the v15/v16 attempt and it silently did not work: the
-          // 2026-07-29 16:33 device video, shot six minutes after v16 went
-          // live, shows the curtain travelling exactly 100% of its height and
-          // parking with a status-bar-tall olive band across the top for
-          // 283ms until el.remove() killed it. WebKit will not interpolate a
-          // transform transition whose end value mixes % and px in calc(); it
-          // falls back to the percentage term alone. Nothing in the console,
-          // nothing in the computed style — only the phone shows it.
-          //
-          // Why 100% is not enough in the first place: with
-          // apple-mobile-web-app-status-bar-style: black-translucent the WEB
-          // VIEW spans the whole screen, but the LAYOUT viewport this inset:0
-          // element fills starts below the status bar. So the element is a
-          // safe-area shorter than the glass AND sits a safe-area down it:
-          // moving it by its own height leaves exactly a safe-area band lit
-          // at the top. screen.height + 40 clears that on any device without
-          // knowing the inset at all, and the extra travel happens entirely
-          // off-screen so the motion still reads as the .55s slide.
-          // Math.max, not ||, and a floor: a hidden/backgrounded web view can
-          // report screen.height AND innerHeight as 0 (reproduced in a hidden
-          // browser pane), and `(0 || 0) + 40` would have produced a 40px
-          // "slide" that never leaves the glass — the curtain would then hang
-          // there until the safety-net timer. The element's own measured
-          // height is the last resort, and 900 covers every phone we ship for.
+          // The win is not less total change, it is WHERE the change sits: the
+          // strip darkens under the still-covering curtain instead of after
+          // the reveal, so iOS re-renders its clock during the sweep rather
+          // than on top of a finished screen.
+          // Travel in PIXELS, computed here — never a percentage and never
+          // calc(). translateY(calc(-100% - 90px)) was tried twice and never
+          // worked: WebKit will not interpolate a transform transition whose
+          // end value mixes % and px, and falls back to the percentage term
+          // with nothing logged anywhere. Math.max with a floor because a
+          // hidden/backgrounded web view can report screen.height AND
+          // innerHeight as 0, and a 40px "slide" would never leave the glass.
           var travel = Math.max(
             (window.screen && screen.height) || 0,
             window.innerHeight || 0,
             el.offsetHeight || 0,
             900) + 40;
-          el.style.transition = 'transform .55s cubic-bezier(.7,0,.3,1)';
-          el.style.transform = 'translateY(-' + travel + 'px)';
-          // REAP AS SOON AS IT IS OFF THE VISIBLE VIEWPORT — not on a timer.
-          //
-          // This is the actual fix for "the top stays stuck for a second", and
-          // it is a different layer from everything v15-v17 changed. Proof
-          // from the 2026-07-30 10:24 video: while the curtain slid from page
-          // row 823 all the way to row 69, the status-bar strip's brightness
-          // held at 99.9-100.0 — DEAD CONSTANT. The curtain never painted
-          // there at all, because a position:fixed element is clipped to the
-          // layout viewport and under black-translucent that viewport starts
-          // BELOW the status bar. The strip is the document canvas, and it
-          // went dark at exactly 620ms into the lift: el.remove(). Not the
-          // transition end, not the background handover above — the removal.
-          //
-          // So the curtain's travel was never what held the strip (chasing it
-          // through -102%, calc(-100% - 90px) and pixel travel was chasing the
-          // wrong layer); the REMOVAL DELAY was. The transform needs ~72% of
-          // its 550ms to carry the box out of the visible area, and the old
-          // fixed 620ms then sat on a stale olive raster for another ~220ms
-          // with the app already fully revealed underneath.
-          //
-          // rAF-polling the rect removes it on the first frame it is genuinely
-          // gone, so the canvas repaints a frame later instead of a third of a
-          // second later. The timer stays as a safety net for the case where
-          // the transition never fires (backgrounded tab, reduced motion).
-          var reap = function () {
-            if (!el.parentNode) return;
-            var b = 1;
-            try { b = el.getBoundingClientRect().bottom; } catch (e) { b = -1; }
-            if (b <= 0) { el.remove(); return; }
+          var slide = function () {
+            el.style.opacity = '';
+            el.style.transition = 'transform .55s cubic-bezier(.7,0,.3,1)';
+            el.style.transform = 'translateY(-' + travel + 'px)';
+            // REAP ON THE FIRST FRAME IT IS GENUINELY GONE, not on a timer.
+            // The strip turns dark when this element is removed, so a fixed
+            // delay is a fixed delay of stale olive: the transform needs ~65%
+            // of its 550ms to carry the box out of view, and the old 620ms
+            // timer then sat on the stale raster for another ~264ms with the
+            // app already revealed. Measured 284ms on the 2026-07-29 video,
+            // predicted 264ms — the model and the phone agree. Polling the
+            // rect cuts it to a single frame. The timer stays as a safety net
+            // for a transition that never fires (backgrounded tab, reduced
+            // motion).
+            var reap = function () {
+              if (!el.parentNode) return;
+              var b = 1;
+              try { b = el.getBoundingClientRect().bottom; } catch (e) { b = -1; }
+              if (b <= 0) { el.remove(); return; }
+              requestAnimationFrame(reap);
+            };
             requestAnimationFrame(reap);
+            setTimeout(function () { if (el.parentNode) el.remove(); }, 700);
           };
-          requestAnimationFrame(reap);
-          setTimeout(function () { if (el.parentNode) el.remove(); }, 700);
+          // One frame at 0.999 to force the skipped canvas paint, then slide.
+          //
+          // The timer is NOT redundant with the rAF. requestAnimationFrame does
+          // not fire at all in a hidden or backgrounded web view, and handing
+          // the slide to it alone meant the curtain never lifted in that case —
+          // caught here because the test browser's pane is hidden and
+          // reproduced it exactly: splash still on screen, app fully booted
+          // behind it. Whichever fires first wins; `started` keeps it to one.
+          var started = false;
+          var go = function () { if (started) return; started = true; slide(); };
+          el.style.opacity = '0.999';
+          if (window.requestAnimationFrame) requestAnimationFrame(go);
+          setTimeout(go, 50);
         };
         // Wait for a COMPLETE screen, not for any markdown: the app emits its
         // CSS as a markdown element long before it renders anything a person
