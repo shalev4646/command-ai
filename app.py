@@ -1768,6 +1768,22 @@ html.cai-standalone [data-testid="stAppViewContainer"]:has(.cai-greet) [data-tes
        real floor — on iPhone it sat right on the home-indicator bar */
     padding-bottom: max(14px, env(safe-area-inset-bottom, 0px));
 }}
+/* ...and in the BROWSER that tint has to follow the underlay down.
+   The rule above is tuned to the home-screen underlay, whose bottom really is
+   #20270F — the tint matches its ground and is invisible. Ending the browser
+   underlay on the base colour (see body::before above, done so the page meets
+   Safari's toolbar without a seam) left this strip painting rgba(32,39,15) at
+   42-60% over #14170E, which composites 6.7-9.6/255 brighter than the page
+   around it: a lighter block sitting exactly where the composer is. That is
+   the glow left on the chat screen after the seam was closed, and it was
+   caused by fixing the seam — the two rules are one system and only the first
+   half got moved.
+   Same colour as the browser underlay's floor, so the step is 0. The blur and
+   the opacity are untouched, so it still frosts messages scrolling beneath. */
+html:not(.cai-standalone) [data-testid="stBottom"] {{
+    background: linear-gradient(180deg,
+        rgba(20,23,14,0) 0%, rgba(20,23,14,.42) 45%, rgba(20,23,14,.6) 100%) !important;
+}}
 /* the inner wrappers must not paint their own (near-black) theme color
    over the gradient strip */
 [data-testid="stBottom"] > div,
