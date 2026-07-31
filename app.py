@@ -1494,6 +1494,25 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     border-radius: 18px;
     padding: 20px 18px 16px;
 }}
+/* ── Streamlit's "Missing Submit Button" warning, suppressed. ──
+   A red developer error box, in English, over the name gate, on a soldier's
+   first launch (2026-07-31 23:29 video, ~t=8s). It is a FALSE POSITIVE: the
+   form has two form_submit_buttons and they work. Streamlit's form component
+   renders the warning whenever, at the instant the script run flips to
+   NOT_RUNNING, no submit button has registered itself with the widget manager
+   yet — and the buttons register from a mount effect, a beat later. Reproduced
+   locally with a MutationObserver: it appears and is gone 29ms later. The
+   phone is slower, so there it lasts about a second.
+
+   Scoped by SHAPE, not by guesswork. The form component renders exactly two
+   children: the content block, which carries data-testid="stVerticalBlock",
+   and this warning, in a bare wrapper with no data-testid at all. So an
+   unlabelled DIRECT child of stForm is the warning and nothing else — a real
+   st.error inside a form lives under the vertical block and is untouched.
+   display:none rather than visibility, so it never takes layout and the card
+   cannot jump when it comes and goes. ── */
+[data-testid="stForm"] > div:not([data-testid]) {{ display: none !important; }}
+
 .cai-gate-title {{ font: 600 17px Heebo, sans-serif; color: var(--text); text-align: right; }}
 .cai-gate-sub {{ font: 400 12px Heebo, sans-serif; color: rgba(239,240,232,.5);
     margin: 5px 0 0; text-align: right; line-height: 1.5; }}
