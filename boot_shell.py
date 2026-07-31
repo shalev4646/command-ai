@@ -24,6 +24,7 @@ build runs it. See the git history for the long Community-Cloud boot saga.
 import base64
 import hashlib
 import inspect
+import os
 import re
 from pathlib import Path
 
@@ -1020,20 +1021,34 @@ def patch_index_html() -> bool:
                     "font-weight: 400; src: url(data:font/woff2;base64," + b64 +
                     ") format('woff2'); }")
         head_raw = _HEAD_TEMPLATE.replace("__FACE__", face)
+        # OFF BY DEFAULT, opt in with CAI_SW=1.
+        #
+        # The worker was built to kill the launch flash, and re-adding the home
+        # screen icon killed it first — measured on the 2026-07-31 23:29 video,
+        # where the launch now runs black -> grey -> olive with no light surface
+        # anywhere. So its remaining value is speed (~3.9s a launch), which is
+        # real but is not worth shipping an unproven-on-iOS-Safari worker days
+        # before the pilot. The flag keeps the code on main and out of
+        # production until someone decides otherwise, and it means an unrelated
+        # fix in this file can deploy without dragging the worker along.
+        sw_on = os.environ.get("CAI_SW") == "1"
         # the registration rides at the end of the boot script, so it is part of
         # the stamped payload like everything else
-        boot_js = _BOOT_JS.replace("    </script>", _SW_REG + "    </script>", 1)
+        boot_js = (_BOOT_JS.replace("    </script>", _SW_REG + "    </script>", 1)
+                   if sw_on else _BOOT_JS)
         # stamped with a hash of exactly what is about to be written — including
         # the font bytes — so a swapped font file re-patches too
         stamp = _VERSION + "-" + hashlib.sha256(
-            (_MICRO + _PAD_JS + head_raw + _SPLASH_HTML + boot_js + _SW_JS
+            (_MICRO + _PAD_JS + head_raw + _SPLASH_HTML + boot_js
+             + (_SW_JS if sw_on else "")
              + "".join(_STATIC_VIEWPORT_TOKENS)).encode("utf-8")
         ).hexdigest()[:8]
         # The worker carries the stamp as its cache name, so publishing it here
         # — before the early return — is what makes a shell edit drop the old
-        # cache. Unconditional: the index may already be current while the
-        # worker file is missing (fresh container, read-only rebuild).
-        publish_root("sw.js", _SW_JS.replace("__VER__", stamp).encode("utf-8"))
+        # cache. Unconditional while enabled: the index may already be current
+        # while the worker file is missing (fresh container, read-only rebuild).
+        if sw_on:
+            publish_root("sw.js", _SW_JS.replace("__VER__", stamp).encode("utf-8"))
         # __VER__ is stamped in AFTER hashing, like head_raw's: the hash covers
         # the placeholder, so it stays a fixed point instead of chasing itself.
         boot_js = boot_js.replace("__VER__", stamp)
