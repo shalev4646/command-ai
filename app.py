@@ -1143,11 +1143,20 @@ html:not(.cai-standalone) body::before {{
        also robust to WHICH colour Safari picked — sampled or declared, it is
        that value at both ends.
 
-       The glow survives; it peaks 14% above the bottom and eases out over the
-       last ~110px instead of being cut mid-step. Depends on the dvh height
-       above: that is what puts 100% exactly at the toolbar edge. */
+       NO BRIGHT STOP NEAR THE BOTTOM. Keeping the glow and easing it out over
+       the last 14% was tried and it traded the seam for a SMEAR: on the chat
+       screen that put a 12/16/1 peak right behind the composer and dropped it
+       again across ~250px, and a step that size over a distance that short is
+       exactly what the eye reads as a smudge (2026-08-01 screenshots).
+
+       The conflict is structural and worth stating: the design wants the glow
+       brightest at the bottom, and in the browser the bottom IS a dark
+       toolbar. There is no placement of a bright stop that satisfies both, so
+       the browser gives the glow up — 4/5/1 of lift at midpoint, spread over
+       ~985px, which is a vignette rather than a band, landing on the base
+       colour at both ends. The home-screen app keeps the real thing. */
     background: linear-gradient(180deg,
-        #14170E 0%, #161A0F 52%, #20270F 86%, #14170E 100%);
+        #14170E 0%, #181C0F 55%, #14170E 100%);
 }}
 /* iOS rubber-band overscroll must reveal the dark backdrop, never a light
    page edge; disable the bounce chain where the platform honors it */
