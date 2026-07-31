@@ -608,7 +608,21 @@ _BOOT_JS = """
             requestAnimationFrame(reap);
             setTimeout(function () { if (el.parentNode) el.remove(); }, 700);
           };
-          // One frame at 0.999 to force the skipped canvas paint, then slide.
+          // One PAINTED frame at 0.999 to force the skipped canvas paint, then
+          // slide.
+          //
+          // DOUBLE rAF, and that is the whole point. A single
+          // requestAnimationFrame does NOT mean "after the next paint" — the
+          // callback runs inside the next frame's rendering steps, BEFORE
+          // style/layout/paint. `slide()` clears the opacity on its first
+          // line, so with one rAF the 0.999 was set and unset within the same
+          // frame and never composited: the two writes collapse and the whole
+          // manoeuvre is a no-op. That is why the status-bar strip kept its
+          // stale olive for the entire slide on the 2026-07-31 video, exactly
+          // as it did before this was added. Nesting the second rAF gives the
+          // 0.999 one real frame on screen, which is what makes WebKit repaint
+          // the canvas it skips while an opaque element covers the layout
+          // viewport — and iOS only learns the new colour from that repaint.
           //
           // The timer is NOT redundant with the rAF. requestAnimationFrame does
           // not fire at all in a hidden or backgrounded web view, and handing
@@ -616,11 +630,15 @@ _BOOT_JS = """
           // caught here because the test browser's pane is hidden and
           // reproduced it exactly: splash still on screen, app fully booted
           // behind it. Whichever fires first wins; `started` keeps it to one.
+          // 80ms because the rAF path now needs TWO frames (33ms) and must be
+          // allowed to win whenever frames are being produced at all.
           var started = false;
           var go = function () { if (started) return; started = true; slide(); };
           el.style.opacity = '0.999';
-          if (window.requestAnimationFrame) requestAnimationFrame(go);
-          setTimeout(go, 50);
+          if (window.requestAnimationFrame) {
+            requestAnimationFrame(function () { requestAnimationFrame(go); });
+          }
+          setTimeout(go, 80);
         };
         // Wait for a COMPLETE screen, not for any markdown: the app emits its
         // CSS as a markdown element long before it renders anything a person
