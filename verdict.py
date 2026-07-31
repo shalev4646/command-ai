@@ -22,7 +22,21 @@ _LINE_RE = re.compile(
     r"^\s*[" + _BIDI_MARKS + r"]*(?:\*\*)?\s*פסיקה:\s*\*{0,2}\s*(.+?)[^\S\n]*$",
     re.MULTILINE,
 )
-_TERM_RE = re.compile(r"^(לא\s+)?(מותר|אסור|מוסמך|רשאי|זכאי|פטור|חייב|ניתן|אפשר|מגיע)(.*)$")
+# ── The two halves of a verdict clause's opener, shared by every gate below
+# (the card's colour classifier and the chat chip): one list, so the card can
+# never colour a clause the chip refuses to recognise, or vice versa. ──
+#
+# NEG: every negation the model actually writes. Each persona prompt says
+# "אתה פונה אל החייל/המפקד בגוף שני", and in that register a term is negated
+# with the copula — "אינך זכאי" — not with לא. A לא-only gate therefore missed
+# the COMMONEST negative phrasing: the pilot's "**פסיקה:** אינך זכאי להחזר
+# דמ"כ בגין אותה ארוחה" scored no colour at all and rendered as plain bold
+# body text (phone screenshot, 2026-08-01). Bare אין is deliberately absent —
+# it negates a noun ("אין זכאות"), never a term, so it could only match by
+# accident.
+NEG = r"(?:לא|אינני|אינכם|אינכן|אינך|אינו|אינה|אינם|אינן|איני)"
+TERM = r"(?:מותר|אסור|מוסמך|רשאי|זכאי|פטור|חייב|ניתן|אפשר|מגיע(?:\s+ל[ךי])?)"
+_TERM_RE = re.compile(rf"^({NEG}\s+)?({TERM})(.*)$")
 _OPPOSE_POS = re.compile(r"מותר|רשאי|זכאי|מוסמך|פטור|מגיע")
 
 
@@ -74,28 +88,22 @@ def verdict_clauses(content: str) -> list[dict]:
 # A verdict clause must OPEN with a term. The model sometimes opens with a
 # TOPIC ("בנוגע למסדר בוקר — ייתכן שאתה פטור...") — chipping that fragment
 # produced a meaningless green badge on the pilot phone check (2026-07-10),
-# so a non-term opener never chips. A short qualifier may follow the term
-# ("אסור בתנועה רגלית", pilot 2026-07-11). The qualifier bars ';' (a
-# mid-list cut) and '*' (markdown residue), and its 18-char cap keeps the
-# chip badge-sized: .verdict-chip is a nowrap pill with no max-width, and
-# term+18 chars still fits the 290px breakpoint — this cap IS the overflow
-# guard.
+# so a non-term opener never chips. A qualifier may follow the term ("אסור
+# בתנועה רגלית", pilot 2026-07-11); it bars ';' (a mid-list cut) and '*'
+# (markdown residue), and CHIP_QUAL_MAX keeps it badge-sized.
+#
+# ONE cap, both chip paths. The lone chip used to be capped at 18 on the
+# reasoning that .verdict-chip is a NOWRAP pill with no max-width, so the cap
+# WAS the overflow guard; the two-sided stacked path meanwhile shipped 50,
+# because a chip that wraps (.verdict-wrap) only needs its clause to stay
+# badge-LIKE, not paragraph-short. 18 is what rejected the pilot's 26-char
+# qualifier ("להחזר דמ"כ בגין אותה ארוחה") and dropped that whole ruling into
+# the body (2026-08-01). Wrapping is now applied by length on both paths, so
+# the guard the 18 provided is gone and the distinction with it. 50 mirrors
+# the none-clause budget (NONE_CHIP_MAX minus a term).
+CHIP_QUAL_MAX = 50
 CHIP_TERM_RE = re.compile(
-    r"^(?P<neg>לא\s+)?"
-    r"(?P<term>מותר|אסור|מוסמך|רשאי|זכאי|פטור|חייב|ניתן|אפשר|מגיע(?:\s+ל[ךי])?)"
-    r"(?P<qual>\s+[^;*]{1,18})?$"
-)
-# Stacked-chip qualifier cap. The 18-char cap above exists because the lone
-# chip is a NOWRAP pill; stacked chips sit in their own vertical block and
-# may wrap (app.py adds .verdict-wrap on long texts), so the cap only has to
-# keep the clause badge-like rather than a paragraph. 50 mirrors the none-
-# clause budget (NONE_CHIP_MAX minus a term). Without this, one extra model
-# word ("אסור — איום הוא עבירה משמעתית", 24 chars, round-5 live smoke
-# 2026-07-27) collapsed the whole two-chip stack back to a bare "✗ אסור".
-CHIP_TERM_STACKED_RE = re.compile(
-    r"^(?P<neg>לא\s+)?"
-    r"(?P<term>מותר|אסור|מוסמך|רשאי|זכאי|פטור|חייב|ניתן|אפשר|מגיע(?:\s+ל[ךי])?)"
-    r"(?P<qual>\s+[^;*]{1,50})?$"
+    rf"^(?P<neg>{NEG}\s+)?(?P<term>{TERM})(?P<qual>\s+[^;*]{{1,{CHIP_QUAL_MAX}}})?$"
 )
 # A qualifier that itself cites a verdict/ruling verb or a negation is a
 # COMPOUND ruling ("מותר אך אסור במדים", "ניתן צו האוסר...") — one color
@@ -114,19 +122,18 @@ QUAL_CONFLICT_RE = re.compile(
 NONE_CHIP_MAX = 60
 
 
-def chip_clause(clause: str, stacked: bool = False) -> tuple[str, str, str] | None:
+def chip_clause(clause: str) -> tuple[str, str, str] | None:
     """(cls, icon, text) for ONE ruling clause that must stand alone as a
     chat chip — no remainder returns to the body — or None when it cannot
     honestly chip. Used by app.py's two-sided (';'-separated) stacked-chip
-    path (stacked=True: qualifier may run to the wrappable stacked cap);
-    the single-clause path keeps its own sep/rest handling but shares
+    path; the single-clause path keeps its own sep/rest handling but shares
     the regexes above."""
     s = clause.strip("* ." + _BIDI_MARKS)
     # the no-rule clause: protective "you broke no rule", coloured none —
     # never a wrong colour ("לא נמצאה בפקודות חובה למצוא מחליף מיידי")
     if s.startswith("לא נמצא"):
         return ("none", "ⓘ", s) if len(s) <= NONE_CHIP_MAX else None
-    m = CHIP_TERM_RE.match(s) or (CHIP_TERM_STACKED_RE.match(s) if stacked else None)
+    m = CHIP_TERM_RE.match(s)
     if not m:
         return None
     qual = (m.group("qual") or "").strip()

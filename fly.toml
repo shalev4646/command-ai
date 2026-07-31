@@ -4,6 +4,22 @@
 app = "commandai"
 primary_region = "fra"
 
+# Swap is the OOM airbag, not a fix: 2026-07-27 12:08Z the kernel killed
+# streamlit at 871MB anon-RSS while ONE user asked ONE question — the machine
+# rebooted mid-answer and the question was lost. With swap the same spike
+# slows down instead of dying. The actual allocations are being trimmed in
+# app code; swap stays as insurance. Costs nothing (disk-backed).
+#
+# IT MUST LIVE HERE, above every table header, and that is the whole story of
+# why it never worked. It used to sit below [[http_service.checks]], where TOML
+# scopes a bare key to the LAST table opened — so it parsed as
+# http_service.checks[0].swap_size_mb, an unknown key inside a health check,
+# which Fly drops without a word. Confirmed twice: absent from the machine
+# config (`fly machine status -d` -> guest has no swap field) and absent from
+# the kernel (`/proc/meminfo` -> SwapTotal 0) on 2026-07-28 AND again on
+# 2026-08-01, across many deploys that all "succeeded".
+swap_size_mb = 768
+
 [build]
 
 [http_service]
@@ -29,15 +45,15 @@ primary_region = "fra"
     method = "GET"
     path = "/_stcore/health"
 
-# Swap is the OOM airbag, not a fix: 2026-07-27 12:08Z the kernel killed
-# streamlit at 871MB anon-RSS while ONE user asked ONE question — the machine
-# rebooted mid-answer and the question was lost. With swap the same spike
-# slows down instead of dying. The actual allocations are being trimmed in
-# app code; swap stays as insurance. Costs nothing (disk-backed).
-swap_size_mb = 768
-
 [[vm]]
-  size = "shared-cpu-1x"
+  # TWO shared vCPUs, not one. Measured on production 2026-08-01 with real
+  # Streamlit sessions (websocket + BackMsg.rerun_script, waiting for
+  # script_finished): 1 session finishes in 1.4s, 6 in 4.4s, 12 in 5.6s, 20 in
+  # 12.7s — nothing ever failed, and memory never moved (895->897MB across all
+  # of it). The whole curve is script runs queueing behind ONE core, so the
+  # pilot's 12 testers pay for each other's boots in latency. The second core
+  # is the only lever that touches that, and it is a couple of dollars a month.
+  size = "shared-cpu-2x"
   # 2GB, not 1GB. At 1GB the app rested at ~664-727MB anon with ~56MB
   # available — a 6% margin on a process whose answer path allocates in
   # hundreds of MB. That margin is what killed it on 2026-07-27 (OOM at

@@ -66,7 +66,7 @@ except Exception:
     def _verdict_clauses(_content):
         return []
 
-    def _chip_clause(_clause, stacked=False):
+    def _chip_clause(_clause):
         return None
     # never-matching stand-ins: every chip gate fails closed, the ruling
     # line stays body text — the same graceful "feature hides" degradation
@@ -1019,6 +1019,11 @@ ACCENT_BRIGHT = role_meta["bright"]
 # accent as an "r,g,b" triplet so drawer/settings tints can be role-aware via
 # rgba(var(--accent-rgb), <alpha>) instead of a hardcoded olive.
 ACCENT_RGB = ",".join(str(int(ACCENT.lstrip("#")[i:i + 2], 16)) for i in (0, 2, 4))
+# Card/bubble fill (--surface below). A Python constant because the answer
+# action row lives in a component IFRAME and has to paint this exact colour
+# itself — CSS variables do not cross into a separate document, and any drift
+# between the two would show up as a visible rectangle inside the bubble.
+SURFACE = "#21261A"
 
 # chat screen needs room under the fixed header band; entry has no header.
 # --cai-sat is the iOS status-bar inset (measured on the shell doc, pushed
@@ -1053,7 +1058,7 @@ st.markdown(f"""
 
 :root {{
     --bg: #14170E;
-    --surface: #21261A;
+    --surface: {SURFACE};
     --surface-hover: #2A3120;
     --text: #EFF0E8;
     --text-sec: rgba(239,240,232,.6);
@@ -1318,11 +1323,15 @@ body::-webkit-scrollbar {{ display: none !important; width: 0 !important; }}
 a[href*="streamlit.io/cloud"],
 a[href*="share.streamlit.io"] {{ display: none !important; }}
 /* the shell-darkener injects `iframe{{background:#14170E}}` into every
-   same-origin ancestor document INCLUDING this one; on the answer action
-   row (transparent-bodied pills iframe) that painted an opaque dark slab
-   over the page gradient — the "black mark" behind העתק/וואטסאפ. Component
-   iframes in THIS document must stay transparent (the injected rule keeps
-   its real job: darkening the cloud-shell documents above us). */
+   same-origin ancestor document INCLUDING this one; keep component iframes
+   in THIS document out of it (the injected rule keeps its real job:
+   darkening the cloud-shell documents above us).
+   This is NOT what governs whether a component frame reads as transparent —
+   an element background paints behind the frame's canvas, and the canvas is
+   opaque whenever Streamlit's `color-scheme: normal` on the iframe disagrees
+   with the scheme of the document inside it. Only that document can fix it;
+   see the answer action row's own <style> for the full story. Every other
+   component here is height=0, so this rule is all they need. */
 [data-testid="stElementContainer"] iframe,
 iframe[data-testid="stIFrame"] {{ background: transparent !important; }}
 [data-testid="stAppViewContainer"], [data-testid="stBottom"], [data-testid="stSidebar"] {{ direction: rtl; }}
@@ -5176,7 +5185,13 @@ _REFUSAL_SENTENCE = "המידע לא קיים בפקודות שסופקו"  # ma
 # QUAL_CONFLICT_RE, imported at the top with the sibling defensive
 # fallback) so the gate is unit-tested in eval's structural suite and
 # shared with chip_clause(), the two-sided stacked-chip path's gate.
-# Their full rationale (topic openers, the 18-char badge cap) lives there.
+# Their full rationale (negation forms, topic openers, the badge cap)
+# lives there.
+# Past this length a chip stops being a pill and becomes a sentence, so it
+# switches to .verdict-wrap (white-space:normal, softer radius) instead of
+# overflowing a nowrap pill. Both chip paths use it — that shared wrap is
+# what let the term gate settle on one qualifier cap (verdict.CHIP_QUAL_MAX).
+_CHIP_WRAP_OVER = 28
 
 
 def _verdict_chip(content: str) -> tuple[str | None, str]:
@@ -5209,24 +5224,24 @@ def _verdict_chip(content: str) -> tuple[str | None, str]:
         # stacked chips with nothing returning to the body. Any clause that
         # can't stand alone falls through to the single-clause path below
         # unchanged. The 400-char stream spill guard in _stream_answer stays
-        # sound: both chip caps (18-char qualifier / 60-char none clause)
+        # sound: both chip caps (50-char qualifier / 60-char none clause)
         # sit far below 400, so a mid-line cut can never produce two valid
         # chips that the full-line rerun parse would reject.
         clauses = [c for c in raw.split(";") if c.strip()]
         if len(clauses) == 2:
-            chips = [_chip_clause(c, stacked=True) for c in clauses]
+            chips = [_chip_clause(c) for c in clauses]
             if all(chips):
                 remainder = content[m.end():]
                 body = content[: m.start()]
                 if remainder:
                     body += "\n\n" + remainder.lstrip("\n")
-                # .verdict-wrap by LENGTH, not clause kind: stacked term
-                # clauses may now carry a long qualifier (see verdict.py's
-                # CHIP_TERM_STACKED_RE) and a nowrap pill would overflow the
-                # 290px breakpoint; short pills keep the tighter nowrap look.
+                # .verdict-wrap by LENGTH, not clause kind: a clause may carry
+                # a long qualifier (verdict.CHIP_QUAL_MAX) and a nowrap pill
+                # would overflow the 290px breakpoint; short pills keep the
+                # tighter nowrap look.
                 stack = '<div class="verdict-stack">' + "".join(
                     f'<span class="verdict-chip verdict-{cls}'
-                    f'{" verdict-wrap" if len(text) > 28 else ""}">'
+                    f'{" verdict-wrap" if len(text) > _CHIP_WRAP_OVER else ""}">'
                     f"{icon} {html.escape(text)}</span>"
                     for cls, icon, text in chips
                 ) + "</div>"
@@ -5284,7 +5299,9 @@ def _verdict_chip(content: str) -> tuple[str | None, str]:
             if remainder:
                 body += "\n\n" + remainder.lstrip("\n")
             body = body.lstrip()
-            chip = f'<span class="verdict-chip verdict-{cls}">{icon} {html.escape(verdict)}</span>'
+            wrap = " verdict-wrap" if len(verdict) > _CHIP_WRAP_OVER else ""
+            chip = (f'<span class="verdict-chip verdict-{cls}{wrap}">'
+                    f"{icon} {html.escape(verdict)}</span>")
             return chip, body
     # neutral chip only when the refusal IS the answer (sentence at the
     # top, incl. after a short topic prefix like "לגבי סכום המענק — ") —
@@ -5390,10 +5407,35 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
              in THIS document -->
         <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Suez+One&display=swap" rel="stylesheet">
         <style>
+        /* ── THE FRAME PAINTS ITS OWN GROUND. ──
+           Streamlit hardcodes `color-scheme: normal` on every component
+           iframe (1.58, IFrame styled-component). When an iframe element's
+           used colour scheme differs from the scheme of the document inside
+           it, the engine stops compositing the frame transparently and fills
+           its canvas opaquely, in the INNER document's scheme — and this
+           document, having declared nothing, is light. That is the white slab
+           behind העתק/וואטסאפ on the pilot's phone (2026-08-01 screenshot),
+           and the same mechanism with the colours swapped produced the dark
+           slab of 2026-07-18 that was pinned on the shell-darkener instead.
+           Reproduced both ways in Chromium by forcing the mismatch —
+           scratchpad/iframe_repro.html, rows 2 and 4.
+
+           The app's `iframe {{ background: transparent !important }}` cannot
+           reach this: that is the ELEMENT's background, which paints BEHIND
+           the canvas the engine just made opaque. Nothing outside the frame
+           can fix a canvas inside it.
+
+           So stop depending on transparency at all: declare the scheme (no
+           mismatch left to trigger the fill) AND paint the bubble's own
+           colour (if some engine fills anyway, it fills with the colour that
+           was already there). SURFACE is the same token --surface is built
+           from, so the two cannot drift apart. */
+        :root {{ color-scheme: dark; }}
         /* text-size-adjust: iOS Safari inflates small text inside iframes,
            blowing the pills up until the row wraps and the last pill (פתח
            PDF) is clipped by the fixed iframe height */
-        html, body {{ -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }}
+        html, body {{ -webkit-text-size-adjust: 100%; text-size-adjust: 100%;
+                      background: {SURFACE}; }}
         body {{ margin:0; direction:rtl; }}
         /* one row, ALWAYS: wrapping used to rely on a ResizeObserver growing
            the iframe, but Streamlit keeps the layout slot at the declared
