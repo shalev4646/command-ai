@@ -1129,6 +1129,25 @@ html:not(.cai-standalone) body::before {{
     bottom: auto;
     height: 100svh;
     height: 100dvh;
+    /* ...and RESOLVE BACK TO THE BASE at the very bottom.
+       Safari's toolbar is tinted #14170E (theme-color), the gradient's last
+       stop is #20270F — 12/16/1 apart per channel, which on a near-black is a
+       >60% luminance step. That step lands exactly on the toolbar's rounded
+       top edge, which is what makes the rounding pop and reads as the design
+       breaking off (2026-08-01 crop). The home-screen app has no toolbar, so
+       there the glow correctly runs to the glass and this rule must not apply.
+
+       Fixing it from the PAGE side, not by re-tinting the toolbar: theme-color
+       paints the top chrome as well, so matching it to #20270F would only move
+       the same seam to the status bar. Landing the page on #14170E instead is
+       also robust to WHICH colour Safari picked — sampled or declared, it is
+       that value at both ends.
+
+       The glow survives; it peaks 14% above the bottom and eases out over the
+       last ~110px instead of being cut mid-step. Depends on the dvh height
+       above: that is what puts 100% exactly at the toolbar edge. */
+    background: linear-gradient(180deg,
+        #14170E 0%, #161A0F 52%, #20270F 86%, #14170E 100%);
 }}
 /* iOS rubber-band overscroll must reveal the dark backdrop, never a light
    page edge; disable the bounce chain where the platform honors it */
