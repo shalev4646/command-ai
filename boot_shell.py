@@ -42,7 +42,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v19"
+_VERSION = "v20"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -554,25 +554,50 @@ _BOOT_JS = """
           // with nothing logged anywhere. Math.max with a floor because a
           // hidden/backgrounded web view can report screen.height AND
           // innerHeight as 0, and a 40px "slide" would never leave the glass.
-          var travel = Math.max(
+          //
+          // OVERSHOOT ×2, because the easing's TAIL has to land off the glass.
+          // cubic-bezier(.7,0,.3,1) is symmetric: it decelerates through its
+          // entire second half. Travelling only screen+40 put the moment the
+          // bottom edge crosses the top of the glass at 89% of the distance —
+          // i.e. deep inside that tail. Measured on the 2026-07-31 video: the
+          // edge peaked at 97 rows/frame and was down to 43 by the time it
+          // reached the top, 103ms of visibly slowing curtain, and THAT is
+          // what "it gets stuck a bit at the end and doesn't lift perfectly"
+          // is. Nothing to do with the strip (that case is closed) — the
+          // curtain was easing out ON SCREEN.
+          //
+          // Doubling the distance moves the crossing to under 50% of the
+          // travel on EVERY geometry — the glass is at most `screen` tall and
+          // the travel is always 2*(screen+40) — so the edge now leaves at
+          // ~98% of peak speed and the whole deceleration happens above the
+          // notch, where there is nothing to see. LIFT_MS grows to match so
+          // the VISIBLE sweep keeps its old tempo: 367ms against 378ms
+          // before, i.e. the same lift, minus the stall. The extra ~390ms of
+          // transition is never played — `reap` below drops the element on
+          // the frame its bottom clears 0.
+          var LIFT_MS = 760, LIFT_OVERSHOOT = 2;
+          var travel = (Math.max(
             (window.screen && screen.height) || 0,
             window.innerHeight || 0,
             el.offsetHeight || 0,
-            900) + 40;
+            900) + 40) * LIFT_OVERSHOOT;
           var slide = function () {
             el.style.opacity = '';
-            el.style.transition = 'transform .55s cubic-bezier(.7,0,.3,1)';
+            el.style.transition = 'transform ' + LIFT_MS + 'ms cubic-bezier(.7,0,.3,1)';
             el.style.transform = 'translateY(-' + travel + 'px)';
             // REAP ON THE FIRST FRAME IT IS GENUINELY GONE, not on a timer.
             // The strip turns dark when this element is removed, so a fixed
-            // delay is a fixed delay of stale olive: the transform needs ~65%
-            // of its 550ms to carry the box out of view, and the old 620ms
+            // delay is a fixed delay of stale olive: the transform needs ~48%
+            // of its 760ms to carry the box out of view, and the old 620ms
             // timer then sat on the stale raster for another ~264ms with the
             // app already revealed. Measured 284ms on the 2026-07-29 video,
             // predicted 264ms — the model and the phone agree. Polling the
             // rect cuts it to a single frame. The timer stays as a safety net
             // for a transition that never fires (backgrounded tab, reduced
-            // motion).
+            // motion) — it is deliberately SHORTER than LIFT_MS: by 700ms a
+            // running transition is 1776px up, long gone, so removing there
+            // is invisible, while a transition that never started must not be
+            // left on screen a moment longer than it already is.
             var reap = function () {
               if (!el.parentNode) return;
               var b = 1;

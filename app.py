@@ -302,7 +302,15 @@ if splash_active:
 /* the parked curtain must END invisible: it stays in the DOM above the
    viewport, and iOS Safari (no theme-color meta yet) SAMPLES it when tinting
    its chrome — an olive ghost kept the bars olive after the lift */
-@keyframes bootCurtainUp { 0% { transform:translateY(0); } 99% { opacity:1; } 100% { transform:translateY(-101%); opacity:0; visibility:hidden; } }
+/* -202%, not -101%: the element IS the layout viewport, so -101% put the
+   moment it clears the glass at 99% of the travel — inside the ease-out tail
+   of cubic-bezier(.7,0,.3,1), which meant it crawled the last stretch at 6%
+   of its peak speed. Twice the distance puts the crossing just under half the
+   travel, where the curtain is still accelerating, and the duration grows to
+   match so the visible sweep keeps its tempo. Same fix as the live curtain in
+   boot_shell.lift(); this block only runs on hosts where the shell patch does
+   not apply. */
+@keyframes bootCurtainUp { 0% { transform:translateY(0); } 99% { opacity:1; } 100% { transform:translateY(-202%); opacity:0; visibility:hidden; } }
 .cai-splash {
     position: fixed; inset: 0; background: #99A26B; z-index: 999990;
     display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 18px;
@@ -310,7 +318,7 @@ if splash_active:
        curtain lift reveals the same layout instead of the logo jumping up
        from dead-center. --cai-sat pushes it clear of the iOS notch. */
     padding-top: calc(var(--cai-sat, 0px) + 14vh);
-    animation: bootCurtainUp .65s cubic-bezier(.7,0,.3,1) both; animation-delay: 30s;
+    animation: bootCurtainUp 1.05s cubic-bezier(.7,0,.3,1) both; animation-delay: 30s;
     pointer-events: none;
 }
 /* NO entrance animation on ANY of the three: the OS launch image now paints
@@ -1066,7 +1074,7 @@ st.markdown(f"""
 @keyframes enterScale {{ from {{ opacity:0; transform:scale(.6); }} to {{ opacity:1; transform:none; }} }}
 /* mirror of bootCurtainUp: the re-armed curtain must also PARK invisible,
    or Safari keeps sampling the olive ghost for its chrome tint */
-@keyframes curtainUp {{ 0% {{ transform:translateY(0); }} 99% {{ opacity:1; }} 100% {{ transform:translateY(-101%); opacity:0; visibility:hidden; }} }}
+@keyframes curtainUp {{ 0% {{ transform:translateY(0); }} 99% {{ opacity:1; }} 100% {{ transform:translateY(-202%); opacity:0; visibility:hidden; }} }}
 
 html, body, [data-testid="stApp"], [data-testid="stAppViewContainer"] {{
     font-family: Heebo, -apple-system, "Segoe UI", Arial, sans-serif;
@@ -1374,7 +1382,7 @@ header {{ visibility: hidden; }}
    the animation NAME, which restarts the clock — hold 1.15s more, then
    lift. Element/child styles live in the boot block. ── */
 .cai-splash {{
-    animation: curtainUp .65s cubic-bezier(.7,0,.3,1) both; animation-delay: 1.15s;
+    animation: curtainUp 1.05s cubic-bezier(.7,0,.3,1) both; animation-delay: 1.15s;
 }}
 
 /* ── Entry screen header (staggers in after the splash lifts) ── */
