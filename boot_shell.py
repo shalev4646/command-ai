@@ -42,7 +42,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v20"
+_VERSION = "v21"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -687,6 +687,27 @@ def _index_path() -> Path:
     return Path(inspect.getfile(st)).parent / "static" / "index.html"
 
 
+def publish_root(name: str, data: bytes) -> str:
+    """Write a file into the document ROOT, so it is served at /<name>.
+
+    publish_static puts things under /static/cai/, which is right for assets
+    and wrong for a service worker: a worker may only control URLs at or below
+    its own path, and the thing worth controlling is the document at /. So this
+    one writes beside index.html instead.
+
+    Streamlit's handler falls back to the SPA document for unknown paths, so
+    /sw.js answered 200 with text/html long before this existed — the same trap
+    publish_static documents. Presence is proved by content-type, never status.
+    """
+    try:
+        p = _index_path().parent / name
+        if not p.exists() or p.read_bytes() != data:
+            p.write_bytes(data)
+        return "/" + name
+    except Exception:
+        return ""
+
+
 def publish_static(name: str, data: bytes) -> str:
     """Write a PWA asset beside Streamlit's bundle and return its STABLE URL.
 
@@ -816,6 +837,171 @@ def _strip(src: str) -> str:
     return src
 
 
+# ── Service worker ───────────────────────────────────────────────────────────
+# WHY: on the pilot's link index.html takes ~3.9s to arrive, and iOS drops its
+# launch image the moment that download ends — handing over to a web view whose
+# first paint is still 100-160ms away. Measured on the 2026-07-31 21:10 video:
+# the screen is pixel-identical (frame delta 0.000) from 1.0s to 4.7s, which is
+# the launch PNG; then a linear dissolve to a base fitted at #F0F0E8 (0.82/ch
+# rms) over 100ms; then a one-frame snap back to olive as the web view finally
+# paints. Nothing on the page can shorten that gap, because the gap exists
+# before the page exists.
+#
+# Serving the document from a cache removes the download, so the first paint
+# lands in ~100ms — long before iOS lets go — and the gap has nothing to show.
+# It also takes ~3.9s off every launch, which matters more than the flash.
+#
+# Cache-first on the document, revalidating behind it. Network-first would be
+# correct-by-construction and worth nothing here: the whole problem IS that the
+# network takes four seconds, so waiting for it defeats the purpose.
+#
+# The staleness that buys is bounded on purpose:
+#   * the cache name carries the shell stamp, so any shell edit starts a new
+#     cache and drops the old one whole;
+#   * caching a document ALSO pre-caches the bundle URLs it names, so a cached
+#     index.html can never reference a bundle the cache lacks — the one failure
+#     that would white-screen the app after a deploy;
+#   * a /static/ asset that 404s means the pair went stale anyway, so the caches
+#     are purged and the next launch is clean.
+#
+# Streamlit's transport is never touched. /_stcore carries the websocket and the
+# health probe, /media and /component are per-session — all pass straight
+# through, and non-GET never reaches the handler at all.
+_SW_JS = """/* CommandAI service worker — __VER__ */
+var SHELL = 'cai-__VER__', DOC = '/';
+
+function bypass(u) {
+  var p = u.pathname;
+  return p.indexOf('/_stcore') === 0 || p.indexOf('/media') === 0
+      || p.indexOf('/component') === 0 || p.indexOf('/vendor') === 0;
+}
+function purge() {
+  return caches.keys().then(function (ks) {
+    return Promise.all(ks.map(function (k) { return caches.delete(k); }));
+  });
+}
+/* Pull the bundle out of a freshly cached document, so the two never drift. */
+function precache(c, res) {
+  return res.clone().text().then(function (html) {
+    var re = /(?:src|href)="\\.(\\/static\\/[^"]+)"/g, urls = [], m;
+    while ((m = re.exec(html))) if (urls.indexOf(m[1]) < 0) urls.push(m[1]);
+    return Promise.all(urls.map(function (p) {
+      return c.match(p).then(function (h) {
+        return h ? null : c.add(p).catch(function () {});
+      });
+    }));
+  }).catch(function () {});
+}
+
+self.addEventListener('install', function (e) {
+  e.waitUntil(caches.open(SHELL).then(function (c) {
+    return c.add(DOC).then(function () {
+      return c.match(DOC).then(function (r) { return r ? precache(c, r) : null; });
+    });
+  }).catch(function () {}).then(function () { return self.skipWaiting(); }));
+});
+
+self.addEventListener('activate', function (e) {
+  e.waitUntil(caches.keys().then(function (ks) {
+    return Promise.all(ks.map(function (k) {
+      return k === SHELL ? null : caches.delete(k);
+    }));
+  }).catch(function () {}).then(function () { return self.clients.claim(); }));
+});
+
+self.addEventListener('fetch', function (e) {
+  var req = e.request;
+  if (req.method !== 'GET') return;
+  var u;
+  try { u = new URL(req.url); } catch (err) { return; }
+  if (u.origin !== self.location.origin || bypass(u)) return;
+
+  if (req.mode === 'navigate') {
+    e.respondWith(caches.open(SHELL).then(function (c) {
+      return c.match(DOC).then(function (hit) {
+        var net = fetch(req).then(function (res) {
+          if (res && res.ok) { c.put(DOC, res.clone()); precache(c, res); }
+          return res;
+        });
+        if (hit) { net.catch(function () {}); return hit; }
+        return net;
+      });
+    }));
+    return;
+  }
+
+  if (u.pathname.indexOf('/static/') === 0) {
+    e.respondWith(caches.open(SHELL).then(function (c) {
+      return c.match(req).then(function (hit) {
+        if (hit) return hit;
+        return fetch(req).then(function (res) {
+          if (res && res.ok) c.put(req, res.clone());
+          else if (res && res.status === 404) purge();
+          return res;
+        });
+      });
+    }));
+  }
+});
+"""
+
+# Registered on `load`, never before: the worker's install fetches the document
+# again, and on a 13KB/s link that must not compete with the boot it is meant to
+# speed up. The win starts at the NEXT launch either way.
+#
+# ?v=<stamp> is not decoration, it is the update mechanism. Streamlit's static
+# handler serves everything beside index.html as `public, immutable,
+# max-age=31536000` — a bundle policy, applied to our worker because it lives in
+# the same directory, and we do not own that handler. Modern engines bypass the
+# HTTP cache when they poll a worker script, but `immutable` is exactly the hint
+# that tells one not to, and a worker that never updates pins the app to a stale
+# shell permanently. Versioning the REGISTRATION URL sidesteps the question:
+# a new stamp is a new script URL, which is an unconditional install no cache
+# can intercept. Query strings do not affect scope, so this still controls /.
+_SW_REG = """
+      // isSecureContext, not a protocol test: it is true for https AND for
+      // localhost, which is the only way this is testable before it ships.
+      (function () {
+        if (!('serviceWorker' in navigator) || !window.isSecureContext) return;
+        // ESCAPE HATCH. A worker that goes wrong on a phone I cannot reach is
+        // the one failure mode with no remote fix — the stale shell it serves
+        // is also the shell that would carry the repair. ?nosw=1 tears the
+        // whole thing out from the address bar; ?nosw=0 puts it back.
+        //
+        // The flag PERSISTS, and that is the point. Tearing down without it
+        // buys exactly one worker-free load, because the very next launch
+        // re-registers and re-breaks whatever was broken. Verified locally:
+        // after unregister() the page keeps its controller until it is
+        // replaced, so the old worker goes on serving — and re-creates its own
+        // cache on the next caches.open — for the remainder of that load. Only
+        // the following navigation is genuinely clean.
+        var KILL = 'cai-nosw';
+        try {
+          if (location.search.indexOf('nosw=0') > -1) localStorage.removeItem(KILL);
+          else if (location.search.indexOf('nosw=1') > -1) localStorage.setItem(KILL, '1');
+        } catch (e) {}
+        var killed = false;
+        try { killed = localStorage.getItem(KILL) === '1'; } catch (e) {}
+        if (killed) {
+          try {
+            navigator.serviceWorker.getRegistrations().then(function (rs) {
+              rs.forEach(function (r) { r.unregister(); });
+            });
+            if (window.caches) caches.keys().then(function (ks) {
+              ks.forEach(function (k) { caches.delete(k); });
+            });
+          } catch (e) {}
+          return;
+        }
+        window.addEventListener('load', function () {
+          setTimeout(function () {
+            try { navigator.serviceWorker.register('/sw.js?v=__VER__'); } catch (e) {}
+          }, 1200);
+        });
+      })();
+"""
+
+
 def patch_index_html() -> bool:
     """Inject the olive boot splash into Streamlit's static index.html.
 
@@ -834,12 +1020,23 @@ def patch_index_html() -> bool:
                     "font-weight: 400; src: url(data:font/woff2;base64," + b64 +
                     ") format('woff2'); }")
         head_raw = _HEAD_TEMPLATE.replace("__FACE__", face)
+        # the registration rides at the end of the boot script, so it is part of
+        # the stamped payload like everything else
+        boot_js = _BOOT_JS.replace("    </script>", _SW_REG + "    </script>", 1)
         # stamped with a hash of exactly what is about to be written — including
         # the font bytes — so a swapped font file re-patches too
         stamp = _VERSION + "-" + hashlib.sha256(
-            (_MICRO + _PAD_JS + head_raw + _SPLASH_HTML + _BOOT_JS
+            (_MICRO + _PAD_JS + head_raw + _SPLASH_HTML + boot_js + _SW_JS
              + "".join(_STATIC_VIEWPORT_TOKENS)).encode("utf-8")
         ).hexdigest()[:8]
+        # The worker carries the stamp as its cache name, so publishing it here
+        # — before the early return — is what makes a shell edit drop the old
+        # cache. Unconditional: the index may already be current while the
+        # worker file is missing (fresh container, read-only rebuild).
+        publish_root("sw.js", _SW_JS.replace("__VER__", stamp).encode("utf-8"))
+        # __VER__ is stamped in AFTER hashing, like head_raw's: the hash covers
+        # the placeholder, so it stays a fixed point instead of chasing itself.
+        boot_js = boot_js.replace("__VER__", stamp)
         if f'data-cai-ver="{stamp}"' in src:
             return True
         src = _strip(src)
@@ -867,7 +1064,7 @@ def patch_index_html() -> bool:
         # indent orphaned before the script — off-by-two-spaces per cycle,
         # caught by the byte-exact round-trip test
         patched = re.sub(r"([ \t]*)</body>",
-                         lambda m: _BOOT_JS + m.group(0), patched, count=1)
+                         lambda m: boot_js + m.group(0), patched, count=1)
         for marker in ('id="cai-micro"', 'id="cai-pad"', 'id="cai-boot"',
                        'id="cai-boot-splash"', 'id="cai-boot-js"',
                        "maximum-scale=1", "var(--cai-pad"):
