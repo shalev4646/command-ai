@@ -1106,6 +1106,30 @@ body::before {{
 html.cai-standalone body::before {{
     bottom: auto; height: var(--cai-vvh, 100svh);
 }}
+/* ── IN SAFARI, the same problem with a different cause. ──
+   The bottom toolbar does not shrink the LAYOUT viewport: position:fixed,
+   100vh and Streamlit's 100%-height shell all size to the tall one, so the
+   last ~50px of everything sits UNDER the toolbar. On the underlay that
+   truncates the ramp — the gradient's lightest stop never reaches the glass,
+   so the soft glow reads as a hard cut across the bottom of the screen
+   (2026-08-01 screenshots, browser only; the home-screen app is unaffected
+   because it has no toolbar and --cai-vvh already pins it).
+
+   dvh, not svh: svh is the toolbar-visible height and would leave a dead
+   band the moment the toolbar collapsed, which is the objection that kept
+   the standalone pin scoped away from Safari in the first place. dvh tracks
+   the toolbar, so the fill is exact in both states. Cheap here because this
+   is a fixed paint layer — no reflow — and because the page itself does not
+   scroll (the chat scrolls inside .stMain), so in practice the toolbar never
+   collapses and the value never moves.
+
+   svh first as the fallback: a browser too old for dvh drops the second
+   declaration and keeps today's behaviour rather than breaking. ── */
+html:not(.cai-standalone) body::before {{
+    bottom: auto;
+    height: 100svh;
+    height: 100dvh;
+}}
 /* iOS rubber-band overscroll must reveal the dark backdrop, never a light
    page edge; disable the bounce chain where the platform honors it */
 html, body {{ overscroll-behavior-y: none; }}
@@ -1132,6 +1156,21 @@ html.cai-standalone .stMain {{
     height: var(--cai-vvh, 100svh) !important;
     min-height: var(--cai-vvh, 100svh) !important;
     max-height: var(--cai-vvh, 100svh) !important;
+}}
+/* Safari gets the same pin, from dvh instead of a measurement. The composer
+   strip is STICKY inside .stMain, so it bottoms out wherever that scroller
+   ends — and unpinned that is the tall layout viewport, which puts the
+   composer and the disclaimer under the toolbar. Same defect the standalone
+   note above describes, reached by a different route.
+   The "dead band" the note warns about was the reason not to pin here, and
+   it was a reason not to pin to a FIXED height: dvh follows the toolbar, so
+   the app keeps filling the glass in both states. svh first as the fallback
+   for engines without dvh. */
+html:not(.cai-standalone) .stApp,
+html:not(.cai-standalone) [data-testid="stAppViewContainer"],
+html:not(.cai-standalone) .stMain {{
+    height: 100svh !important;  min-height: 100svh !important;  max-height: 100svh !important;
+    height: 100dvh !important;  min-height: 100dvh !important;  max-height: 100dvh !important;
 }}
 /* cold-launch overflow corrective: the boot pin frame MEASURES where the
    composer strip really ends and pulls the whole column up by the excess
