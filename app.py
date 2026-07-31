@@ -5417,8 +5417,10 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
            behind העתק/וואטסאפ on the pilot's phone (2026-08-01 screenshot),
            and the same mechanism with the colours swapped produced the dark
            slab of 2026-07-18 that was pinned on the shell-darkener instead.
-           Reproduced both ways in Chromium by forcing the mismatch —
-           scratchpad/iframe_repro.html, rows 2 and 4.
+           Reproducible in any engine, no phone needed: put a srcdoc iframe on
+           a dark page and force element and document to disagree — dark
+           element over light document fills white, light element over dark
+           document fills dark, and either way agreeing restores transparency.
 
            The app's `iframe {{ background: transparent !important }}` cannot
            reach this: that is the ELEMENT's background, which paints BEHIND
