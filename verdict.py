@@ -38,6 +38,16 @@ NEG = r"(?:לא|אינני|אינכם|אינכן|אינך|אינו|אינה|אי
 TERM = r"(?:מותר|אסור|מוסמך|רשאי|זכאי|פטור|חייב|ניתן|אפשר|מגיע(?:\s+ל[ךי])?)"
 _TERM_RE = re.compile(rf"^({NEG}\s+)?({TERM})(.*)$")
 _OPPOSE_POS = re.compile(r"מותר|רשאי|זכאי|מוסמך|פטור|מגיע")
+# Restrictive-condition markers after a POSITIVE term. The model's sampling
+# (thinking forces temperature=1) legitimately phrases the same conditioned
+# permission either "מותר בתנאים — רק באישור..." or "מותר — אך ורק ב..."
+# (same question, both observed live 2026-08-03, minutes apart) — the first
+# chipped ⚠ and the second ✓. The prompt now mandates the בתנאים form; this
+# is the deterministic backstop when the model slips anyway. Quantitative
+# bounds ("עד 7 ימים") are deliberately NOT conditions — they stay ✓.
+COND_QUAL_RE = re.compile(
+    r"אך ורק|ובלבד|בכפוף|בתנאי|למעט|בחריגים|באישור|אלא אם|(?:^|\s)רק(?=\s)"
+)
 
 
 def clause_class(clause: str) -> str:
@@ -62,6 +72,10 @@ def clause_class(clause: str) -> str:
     if cls == "yes" and "אסור" in tail:
         return "cond"
     if cls == "no" and _OPPOSE_POS.search(tail):
+        return "cond"
+    # a positive term whose tail restricts it ("מותר — אך ורק ב...") IS the
+    # conditioned ruling, whatever surface form the model sampled
+    if cls == "yes" and COND_QUAL_RE.search(tail):
         return "cond"
     return cls
 
@@ -152,4 +166,8 @@ def chip_clause(clause: str) -> tuple[str, str, str] | None:
         return ("cond", "⚠", s)
     if m.group("neg") or m.group("term") == "אסור":
         return ("no", "✗", s)
+    # positive term restricted by its qualifier ("מותר — אך ורק ב...") — the
+    # same conditioned ruling the בתנאים form expresses; chip it honestly
+    if qual and COND_QUAL_RE.search(qual):
+        return ("cond", "⚠", s)
     return ("yes", "✓", s)

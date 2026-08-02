@@ -853,6 +853,12 @@ def run_structural() -> int:
         # (pilot phone 2026-08-01, scored "accent" before the NEG list landed)
         ('**פסיקה:** אינך זכאי להחזר דמ"כ בגין אותה ארוחה', ["no"]),
         ("**פסיקה:** אינו רשאי לאשר חופשה מיוחדת", ["no"]),
+        # restrictive qualifier after a positive term = the conditioned ruling,
+        # whatever surface form the sampling produced (live 2026-08-03: the
+        # same question chipped ✓ and ⚠ in two runs)
+        ("**פסיקה:** מותר — אך ורק בשני מצבים חריגים", ["cond"]),
+        ("**פסיקה:** מותר רק באישור מפקד", ["cond"]),
+        ("**פסיקה:** זכאי בכפוף לאישור ולת\"ם", ["cond"]),
         ("אין כאן פסיקה", []),
     ]
     vc_ok = all([c["cls"] for c in verdict.verdict_clauses(t)] == exp for t, exp in vc_cases)
@@ -883,6 +889,11 @@ def run_structural() -> int:
         ("אסור — איום הוא עבירה משמעתית", ("no", "✗")),
         ("זכאי לתשלום מלא עבור ימי המילואים שבוצעו", ("yes", "✓")),
         ("אסור " + "סייג ארוך מאוד " * 5, None),   # …but the cap still bites
+        # positive term + restrictive qualifier chips ⚠, not ✓ (2026-08-03);
+        # a quantitative bound is NOT a condition and stays ✓
+        ("מותר — אך ורק בשני מצבים חריגים", ("cond", "⚠")),
+        ("מותר רק באישור סרן", ("cond", "⚠")),
+        ("מוסמך להטיל עד 14 ימי ריתוק", ("yes", "✓")),
     ]
     cc_ok = all(
         (r[:2] if (r := verdict.chip_clause(t)) else None) == exp
