@@ -1037,6 +1037,23 @@ role_meta = ROLE_META.get(st.session_state.role, ROLE_META["soldier"])
 role_label = role_meta["label"]
 
 
+def _service_type_default() -> str:
+    """The service type the entry role implies. The session default "סדיר"
+    used to leak into every identity surface as a "שירות חובה" badge beside a
+    reserve role — three contradictory surfaces on a fresh reserve profile
+    (drawer, settings hub, service card; 2026-08-03 audit)."""
+    return {"reserve": "מילואים", "commander": "קבע"}.get(st.session_state.role, "סדיר")
+
+
+def _service_type_shown() -> str:
+    """Display-only resolution: an explicit save in פרטים אישיים wins; until
+    then the badge/card/form seed follow the role. Storage and the API path
+    (profile_customized gate in handle_question) are untouched."""
+    if st.session_state.get("profile_customized"):
+        return st.session_state.get("service_type") or _service_type_default()
+    return _service_type_default()
+
+
 def _display_name() -> str:
     """First name for the greeting/pill/avatars — display-only; the full
     profile_name stays a settings field and is never sent to the API."""
@@ -2706,8 +2723,12 @@ components.html(
             var shown = s.name || fallback;
             setText(card.querySelector("[data-svc-mono]"), shown.slice(0, 1));
             setText(card.querySelector("[data-svc-nm]"), shown);
+            // mirror the server rule: a type equal to the role (card footer)
+            // is dropped from the meta line — no "מילואים" twice on one card
             setText(card.querySelector("[data-svc-meta]"),
-                    [s.type, s.track].filter(Boolean).join(" · "));
+                    [s.type, s.track].filter(function (x) {
+                        return x && x !== fallback;
+                    }).join(" · "));
 
             // the ticks land on the card's footer — the slot has shipped empty
             // since the direction was chosen, and filling it is what turns the
@@ -4814,8 +4835,11 @@ def _wipe_all():
 
 def _settings_hub():
     """8a — settings home: profile card + grouped nav + logout."""
-    _svc = st.session_state.get("service_type") or "סדיר"
-    _sub = ["שירות חובה" if _svc == "סדיר" else _svc]
+    _svc = _service_type_shown()
+    _svc_label = "שירות חובה" if _svc == "סדיר" else _svc
+    # a service label that merely repeats the role ("מילואים · מילואים") adds
+    # nothing — show it only when it carries new information
+    _sub = [] if _svc_label == role_label else [_svc_label]
     _pills = st.session_state.get("profile_saved") or []
     if _pills:
         _sub.append(_pills[0])
@@ -4898,7 +4922,9 @@ def _service_card(name: str, svc: str, track: str, marks: list[str]) -> str:
     """
     short_track = track.split(" (")[0] if track else ""
     initial = (name or role_label)[:1]
-    meta = " · ".join(x for x in (svc, short_track) if x)
+    # the card footer already prints the role — a meta line repeating the same
+    # word (reserve default: type "מילואים" over foot "מילואים") says nothing
+    meta = " · ".join(x for x in (svc, short_track) if x and x != role_label)
     base = json.dumps(
         {"name": name.strip(), "type": svc, "track": short_track,
          "marks": "|".join(sorted(marks))},
@@ -4930,7 +4956,7 @@ def _settings_personal():
     # stays the first-name-only form used for greetings and the hub avatar
     st.markdown(
         _service_card((st.session_state.get("profile_name") or "").strip(),
-                      st.session_state.get("service_type") or "סדיר",
+                      _service_type_shown(),
                       st.session_state.get("service_track") or "",
                       list(st.session_state.get("profile_saved") or [])),
         unsafe_allow_html=True)
@@ -4965,7 +4991,9 @@ def _settings_personal():
                 with st.container(key="cai_pf_fld_type"):
                     st.markdown("<div class='cai-fld-label'>סוג שירות</div>", unsafe_allow_html=True)
                     if "pf_type_w" not in st.session_state:
-                        st.session_state.pf_type_w = st.session_state.get("service_type", "סדיר")
+                        # seed from the role-aware resolution: a reserve user's
+                        # form opens on מילואים, not the conscript default
+                        st.session_state.pf_type_w = _service_type_shown()
                     st.segmented_control("סוג שירות", _SERVICE_TYPES, key="pf_type_w",
                                          selection_mode="single", label_visibility="collapsed")
 
@@ -5473,7 +5501,7 @@ with st.container(key="cai_drawer"):
         st.button("«", key="drawer_close")
 
     # ── role card (display only; role switching lives in Settings) ──
-    _svc_type = st.session_state.get("service_type") or "סדיר"
+    _svc_type = _service_type_shown()
     _role_badge = "שירות חובה" if _svc_type == "סדיר" else _svc_type
     # with a saved name: initial + name up front, role folds into the
     # small key line ("מחובר כ־חייל"); without — exactly the old card
@@ -5481,13 +5509,17 @@ with st.container(key="cai_drawer"):
     _card_av = (_dnd or role_label)[:1]
     _card_k = f"מחובר כ־{role_label}" if _dnd else "מחובר כ־"
     _card_nm = _dnd or role_label
+    # a badge that repeats what the card already says ("מילואים" beside
+    # "מחובר כ־מילואים") is noise — render it only when it adds information
+    _badge_html = (f"<span class='cai-role-badge'>{html.escape(_role_badge)}</span>"
+                   if _role_badge != role_label else "")
     st.markdown(
         "<div class='cai-role-card'>"
         f"<div class='cai-role-av'>{html.escape(_card_av)}</div>"
         "<div class='cai-role-meta'>"
         f"<div class='cai-role-k'>{html.escape(_card_k)}</div>"
         f"<div class='cai-role-nm'>{html.escape(_card_nm)}</div></div>"
-        f"<span class='cai-role-badge'>{html.escape(_role_badge)}</span>"
+        f"{_badge_html}"
         "</div>",
         unsafe_allow_html=True,
     )
