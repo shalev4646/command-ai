@@ -3342,15 +3342,19 @@ div[data-testid="stDialog"] [data-testid="stRadio"] div[role="radiogroup"] {
 }
 div[data-testid="stDialog"] [data-testid="stRadio"] div[role="radiogroup"] label {
     flex: 1; display: flex; align-items: center; justify-content: center;
-    padding: 10px; margin: 0 !important; border-radius: 10px; cursor: pointer;
+    /* uniform min-height + slim side padding: the three tiles used to render
+       40/60/80px tall with "אישי־משפחתי" fractured mid-word at ~77px width
+       (2026-08-03). Two-line labels are fine; ragged tiles are not. */
+    min-height: 52px; padding: 8px 6px; margin: 0 !important; border-radius: 10px;
+    cursor: pointer; text-align: center;
     transition: background .15s ease;
 }
 div[data-testid="stDialog"] [data-testid="stRadio"] div[role="radiogroup"] label > div:first-child {
     display: none !important;  /* hide the radio dot */
 }
 div[data-testid="stDialog"] [data-testid="stRadio"] div[role="radiogroup"] label p {
-    font: 600 13.5px Heebo, sans-serif !important; color: rgba(236,237,230,.6) !important;
-    margin: 0 !important;
+    font: 600 13.5px/1.3 Heebo, sans-serif !important; color: rgba(236,237,230,.6) !important;
+    margin: 0 !important; word-break: normal !important; overflow-wrap: normal !important;
 }
 div[data-testid="stDialog"] [data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) {
     background: linear-gradient(180deg, var(--accent-hover), var(--accent));
@@ -3560,7 +3564,10 @@ div[data-testid="stDialog"] [data-testid="InputInstructions"] { display: none !i
     margin-top: 2px; line-height: 1.45; }
 .cai-mil-tag { font: 600 10.5px Heebo, sans-serif; color: var(--accent-bright);
     background: var(--accent-soft); border: 1px solid var(--accent-border);
-    border-radius: 99px; padding: 1px 8px; flex: none; }
+    border-radius: 99px; padding: 1px 8px; flex: none;
+    /* a pill is an atom: it may DROP to the next line whole, never split
+       mid-text ("מקור/אזרחי", "כי/סימנת סטודנט" — 2026-08-03 audit) */
+    display: inline-block; white-space: nowrap; vertical-align: middle; }
 .cai-mil-body { border-top: 1px solid rgba(236,237,230,.09); padding: 4px 13px 12px; }
 .cai-mil-how { display: flex; gap: 8px; align-items: flex-start; direction: rtl;
     font: 400 12.5px Heebo, sans-serif; color: rgba(236,237,230,.78);
@@ -4199,9 +4206,13 @@ html.cai-drawer-drag .st-key-drawer_backdrop { pointer-events: none !important; 
    bottom margin of a markdown <p>). Our blocks are raw <div>s with no <p>, so
    the -16px goes UNCANCELLED and every markdown pulls its successor 16px up —
    section labels land ON the card above and the recent-head row collapses.
-   Zero it here; all rhythm comes from the blocks' own margins. */
+   Zero it here; all rhythm comes from the blocks' own margins. Dialogs too:
+   the miluim tools are built from the same raw <div>s — the letter-form and
+   profile-form labels overlapped their headings by 6px, and the benefits foot
+   lost its last line under the update button (measured 2026-08-03). */
 .st-key-cai_drawer [data-testid="stMarkdownContainer"],
-.st-key-cai_settings [data-testid="stMarkdownContainer"] { margin-bottom: 0 !important; }
+.st-key-cai_settings [data-testid="stMarkdownContainer"],
+div[data-testid="stDialog"] [data-testid="stMarkdownContainer"] { margin-bottom: 0 !important; }
 /* top row: gear (right) + close « (left) */
 .st-key-cai_drawer div[data-testid="stHorizontalBlock"]:first-of-type { align-items: center; }
 /* push each top-row button to the OUTER edge of its column (auto cross-axis
@@ -4694,14 +4705,24 @@ html.cai-orders-open .cai-kb-card {
    inside a 335px row — and the three buttons (width:100% of that) stacked
    into a narrow left-leaning column. That is what made the whole screen read
    as misaligned (2026-07-30 device video). */
+/* the keyed stElementContainer itself shrink-wraps inside the flex column —
+   every inner width:100% resolves against IT, so the "full-width" tabs were
+   min-content coincidence (185px exposed once padding shrank, 2026-08-03) */
+.st-key-pf_type_w { width: 100% !important; }
 .st-key-pf_type_w [data-testid="stButtonGroup"] { width: 100% !important; display: block !important; }
 .st-key-pf_type_w [data-testid="stButtonGroup"] [role="radiogroup"] {
-  width: 100% !important; display: grid !important;
+  /* BaseWeb ships max-width:fit-content on the radiogroup — it silently caps
+     width:100% at content size (185px), which is what kept the tabs narrow
+     and "מילואים" one px from ellipsis (2026-08-03) */
+  width: 100% !important; max-width: none !important; display: grid !important;
   grid-template-columns: 1fr 1fr 1fr !important; gap: 7px !important; }
 .st-key-pf_type_w [data-testid="stButtonGroup"] button {
   width: 100% !important; border-radius: 11px !important; min-height: 44px !important;
   background: #22271A !important; border: 1px solid rgba(236,237,230,.13) !important;
-  color: rgba(236,237,230,.7) !important; }
+  color: rgba(236,237,230,.7) !important;
+  /* BaseWeb's 16px side padding left "מילואים" one px from ellipsis at the
+     77px track (and phones DID ellipsize it — 2026-08-03 audit) */
+  padding-inline: 6px !important; }
 .st-key-pf_type_w [data-testid="stButtonGroup"] button p {
   color: rgba(236,237,230,.7) !important; font: 500 13px Heebo !important; }
 .st-key-pf_type_w button[data-testid*="segmented_controlActive"],
