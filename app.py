@@ -83,6 +83,14 @@ try:
     import entitlements
 except Exception:
     entitlements = None
+try:
+    import miluim_benefits as _mb
+except Exception:
+    _mb = None
+try:
+    import miluim_guide as _mg
+except Exception:
+    _mg = None
 
 try:
     import backend
@@ -251,6 +259,29 @@ st.session_state.setdefault("role_picked_here", False)
 st.session_state.setdefault("service_type", "סדיר")
 st.session_state.setdefault("service_track", "")
 st.session_state.setdefault("profile_customized", False)
+# ── miluim profile (the "מה מגיע לי במילואים" inputs) — same mirror pattern.
+# Seeded from the device cookie's "mil" slot; committed by the tool's form.
+# mil_salary is used ONLY for the local tagmul estimate — it must never join
+# the chat profile (see handle_question) or any Anthropic call.
+_mil_ck = _ck.get("mil") if isinstance(_ck.get("mil"), dict) else {}
+
+
+def _mil_int(v, cap):
+    """Cookie values are attacker-writable device state — coerce or drop."""
+    return max(0, min(int(v), cap)) if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+
+
+st.session_state.setdefault("mil_days_year", _mil_int(_mil_ck.get("dy"), 400))
+st.session_state.setdefault("mil_days_3y", _mil_int(_mil_ck.get("d3"), 1000))
+st.session_state.setdefault("mil_emp", [e for e in (_mil_ck.get("emp") or [])
+                                        if e in ("employee", "self_employed", "student")]
+                            if isinstance(_mil_ck.get("emp"), list) else [])
+st.session_state.setdefault("mil_salary", _mil_int(_mil_ck.get("sal"), 200000))
+# saved only counts if both day-counts survived coercion — a half profile
+# would render a map of zeros
+st.session_state.setdefault("mil_saved", bool(_mil_ck.get("sv"))
+                            and _mil_int(_mil_ck.get("dy"), 400) is not None
+                            and _mil_int(_mil_ck.get("d3"), 1000) is not None)
 st.session_state.setdefault("share_analytics", True)
 st.session_state.setdefault("show_settings", False)
 st.session_state.setdefault("settings_screen", "hub")
@@ -2905,12 +2936,23 @@ _sync_settled = (
     or bool((st.session_state.get("profile_name") or "").strip())
     or st.session_state.get("cai_wipe_pending")
 )
-_ck_payload = urllib.parse.quote(json.dumps({
+_ck_dict = {
     "v": 1,
     "role": st.session_state.role,
     "name": (st.session_state.get("profile_name") or "")[:40],
     "asked": bool(st.session_state.get("name_asked")),
-}, ensure_ascii=False), safe="")
+}
+# miluim-tool inputs ride the same device cookie — only once saved, so every
+# other user's payload stays byte-identical to the pre-miluim format
+if st.session_state.get("mil_saved"):
+    _ck_dict["mil"] = {
+        "dy": st.session_state.get("mil_days_year"),
+        "d3": st.session_state.get("mil_days_3y"),
+        "emp": list(st.session_state.get("mil_emp") or []),
+        "sal": st.session_state.get("mil_salary"),
+        "sv": True,
+    }
+_ck_payload = urllib.parse.quote(json.dumps(_ck_dict, ensure_ascii=False), safe="")
 if _sync_settled:
     components.html(
         "<script>try{"
@@ -3486,6 +3528,66 @@ div[data-testid="stDialog"] [data-testid="InputInstructions"] { display: none !i
     border-color: var(--accent) !important; }
 .cai-sc-disc { text-align: center; font: 400 11px Heebo, sans-serif; direction: rtl;
     color: rgba(236,237,230,.4); margin-top: 10px; line-height: 1.5; }
+
+/* ---- Miluim tools (מה מגיע לי / קיבלתי צו) ---- */
+.cai-mil-sec { display: flex; justify-content: space-between; align-items: baseline;
+    font: 600 11px Heebo, sans-serif; letter-spacing: .06em; direction: rtl;
+    color: rgba(236,237,230,.45); margin: 16px 2px 2px; }
+.cai-mil-hero { direction: rtl; text-align: right; border-radius: 14px; padding: 13px 14px;
+    background: var(--accent-soft); border: 1px solid var(--accent-border); margin-top: 8px; }
+.cai-mil-hero .t { font: 700 15.5px Heebo, sans-serif; color: var(--accent-bright); }
+.cai-mil-hero .s { font: 400 12.5px Heebo, sans-serif; color: rgba(236,237,230,.75); margin-top: 3px; }
+.cai-mil-tiers { display: flex; gap: 6px; flex-wrap: wrap; direction: rtl; margin-top: 8px; }
+.cai-mil-chip { font: 600 11.5px Heebo, sans-serif; border-radius: 99px; padding: 3px 10px;
+    color: var(--accent-bright); background: var(--accent-soft);
+    border: 1px solid var(--accent-border); }
+.cai-mil-chip.off { color: rgba(236,237,230,.45); background: transparent;
+    border-color: rgba(236,237,230,.16); }
+.cai-mil-bar { height: 5px; border-radius: 99px; background: rgba(236,237,230,.1);
+    overflow: hidden; margin-top: 9px; direction: rtl; }
+.cai-mil-bar > span { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+.cai-mil-det { direction: rtl; text-align: right; border-radius: 13px; margin-top: 8px;
+    background: #22271A; border: 1px solid rgba(236,237,230,.11); }
+.cai-mil-det summary { list-style: none; cursor: pointer; padding: 12px 13px;
+    display: flex; align-items: center; gap: 9px; -webkit-tap-highlight-color: transparent; }
+.cai-mil-det summary::-webkit-details-marker { display: none; }
+.cai-mil-det summary::after { content: "‹"; margin-inline-start: auto;
+    color: rgba(236,237,230,.35); font-size: 15px; transform: rotate(-90deg);
+    transition: transform .18s ease; }
+.cai-mil-det[open] summary::after { transform: rotate(90deg); }
+.cai-mil-det .tt { font: 600 14px Heebo, sans-serif; color: var(--text); }
+.cai-mil-det .sb { font: 400 12px Heebo, sans-serif; color: rgba(236,237,230,.6);
+    margin-top: 2px; line-height: 1.45; }
+.cai-mil-tag { font: 600 10.5px Heebo, sans-serif; color: var(--accent-bright);
+    background: var(--accent-soft); border: 1px solid var(--accent-border);
+    border-radius: 99px; padding: 1px 8px; flex: none; }
+.cai-mil-body { border-top: 1px solid rgba(236,237,230,.09); padding: 4px 13px 12px; }
+.cai-mil-how { display: flex; gap: 8px; align-items: flex-start; direction: rtl;
+    font: 400 12.5px Heebo, sans-serif; color: rgba(236,237,230,.78);
+    line-height: 1.5; margin-top: 8px; }
+.cai-mil-how .g { color: var(--accent); flex: none; font-weight: 700; }
+.cai-mil-link { display: inline-block; font: 600 12.5px Heebo, sans-serif;
+    color: var(--accent-bright) !important; text-decoration: none !important;
+    margin-top: 9px; }
+.cai-mil-cite { font: 400 11px Heebo, sans-serif; color: rgba(236,237,230,.42);
+    margin-top: 8px; line-height: 1.5; }
+.cai-mil-foot { font: 400 11px Heebo, sans-serif; color: rgba(236,237,230,.42);
+    direction: rtl; text-align: right; margin-top: 14px; line-height: 1.6; }
+.cai-mil-warn { direction: rtl; text-align: right; border-radius: 13px; padding: 11px 13px;
+    background: rgba(233,214,150,.07); border: 1px solid rgba(233,214,150,.35); margin-top: 8px; }
+.cai-mil-warn .t { font: 600 12.5px Heebo, sans-serif; color: #E9D696; line-height: 1.5; }
+.cai-mil-warn .c { font: 400 10.5px Heebo, sans-serif; color: rgba(233,214,150,.6); margin-top: 4px; }
+.cai-mil-tline { display: flex; align-items: center; direction: rtl; margin-top: 10px; }
+.cai-mil-tline .d { width: 10px; height: 10px; border-radius: 50%; flex: none;
+    background: var(--accent-soft); border: 2px solid var(--accent); }
+.cai-mil-tline .seg { flex: 1; height: 2px; background: var(--accent-border); }
+.cai-mil-tcaps { display: flex; direction: rtl; margin-top: 5px; }
+.cai-mil-tcaps span { flex: 1; text-align: center; font: 400 10.5px Heebo, sans-serif;
+    color: rgba(236,237,230,.5); line-height: 1.35; }
+.cai-mil-num { width: 22px; height: 22px; border-radius: 50%; flex: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    font: 700 11px Heebo, sans-serif; color: var(--accent-bright);
+    background: var(--accent-soft); border: 1px solid var(--accent-border); }
 </style>
 """
 
@@ -3732,6 +3834,269 @@ def _entitlements_dialog():
         _ent_pay_ui()
 
 
+def _mil_details_row(r: dict) -> str:
+    """One benefit row as a native <details> accordion — client-side open/
+    close, zero rerun (the same reason the orders panel is client-side)."""
+    tag = f"<span class='cai-mil-tag'>{html.escape(r['tag'])}</span>" if r.get("tag") else ""
+    civil = "<span class='cai-mil-tag'>מקור אזרחי</span>" if r.get("civil") else ""
+    hows = "".join(
+        f"<div class='cai-mil-how'><span class='g'>✓</span><span>{html.escape(h)}</span></div>"
+        for h in r["how"]
+    )
+    link = (f"<a class='cai-mil-link' href='{html.escape(r['link'], quote=True)}' "
+            f"target='_blank' rel='noopener'>{html.escape(r.get('link_label') or 'למקור הרשמי')} ↗</a>"
+            if r.get("link") else "")
+    asof = f" · נכון ל-{html.escape(r['asof'])}" if r.get("asof") else ""
+    return (
+        "<details class='cai-mil-det'>"
+        "<summary><span style='min-width:0'>"
+        f"<span class='tt'>{html.escape(r['title'])}</span> {tag}{civil}"
+        f"<div class='sb'>{html.escape(r['sub'])}</div>"
+        "</span></summary>"
+        f"<div class='cai-mil-body'>{hows}{link}"
+        f"<div class='cai-mil-cite'>{html.escape(r['cite'])}{asof}</div>"
+        "</div></details>"
+    )
+
+
+@st.dialog("🎖️ מה מגיע לי במילואים", width="large")
+def _miluim_benefits_dialog():
+    """The reserve flagship: a personal entitlements map from curated,
+    source-cited data (miluim_benefits.py). Deterministic, NO Anthropic call,
+    no quota. First open collects the profile (saved to the device cookie via
+    the mil mirrors); afterwards it opens straight on the map. The salary is
+    used only for the local estimate — never joins the chat profile."""
+    if not _mb:
+        return
+    st.markdown(_modal_header("מה מגיע לי במילואים"), unsafe_allow_html=True)
+
+    if not st.session_state.get("mil_saved"):
+        st.markdown(
+            "<div class='cai-pa-intro'>הזנה חד-פעמית — נשמרת במכשיר, וניתנת "
+            "לעדכון בכל רגע. התוצאה: מפת הזכאויות האישית שלך, עם מקור לכל שורה.</div>",
+            unsafe_allow_html=True,
+        )
+        dy = st.number_input("ימי מילואים בשנה הנוכחית", min_value=0, max_value=400,
+                             step=1, value=st.session_state.get("mil_days_year"),
+                             placeholder="למשל: 46", key="mil_dy_w")
+        d3 = st.number_input("ימי מילואים בשלוש השנים האחרונות (כולל השנה)",
+                             min_value=0, max_value=1000, step=1,
+                             value=st.session_state.get("mil_days_3y"),
+                             placeholder="למשל: 118", key="mil_d3_w")
+        emp_labels = dict(_mb.EMP_OPTIONS)
+        emp = st.pills("מה מתאר אותך? (אפשר כמה)", [k for k, _ in _mb.EMP_OPTIONS],
+                       format_func=lambda k: emp_labels[k], selection_mode="multi",
+                       default=[e for e in (st.session_state.get("mil_emp") or [])
+                                if e in emp_labels], key="mil_emp_w")
+        sal = st.number_input("שכר חודשי ברוטו — אופציונלי, להערכת תגמול בלבד",
+                              min_value=0, max_value=200000, step=500,
+                              value=st.session_state.get("mil_salary"),
+                              placeholder="אפשר לדלג", key="mil_sal_w")
+        if st.button("הצג מה מגיע לי", key="mil_go", use_container_width=True):
+            if dy is None or d3 is None:
+                st.warning("צריך את שני שדות הימים כדי לחשב את המפה.")
+            else:
+                st.session_state.mil_days_year = int(dy)
+                # the 3-year window contains the current year — clamp quietly
+                st.session_state.mil_days_3y = max(int(d3), int(dy))
+                st.session_state.mil_emp = list(emp or [])
+                st.session_state.mil_salary = int(sal) if sal else None
+                st.session_state.mil_saved = True
+                st.rerun()
+        st.markdown(
+            "<div class='cai-sc-disc'>הנתונים נשמרים במכשיר בלבד. השכר משמש "
+            "לחישוב מקומי של הערכת התגמול — ולא נשלח לצ׳אט.</div>",
+            unsafe_allow_html=True,
+        )
+        return
+
+    # ── the map ──
+    dy = int(st.session_state.get("mil_days_year") or 0)
+    d3 = int(st.session_state.get("mil_days_3y") or 0)
+    emp = set(st.session_state.get("mil_emp") or [])
+    sal = st.session_state.get("mil_salary")
+
+    status = _mb.active_status(d3)
+    if status["active"]:
+        hero = (f"<div class='cai-mil-hero'><div class='t'>משרת מילואים פעיל ✓</div>"
+                f"<div class='s'>{d3} ימ\"מ בתלת-שנתי — מעל סף ה-{status['threshold']}</div>"
+                f"<div class='cai-mil-cite'>{html.escape(status['cite'])}</div></div>")
+    else:
+        hero = (f"<div class='cai-mil-hero'><div class='t'>עוד {status['gap']} ימים למעמד משרת פעיל</div>"
+                f"<div class='s'>{d3} ימ\"מ בתלת-שנתי מתוך {status['threshold']} הנדרשים</div>"
+                f"<div class='cai-mil-cite'>{html.escape(status['cite'])}</div></div>")
+
+    tiers = _mb.year_tiers(dy)
+    chips = "".join(
+        (f"<span class='cai-mil-chip'>{t['threshold']}+ ✓</span>" if t["passed"] else
+         f"<span class='cai-mil-chip off'>{t['threshold']}+ · עוד {t['gap']}</span>")
+        for t in tiers
+    )
+    nxt = next((t for t in tiers if not t["passed"]), None)
+    pct = 100 if nxt is None else min(100, int(dy * 100 / nxt["threshold"]))
+    tier_card = (
+        "<div class='cai-mil-det' style='padding:12px 13px'>"
+        f"<div class='sb' style='margin:0 0 7px'>מדרגות השנה · {dy} ימ\"מ"
+        + (f" · הבאה: {html.escape(nxt['label'])}" if nxt else " · כל המדרגות הושגו")
+        + f"</div><div class='cai-mil-tiers'>{chips}</div>"
+        f"<div class='cai-mil-bar'><span style='width:{pct}%'></span></div></div>"
+    )
+
+    est_html = ""
+    est = _mb.tagmul_estimate(sal) if sal else None
+    if est:
+        est_html = (
+            "<div class='cai-mil-hero' style='margin-top:8px'>"
+            f"<div class='t'>הערכת תגמול: ~{est['daily']:,.0f} ₪ ליום</div>"
+            f"<div class='s'>בטווח {est['min_daily']:,.2f}–{est['max_daily']:,.2f} ₪ · "
+            "הערכה בלבד — המחשבון הרשמי של ביטוח לאומי קובע</div>"
+            f"<div class='cai-mil-cite'>{html.escape(est['cite'])} · נכון ל-{est['asof']}</div></div>"
+        )
+
+    rows = _mb.benefit_rows(dy, d3, emp, bool(sal))
+    sections_html = []
+    for sec in _mb.SECTION_ORDER:
+        sec_rows = [r for r in rows if r["section"] == sec]
+        if not sec_rows:
+            continue
+        sections_html.append(
+            f"<div class='cai-mil-sec'><span>{html.escape(_mb.SECTION_LABELS[sec])}</span>"
+            f"<span>{len(sec_rows)}</span></div>"
+            + "".join(_mil_details_row(r) for r in sec_rows)
+        )
+    lp = _mb.LOCAL_POINTER
+    pointer = (
+        "<div class='cai-mil-det' style='border-style:dashed;padding:12px 13px'>"
+        f"<span class='tt'>{html.escape(lp['title'])}</span>"
+        f"<div class='sb'>{html.escape(lp['sub'])}</div>"
+        f"<a class='cai-mil-link' href='{html.escape(lp['link'], quote=True)}' target='_blank' "
+        "rel='noopener'>לריכוז באתר המילואים ↗</a></div>"
+    )
+    st.markdown(
+        hero + tier_card + est_html + "".join(sections_html) + pointer
+        + f"<div class='cai-mil-foot'>🔄 המקורות נבדקו לאחרונה: {_mb.LAST_VERIFIED}"
+        f"<br>⚠️ {html.escape(_mb.DISCLAIMER)}</div>",
+        unsafe_allow_html=True,
+    )
+    if st.button("עדכון נתונים", key="mil_edit", use_container_width=True):
+        st.session_state.mil_saved = False
+        st.rerun()
+
+
+@st.dialog("📋 קיבלתי צו — מה עכשיו?", width="large")
+def _miluim_guide_dialog():
+    """The deferral route (ולת"ם), deterministic from פ"מ 31.0603 via
+    miluim_guide.py — cause picker, timeline, the standing "the order binds"
+    warning, and four expandable steps. The ONLY paid action is the letter
+    button at the bottom, which follows the exact letters-dialog quota
+    contract (reserve → compose → log, refund on failure)."""
+    if not _mg:
+        return
+    st.markdown(_modal_header("קיבלתי צו — מה עכשיו?"), unsafe_allow_html=True)
+
+    # timeline: 4 dots, painted RTL so the first stage is rightmost
+    tline = ("<div class='cai-mil-tline'><span class='d'></span><span class='seg'></span>"
+             "<span class='d'></span><span class='seg'></span><span class='d'></span>"
+             "<span class='seg'></span><span class='d'></span></div>"
+             "<div class='cai-mil-tcaps'>"
+             + "".join(f"<span>{html.escape(t)}</span>" for t in _mg.TIMELINE)
+             + "</div>")
+    warn = (f"<div class='cai-mil-warn'><div class='t'>⚠️ {html.escape(_mg.STANDING_WARNING['text'])}</div>"
+            f"<div class='c'>{html.escape(_mg.STANDING_WARNING['cite'])}</div></div>")
+    st.markdown(tline + warn, unsafe_allow_html=True)
+
+    labels = dict(_mg.CAUSES)
+    cause = st.radio("מה הקושי שלך להתייצב?", [k for k, _ in _mg.CAUSES],
+                     format_func=lambda k: labels[k], key="mil_cause", horizontal=True)
+    g = _mg.guide_for(cause)
+    note = (f"<div class='cai-mil-cite' style='margin:6px 2px 0'>{html.escape(g['note'])}</div>"
+            if g.get("note") else "")
+    steps_html = []
+    for i, s in enumerate(g["steps"], start=1):
+        lines = "".join(
+            f"<div class='cai-mil-how'><span class='g'>✓</span><span>{html.escape(ln)}</span></div>"
+            for ln in s["lines"]
+        )
+        steps_html.append(
+            f"<details class='cai-mil-det'{' open' if i == 1 else ''}>"
+            f"<summary><span class='cai-mil-num'>{i}</span>"
+            f"<span class='tt'>{html.escape(s['title'])}</span></summary>"
+            f"<div class='cai-mil-body'>{lines}"
+            f"<div class='cai-mil-cite'>{html.escape(s['cite'])}</div></div></details>"
+        )
+    st.markdown(note + "".join(steps_html), unsafe_allow_html=True)
+
+    # ── the letter step — the one paid action, same contract as the letters
+    # dialog (quota reserve → compose → analytics log; refund on failure) ──
+    st.markdown("<div class='cai-mil-sec'><span>צריך גם מכתב בקשה?</span></div>",
+                unsafe_allow_html=True)
+    if not (LETTER_TYPES and _mg.LETTER_KEY in LETTER_TYPES):
+        st.caption("ניסוח המכתב אינו זמין כרגע.")
+        return
+    lt = LETTER_TYPES[_mg.LETTER_KEY]
+    details = {}
+    for i, field in enumerate(lt["fields"]):
+        label, placeholder = field[0], field[1]
+        details[label] = st.text_input(label, placeholder=placeholder or None,
+                                       key=f"mil_letter_f{i}")
+    if st.button("נסח לי את מכתב הבקשה", key="mil_letter_go", use_container_width=True):
+        quota = metrics.reserve(st.session_state.session_id)
+        if quota != "ok":
+            st.warning(_QUOTA_NOTICES[quota])
+        else:
+            try:
+                t0 = time.time()
+                with st.spinner("מנסח טיוטה מעוגנת בפקודות..."):
+                    draft = compose_letter(_mg.LETTER_KEY, details,
+                                           role=st.session_state.role)
+                st.session_state.mil_letter_draft = draft
+                st.session_state.mil_letter_edit = draft["text"]
+                if st.session_state.get("share_analytics", True):
+                    metrics.log_question(
+                        session_id=st.session_state.session_id,
+                        role=st.session_state.role or "",
+                        question=f"[מכתב] {lt['title']}",
+                        answer=draft["text"],
+                        sources=draft.get("sources"),
+                        usage=draft.get("usage"),
+                        latency_s=time.time() - t0,
+                    )
+            except (APIConnectionError, APITimeoutError):
+                metrics.refund(st.session_state.session_id)
+                st.error("⚠️ אין כרגע חיבור לשירות. בדוק את החיבור ונסה שוב בעוד רגע.")
+            except BadRequestError as e:
+                metrics.refund(st.session_state.session_id)
+                st.error("⏸️ המערכת בהשהיה זמנית עקב מגבלת שימוש — נסה שוב מחר."
+                         if "usage limits" in str(e)
+                         else "⚠️ אירעה שגיאה זמנית בניסוח. נסה לשלוח שוב.")
+            except Exception as e:
+                safe_print(f"[mil-letter] draft failed: {e!r}")
+                metrics.refund(st.session_state.session_id)
+                st.error("⚠️ אירעה שגיאה זמנית בניסוח. נסה לשלוח שוב.")
+    st.markdown(
+        "<div class='cai-sc-disc'>זה הצעד היחיד בכלי שפונה למודל — בעלות של "
+        "שאלה אחת מהמכסה היומית. הטיוטה דורשת קריאה והשלמה לפני הגשה.</div>",
+        unsafe_allow_html=True,
+    )
+    draft = st.session_state.get("mil_letter_draft")
+    if draft:
+        if draft.get("truncated"):
+            st.warning("✂️ הטיוטה נקטעה באמצע בגלל אורך — קצר את הפרטים ונסח שוב, או השלם את הסיום ידנית.")
+        st.text_area("הטיוטה — קרא, השלם את החסר וערוך לפני הגשה", height=320,
+                     key="mil_letter_edit")
+        st.download_button(
+            "⬇️ הורד כקובץ",
+            data=(st.session_state.get("mil_letter_edit") or draft["text"]).encode("utf-8"),
+            file_name="commandai-valtam-letter.txt",
+            mime="text/plain",
+            use_container_width=True,
+            key="mil_letter_dl",
+        )
+        srcs = draft.get("sources") or []
+        if srcs:
+            st.caption("מעוגן בפקודות: " + " · ".join(s["title"] for s in srcs[:2]))
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Drawer + Settings — redesigned surface (mockup 2a + 8a–8e).
 # The settings screens are an APP-OWNED overlay (a keyed st.container + a
@@ -3757,6 +4122,10 @@ _ICON = {
                   "<path d='M5 7l-2.6 5a2.6 2.6 0 0 0 5.2 0z'/><path d='M19 7l-2.6 5a2.6 2.6 0 0 0 5.2 0z'/>"),
     "calc": _svg("<rect x='5' y='3' width='14' height='18' rx='2'/><path d='M8 7h8'/>"
                  "<path d='M9 12h.01M12 12h.01M15 12h.01M9 16h.01M12 16h.01M15 16h.01'/>"),
+    # miluim tools: award medal ("מה מגיע לי") + clipboard route ("קיבלתי צו")
+    "medal": _svg("<circle cx='12' cy='9' r='5'/><path d='M9 13.5 7 21l5-2 5 2-2-7.5'/>"),
+    "clipboard": _svg("<rect x='6' y='4' width='12' height='17' rx='2'/>"
+                      "<path d='M9 2h6v4H9z'/><path d='M9.5 11h5M9.5 15h5'/>"),
     "book": _svg("<rect x='4' y='3' width='12' height='16' rx='2'/><path d='M8 3v16'/>"
                  "<path d='M18 6v13a2 2 0 0 1-2 2H7'/>", stroke="#C4CE92"),
     "user": _svg("<path d='M20 21a8 8 0 0 0-16 0'/><circle cx='12' cy='7' r='4'/>"),
@@ -3995,6 +4364,8 @@ html.cai-orders-open .cai-kb-card {
 .st-key-open_letters button::before { background-image: url("ICON_LETTERS"); }
 .st-key-open_punishment button::before { background-image: url("ICON_GAVEL"); }
 .st-key-open_entitlements button::before { background-image: url("ICON_CALC"); }
+.st-key-open_mil_benefits button::before { background-image: url("ICON_MEDAL"); }
+.st-key-open_mil_guide button::before { background-image: url("ICON_CLIPBOARD"); }
 .st-key-cai_tools button::after, .st-key-cai_recent button::after {
   content: "‹"; position: absolute; inset-inline-end: 14px; top: 50%;
   transform: translateY(-50%); color: rgba(236,237,230,.3); font-size: 14px;
@@ -4798,6 +5169,17 @@ def handle_question(question: str):
             _track = st.session_state.get("service_track")
             if _track:
                 _injected.append(f"מסלול שירות: {_track}")
+        # miluim-tool data enriches RESERVE-persona answers only. mil_salary is
+        # deliberately absent — it exists for the local tagmul estimate and
+        # must never reach the API.
+        if st.session_state.role == "reserve" and st.session_state.get("mil_saved"):
+            _dy, _d3 = st.session_state.get("mil_days_year"), st.session_state.get("mil_days_3y")
+            if _dy is not None and _d3 is not None:
+                _injected.append(f"ימי מילואים: {int(_dy)} השנה, {int(_d3)} בתלת-שנתי")
+            _emp_labels = {"employee": "שכיר", "self_employed": "עצמאי", "student": "סטודנט"}
+            _emp = [_emp_labels[e] for e in (st.session_state.get("mil_emp") or []) if e in _emp_labels]
+            if _emp:
+                _injected.append("במקביל למילואים: " + ", ".join(_emp))
         profile_kw["profile"] = _injected or None
     # chunks received so far, tapped by _stream_answer as they arrive: when a
     # RerunException detonates mid-stream (any widget event during the 15-30s
@@ -5097,19 +5479,30 @@ with st.container(key="cai_drawer"):
     with st.container(key="cai_kb"):
         st.markdown(_orders_panel(docs), unsafe_allow_html=True)
 
-    # ── tools (grouped card) ──
+    # ── tools (grouped card) — role-aware: each persona sees its own set.
+    # RESERVE gets the miluim tools; the חובה entitlements calculator and the
+    # (4/5 soldier-oriented) letters generator are actively misleading there.
+    # soldier/commander keep today's exact set — keys/order untouched. ──
     st.markdown("<div class='cai-sec-label'>כלים</div>", unsafe_allow_html=True)
     with st.container(key="cai_tools"):
         # the tool dialogs overlay a live drawer that stays open behind
         # them (same as the gear above), so dismissing one returns the
         # user straight to the menu.
-        if LETTER_TYPES and st.button("מחולל מכתבים", key="open_letters", use_container_width=True):
-            _letters_dialog()
-        # deterministic tools, zero-token, no quota — each gated on its module
-        if _pa and st.button("בודק סמכות עונש", key="open_punishment", use_container_width=True):
-            _punishment_dialog()
-        if entitlements and st.button("מחשבון זכאויות", key="open_entitlements", use_container_width=True):
-            _entitlements_dialog()
+        if st.session_state.role == "reserve":
+            if _mb and st.button("מה מגיע לי במילואים", key="open_mil_benefits", use_container_width=True):
+                _miluim_benefits_dialog()
+            if _mg and st.button("קיבלתי צו — דחייה והתייצבות", key="open_mil_guide", use_container_width=True):
+                _miluim_guide_dialog()
+            if _pa and st.button("בודק סמכות עונש", key="open_punishment", use_container_width=True):
+                _punishment_dialog()
+        else:
+            if LETTER_TYPES and st.button("מחולל מכתבים", key="open_letters", use_container_width=True):
+                _letters_dialog()
+            # deterministic tools, zero-token, no quota — each gated on its module
+            if _pa and st.button("בודק סמכות עונש", key="open_punishment", use_container_width=True):
+                _punishment_dialog()
+            if entitlements and st.button("מחשבון זכאויות", key="open_entitlements", use_container_width=True):
+                _entitlements_dialog()
 
     # ── recent conversations — only this role's (restoring a cross-role
     # chat would mix personas/doc scopes in one thread) ──
