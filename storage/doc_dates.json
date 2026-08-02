@@ -1,402 +1,412 @@
 {
-  "013.3": {
-    "date": null,
-    "raw": null,
-    "marker": null
-  },
-  "05.104": {
-    "date": "2026-05-20",
-    "raw": "20 במאי2026",
-    "marker": "update-dates-list"
-  },
-  "2.0101": {
-    "date": "2025-06-04",
-    "raw": "2025ביוני4",
-    "marker": "published-line"
-  },
-  "20.0502": {
-    "date": null,
-    "raw": null,
-    "marker": null
-  },
-  "21.0113": {
-    "date": null,
-    "raw": null,
-    "marker": null
-  },
-  "21.0210": {
-    "date": null,
-    "raw": null,
-    "marker": null
-  },
-  "3.0501": {
-    "date": null,
-    "raw": null,
-    "marker": null
-  },
-  "30.0106": {
-    "date": "2021-11-03",
-    "raw": "3 בנובמבר2021",
-    "marker": "tokef-clause"
-  },
-  "30.33": {
-    "date": null,
-    "raw": null,
-    "marker": null
-  },
-  "31.0103": {
-    "date": "1998-07-01",
-    "raw": "יולי98",
-    "marker": "tokef-clause;2digit-year;month-precision"
-  },
-  "31.0109": {
-    "date": "1997-12-01",
-    "raw": "דצמ97",
-    "marker": "tokef-clause;2digit-year;month-precision"
-  },
-  "31.0116": {
-    "date": "1949-03-01",
-    "raw": "מרס49",
-    "marker": "tokef-clause;2digit-year;month-precision"
-  },
-  "31.0203": {
-    "date": "1988-12-01",
-    "raw": "דצמ88",
-    "marker": "tokef-clause;2digit-year;month-precision"
-  },
-  "31.0308": {
-    "date": "1993-10-01",
-    "raw": "אוק93",
-    "marker": "corner-stamp;2digit-year;month-precision"
-  },
-  "31.0513": {
-    "date": "2026-01-21",
-    "raw": "2026בינואר21",
-    "marker": "update-dates-list"
-  },
-  "31.0517": {
-    "date": "2026-01-21",
-    "raw": "2026בינואר21",
-    "marker": "update-dates-list"
-  },
-  "31.0521": {
-    "date": "1969-07-01",
-    "raw": "יולי69",
-    "marker": "corner-stamp;2digit-year;month-precision"
-  },
-  "31.0603": {
-    "date": "1979-02-01",
-    "raw": "פבר79",
-    "marker": "corner-stamp;2digit-year;month-precision"
-  },
-  "31.0605": {
-    "date": null,
-    "raw": null,
-    "marker": null
-  },
-  "31.0701": {
-    "date": "2020-09-17",
-    "raw": "2020 בספטמבר17",
-    "marker": "tokef-clause"
-  },
-  "31.0703": {
-    "date": "2024-10-30",
-    "raw": "2024באוקטובר30",
-    "marker": "tokef-clause"
-  },
-  "31.0901": {
-    "date": "2026-02-03",
-    "raw": "3 בפברואר2026",
-    "marker": "published-line"
-  },
-  "32.0401": {
-    "date": "1987-04-01",
-    "raw": "אפר87",
-    "marker": "corner-stamp;2digit-year;month-precision"
-  },
-  "32.0402": {
-    "date": "1987-04-01",
-    "raw": "אפר87",
-    "marker": "corner-stamp;2digit-year;month-precision"
-  },
-  "33-05-01": {
-    "date": "2022-04-01",
-    "raw": "אפריל 2022",
-    "marker": "header-window;month-precision"
-  },
-  "33.0111": {
-    "date": "2025-07-13",
-    "raw": "2025ביולי13",
-    "marker": "update-dates-list"
-  },
-  "33.0115": {
-    "date": null,
-    "raw": null,
-    "marker": null
-  },
-  "33.0120": {
-    "date": null,
-    "raw": null,
-    "marker": null
-  },
-  "33.0145": {
-    "date": null,
-    "raw": null,
-    "marker": null
-  },
-  "33.0146": {
-    "date": "1948-01-01",
-    "raw": "ינו48",
-    "marker": "corner-stamp;2digit-year;month-precision"
-  },
-  "33.0219": {
-    "date": "2026-01-21",
-    "raw": "2026בינואר21",
-    "marker": "update-dates-list"
-  },
-  "33.0220": {
-    "date": null,
-    "raw": null,
-    "marker": null
-  },
-  "33.0336": {
-    "date": null,
-    "raw": null,
-    "marker": null
-  },
-  "33.0351": {
-    "date": null,
-    "raw": null,
-    "marker": null
-  },
-  "33.0501": {
-    "date": null,
-    "raw": null,
-    "marker": null
-  },
-  "33.1104": {
-    "date": null,
-    "raw": null,
-    "marker": null
-  },
-  "35.0201": {
-    "date": null,
-    "raw": null,
-    "marker": null
-  },
-  "35.0205": {
-    "date": "1997-02-01",
-    "raw": "פבר97",
-    "marker": "corner-stamp;2digit-year;month-precision"
-  },
-  "35.0206": {
-    "date": null,
-    "raw": null,
-    "marker": null
-  },
-  "35.0209": {
-    "date": "2022-02-02",
-    "raw": "02 בפברואר , 2022",
-    "marker": "updated-line"
-  },
-  "35.0210": {
-    "date": "1996-05-01",
-    "raw": "מאי96",
-    "marker": "tokef-clause;2digit-year;month-precision"
-  },
-  "35.0221": {
-    "date": null,
-    "raw": null,
-    "marker": null
-  },
-  "35.0223": {
-    "date": "2020-12-27",
-    "raw": "27 בדצמבר2020",
-    "marker": "tokef-clause"
-  },
-  "35.0227": {
-    "date": "2020-06-25",
-    "raw": "25.06.2020",
-    "marker": "updated-line"
-  },
-  "35.0234": {
-    "date": "2021-02-14",
-    "raw": "14 בפברואר2021",
-    "marker": "tokef-clause"
-  },
-  "35.0307": {
-    "date": "1998-09-01",
-    "raw": "ספט98",
-    "marker": "corner-stamp;2digit-year;month-precision"
-  },
-  "35.0803": {
-    "date": "1959-11-01",
-    "raw": "נוב59",
-    "marker": "tokef-clause;2digit-year;month-precision"
-  },
-  "35.0805": {
-    "date": "1978-03-01",
-    "raw": "מרס78",
-    "marker": "corner-stamp;2digit-year;month-precision"
-  },
-  "35.0807": {
-    "date": null,
-    "raw": null,
-    "marker": null
-  },
-  "35.0808": {
-    "date": "2021-02-14",
-    "raw": "14 בפברואר2021",
-    "marker": "tokef-clause"
-  },
-  "35.0818": {
-    "date": null,
-    "raw": null,
-    "marker": null
-  },
-  "36.0106": {
-    "date": null,
-    "raw": null,
-    "marker": null
-  },
-  "36.0218": {
-    "date": "2002-09-28",
-    "raw": "28 בספטמבר2002",
-    "marker": "tokef-clause"
-  },
-  "36.0401": {
-    "date": "2026-01-21",
-    "raw": "2026בינואר21",
-    "marker": "update-dates-list"
-  },
-  "36.0406": {
-    "date": "2026-01-21",
-    "raw": "2026בינואר21",
-    "marker": "update-dates-list"
-  },
-  "36.0413": {
-    "date": "2026-01-21",
-    "raw": "2026בינואר21",
-    "marker": "update-dates-list"
-  },
-  "36.0511": {
-    "date": "1981-03-01",
-    "raw": "במרס81",
-    "marker": "cancelled-clause;2digit-year;month-precision"
-  },
-  "36.0513": {
-    "date": "2000-06-01",
-    "raw": "יוני0002",
-    "marker": "tokef-clause;digits-reversed;month-precision"
-  },
-  "36.0527": {
-    "date": "2019-03-01",
-    "raw": "22 במרץ2019",
-    "marker": "updated-line;month-precision"
-  },
-  "37.0102": {
-    "date": "2008-03-01",
-    "raw": "מארס 2008",
-    "marker": "header-window;month-precision"
-  },
-  "38.0122": {
-    "date": "2003-09-21",
-    "raw": "21 בספטמבר2003",
-    "marker": "tokef-clause"
-  },
-  "5040.05": {
-    "date": "2006-10-01",
-    "raw": "באוקטובר6002",
-    "marker": "standalone-stamp;digits-reversed;month-precision"
-  },
-  "56.0131": {
-    "date": null,
-    "raw": null,
-    "marker": null
-  },
-  "58.0202": {
-    "date": "2026-03-01",
-    "raw": "במרץ 2026",
-    "marker": "update-dates-list;month-precision"
-  },
-  "61.0104": {
-    "date": "2024-05-12",
-    "raw": "2024במאי12",
-    "marker": "published-line"
-  },
-  "61.0113": {
-    "date": null,
-    "raw": null,
-    "marker": null
-  },
-  "8.0101": {
-    "date": "2002-07-01",
-    "raw": "יולי2002",
-    "marker": "standalone-stamp;month-precision"
-  },
-  "PM-33.0137": {
-    "date": "1958-03-01",
-    "raw": "מארס58",
-    "marker": "corner-stamp;2digit-year;month-precision"
-  },
-  "PM-33.0161": {
-    "date": "2026-05-20",
-    "raw": "20 במאי2026",
-    "marker": "update-dates-list"
-  },
-  "PM-33.0202": {
-    "date": null,
-    "raw": null,
-    "marker": null
-  },
-  "PM-33.0207": {
-    "date": "2026-02-03",
-    "raw": "3 בפברואר 2026",
-    "marker": "header-window"
-  },
-  "PM-33.0213": {
-    "date": "2020-04-19",
-    "raw": "19.04.2020",
-    "marker": "published-line"
-  },
-  "PM-33.0302": {
-    "date": "2026-05-20",
-    "raw": "20 במאי2026",
-    "marker": "update-dates-list"
-  },
-  "PM-33.0309": {
-    "date": "1966-05-01",
-    "raw": "מאי66",
-    "marker": "tokef-clause;2digit-year;month-precision"
-  },
-  "PM-33.0352": {
-    "date": null,
-    "raw": null,
-    "marker": null
-  },
-  "PM-34.0101": {
-    "date": "2025-07-13",
-    "raw": "2025ביולי13",
-    "marker": "updated-line"
-  },
-  "PM-34.0205": {
-    "date": "2025-07-13",
-    "raw": "2025ביולי13",
-    "marker": "update-dates-list"
-  },
-  "PM-35.0402": {
-    "date": "2026-05-20",
-    "raw": "20 במאי2026",
-    "marker": "update-dates-list"
-  },
-  "חוק-קליטת-חיילים": {
-    "date": "2000-12-01",
-    "raw": "דצמבר2000",
-    "marker": "updated-line;month-precision"
-  },
-  "שוברי-נופש-מילואים": {
-    "date": "2026-01-25",
-    "raw": "החלטת ממשלה 3812 מיום 25.1.2026",
-    "marker": "manual"
-  }
+ "013.3": {
+  "date": null,
+  "raw": null,
+  "marker": null
+ },
+ "05.104": {
+  "date": "2026-05-20",
+  "raw": "20 במאי2026",
+  "marker": "update-dates-list"
+ },
+ "2.0101": {
+  "date": "2025-06-04",
+  "raw": "2025ביוני4",
+  "marker": "published-line"
+ },
+ "20.0502": {
+  "date": null,
+  "raw": null,
+  "marker": null
+ },
+ "21.0113": {
+  "date": null,
+  "raw": null,
+  "marker": null
+ },
+ "21.0210": {
+  "date": null,
+  "raw": null,
+  "marker": null
+ },
+ "3.0501": {
+  "date": null,
+  "raw": null,
+  "marker": null
+ },
+ "30.0106": {
+  "date": "2021-11-03",
+  "raw": "3 בנובמבר2021",
+  "marker": "tokef-clause"
+ },
+ "30.33": {
+  "date": null,
+  "raw": null,
+  "marker": null
+ },
+ "31.0103": {
+  "date": "1998-07-01",
+  "raw": "יולי98",
+  "marker": "tokef-clause;2digit-year;month-precision"
+ },
+ "31.0109": {
+  "date": "1997-12-01",
+  "raw": "דצמ97",
+  "marker": "tokef-clause;2digit-year;month-precision"
+ },
+ "31.0116": {
+  "date": "1949-03-01",
+  "raw": "מרס49",
+  "marker": "tokef-clause;2digit-year;month-precision"
+ },
+ "31.0203": {
+  "date": "1988-12-01",
+  "raw": "דצמ88",
+  "marker": "tokef-clause;2digit-year;month-precision"
+ },
+ "31.0308": {
+  "date": "1993-10-01",
+  "raw": "אוק93",
+  "marker": "corner-stamp;2digit-year;month-precision"
+ },
+ "31.0513": {
+  "date": "2026-01-21",
+  "raw": "2026בינואר21",
+  "marker": "update-dates-list"
+ },
+ "31.0517": {
+  "date": "2026-01-21",
+  "raw": "2026בינואר21",
+  "marker": "update-dates-list"
+ },
+ "31.0521": {
+  "date": "1969-07-01",
+  "raw": "יולי69",
+  "marker": "corner-stamp;2digit-year;month-precision"
+ },
+ "31.0603": {
+  "date": "1979-02-01",
+  "raw": "פבר79",
+  "marker": "corner-stamp;2digit-year;month-precision"
+ },
+ "31.0605": {
+  "date": null,
+  "raw": null,
+  "marker": null
+ },
+ "31.0701": {
+  "date": "2020-09-17",
+  "raw": "2020 בספטמבר17",
+  "marker": "tokef-clause"
+ },
+ "31.0703": {
+  "date": "2024-10-30",
+  "raw": "2024באוקטובר30",
+  "marker": "tokef-clause"
+ },
+ "31.0901": {
+  "date": "2026-02-03",
+  "raw": "3 בפברואר2026",
+  "marker": "published-line"
+ },
+ "32.0401": {
+  "date": "1987-04-01",
+  "raw": "אפר87",
+  "marker": "corner-stamp;2digit-year;month-precision"
+ },
+ "32.0402": {
+  "date": "1987-04-01",
+  "raw": "אפר87",
+  "marker": "corner-stamp;2digit-year;month-precision"
+ },
+ "33-05-01": {
+  "date": "2022-04-01",
+  "raw": "אפריל 2022",
+  "marker": "header-window;month-precision"
+ },
+ "33.0111": {
+  "date": "2025-07-13",
+  "raw": "2025ביולי13",
+  "marker": "update-dates-list"
+ },
+ "33.0115": {
+  "date": null,
+  "raw": null,
+  "marker": null
+ },
+ "33.0120": {
+  "date": null,
+  "raw": null,
+  "marker": null
+ },
+ "33.0145": {
+  "date": null,
+  "raw": null,
+  "marker": null
+ },
+ "33.0146": {
+  "date": "1948-01-01",
+  "raw": "ינו48",
+  "marker": "corner-stamp;2digit-year;month-precision"
+ },
+ "33.0219": {
+  "date": "2026-01-21",
+  "raw": "2026בינואר21",
+  "marker": "update-dates-list"
+ },
+ "33.0220": {
+  "date": null,
+  "raw": null,
+  "marker": null
+ },
+ "33.0336": {
+  "date": null,
+  "raw": null,
+  "marker": null
+ },
+ "33.0351": {
+  "date": null,
+  "raw": null,
+  "marker": null
+ },
+ "33.0501": {
+  "date": null,
+  "raw": null,
+  "marker": null
+ },
+ "33.1104": {
+  "date": null,
+  "raw": null,
+  "marker": null
+ },
+ "35.0201": {
+  "date": null,
+  "raw": null,
+  "marker": null
+ },
+ "35.0205": {
+  "date": "1997-02-01",
+  "raw": "פבר97",
+  "marker": "corner-stamp;2digit-year;month-precision"
+ },
+ "35.0206": {
+  "date": null,
+  "raw": null,
+  "marker": null
+ },
+ "35.0209": {
+  "date": "2022-02-02",
+  "raw": "02 בפברואר , 2022",
+  "marker": "updated-line"
+ },
+ "35.0210": {
+  "date": "1996-05-01",
+  "raw": "מאי96",
+  "marker": "tokef-clause;2digit-year;month-precision"
+ },
+ "35.0221": {
+  "date": null,
+  "raw": null,
+  "marker": null
+ },
+ "35.0223": {
+  "date": "2020-12-27",
+  "raw": "27 בדצמבר2020",
+  "marker": "tokef-clause"
+ },
+ "35.0227": {
+  "date": "2020-06-25",
+  "raw": "25.06.2020",
+  "marker": "updated-line"
+ },
+ "35.0234": {
+  "date": "2021-02-14",
+  "raw": "14 בפברואר2021",
+  "marker": "tokef-clause"
+ },
+ "35.0307": {
+  "date": "1998-09-01",
+  "raw": "ספט98",
+  "marker": "corner-stamp;2digit-year;month-precision"
+ },
+ "35.0803": {
+  "date": "1959-11-01",
+  "raw": "נוב59",
+  "marker": "tokef-clause;2digit-year;month-precision"
+ },
+ "35.0805": {
+  "date": "1978-03-01",
+  "raw": "מרס78",
+  "marker": "corner-stamp;2digit-year;month-precision"
+ },
+ "35.0807": {
+  "date": null,
+  "raw": null,
+  "marker": null
+ },
+ "35.0808": {
+  "date": "2021-02-14",
+  "raw": "14 בפברואר2021",
+  "marker": "tokef-clause"
+ },
+ "35.0818": {
+  "date": null,
+  "raw": null,
+  "marker": null
+ },
+ "36.0106": {
+  "date": null,
+  "raw": null,
+  "marker": null
+ },
+ "36.0218": {
+  "date": "2002-09-28",
+  "raw": "28 בספטמבר2002",
+  "marker": "tokef-clause"
+ },
+ "36.0401": {
+  "date": "2026-01-21",
+  "raw": "2026בינואר21",
+  "marker": "update-dates-list"
+ },
+ "36.0406": {
+  "date": "2026-01-21",
+  "raw": "2026בינואר21",
+  "marker": "update-dates-list"
+ },
+ "36.0413": {
+  "date": "2026-01-21",
+  "raw": "2026בינואר21",
+  "marker": "update-dates-list"
+ },
+ "36.0511": {
+  "date": "1981-03-01",
+  "raw": "במרס81",
+  "marker": "cancelled-clause;2digit-year;month-precision"
+ },
+ "36.0513": {
+  "date": "2000-06-01",
+  "raw": "יוני0002",
+  "marker": "tokef-clause;digits-reversed;month-precision"
+ },
+ "36.0527": {
+  "date": "2019-03-01",
+  "raw": "22 במרץ2019",
+  "marker": "updated-line;month-precision"
+ },
+ "37.0102": {
+  "date": "2008-03-01",
+  "raw": "מארס 2008",
+  "marker": "header-window;month-precision"
+ },
+ "38.0122": {
+  "date": "2003-09-21",
+  "raw": "21 בספטמבר2003",
+  "marker": "tokef-clause"
+ },
+ "5040.05": {
+  "date": "2006-10-01",
+  "raw": "באוקטובר6002",
+  "marker": "standalone-stamp;digits-reversed;month-precision"
+ },
+ "56.0131": {
+  "date": null,
+  "raw": null,
+  "marker": null
+ },
+ "58.0202": {
+  "date": "2026-03-01",
+  "raw": "במרץ 2026",
+  "marker": "update-dates-list;month-precision"
+ },
+ "61.0104": {
+  "date": "2024-05-12",
+  "raw": "2024במאי12",
+  "marker": "published-line"
+ },
+ "61.0113": {
+  "date": null,
+  "raw": null,
+  "marker": null
+ },
+ "8.0101": {
+  "date": "2002-07-01",
+  "raw": "יולי2002",
+  "marker": "standalone-stamp;month-precision"
+ },
+ "PM-33.0137": {
+  "date": "1958-03-01",
+  "raw": "מארס58",
+  "marker": "corner-stamp;2digit-year;month-precision"
+ },
+ "PM-33.0161": {
+  "date": "2026-05-20",
+  "raw": "20 במאי2026",
+  "marker": "update-dates-list"
+ },
+ "PM-33.0202": {
+  "date": null,
+  "raw": null,
+  "marker": null
+ },
+ "PM-33.0207": {
+  "date": "2026-02-03",
+  "raw": "3 בפברואר 2026",
+  "marker": "header-window"
+ },
+ "PM-33.0213": {
+  "date": "2020-04-19",
+  "raw": "19.04.2020",
+  "marker": "published-line"
+ },
+ "PM-33.0302": {
+  "date": "2026-05-20",
+  "raw": "20 במאי2026",
+  "marker": "update-dates-list"
+ },
+ "PM-33.0309": {
+  "date": "1966-05-01",
+  "raw": "מאי66",
+  "marker": "tokef-clause;2digit-year;month-precision"
+ },
+ "PM-33.0352": {
+  "date": null,
+  "raw": null,
+  "marker": null
+ },
+ "PM-34.0101": {
+  "date": "2025-07-13",
+  "raw": "2025ביולי13",
+  "marker": "updated-line"
+ },
+ "PM-34.0205": {
+  "date": "2025-07-13",
+  "raw": "2025ביולי13",
+  "marker": "update-dates-list"
+ },
+ "PM-35.0402": {
+  "date": "2026-05-20",
+  "raw": "20 במאי2026",
+  "marker": "update-dates-list"
+ },
+ "חוק-קליטת-חיילים": {
+  "date": "2000-12-01",
+  "raw": "דצמבר2000",
+  "marker": "updated-line;month-precision"
+ },
+ "שוברי-נופש-מילואים": {
+  "date": "2026-01-25",
+  "raw": "החלטת ממשלה 3812 מיום 25.1.2026",
+  "marker": "manual"
+ },
+ "זכויות-עבודה-מילואים": {
+  "date": "2026-08-02",
+  "raw": "נכון לאוגוסט 2026 — חוק חיילים משוחררים (החזרה לעבודה) וצו ההרחבה",
+  "marker": "manual"
+ },
+ "זכויות-סטודנטים-מילואים": {
+  "date": "2026-08-02",
+  "raw": "נכון לאוגוסט 2026 — כללי זכויות הסטודנט (התאמות למשרתים במילואים), התשע\"ב-2012",
+  "marker": "manual"
+ }
 }

@@ -185,6 +185,10 @@ GOLDEN = [
     ("soldier",   "שלחתי פנייה בכתב לגורם בצבא ואף אחד לא עונה — מה עושים?", "8.0101"),
     ("soldier",   "איך גובים ממני קנס שקיבלתי בדין משמעתי?", "35.0221"),
     ("soldier",   "הציוד הפרטי שלי ניזוק במהלך פעילות — הצבא מפצה על זה?", "35.0223"),
+    # batch 12 (2026-08-02): the miluim civil-rights expansion — employment
+    # protection + student accommodations for the reserve persona
+    ("reserve",   "המעסיק שלי יכול לפטר אותי בגלל שאני יוצא למילואים?", "זכויות-עבודה-מילואים"),
+    ("reserve",   "פספסתי מבחן בגלל מילואים — מגיע לי מועד מיוחד?", "זכויות-סטודנטים-מילואים"),
     # batch 11 (2026-07-26): pilot demand gap — a live reserve user asked when
     # the vacation voucher arrives and got a refusal; covered by the vouchers
     # doc built from miluim.idf.il (government decisions; civil source like
@@ -228,6 +232,9 @@ DIRTY = [
     ("soldier",   "יש חינם באוטובוסים לחיילים?", "33.0120"),
     ("soldier",   "מותר פלאפון בבסיס?", "21.0113"),
     ("soldier",   "בא לי לעבור יחידה, איך עושים את זה?", "31.0308"),
+    # batch 12 (2026-08-02): live colloquial phrasings for the civil-rights docs
+    ("reserve",   "הבוס שלי מאיים לפטר אותי בגלל המילואים", "זכויות-עבודה-מילואים"),
+    ("reserve",   "כמה נקודות זכות מקבלים על מילואים?", "זכויות-סטודנטים-מילואים"),
 ]
 
 # (role, question, expected_doc_id) — heavy-typo questions that go through the
@@ -473,6 +480,17 @@ FACTS = [
     # asker's own limits; the מי-ידון restriction belongs in the body.
     ("commander", "חייל איים עליי במשפט אחרי שאמרתי לו שייקח זמן למצוא מחליף לתורנות — הוא יכול לעשות את זה, ומה עושים איתו?", "PM-33.0302",
      [["אסור", "עבירה"], ["62"]]),
+    # batch 12 (2026-08-02): the miluim civil-rights expansion. The dismissal
+    # answer must carry the 30-day window and the employment-committee route;
+    # the assignment answer certifies the AMBIGUOUS phrasing end-to-end (raw
+    # retrieval ranks 5040.05 ריתוק first on "הגשת עבודה" — the students doc
+    # sits rank-2 with the verbatim clause, and the model must answer from it)
+    ("reserve", "פיטרו אותי שבוע אחרי שחזרתי ממילואים — זה חוקי?", "זכויות-עבודה-מילואים",
+     [["30", "שלושים"], ["ועדת התעסוקה", "ועדת תעסוקה"], ["חוק", "מקור אזרחי"]]),
+    ("reserve", "יש לי הגשת עבודה באמצע המילואים — אפשר לדחות?", "זכויות-סטודנטים-מילואים",
+     [["נדחית", "דחייה", "לדחות", "דוחים"], ["ימי השירות", "10"], ["זכויות הסטודנט", "המל\"ג", "התאמות"]]),
+    ("reserve", "פספסתי מבחן בגלל מילואים — מה מגיע לי?", "זכויות-סטודנטים-מילואים",
+     [["מועד נוסף", "מועד מיוחד"], ["זכויות הסטודנט", "המל\"ג", "התאמות"]]),
 ]
 
 # שאלות אמת עמומות — נדפסות לקריאה ידנית בלבד (אין להן pass/fail חד):
