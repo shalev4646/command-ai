@@ -3902,7 +3902,10 @@ def _miluim_benefits_dialog():
                 st.session_state.mil_emp = list(emp or [])
                 st.session_state.mil_salary = int(sal) if sal else None
                 st.session_state.mil_saved = True
-                st.rerun()
+                # fragment scope: a full rerun would CLOSE the dialog and
+                # strand the user back in the drawer — this repaints the
+                # dialog in place, straight onto the map
+                st.rerun(scope="fragment")
         st.markdown(
             "<div class='cai-sc-disc'>הנתונים נשמרים במכשיר בלבד. השכר משמש "
             "לחישוב מקומי של הערכת התגמול — ולא נשלח לצ׳אט.</div>",
@@ -3980,7 +3983,7 @@ def _miluim_benefits_dialog():
     )
     if st.button("עדכון נתונים", key="mil_edit", use_container_width=True):
         st.session_state.mil_saved = False
-        st.rerun()
+        st.rerun(scope="fragment")
 
 
 @st.dialog("📋 קיבלתי צו — מה עכשיו?", width="large")
