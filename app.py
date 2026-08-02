@@ -1037,6 +1037,23 @@ role_meta = ROLE_META.get(st.session_state.role, ROLE_META["soldier"])
 role_label = role_meta["label"]
 
 
+def _service_type_default() -> str:
+    """The service type the entry role implies. The session default "סדיר"
+    used to leak into every identity surface as a "שירות חובה" badge beside a
+    reserve role — three contradictory surfaces on a fresh reserve profile
+    (drawer, settings hub, service card; 2026-08-03 audit)."""
+    return {"reserve": "מילואים", "commander": "קבע"}.get(st.session_state.role, "סדיר")
+
+
+def _service_type_shown() -> str:
+    """Display-only resolution: an explicit save in פרטים אישיים wins; until
+    then the badge/card/form seed follow the role. Storage and the API path
+    (profile_customized gate in handle_question) are untouched."""
+    if st.session_state.get("profile_customized"):
+        return st.session_state.get("service_type") or _service_type_default()
+    return _service_type_default()
+
+
 def _display_name() -> str:
     """First name for the greeting/pill/avatars — display-only; the full
     profile_name stays a settings field and is never sent to the API."""
@@ -2299,7 +2316,13 @@ div[data-testid="stDialog"] textarea {{ direction: rtl; font: 400 14px/1.7 Heebo
 /* ── Loaded orders: each title IS the tap target that opens its PDF
    inline — styled as a flat list line (olive right rule, dim text) ── */
 .cai-order-link {{
-    display: block;
+    /* flex, not a clipped block: with ellipsis on the whole row, a long title
+       pushed the date badge past the clip edge — 11 of 20 badges were simply
+       invisible (2026-08-03 audit). Now the title alone truncates and the
+       badge, flex:none at the row end, always survives. */
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
     border-right: 2px solid var(--accent-border);
     color: rgba(239,240,232,.65) !important;
     font: 400 13px Heebo, sans-serif;
@@ -2308,10 +2331,14 @@ div[data-testid="stDialog"] textarea {{ direction: rtl; font: 400 14px/1.7 Heebo
     padding: 7px 10px;
     margin: 0 8px 2px 0;
     direction: rtl;
+    transition: color .15s ease, border-color .15s ease;
+}}
+.cai-order-tt {{
+    flex: 0 1 auto;
+    min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    transition: color .15s ease, border-color .15s ease;
 }}
 a.cai-order-link:hover {{
     color: var(--text) !important;
@@ -2322,7 +2349,7 @@ a.cai-order-link:hover {{
 .cai-order-date {{
     font: 400 10.5px Heebo, sans-serif;
     color: rgba(239,240,232,.38);
-    margin-right: 6px;
+    flex: none;
     white-space: nowrap;
 }}
 /* orders search field — translucent pill matching the 9a drawer (rescoped
@@ -2706,8 +2733,12 @@ components.html(
             var shown = s.name || fallback;
             setText(card.querySelector("[data-svc-mono]"), shown.slice(0, 1));
             setText(card.querySelector("[data-svc-nm]"), shown);
+            // mirror the server rule: a type equal to the role (card footer)
+            // is dropped from the meta line — no "מילואים" twice on one card
             setText(card.querySelector("[data-svc-meta]"),
-                    [s.type, s.track].filter(Boolean).join(" · "));
+                    [s.type, s.track].filter(function (x) {
+                        return x && x !== fallback;
+                    }).join(" · "));
 
             // the ticks land on the card's footer — the slot has shipped empty
             // since the direction was chosen, and filling it is what turns the
@@ -3342,15 +3373,19 @@ div[data-testid="stDialog"] [data-testid="stRadio"] div[role="radiogroup"] {
 }
 div[data-testid="stDialog"] [data-testid="stRadio"] div[role="radiogroup"] label {
     flex: 1; display: flex; align-items: center; justify-content: center;
-    padding: 10px; margin: 0 !important; border-radius: 10px; cursor: pointer;
+    /* uniform min-height + slim side padding: the three tiles used to render
+       40/60/80px tall with "אישי־משפחתי" fractured mid-word at ~77px width
+       (2026-08-03). Two-line labels are fine; ragged tiles are not. */
+    min-height: 52px; padding: 8px 6px; margin: 0 !important; border-radius: 10px;
+    cursor: pointer; text-align: center;
     transition: background .15s ease;
 }
 div[data-testid="stDialog"] [data-testid="stRadio"] div[role="radiogroup"] label > div:first-child {
     display: none !important;  /* hide the radio dot */
 }
 div[data-testid="stDialog"] [data-testid="stRadio"] div[role="radiogroup"] label p {
-    font: 600 13.5px Heebo, sans-serif !important; color: rgba(236,237,230,.6) !important;
-    margin: 0 !important;
+    font: 600 13.5px/1.3 Heebo, sans-serif !important; color: rgba(236,237,230,.6) !important;
+    margin: 0 !important; word-break: normal !important; overflow-wrap: normal !important;
 }
 div[data-testid="stDialog"] [data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) {
     background: linear-gradient(180deg, var(--accent-hover), var(--accent));
@@ -3560,7 +3595,10 @@ div[data-testid="stDialog"] [data-testid="InputInstructions"] { display: none !i
     margin-top: 2px; line-height: 1.45; }
 .cai-mil-tag { font: 600 10.5px Heebo, sans-serif; color: var(--accent-bright);
     background: var(--accent-soft); border: 1px solid var(--accent-border);
-    border-radius: 99px; padding: 1px 8px; flex: none; }
+    border-radius: 99px; padding: 1px 8px; flex: none;
+    /* a pill is an atom: it may DROP to the next line whole, never split
+       mid-text ("מקור/אזרחי", "כי/סימנת סטודנט" — 2026-08-03 audit) */
+    display: inline-block; white-space: nowrap; vertical-align: middle; }
 .cai-mil-body { border-top: 1px solid rgba(236,237,230,.09); padding: 4px 13px 12px; }
 .cai-mil-how { display: flex; gap: 8px; align-items: flex-start; direction: rtl;
     font: 400 12.5px Heebo, sans-serif; color: rgba(236,237,230,.78);
@@ -3649,7 +3687,10 @@ def _punishment_dialog():
             "<div class='cai-pa-row'>"
             "<div class='cai-pa-main'>"
             f"<span class='cai-pa-pun'>{html.escape(cap['punishment'])}</span>"
-            f"<span class='cai-pa-clause'>לפי פ\"מ 33.0302 · {html.escape(cap['clause'])}</span>"
+            # the dialog intro already anchors the whole table to פ"מ 33.0302 —
+            # repeating the order id on every row buried the per-row uniques
+            # (2026-08-03 audit); the clause alone is the information
+            f"<span class='cai-pa-clause'>{html.escape(cap['clause'])}</span>"
             "</div>"
             f"<span class='cai-pa-max {cls}'>{html.escape(mx)}</span>"
             "</div>"
@@ -4199,9 +4240,13 @@ html.cai-drawer-drag .st-key-drawer_backdrop { pointer-events: none !important; 
    bottom margin of a markdown <p>). Our blocks are raw <div>s with no <p>, so
    the -16px goes UNCANCELLED and every markdown pulls its successor 16px up —
    section labels land ON the card above and the recent-head row collapses.
-   Zero it here; all rhythm comes from the blocks' own margins. */
+   Zero it here; all rhythm comes from the blocks' own margins. Dialogs too:
+   the miluim tools are built from the same raw <div>s — the letter-form and
+   profile-form labels overlapped their headings by 6px, and the benefits foot
+   lost its last line under the update button (measured 2026-08-03). */
 .st-key-cai_drawer [data-testid="stMarkdownContainer"],
-.st-key-cai_settings [data-testid="stMarkdownContainer"] { margin-bottom: 0 !important; }
+.st-key-cai_settings [data-testid="stMarkdownContainer"],
+div[data-testid="stDialog"] [data-testid="stMarkdownContainer"] { margin-bottom: 0 !important; }
 /* top row: gear (right) + close « (left) */
 .st-key-cai_drawer div[data-testid="stHorizontalBlock"]:first-of-type { align-items: center; }
 /* push each top-row button to the OUTER edge of its column (auto cross-axis
@@ -4338,6 +4383,11 @@ html.cai-orders-open .cai-kb-card {
 }
 .st-key-cai_tools [data-testid="stElementContainer"],
 .st-key-cai_recent [data-testid="stElementContainer"] { margin: 0 !important; }
+/* empty state: st.caption ships with zero inset and LTR left-alignment, so
+   "אין שיחות קודמות" sat glued to the box corner (2026-08-03 audit) */
+.st-key-cai_recent [data-testid="stCaptionContainer"] {
+  padding: 13px 14px !important; text-align: center !important;
+}
 .st-key-cai_tools button, .st-key-cai_recent button {
   background: transparent !important; border: none !important; border-radius: 0 !important;
   padding: 13px 14px !important; margin: 0 !important; min-height: 0 !important;
@@ -4671,6 +4721,9 @@ html.cai-orders-open .cai-kb-card {
 .cai-banner .bi { background-image: url("ICON_SHIELD"); }
 .st-key-cai_analytics { border-radius: 15px; background: #1E2416; border: 1px solid rgba(236,237,230,.1); padding: 10px 14px 12px; margin-bottom: 8px; }
 .st-key-cai_analytics [data-testid="stElementContainer"] { margin: 0 !important; }
+/* zero flex gap left the switch knob touching the first letter of the label
+   ("שיתוף" read as swallowed — 2026-08-03 audit) */
+.st-key-cai_analytics [data-testid="stCheckbox"] label { gap: 10px !important; }
 .st-key-share_analytics_w label { font: 500 14px Heebo !important; color: #ECEDE6 !important; }
 .st-key-share_analytics_w [data-baseweb="checkbox"] > div:first-child { background: var(--accent) !important; }
 .cai-analytics-sub { font: 400 11px Heebo; color: rgba(236,237,230,.45); margin: 2px 0 0; }
@@ -4694,14 +4747,24 @@ html.cai-orders-open .cai-kb-card {
    inside a 335px row — and the three buttons (width:100% of that) stacked
    into a narrow left-leaning column. That is what made the whole screen read
    as misaligned (2026-07-30 device video). */
+/* the keyed stElementContainer itself shrink-wraps inside the flex column —
+   every inner width:100% resolves against IT, so the "full-width" tabs were
+   min-content coincidence (185px exposed once padding shrank, 2026-08-03) */
+.st-key-pf_type_w { width: 100% !important; }
 .st-key-pf_type_w [data-testid="stButtonGroup"] { width: 100% !important; display: block !important; }
 .st-key-pf_type_w [data-testid="stButtonGroup"] [role="radiogroup"] {
-  width: 100% !important; display: grid !important;
+  /* BaseWeb ships max-width:fit-content on the radiogroup — it silently caps
+     width:100% at content size (185px), which is what kept the tabs narrow
+     and "מילואים" one px from ellipsis (2026-08-03) */
+  width: 100% !important; max-width: none !important; display: grid !important;
   grid-template-columns: 1fr 1fr 1fr !important; gap: 7px !important; }
 .st-key-pf_type_w [data-testid="stButtonGroup"] button {
   width: 100% !important; border-radius: 11px !important; min-height: 44px !important;
   background: #22271A !important; border: 1px solid rgba(236,237,230,.13) !important;
-  color: rgba(236,237,230,.7) !important; }
+  color: rgba(236,237,230,.7) !important;
+  /* BaseWeb's 16px side padding left "מילואים" one px from ellipsis at the
+     77px track (and phones DID ellipsize it — 2026-08-03 audit) */
+  padding-inline: 6px !important; }
 .st-key-pf_type_w [data-testid="stButtonGroup"] button p {
   color: rgba(236,237,230,.7) !important; font: 500 13px Heebo !important; }
 .st-key-pf_type_w button[data-testid*="segmented_controlActive"],
@@ -4793,8 +4856,11 @@ def _wipe_all():
 
 def _settings_hub():
     """8a — settings home: profile card + grouped nav + logout."""
-    _svc = st.session_state.get("service_type") or "סדיר"
-    _sub = ["שירות חובה" if _svc == "סדיר" else _svc]
+    _svc = _service_type_shown()
+    _svc_label = "שירות חובה" if _svc == "סדיר" else _svc
+    # a service label that merely repeats the role ("מילואים · מילואים") adds
+    # nothing — show it only when it carries new information
+    _sub = [] if _svc_label == role_label else [_svc_label]
     _pills = st.session_state.get("profile_saved") or []
     if _pills:
         _sub.append(_pills[0])
@@ -4877,7 +4943,9 @@ def _service_card(name: str, svc: str, track: str, marks: list[str]) -> str:
     """
     short_track = track.split(" (")[0] if track else ""
     initial = (name or role_label)[:1]
-    meta = " · ".join(x for x in (svc, short_track) if x)
+    # the card footer already prints the role — a meta line repeating the same
+    # word (reserve default: type "מילואים" over foot "מילואים") says nothing
+    meta = " · ".join(x for x in (svc, short_track) if x and x != role_label)
     base = json.dumps(
         {"name": name.strip(), "type": svc, "track": short_track,
          "marks": "|".join(sorted(marks))},
@@ -4909,7 +4977,7 @@ def _settings_personal():
     # stays the first-name-only form used for greetings and the hub avatar
     st.markdown(
         _service_card((st.session_state.get("profile_name") or "").strip(),
-                      st.session_state.get("service_type") or "סדיר",
+                      _service_type_shown(),
                       st.session_state.get("service_track") or "",
                       list(st.session_state.get("profile_saved") or [])),
         unsafe_allow_html=True)
@@ -4944,7 +5012,9 @@ def _settings_personal():
                 with st.container(key="cai_pf_fld_type"):
                     st.markdown("<div class='cai-fld-label'>סוג שירות</div>", unsafe_allow_html=True)
                     if "pf_type_w" not in st.session_state:
-                        st.session_state.pf_type_w = st.session_state.get("service_type", "סדיר")
+                        # seed from the role-aware resolution: a reserve user's
+                        # form opens on מילואים, not the conscript default
+                        st.session_state.pf_type_w = _service_type_shown()
                     st.segmented_control("סוג שירות", _SERVICE_TYPES, key="pf_type_w",
                                          selection_mode="single", label_visibility="collapsed")
 
@@ -5352,7 +5422,7 @@ def _order_link(title: str, url: str | None, date_badge: str | None = None,
     SAME rules the search box applies client-side (_search_norm), so filtering
     is a substring test in the browser instead of a round-trip per keystroke.
     """
-    safe_title = html.escape(title)
+    safe_title = f"<span class='cai-order-tt'>{html.escape(title)}</span>"
     tail = f"<span class='cai-order-date'>נוסח {date_badge}</span>" if date_badge else ""
     q = html.escape(_search_norm(f"{title} {doc_id}"), quote=True)
     if url:
@@ -5452,7 +5522,7 @@ with st.container(key="cai_drawer"):
         st.button("«", key="drawer_close")
 
     # ── role card (display only; role switching lives in Settings) ──
-    _svc_type = st.session_state.get("service_type") or "סדיר"
+    _svc_type = _service_type_shown()
     _role_badge = "שירות חובה" if _svc_type == "סדיר" else _svc_type
     # with a saved name: initial + name up front, role folds into the
     # small key line ("מחובר כ־חייל"); without — exactly the old card
@@ -5460,13 +5530,17 @@ with st.container(key="cai_drawer"):
     _card_av = (_dnd or role_label)[:1]
     _card_k = f"מחובר כ־{role_label}" if _dnd else "מחובר כ־"
     _card_nm = _dnd or role_label
+    # a badge that repeats what the card already says ("מילואים" beside
+    # "מחובר כ־מילואים") is noise — render it only when it adds information
+    _badge_html = (f"<span class='cai-role-badge'>{html.escape(_role_badge)}</span>"
+                   if _role_badge != role_label else "")
     st.markdown(
         "<div class='cai-role-card'>"
         f"<div class='cai-role-av'>{html.escape(_card_av)}</div>"
         "<div class='cai-role-meta'>"
         f"<div class='cai-role-k'>{html.escape(_card_k)}</div>"
         f"<div class='cai-role-nm'>{html.escape(_card_nm)}</div></div>"
-        f"<span class='cai-role-badge'>{html.escape(_role_badge)}</span>"
+        f"{_badge_html}"
         "</div>",
         unsafe_allow_html=True,
     )
@@ -5865,7 +5939,9 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
           <!-- one wrapping span: the pill is inline-flex with gap, so bare
                text + .xtra as separate flex items would put the 6px gap
                INSIDE the word ("שתף ב וואטסאפ") -->
-          <a class="act" id="wa" target="_blank" rel="noopener"><span>✆ <span class="xtra">שלח ב</span>וואטסאפ</span></a>
+          <!-- inline WhatsApp glyph, not "✆": at pill size the dingbat read
+               as a block/slash icon (2026-08-03 audit) -->
+          <a class="act" id="wa" target="_blank" rel="noopener"><span><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" style="vertical-align:-1px"><path d="M17.5 14.4c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.5 0 1.47 1.07 2.9 1.22 3.1.15.2 2.11 3.22 5.1 4.51.71.31 1.27.49 1.7.63.72.23 1.37.2 1.88.12.58-.09 1.76-.72 2.01-1.41.25-.7.25-1.3.17-1.42-.07-.12-.27-.2-.57-.35zM12.05 21.6h-.01a9.53 9.53 0 0 1-4.86-1.33l-.35-.21-3.62.95.97-3.53-.23-.36a9.54 9.54 0 1 1 8.1 4.48zm0-21.1C5.7.5.55 5.65.55 12a11.4 11.4 0 0 0 1.53 5.73L.5 23.5l5.93-1.56a11.5 11.5 0 0 0 5.61 1.46h.01c6.35 0 11.5-5.15 11.5-11.5S18.4.5 12.05.5z"/></svg> <span class="xtra">שלח ב</span>וואטסאפ</span></a>
           <button class="act" id="card"><span>🖼<span class="xtra"> כרטיס</span></span></button>
         </div>
         <script>
@@ -6208,9 +6284,13 @@ def _clause_dialog(primary: dict, page: int | None, full_href: str | None) -> No
     )
 
     title = primary.get("title", "")
+    # the caption introduces the page PREVIEW — without one (no page metadata)
+    # it read as a promise for content that never appeared (2026-08-03 audit)
+    _cap = ("הסעיף הרלוונטי מתוך נוסח הפקודה הרשמי" if page
+            else "הסעיף המדויק מופיע בנוסח הפקודה הרשמי — נפתח בכפתור למטה")
     st.markdown(
         f"<div class='cai-sc-ctitle'>{html.escape(title)}</div>"
-        "<div class='cai-sc-ccap'>הסעיף הרלוונטי מתוך נוסח הפקודה הרשמי</div>",
+        f"<div class='cai-sc-ccap'>{_cap}</div>",
         unsafe_allow_html=True,
     )
 

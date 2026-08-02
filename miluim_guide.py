@@ -39,7 +39,11 @@ DISCLAIMER = (
 CAUSES: list[tuple[str, str]] = [
     ("economic", "עבודה / עסק"),
     ("studies", "לימודים"),
-    ("personal", "אישי־משפחתי"),
+    # "אישי / משפחתי", not "אישי־משפחתי": browsers may break after the maqaf,
+    # and at ~77px per tile the word fractured mid-letter ("אישר/משפח/תי",
+    # 2026-08-03 device-width audit). The slash matches "עבודה / עסק" and
+    # gives a clean two-line wrap point.
+    ("personal", "אישי / משפחתי"),
 ]
 
 # the four timeline stages painted at the top of the dialog
