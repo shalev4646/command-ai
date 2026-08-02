@@ -2316,7 +2316,13 @@ div[data-testid="stDialog"] textarea {{ direction: rtl; font: 400 14px/1.7 Heebo
 /* ── Loaded orders: each title IS the tap target that opens its PDF
    inline — styled as a flat list line (olive right rule, dim text) ── */
 .cai-order-link {{
-    display: block;
+    /* flex, not a clipped block: with ellipsis on the whole row, a long title
+       pushed the date badge past the clip edge — 11 of 20 badges were simply
+       invisible (2026-08-03 audit). Now the title alone truncates and the
+       badge, flex:none at the row end, always survives. */
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
     border-right: 2px solid var(--accent-border);
     color: rgba(239,240,232,.65) !important;
     font: 400 13px Heebo, sans-serif;
@@ -2325,10 +2331,14 @@ div[data-testid="stDialog"] textarea {{ direction: rtl; font: 400 14px/1.7 Heebo
     padding: 7px 10px;
     margin: 0 8px 2px 0;
     direction: rtl;
+    transition: color .15s ease, border-color .15s ease;
+}}
+.cai-order-tt {{
+    flex: 0 1 auto;
+    min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    transition: color .15s ease, border-color .15s ease;
 }}
 a.cai-order-link:hover {{
     color: var(--text) !important;
@@ -2339,7 +2349,7 @@ a.cai-order-link:hover {{
 .cai-order-date {{
     font: 400 10.5px Heebo, sans-serif;
     color: rgba(239,240,232,.38);
-    margin-right: 6px;
+    flex: none;
     white-space: nowrap;
 }}
 /* orders search field — translucent pill matching the 9a drawer (rescoped
@@ -3677,7 +3687,10 @@ def _punishment_dialog():
             "<div class='cai-pa-row'>"
             "<div class='cai-pa-main'>"
             f"<span class='cai-pa-pun'>{html.escape(cap['punishment'])}</span>"
-            f"<span class='cai-pa-clause'>לפי פ\"מ 33.0302 · {html.escape(cap['clause'])}</span>"
+            # the dialog intro already anchors the whole table to פ"מ 33.0302 —
+            # repeating the order id on every row buried the per-row uniques
+            # (2026-08-03 audit); the clause alone is the information
+            f"<span class='cai-pa-clause'>{html.escape(cap['clause'])}</span>"
             "</div>"
             f"<span class='cai-pa-max {cls}'>{html.escape(mx)}</span>"
             "</div>"
@@ -4370,6 +4383,11 @@ html.cai-orders-open .cai-kb-card {
 }
 .st-key-cai_tools [data-testid="stElementContainer"],
 .st-key-cai_recent [data-testid="stElementContainer"] { margin: 0 !important; }
+/* empty state: st.caption ships with zero inset and LTR left-alignment, so
+   "אין שיחות קודמות" sat glued to the box corner (2026-08-03 audit) */
+.st-key-cai_recent [data-testid="stCaptionContainer"] {
+  padding: 13px 14px !important; text-align: center !important;
+}
 .st-key-cai_tools button, .st-key-cai_recent button {
   background: transparent !important; border: none !important; border-radius: 0 !important;
   padding: 13px 14px !important; margin: 0 !important; min-height: 0 !important;
@@ -4703,6 +4721,9 @@ html.cai-orders-open .cai-kb-card {
 .cai-banner .bi { background-image: url("ICON_SHIELD"); }
 .st-key-cai_analytics { border-radius: 15px; background: #1E2416; border: 1px solid rgba(236,237,230,.1); padding: 10px 14px 12px; margin-bottom: 8px; }
 .st-key-cai_analytics [data-testid="stElementContainer"] { margin: 0 !important; }
+/* zero flex gap left the switch knob touching the first letter of the label
+   ("שיתוף" read as swallowed — 2026-08-03 audit) */
+.st-key-cai_analytics [data-testid="stCheckbox"] label { gap: 10px !important; }
 .st-key-share_analytics_w label { font: 500 14px Heebo !important; color: #ECEDE6 !important; }
 .st-key-share_analytics_w [data-baseweb="checkbox"] > div:first-child { background: var(--accent) !important; }
 .cai-analytics-sub { font: 400 11px Heebo; color: rgba(236,237,230,.45); margin: 2px 0 0; }
@@ -5401,7 +5422,7 @@ def _order_link(title: str, url: str | None, date_badge: str | None = None,
     SAME rules the search box applies client-side (_search_norm), so filtering
     is a substring test in the browser instead of a round-trip per keystroke.
     """
-    safe_title = html.escape(title)
+    safe_title = f"<span class='cai-order-tt'>{html.escape(title)}</span>"
     tail = f"<span class='cai-order-date'>נוסח {date_badge}</span>" if date_badge else ""
     q = html.escape(_search_norm(f"{title} {doc_id}"), quote=True)
     if url:
@@ -5918,7 +5939,9 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
           <!-- one wrapping span: the pill is inline-flex with gap, so bare
                text + .xtra as separate flex items would put the 6px gap
                INSIDE the word ("שתף ב וואטסאפ") -->
-          <a class="act" id="wa" target="_blank" rel="noopener"><span>✆ <span class="xtra">שלח ב</span>וואטסאפ</span></a>
+          <!-- inline WhatsApp glyph, not "✆": at pill size the dingbat read
+               as a block/slash icon (2026-08-03 audit) -->
+          <a class="act" id="wa" target="_blank" rel="noopener"><span><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" style="vertical-align:-1px"><path d="M17.5 14.4c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.5 0 1.47 1.07 2.9 1.22 3.1.15.2 2.11 3.22 5.1 4.51.71.31 1.27.49 1.7.63.72.23 1.37.2 1.88.12.58-.09 1.76-.72 2.01-1.41.25-.7.25-1.3.17-1.42-.07-.12-.27-.2-.57-.35zM12.05 21.6h-.01a9.53 9.53 0 0 1-4.86-1.33l-.35-.21-3.62.95.97-3.53-.23-.36a9.54 9.54 0 1 1 8.1 4.48zm0-21.1C5.7.5.55 5.65.55 12a11.4 11.4 0 0 0 1.53 5.73L.5 23.5l5.93-1.56a11.5 11.5 0 0 0 5.61 1.46h.01c6.35 0 11.5-5.15 11.5-11.5S18.4.5 12.05.5z"/></svg> <span class="xtra">שלח ב</span>וואטסאפ</span></a>
           <button class="act" id="card"><span>🖼<span class="xtra"> כרטיס</span></span></button>
         </div>
         <script>
@@ -6261,9 +6284,13 @@ def _clause_dialog(primary: dict, page: int | None, full_href: str | None) -> No
     )
 
     title = primary.get("title", "")
+    # the caption introduces the page PREVIEW — without one (no page metadata)
+    # it read as a promise for content that never appeared (2026-08-03 audit)
+    _cap = ("הסעיף הרלוונטי מתוך נוסח הפקודה הרשמי" if page
+            else "הסעיף המדויק מופיע בנוסח הפקודה הרשמי — נפתח בכפתור למטה")
     st.markdown(
         f"<div class='cai-sc-ctitle'>{html.escape(title)}</div>"
-        "<div class='cai-sc-ccap'>הסעיף הרלוונטי מתוך נוסח הפקודה הרשמי</div>",
+        f"<div class='cai-sc-ccap'>{_cap}</div>",
         unsafe_allow_html=True,
     )
 
