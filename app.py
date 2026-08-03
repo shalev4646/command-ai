@@ -4247,7 +4247,11 @@ html.cai-drawer-drag .st-key-drawer_backdrop { pointer-events: none !important; 
   background: linear-gradient(180deg,#121509 0%,#0E1007 100%) !important;
   border-inline-end: 1px solid rgba(236,237,230,.08) !important;
   box-shadow: -14px 0 44px rgba(0,0,0,.5) !important;
-  padding: max(42px, calc(env(safe-area-inset-top,0px) + 12px)) 16px calc(env(safe-area-inset-bottom,0px) + 10px) !important;
+  /* top inset from max(--cai-sat, env()): standalone iOS reports env()=0
+     (no viewport-fit=cover), so env() alone put the gear/« under the clock
+     on the device (user screenshot 2026-08-03) — same recipe as the
+     settings pane below */
+  padding: max(42px, calc(max(var(--cai-sat, 0px), env(safe-area-inset-top,0px)) + 12px)) 16px calc(env(safe-area-inset-bottom,0px) + 10px) !important;
   display: flex !important; flex-direction: column !important;
   /* the keyed container IS the stVerticalBlock (1.58) — no inner wrapper to
      size. Height comes from the fixed inset; margin-top:auto on the CTA pins
