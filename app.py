@@ -1728,12 +1728,22 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     line-height: 64px; white-space: nowrap; }}
 /* 9a: two-tone wordmark — "Command" light, "AI" olive (header + entry title) */
 .cai-wordmark .cai-wm-ai, .cai-entry-title .cai-wm-ai {{ color: var(--accent); }}
-.cai-pill {{
-    /* no auto margin: the wordmark's margin-inline:auto already pushes the
-       pill to the trailing edge; a second auto margin would skew the split */
-    font: 600 12px Heebo, sans-serif; color: var(--accent);
-    background: var(--accent-soft); border: 1px solid var(--accent-border);
-    border-radius: 99px; padding: 6px 13px; white-space: nowrap;
+/* identity cluster — boxless two-line lockup at the trailing edge (replaces
+   the old .cai-pill capsule, user pick 2026-08-03). No auto margin: the
+   wordmark's margin-inline:auto already pushes it to the edge. Both lines
+   NOWRAP + ellipsis inside a capped width, so a long name can never wrap the
+   header or shove the centered wordmark around. */
+.cai-ident {{
+    flex: none; display: flex; flex-direction: column;
+    align-items: flex-end; gap: 3px; max-width: 108px;
+}}
+.cai-ident .nm {{
+    font: 500 13.5px Heebo, sans-serif; color: var(--text); line-height: 1.1;
+    max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}}
+.cai-ident .rl {{
+    font: 400 10.5px Heebo, sans-serif; color: var(--accent-bright);
+    opacity: .8; line-height: 1; white-space: nowrap;
 }}
 
 /* ── Chat home greeting — 9a: title 30px + subtitle 13.5px, both CENTERED,
@@ -5661,13 +5671,19 @@ with st.container(key="cai_drawer"):
 if st.session_state.get("show_settings"):
     _render_settings()
 
-# ── Header: wordmark + role pill ──
+# ── Header: wordmark + identity cluster (boxless, user pick 2026-08-03 —
+# "variant 1": name over role as two quiet lines, no pill chrome; with no
+# saved name the role alone takes the name slot) ──
 _dn = _display_name()
-_pill_text = f"{html.escape(_dn)} · {html.escape(role_label)}" if _dn else f"מחובר כ־{html.escape(role_label)}"
+if _dn:
+    _ident = (f"<span class='cai-ident'><span class='nm'>{html.escape(_dn)}</span>"
+              f"<span class='rl'>{html.escape(role_label)}</span></span>")
+else:
+    _ident = f"<span class='cai-ident'><span class='nm'>{html.escape(role_label)}</span></span>"
 st.markdown(
     f"<div class='cai-header'>"
     f"<span class='cai-wordmark'>Command<span class='cai-wm-ai'>AI</span></span>"
-    f"<span class='cai-pill'>{_pill_text}</span>"
+    f"{_ident}"
     f"</div>",
     unsafe_allow_html=True,
 )
