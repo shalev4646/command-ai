@@ -1920,6 +1920,25 @@ html:not(.cai-standalone) [data-testid="stBottom"] {{
     0%, 80%, 100% {{ opacity:.25; transform:scale(.62); }}
     40% {{ opacity:1; transform:scale(1); }}
 }}
+/* answer skeleton — the wait shows the SHAPE of the coming answer (verdict
+   chip + three text lines) instead of a spinner; one shimmer sweep, RTL */
+.cai-skel {{ display:block; direction:rtl; padding:4px 2px 2px; }}
+.cai-skel .skc, .cai-skel .skr {{
+    display:block;
+    background:linear-gradient(270deg,
+        rgba(236,237,230,.055) 25%, rgba(236,237,230,.14) 50%,
+        rgba(236,237,230,.055) 75%);
+    background-size:220% 100%;
+    animation:caiSkelShimmer 1.4s infinite linear;
+}}
+.cai-skel .skc {{ width:96px; height:26px; border-radius:99px; margin:2px 0 13px; }}
+.cai-skel .skr {{ height:13px; border-radius:7px; margin:9px 0; }}
+.cai-skel .skr.w84 {{ width:84%; }}
+.cai-skel .skr.w58 {{ width:58%; }}
+@keyframes caiSkelShimmer {{
+    0% {{ background-position:220% 0; }}
+    100% {{ background-position:-220% 0; }}
+}}
 .cai-thinking {{
     display:flex; align-items:center; gap:10px; direction:rtl;
     padding:3px 2px 5px; color:var(--text-dim);
@@ -5264,7 +5283,17 @@ def handle_question(question: str):
     acc: list[str] = []
     sources: list = []
     try:
-        with st.spinner("מחפש בפקודות..."):
+        # The answer bubble opens IMMEDIATELY with a skeleton + a staged,
+        # truthful status line — no generic spinner, no surface swap. The
+        # stages mirror the real pipeline: stage 1 spans the rewrite +
+        # retrieval inside stream_ai_answer; stage 2 the model's reading/
+        # writing pause until the first token (2026-08-03 wait-experience
+        # round; p50 ~19s in production made this THE first impression).
+        # Error paths need no cleanup — the caller reruns unconditionally.
+        with st.chat_message("assistant"):
+            stage = st.empty()
+            stage.markdown(_stage_html("מאתר פקודות רלוונטיות…"),
+                           unsafe_allow_html=True)
             result = stream_ai_answer(question, history, role=st.session_state.role, **profile_kw)
             text_gen, sources = result[0], result[1]
             # Streamlit Cloud can pair a fresh app.py with a backend module
@@ -5272,8 +5301,9 @@ def handle_question(question: str):
             # builds returned 2 items and no sent-content
             if len(result) > 2:
                 user_msg["api_content"] = result[2]
-        with st.chat_message("assistant"):
-            text = _stream_answer(text_gen, acc)
+            stage.markdown(_stage_html("קורא את הסעיפים ומנסח…"),
+                           unsafe_allow_html=True)
+            text = _stream_answer(text_gen, acc, think=stage)
     except (APIConnectionError, APITimeoutError):
         user_msg["error"] = True
         metrics.refund(st.session_state.session_id)  # failures don't burn quota
@@ -5790,14 +5820,24 @@ def _verdict_chip(content: str) -> tuple[str | None, str]:
 # token. Opus runs adaptive thinking with no deltas yielded, so the bubble
 # would otherwise sit blank for several seconds after the retrieval spinner
 # cleared — the "dead empty bubble" the 2026-07-21 phone video caught (~7s).
-_THINKING_HTML = (
-    '<div class="cai-thinking"><span class="cai-think-dots">'
-    '<i></i><i></i><i></i></span>'
-    '<span>מנסח תשובה מהפקודות…</span></div>'
-)
+def _stage_html(text: str) -> str:
+    """One staged wait surface: an answer-shaped skeleton (chip pill + three
+    shimmering lines) with a truthful caption that advances with the real
+    pipeline. The SHAPE stays fixed across stages — only the words move —
+    so the bubble never jumps."""
+    return (
+        '<div class="cai-skel">'
+        '<span class="skc"></span>'
+        '<span class="skr"></span><span class="skr w84"></span>'
+        '<span class="skr w58"></span>'
+        '</div>'
+        '<div class="cai-thinking"><span class="cai-think-dots">'
+        '<i></i><i></i><i></i></span>'
+        f'<span>{html.escape(text)}</span></div>'
+    )
 
 
-def _stream_answer(text_gen, acc: list[str] | None = None) -> str:
+def _stream_answer(text_gen, acc: list[str] | None = None, think=None) -> str:
     """Render the live answer chip-first: hold the stream until the first
     line is complete; when it is a recognizable **פסיקה:** line, draw the
     chip immediately and stream only the body under it. Without this the
@@ -5816,11 +5856,14 @@ def _stream_answer(text_gen, acc: list[str] | None = None) -> str:
                 yield c
         text_gen = _tap(text_gen)
     it = iter(text_gen)
-    # animated placeholder until the first real content is ready to paint —
+    # staged placeholder until the first real content is ready to paint —
     # covers both the pre-first-token thinking pause and the first-line buffer
-    # below; cleared the moment we render the chip/stream.
-    think = st.empty()
-    think.markdown(_THINKING_HTML, unsafe_allow_html=True)
+    # below; cleared the moment we render the chip/stream. The caller passes
+    # its own placeholder (the stage element already inside the bubble) so
+    # the skeleton persists seamlessly from retrieval into this phase.
+    if think is None:
+        think = st.empty()
+        think.markdown(_stage_html("קורא את הסעיפים ומנסח…"), unsafe_allow_html=True)
     buf = ""
     ended = True
     for chunk in it:
