@@ -184,8 +184,11 @@ def _font_data_uri() -> str:
 # verified in-browser: with the meta alone, getComputedStyle(:root).colorScheme
 # stayed "normal"; with the property it reads "dark", and the pre-paint canvas
 # follows the used scheme.
+# Dark chain (2026-08-03, user decision): the launch image, the splash and
+# the app now share ONE dark backdrop — the light-olive splash era ended
+# because the sage→dark handoff read as a flash/"two screens" on device.
 _MICRO = ('<style id="cai-micro">:root{color-scheme:dark}'
-          'html,body{background:#99A26B;margin:0}</style>')
+          'html,body{background:#14170E;margin:0}</style>')
 
 # __FACE__ is substituted at patch time. A plain placeholder, not an f-string:
 # this block is nearly all CSS braces and escaping them all would bury it.
@@ -206,15 +209,16 @@ _HEAD_TEMPLATE = """
     <meta id="cai-scheme" name="color-scheme" content="dark">
     <style id="cai-boot" data-cai-ver="__VER__">
       __FACE__
-      html, body { background: #99A26B; }
-      #cai-boot-splash { position: fixed; inset: 0; z-index: 2147483000; background: #99A26B;
+      html, body { background: #14170E; }
+      #cai-boot-splash { position: fixed; inset: 0; z-index: 2147483000; background: #14170E;
         display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
         padding-top: var(--cai-pad, calc(env(safe-area-inset-top, 0px) + 14vh));
         gap: 18px; transition: opacity .4s ease; pointer-events: none; }
       #cai-boot-splash .chev span { display: block; width: 26px; height: 26px;
-        border-top: 6px solid #171A12; border-left: 6px solid #171A12; transform: rotate(45deg); }
-      #cai-boot-splash .chev span + span { border-color: rgba(23,26,18,.45); margin-top: -9px; }
-      #cai-boot-splash .t { font: 400 34px 'Suez One', serif; color: #171A12; }
+        border-top: 6px solid #A3AE6E; border-left: 6px solid #A3AE6E; transform: rotate(45deg); }
+      #cai-boot-splash .chev span + span { border-color: rgba(163,174,110,.45); margin-top: -9px; }
+      #cai-boot-splash .t { font: 400 34px 'Suez One', serif; color: #ECEDE6; }
+      #cai-boot-splash .t b { color: #A3AE6E; font-weight: 400; }
       /* SUEZ ONE, NOT ui-monospace — and this is load-bearing, not taste.
          The launch image now paints this line too (see _startup_png), so the
          two must agree to the pixel or the hand-off shows the subtitle
@@ -249,11 +253,11 @@ _HEAD_TEMPLATE = """
         gap: 6px; }
       #cai-boot-splash .s1 { display: flex; align-items: center; gap: 12px;
         font: 400 13px 'Suez One', serif; letter-spacing: 2px;
-        color: rgba(23,26,18,.59); }
+        color: rgba(236,237,230,.59); }
       #cai-boot-splash .s1::before, #cai-boot-splash .s1::after {
-        content: ''; width: 26px; height: 1px; background: rgba(23,26,18,.31); }
+        content: ''; width: 26px; height: 1px; background: rgba(236,237,230,.31); }
       #cai-boot-splash .s2 { font: 400 9.5px 'Suez One', serif; letter-spacing: 7px;
-        color: rgba(23,26,18,.37); }
+        color: rgba(236,237,230,.37); }
       /* NO lift choreography. A staggered per-element entrance was tried
          (2026-07-27, shell v4) and it FOUGHT Streamlit: reruns replace the
          DOM mid-cascade, so the curtain lifted onto a dark screen of
@@ -276,7 +280,7 @@ _HEAD_TEMPLATE = """
       #cai-boot-splash .wait { margin: auto auto 14vh; display: flex;
         flex-direction: column; align-items: center; gap: 13px; }
       #cai-boot-splash .w { width: 22px; height: 22px; margin: 0;
-        border: 2px solid rgba(23,26,18,.20); border-top-color: rgba(23,26,18,.55);
+        border: 2px solid rgba(236,237,230,.20); border-top-color: rgba(236,237,230,.55);
         border-radius: 50%;
         animation: caiBootSpin .9s linear infinite, caiBootFade .5s ease both;
         animation-delay: 0s, 2.5s; }
@@ -287,11 +291,11 @@ _HEAD_TEMPLATE = """
          normal load never sees it and the geometry is untouched. */
       #cai-boot-splash .m { display: none; max-width: 78vw; text-align: center;
         font: 600 12px ui-monospace, Menlo, monospace; line-height: 1.7;
-        color: rgba(23,26,18,.62); opacity: 0; transition: opacity .5s ease; }
+        color: rgba(236,237,230,.65); opacity: 0; transition: opacity .5s ease; }
       #cai-boot-splash .m.on { opacity: 1; }
       #cai-boot-splash .r { display: none; pointer-events: auto;
-        font: 700 12px ui-monospace, Menlo, monospace; color: #171A12;
-        background: rgba(23,26,18,.10); border: 1px solid rgba(23,26,18,.30);
+        font: 700 12px ui-monospace, Menlo, monospace; color: #C4CE92;
+        background: rgba(163,174,110,.14); border: 1px solid rgba(163,174,110,.4);
         border-radius: 999px; padding: 8px 20px;
         animation: caiBootFade .4s ease both; }
       /* Connection bar — see the watchdog in the script below for WHY. Lives
@@ -328,7 +332,7 @@ _HEAD_TEMPLATE = """
 _SPLASH_HTML = """
     <div id="cai-boot-splash" dir="rtl">
       <div class="chev"><span></span><span></span></div>
-      <div class="t">CommandAI</div>
+      <div class="t">Command<b>AI</b></div>
       <div class="s"><span class="s1">מערכת פקודות</span><span class="s2">בלמ"ס</span></div>
       <div class="wait">
         <div class="m"></div>

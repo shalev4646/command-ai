@@ -343,7 +343,9 @@ if splash_active:
    not apply. */
 @keyframes bootCurtainUp { 0% { transform:translateY(0); } 99% { opacity:1; } 100% { transform:translateY(-202%); opacity:0; visibility:hidden; } }
 .cai-splash {
-    position: fixed; inset: 0; background: #99A26B; z-index: 999990;
+    /* dark chain (2026-08-03): splash matches the app backdrop — the sage
+       splash read as a second, brighter screen on device */
+    position: fixed; inset: 0; background: #14170E; z-index: 999990;
     display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 18px;
     /* top-anchor the logo where the entry screen lands it (~26% down) so the
        curtain lift reveals the same layout instead of the logo jumping up
@@ -361,16 +363,17 @@ if splash_active:
    boot_shell._HEAD_TEMPLATE exactly, for the same reason. */
 .cai-splash-chev { display:flex; flex-direction:column; align-items:center; }
 .cai-splash-chev span { display:block; width:26px; height:26px;
-    border-top:6px solid #171A12; border-left:6px solid #171A12; transform:rotate(45deg); }
-.cai-splash-chev span + span { border-color: rgba(23,26,18,.45); margin-top: -9px; }
-.cai-splash-title { font: 400 34px 'Suez One', serif; color: #171A12; }
+    border-top:6px solid #A3AE6E; border-left:6px solid #A3AE6E; transform:rotate(45deg); }
+.cai-splash-chev span + span { border-color: rgba(163,174,110,.45); margin-top: -9px; }
+.cai-splash-title { font: 400 34px 'Suez One', serif; color: #ECEDE6; }
+.cai-splash-title b { color: #A3AE6E; font-weight: 400; }
 /* layout D — mirrors #cai-boot-splash .s/.s1/.s2 in boot_shell exactly */
 .cai-splash-sub { display:flex; flex-direction:column; align-items:center; gap:6px; }
 .cai-splash-sub .s1 { display:flex; align-items:center; gap:12px;
-    font: 400 13px 'Suez One', serif; letter-spacing: 2px; color: rgba(23,26,18,.59); }
+    font: 400 13px 'Suez One', serif; letter-spacing: 2px; color: rgba(236,237,230,.59); }
 .cai-splash-sub .s1::before, .cai-splash-sub .s1::after {
-    content:''; width:26px; height:1px; background: rgba(23,26,18,.31); }
-.cai-splash-sub .s2 { font: 400 9.5px 'Suez One', serif; letter-spacing: 7px; color: rgba(23,26,18,.37); }
+    content:''; width:26px; height:1px; background: rgba(236,237,230,.31); }
+.cai-splash-sub .s2 { font: 400 9.5px 'Suez One', serif; letter-spacing: 7px; color: rgba(236,237,230,.37); }
 /* Waiting ring, bottom-anchored (margin-top:auto against the flex-start
    column). Measured on the live app 2026-07-27: domComplete 8.6s and the last
    Streamlit chunk at 11.4s — the wait is latency-bound waves of tiny lazy
@@ -381,8 +384,8 @@ if splash_active:
 @keyframes bootFadeIn { from { opacity: 0; } to { opacity: 1; } }
 .cai-splash-wait {
     width: 22px; height: 22px; margin: auto auto 14vh;
-    border: 2px solid rgba(23,26,18,.20);
-    border-top-color: rgba(23,26,18,.55);
+    border: 2px solid rgba(236,237,230,.20);
+    border-top-color: rgba(236,237,230,.55);
     border-radius: 50%;
     animation: bootSpin .9s linear infinite, bootFadeIn .5s ease both;
     animation-delay: 0s, 2.5s;
@@ -390,7 +393,7 @@ if splash_active:
 </style>
 <div class='cai-splash'>
 <div class='cai-splash-chev'><span></span><span></span></div>
-<div class='cai-splash-title'>CommandAI</div>
+<div class='cai-splash-title'>Command<b>AI</b></div>
 <div class='cai-splash-sub'><span class='s1'>מערכת פקודות</span><span class='s2'>בלמ"ס</span></div>
 <div class='cai-splash-wait'></div>
 </div>""", unsafe_allow_html=True)
@@ -1514,8 +1517,8 @@ header {{ visibility: hidden; }}
 .cai-entry-chev {{ display:flex; flex-direction:column; align-items:center; margin-top: 26px;
     animation-delay: calc(var(--ehold) + .3s) !important; }}
 .cai-entry-chev span {{ display:block; width:22px; height:22px;
-    border-top:5px solid #99A26B; border-left:5px solid #99A26B; transform:rotate(45deg); }}
-.cai-entry-chev span + span {{ border-color: rgba(153,162,107,.45); margin-top:-8px; }}
+    border-top:5px solid #A3AE6E; border-left:5px solid #A3AE6E; transform:rotate(45deg); }}
+.cai-entry-chev span + span {{ border-color: rgba(163,174,110,.45); margin-top:-8px; }}
 .cai-entry-title {{ font: 400 40px 'Suez One', serif; color: var(--text); margin-top: 18px;
     animation-delay: calc(var(--ehold) + .38s) !important; }}
 .cai-entry-sub {{ font: 400 15px Heebo, sans-serif; color: var(--text-sec); margin-top: 6px;
@@ -4250,6 +4253,12 @@ html.cai-drawer-drag .st-key-drawer_backdrop {
   transition: none !important; visibility: visible !important;
 }
 html.cai-drawer-drag .st-key-drawer_backdrop { pointer-events: none !important; }
+/* the page header ducks while the drawer moves or sits open: mid-drag the
+   identity cluster floated over the incoming panel and the two "headers"
+   interleaved (device screenshot 2026-08-03) */
+html.cai-drawer-open .cai-header, html.cai-drawer-drag .cai-header {
+  opacity: 0; transition: opacity .18s ease;
+}
 
 /* ═══ DRAWER — redesigned (mockup 2a) ═══ */
 .st-key-cai_drawer {

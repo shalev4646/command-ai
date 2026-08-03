@@ -150,7 +150,7 @@ def _draw_subtitle(img, fp: str, cx: float, pad_px: float, dpr: int) -> None:
         outer = inner + sgn * _RULE_W * dpr
         mdraw.rectangle([min(inner, outer), y0, max(inner, outer), y1],
                         fill=_RULE_ALPHA)
-    img.paste((23, 26, 18), (0, 0), mask)
+    img.paste((236, 237, 230), (0, 0), mask)
 
 
 @lru_cache(maxsize=None)
@@ -166,14 +166,17 @@ def _startup_png(w: int, h: int, dpr: int) -> bytes:
     import io
     from PIL import Image, ImageDraw
 
-    img = Image.new("RGB", (w, h), "#99A26B")
+    # Dark chain (2026-08-03): the launch image shares the APP's backdrop —
+    # the sage field read as a bright second screen that then "flashed" into
+    # the dark app. Ink flips accordingly: olive chevron, cream wordmark.
+    img = Image.new("RGB", (w, h), "#14170E")
     draw = ImageDraw.Draw(img, "RGBA")
     dd = 32 * 0.7071 * dpr          # apex-to-arm-tip reach of the 32px box
     tv = 6 * 1.4142 * dpr           # vertical band thickness of a 6px stroke
     cx = w / 2
     sat = _STARTUP_SAT.get((w, h, dpr), 47)
     apex = (sat + 0.14 * (h / dpr) - 6.6) * dpr
-    for i, color in enumerate([(23, 26, 18, 255), (23, 26, 18, 115)]):
+    for i, color in enumerate([(163, 174, 110, 255), (163, 174, 110, 115)]):
         ay = apex + i * 23 * dpr
         draw.polygon(
             [(cx - dd, ay + dd), (cx, ay), (cx + dd, ay + dd),
@@ -201,8 +204,15 @@ def _startup_png(w: int, h: int, dpr: int) -> bytes:
         fp = _ROOT / "branding" / "fonts" / "SuezOne-Regular.ttf"
         font = ImageFont.truetype(str(fp), int(round(34 * dpr)))
         baseline = (sat + 0.14 * (h / dpr) + 61 + 34) * dpr
-        draw.text((cx, baseline), "CommandAI", font=font,
-                  fill=(23, 26, 18, 255), anchor="ms")
+        # two-tone like the splash/entry ("Command" cream, "AI" olive): both
+        # ends pinned to the full-string advance so the total width matches
+        # the single-run CSS text; seam kerning error lands invisibly between
+        total = font.getlength("CommandAI")
+        x0 = cx - total / 2
+        draw.text((x0, baseline), "Command", font=font,
+                  fill=(236, 237, 230, 255), anchor="ls")
+        draw.text((x0 + total - font.getlength("AI"), baseline), "AI",
+                  font=font, fill=(163, 174, 110, 255), anchor="ls")
         _draw_subtitle(img, str(fp), cx,
                        (sat + 0.14 * (h / dpr)) * dpr, dpr)
     except Exception:
@@ -226,7 +236,7 @@ def build_manifest(start_url: str, icons: dict) -> bytes:
         "start_url": start_url,
         "scope": "/",
         "display": "standalone",
-        "background_color": "#99A26B",   # the boot-splash olive
+        "background_color": "#14170E",   # the dark chain: webview pre-paint matches the app
         "theme_color": "#14170E",
         "icons": [
             {"src": icons[192], "sizes": "192x192",
