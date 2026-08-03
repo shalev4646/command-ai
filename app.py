@@ -1013,25 +1013,20 @@ if _is_admin:
     st.stop()
 
 # ── Design tokens (from design_handoff_commandai) ──
-# Dark-olive theme; role accents: soldier olive, commander tan, reserve blue.
+# ONE accent for every role (user decision 2026-08-03): the olive brand color.
+# The per-role palettes (commander tan #B29A72, reserve blue #8A9BC0) are
+# retired — roles still differ in content (tools, suggestions, greeting),
+# just not in color. 9a home palette: olive #99A26B → #A3AE6E, tints rebased
+# on rgb(163,174,110); "bright" is the lightened accent for modal hero numbers.
+_ACCENT_OLIVE = {
+    "accent": "#A3AE6E", "accent_hover": "#B2BD7E",
+    "soft": "rgba(163,174,110,.14)", "border": "rgba(163,174,110,.35)",
+    "bright": "#C4CE92",
+}
 ROLE_META = {
-    "soldier": {
-        # 9a home redesign palette (design_handoff_commandai_home): olive
-        # lightened #99A26B → #A3AE6E, tints rebased on rgb(163,174,110)
-        "label": "חייל", "accent": "#A3AE6E", "accent_hover": "#B2BD7E",
-        "soft": "rgba(163,174,110,.14)", "border": "rgba(163,174,110,.35)",
-        "bright": "#C4CE92",  # lightened accent for the modal hero number
-    },
-    "commander": {
-        "label": "מפקד", "accent": "#B29A72", "accent_hover": "#C4AC84",
-        "soft": "rgba(178,154,114,.14)", "border": "rgba(178,154,114,.4)",
-        "bright": "#D6C193",
-    },
-    "reserve": {
-        "label": "מילואים", "accent": "#8A9BC0", "accent_hover": "#9DAECE",
-        "soft": "rgba(138,155,192,.12)", "border": "rgba(138,155,192,.38)",
-        "bright": "#B4C3E0",
-    },
+    "soldier": {"label": "חייל", **_ACCENT_OLIVE},
+    "commander": {"label": "מפקד", **_ACCENT_OLIVE},
+    "reserve": {"label": "מילואים", **_ACCENT_OLIVE},
 }
 role_meta = ROLE_META.get(st.session_state.role, ROLE_META["soldier"])
 role_label = role_meta["label"]
@@ -1095,10 +1090,12 @@ MAIN_TOP_PADDING = "12px" if _entry_like else "calc(72px + var(--cai-sat, 0px))"
 # cards' rise is the only choreography left on screen — same look, -0.45s.
 EHOLD = "0.9s" if splash_active else "0s"
 
-# CSS-drawn role icons (chevron / bars / diamond) as inline SVG tiles
-_ICON_SOLDIER = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18'%3E%3Cpath d='M4 12 L9 6 L14 12' fill='none' stroke='%2399A26B' stroke-width='3'/%3E%3C/svg%3E\")"
-_ICON_COMMANDER = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18'%3E%3Crect x='1' y='4.5' width='16' height='3.5' rx='1' fill='%23B29A72'/%3E%3Crect x='1' y='11' width='16' height='3.5' rx='1' fill='%23B29A72'/%3E%3C/svg%3E\")"
-_ICON_RESERVE = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Crect x='5.5' y='5.5' width='9' height='9' fill='none' stroke='%238A9BC0' stroke-width='2.5' transform='rotate(45 10 10)'/%3E%3C/svg%3E\")"
+# CSS-drawn role icons (chevron / bars / diamond) as inline SVG tiles.
+# Shapes stay per-role; the color is the ONE olive accent (user decision
+# 2026-08-03 — no more tan/blue category colors).
+_ICON_SOLDIER = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18'%3E%3Cpath d='M4 12 L9 6 L14 12' fill='none' stroke='%23A3AE6E' stroke-width='3'/%3E%3C/svg%3E\")"
+_ICON_COMMANDER = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18'%3E%3Crect x='1' y='4.5' width='16' height='3.5' rx='1' fill='%23A3AE6E'/%3E%3Crect x='1' y='11' width='16' height='3.5' rx='1' fill='%23A3AE6E'/%3E%3C/svg%3E\")"
+_ICON_RESERVE = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Crect x='5.5' y='5.5' width='9' height='9' fill='none' stroke='%23A3AE6E' stroke-width='2.5' transform='rotate(45 10 10)'/%3E%3C/svg%3E\")"
 
 st.markdown(f"""
 <style>
@@ -1574,22 +1571,18 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
     content: ""; width: 44px; height: 44px; border-radius: 12px; flex: none;
     background-repeat: no-repeat; background-position: center;
 }}
-.st-key-role_soldier button::before {{
-    background-color: rgba(153,162,107,.14); border: 1px solid rgba(153,162,107,.35);
-    background-image: {_ICON_SOLDIER};
-}}
-.st-key-role_commander button::before {{
-    background-color: rgba(178,154,114,.14); border: 1px solid rgba(178,154,114,.4);
-    background-image: {_ICON_COMMANDER};
-}}
+.st-key-role_soldier button::before,
+.st-key-role_commander button::before,
 .st-key-role_reserve button::before {{
-    background-color: rgba(138,155,192,.12); border: 1px solid rgba(138,155,192,.38);
-    background-image: {_ICON_RESERVE};
+    background-color: rgba(163,174,110,.14); border: 1px solid rgba(163,174,110,.35);
 }}
+.st-key-role_soldier button::before {{ background-image: {_ICON_SOLDIER}; }}
+.st-key-role_commander button::before {{ background-image: {_ICON_COMMANDER}; }}
+.st-key-role_reserve button::before {{ background-image: {_ICON_RESERVE}; }}
 @media (hover: hover) {{
-    .st-key-role_soldier button:hover {{ border-color: rgba(153,162,107,.5) !important; }}
-    .st-key-role_commander button:hover {{ border-color: rgba(178,154,114,.5) !important; }}
-    .st-key-role_reserve button:hover {{ border-color: rgba(138,155,192,.5) !important; }}
+    .st-key-role_soldier button:hover,
+    .st-key-role_commander button:hover,
+    .st-key-role_reserve button:hover {{ border-color: rgba(163,174,110,.5) !important; }}
 }}
 .st-key-role_soldier button p, .st-key-role_commander button p, .st-key-role_reserve button p {{
     font-size: 12.5px !important; color: var(--text-dim); text-align: right; margin: 0; line-height: 1.35;
@@ -1714,23 +1707,30 @@ div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
         rgba(20,23,14,.92) 0%, rgba(20,23,14,.82) 55%, rgba(20,23,14,0) 100%);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    display: flex; align-items: center; gap: 12px;
-    padding: var(--cai-sat, 0px) 72px 0 18px;
+    /* gap 0, not 12: the wordmark centers via auto margins between the
+       button-side padding edge and the pill — a fixed gap would bias it.
+       Button-side padding 60 = 18px inset + 42px button, EXACTLY the drawer
+       button's footprint, so the padding edge IS the button's inner edge
+       (72 overshot by 12px and pulled the wordmark 6px off center). */
+    display: flex; align-items: center; gap: 0;
+    padding: var(--cai-sat, 0px) 60px 0 18px;
     /* 9a: NO divider line beneath the header */
     /* no entrance animation: a transform on a fixed element re-anchors it
        and Streamlit can freeze the animation at its from-state (top: 18px) */
 }}
-/* screen-centered in the fixed band: absolute, so the asymmetric side
-   paddings (72px hamburger side vs 18px) and the pill's auto margin can't
-   pull it off true center; line-height fills the 64px strip below the
-   status-bar inset */
+/* in-flow with auto margins: the wordmark sits exactly midway between the
+   drawer button (the 72px padding edge) and the pill — optical centering
+   between its real neighbors, not on the viewport (user request 2026-08-03;
+   replaces the old absolute left:50% screen-centering). line-height fills
+   the 64px strip below the status-bar inset. */
 .cai-wordmark {{ font: 400 20px 'Suez One', serif; color: var(--text);
-    position: absolute; left: 50%; transform: translateX(-50%);
-    top: var(--cai-sat, 0px); line-height: 64px; white-space: nowrap; }}
+    margin-inline: auto;
+    line-height: 64px; white-space: nowrap; }}
 /* 9a: two-tone wordmark — "Command" light, "AI" olive (header + entry title) */
 .cai-wordmark .cai-wm-ai, .cai-entry-title .cai-wm-ai {{ color: var(--accent); }}
 .cai-pill {{
-    margin-inline-start: auto;
+    /* no auto margin: the wordmark's margin-inline:auto already pushes the
+       pill to the trailing edge; a second auto margin would skew the split */
     font: 600 12px Heebo, sans-serif; color: var(--accent);
     background: var(--accent-soft); border: 1px solid var(--accent-border);
     border-radius: 99px; padding: 6px 13px; white-space: nowrap;
