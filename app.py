@@ -1559,7 +1559,22 @@ div[data-testid="stButton"] > button {{
         color: var(--text);
     }}
 }}
-div[data-testid="stButton"] > button:active {{ transform: scale(.98); }}
+/* press feedback = composite, not scale alone: scale(.98) by itself was on
+   phones since 13.07 and read as "no response" (2026-08-03 design review) —
+   the surface tint + accent border are what the finger actually sees. The
+   short transition-duration makes press-in instant; release rebounds on the
+   base rule's .18s. */
+div[data-testid="stButton"] > button:active {{
+    transform: scale(.985);
+    background-color: var(--surface-hover);
+    border-color: var(--accent-border);
+    transition-duration: .05s;
+}}
+/* accordion rows (answer sources, tools content) — same press language */
+[data-testid="stExpander"] summary:active {{ background: rgba(236,237,230,.06); }}
+/* the client-side orders accordion: card head + order rows */
+.cai-kb-card:active {{ filter: brightness(1.18); }}
+.cai-order-link:active {{ background: rgba(236,237,230,.07); }}
 
 /* ── Entry role buttons: icon tile + title/subtitle, staggered entrance ── */
 .st-key-role_soldier button, .st-key-role_commander button, .st-key-role_reserve button {{
@@ -3145,10 +3160,10 @@ def archive_current_conversation():
 
 
 _QUOTA_NOTICES = {
-    "user": "🕐 **הגעת למכסת השאלות היומית שלך.**\n\n"
+    "user": "**הגעת למכסת השאלות היומית שלך.**\n\n"
             "המכסה מתאפסת מחר. בינתיים אפשר להמשיך לעיין בפקודות המלאות "
             "ובחיפוש שבתפריט הצד — הם ללא הגבלה.",
-    "global": "🕐 **המכסה היומית של המערכת נוצלה במלואה.**\n\n"
+    "global": "**המכסה היומית של המערכת נוצלה במלואה.**\n\n"
               "חזרו מחר! בינתיים אפשר להמשיך לעיין בפקודות המלאות ובחיפוש "
               "שבתפריט הצד — הם ללא הגבלה.",
 }
@@ -3166,7 +3181,7 @@ _LETTER_EMBLEM = (
 )
 
 
-@st.dialog("📄 מחולל מכתבים", width="large")
+@st.dialog("מחולל מכתבים", width="large")
 def _letters_dialog():
     """Order-grounded formal-letter drafts (בקשת חופשה, ערר, קבילה...).
 
@@ -3229,17 +3244,17 @@ def _letters_dialog():
                     )
             except (APIConnectionError, APITimeoutError):
                 metrics.refund(st.session_state.session_id)
-                st.error("⚠️ אין כרגע חיבור לשירות. בדוק את החיבור ונסה שוב בעוד רגע.")
+                st.error("אין כרגע חיבור לשירות. בדוק את החיבור ונסה שוב בעוד רגע.")
             except BadRequestError as e:
                 metrics.refund(st.session_state.session_id)
                 # same monthly-spend-limit 400 as in handle_question
                 st.error("⏸️ המערכת בהשהיה זמנית עקב מגבלת שימוש — נסה שוב מחר."
                          if "usage limits" in str(e)
-                         else "⚠️ אירעה שגיאה זמנית בניסוח. נסה לשלוח שוב.")
+                         else "אירעה שגיאה זמנית בניסוח. נסה לשלוח שוב.")
             except Exception as e:
                 safe_print(f"[letters] draft failed: {e!r}")
                 metrics.refund(st.session_state.session_id)
-                st.error("⚠️ אירעה שגיאה זמנית בניסוח. נסה לשלוח שוב.")
+                st.error("אירעה שגיאה זמנית בניסוח. נסה לשלוח שוב.")
     # standing note under the button (matches the design mock): sets the
     # expectation that the output is an order-grounded draft to review
     st.markdown(
@@ -3253,7 +3268,7 @@ def _letters_dialog():
     # as the currently selected one
     if draft and draft.get("kind") == kind:
         if draft.get("truncated"):
-            st.warning("✂️ הטיוטה נקטעה באמצע בגלל אורך — קצר את הפרטים ונסח שוב, או השלם את הסיום ידנית.")
+            st.warning("הטיוטה נקטעה באמצע בגלל אורך — קצר את הפרטים ונסח שוב, או השלם את הסיום ידנית.")
         st.text_area("הטיוטה — קרא, השלם את החסר וערוך לפני הגשה", height=320, key="letter_edit")
         st.download_button(
             "⬇️ הורד כקובץ",
@@ -3290,6 +3305,18 @@ _MODAL_CSS = """
    Darken the full-screen stDialog layer (the card below keeps its own bg). */
 div[data-testid="stDialog"] { background: rgba(9,11,7,.66) !important; }
 div[data-testid="stDialog"] > div { direction: rtl; background: transparent !important; }
+/* 150ms entrance: fade the layer, rise the card (2026-08-03 review — dialogs
+   popped in with zero transition; 150ms reads as response, not as delay).
+   The layer fades via opacity, NOT background: the scrim color above is
+   pinned with !important, and CSS animations lose to !important declarations. */
+@keyframes caiModalIn { from { opacity: 0; } }
+@keyframes caiCardIn { from { transform: translateY(9px) scale(.977); } }
+div[data-testid="stDialog"] { animation: caiModalIn .15s ease-out; }
+div[data-testid="stDialog"] [role="dialog"] { animation: caiCardIn .15s cubic-bezier(.2,.7,.3,1); }
+@media (prefers-reduced-motion: reduce) {
+  div[data-testid="stDialog"],
+  div[data-testid="stDialog"] [role="dialog"] { animation: none; }
+}
 div[data-testid="stDialog"] [role="dialog"] {
     direction: rtl;
     background: linear-gradient(180deg,#1E2216 0%,#181B12 100%) !important;
@@ -3519,7 +3546,7 @@ div[data-testid="stDialog"] [data-testid="InputInstructions"] { display: none !i
 .cai-ent-cite::before { content: ""; width: 12px; height: 12px; flex: none;
     border: 1.5px solid var(--accent); border-radius: 3px; transform: rotate(45deg); }
 .cai-ent-disc { display: flex; gap: 7px; margin: 16px 2px 0; direction: rtl; text-align: right; }
-.cai-ent-disc span.g { flex: none; font-size: 12px; line-height: 1.55; }
+.cai-ent-disc span.g { flex: none; font-size: 12px; line-height: 1.55; color: rgba(236,237,230,.45); }
 .cai-ent-disc span.t { font: 400 11px Heebo, sans-serif; color: rgba(236,237,230,.4); line-height: 1.55; }
 
 /* ---- Punishment-authority views (share the card shell) ---- */
@@ -3677,7 +3704,7 @@ def _modal_header(title: str) -> str:
     )
 
 
-@st.dialog("⚖️ בודק סמכות עונש משמעתי", width="large")
+@st.dialog("בודק סמכות עונש משמעתי", width="large")
 def _punishment_dialog():
     """Deterministic authority-of-punishment lookup, grounded in PM-33.0302.
 
@@ -3768,7 +3795,7 @@ def _punishment_dialog():
 
     # conservative disclaimer — this is guidance, the order is binding
     st.markdown(
-        f"<div class='cai-pa-disc'>⚠️ {html.escape(_pa.DISCLAIMER)}</div>",
+        f"<div class='cai-pa-disc'>{_isvg(_I_ALERT, size=12)} {html.escape(_pa.DISCLAIMER)}</div>",
         unsafe_allow_html=True,
     )
 
@@ -3792,7 +3819,7 @@ def _ent_card(html_inner: str) -> None:
     """Render one entitlement result card + the standing disclaimer."""
     st.markdown(
         f"<div class='cai-ent-card'>{html_inner}</div>"
-        "<div class='cai-ent-disc'><span class='g'>⚠️</span>"
+        f"<div class='cai-ent-disc'><span class='g'>{_isvg(_I_ALERT, size=12)}</span>"
         f"<span class='t'>{html.escape(entitlements.DISCLAIMER)}</span></div>",
         unsafe_allow_html=True,
     )
@@ -3886,7 +3913,7 @@ def _ent_pay_ui() -> None:
     )
 
 
-@st.dialog("🧮 מחשבון זכאויות", width="large")
+@st.dialog("מחשבון זכאויות", width="large")
 def _entitlements_dialog():
     """Deterministic entitlement lookup: exact leave-day counts and the
     subsistence/family-payment structure, each value quoted to its clause.
@@ -3932,7 +3959,7 @@ def _mil_details_row(r: dict) -> str:
     )
 
 
-@st.dialog("🎖️ מה מגיע לי במילואים", width="large")
+@st.dialog("מה מגיע לי במילואים", width="large")
 def _miluim_benefits_dialog():
     """The reserve flagship: a personal entitlements map from curated,
     source-cited data (miluim_benefits.py). Deterministic, NO Anthropic call,
@@ -4050,8 +4077,8 @@ def _miluim_benefits_dialog():
     )
     st.markdown(
         hero + tier_card + est_html + "".join(sections_html) + pointer
-        + f"<div class='cai-mil-foot'>🔄 המקורות נבדקו לאחרונה: {_mb.LAST_VERIFIED}"
-        f"<br>⚠️ {html.escape(_mb.DISCLAIMER)}</div>",
+        + f"<div class='cai-mil-foot'>{_isvg(_I_REFRESH, size=11)} המקורות נבדקו לאחרונה: {_mb.LAST_VERIFIED}"
+        f"<br>{_isvg(_I_ALERT, size=11)} {html.escape(_mb.DISCLAIMER)}</div>",
         unsafe_allow_html=True,
     )
     if st.button("עדכון נתונים", key="mil_edit", use_container_width=True):
@@ -4059,7 +4086,7 @@ def _miluim_benefits_dialog():
         st.rerun(scope="fragment")
 
 
-@st.dialog("📋 קיבלתי צו — מה עכשיו?", width="large")
+@st.dialog("קיבלתי צו — מה עכשיו?", width="large")
 def _miluim_guide_dialog():
     """The deferral route (ולת"ם), deterministic from פ"מ 31.0603 via
     miluim_guide.py — cause picker, timeline, the standing "the order binds"
@@ -4077,7 +4104,7 @@ def _miluim_guide_dialog():
              "<div class='cai-mil-tcaps'>"
              + "".join(f"<span>{html.escape(t)}</span>" for t in _mg.TIMELINE)
              + "</div>")
-    warn = (f"<div class='cai-mil-warn'><div class='t'>⚠️ {html.escape(_mg.STANDING_WARNING['text'])}</div>"
+    warn = (f"<div class='cai-mil-warn'><div class='t'>{_isvg(_I_ALERT, size=12)} {html.escape(_mg.STANDING_WARNING['text'])}</div>"
             f"<div class='c'>{html.escape(_mg.STANDING_WARNING['cite'])}</div></div>")
     st.markdown(tline + warn, unsafe_allow_html=True)
 
@@ -4139,16 +4166,16 @@ def _miluim_guide_dialog():
                     )
             except (APIConnectionError, APITimeoutError):
                 metrics.refund(st.session_state.session_id)
-                st.error("⚠️ אין כרגע חיבור לשירות. בדוק את החיבור ונסה שוב בעוד רגע.")
+                st.error("אין כרגע חיבור לשירות. בדוק את החיבור ונסה שוב בעוד רגע.")
             except BadRequestError as e:
                 metrics.refund(st.session_state.session_id)
                 st.error("⏸️ המערכת בהשהיה זמנית עקב מגבלת שימוש — נסה שוב מחר."
                          if "usage limits" in str(e)
-                         else "⚠️ אירעה שגיאה זמנית בניסוח. נסה לשלוח שוב.")
+                         else "אירעה שגיאה זמנית בניסוח. נסה לשלוח שוב.")
             except Exception as e:
                 safe_print(f"[mil-letter] draft failed: {e!r}")
                 metrics.refund(st.session_state.session_id)
-                st.error("⚠️ אירעה שגיאה זמנית בניסוח. נסה לשלוח שוב.")
+                st.error("אירעה שגיאה זמנית בניסוח. נסה לשלוח שוב.")
     st.markdown(
         "<div class='cai-sc-disc'>זה הצעד היחיד בכלי שפונה למודל — בעלות של "
         "שאלה אחת מהמכסה היומית. הטיוטה דורשת קריאה והשלמה לפני הגשה.</div>",
@@ -4157,7 +4184,7 @@ def _miluim_guide_dialog():
     draft = st.session_state.get("mil_letter_draft")
     if draft:
         if draft.get("truncated"):
-            st.warning("✂️ הטיוטה נקטעה באמצע בגלל אורך — קצר את הפרטים ונסח שוב, או השלם את הסיום ידנית.")
+            st.warning("הטיוטה נקטעה באמצע בגלל אורך — קצר את הפרטים ונסח שוב, או השלם את הסיום ידנית.")
         st.text_area("הטיוטה — קרא, השלם את החסר וערוך לפני הגשה", height=320,
                      key="mil_letter_edit")
         st.download_button(
@@ -4192,6 +4219,23 @@ def _svg(inner: str, stroke: str = "#AAB37C", sw: str = "1.7", w: int = 18) -> s
     return "data:image/svg+xml," + _uparse.quote(svg)
 
 
+def _isvg(inner: str, size: int = 13, dy: str = "-2px") -> str:
+    """The same 24-viewBox stroke language as _ICON, inlined for HTML surfaces.
+    currentColor — the icon takes the surrounding text color, so a faint
+    disclaimer gets a faint mark (the color emoji it replaces ignored the
+    text hierarchy and popped at full saturation on every device differently)."""
+    return (f"<svg viewBox='0 0 24 24' width='{size}' height='{size}' fill='none' "
+            f"stroke='currentColor' stroke-width='1.7' stroke-linecap='round' "
+            f"stroke-linejoin='round' style='vertical-align:{dy};flex:none'>{inner}</svg>")
+
+
+# inline marks for the answer/dialog surfaces (one line language, no emoji)
+_I_ALERT = ("<path d='M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 "
+            "1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z'/><path d='M12 9v4'/><path d='M12 17h.01'/>")
+_I_REFRESH = "<path d='M2.5 4.5v5h5'/><path d='M4.2 15a9 9 0 1 0 1.8-9.2L2.5 9.5'/>"
+_I_COMPASS = "<circle cx='12' cy='12' r='9'/><path d='m15.5 8.5-2 5-5 2 2-5z'/>"
+
+
 _ICON = {
     "letters": _svg("<path d='M6 3h8l4 4v14H6z'/><path d='M14 3v4h4'/><path d='M9 12h6M9 16h6'/>"),
     "gavel": _svg("<path d='M12 3v18'/><path d='M9 21h6'/><path d='M5 7h14'/>"
@@ -4214,6 +4258,8 @@ _ICON = {
     "clock": _svg("<path d='M12 2a10 10 0 1 0 10 10'/><path d='M12 6v6l4 2'/>"),
     "chart": _svg("<path d='M3 3v18h18'/><path d='M7 14l4-4 3 3 5-6'/>"),
     "chat": _svg("<path d='M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'/>"),
+    "search": _svg("<circle cx='11' cy='11' r='7'/><path d='m20.5 20.5-4.6-4.6'/>",
+                   stroke="#8A9077", w=15),
     "shield": _svg("<path d='M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z'/><path d='M9 12l2 2 4-4'/>", stroke="#C4CE92", w=24),
     "gear": _svg("<circle cx='12' cy='12' r='3'/><path d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'/>", stroke="#ECEDE6"),
 }
@@ -4827,6 +4873,42 @@ html.cai-orders-open .cai-kb-card {
 .st-key-cai_tools button [data-testid="stMarkdownContainer"],
 .st-key-cai_recent button [data-testid="stMarkdownContainer"],
 [class*="st-key-cai_sgrp"] button [data-testid="stMarkdownContainer"] { width: 100% !important; }
+
+/* ═══ 2026-08-04 iconography + touch round ═══ */
+/* recent-conversation rows: same leading-icon language as the tool rows
+   (the old 💬 label prefix rendered as a color emoji, differently per device) */
+.st-key-cai_recent button::before {
+  content: ""; position: absolute; inset-inline-start: 14px; top: 50%;
+  transform: translateY(-50%); width: 18px; height: 18px;
+  background: url("ICON_CHAT") center / 18px no-repeat;
+}
+/* "הצג סעיף מקור" under an answer — page mark, inline with the label */
+[class*="st-key-src_"] button::before {
+  content: ""; display: inline-block; width: 15px; height: 15px;
+  margin-inline-end: 7px; vertical-align: -3px;
+  background: url("ICON_LETTERS") center / 15px no-repeat;
+}
+/* the search field draws its own magnifier — the emoji in the placeholder
+   was a color glyph on iOS and disappeared the moment typing started */
+.cai-orders-q {
+  padding-inline-start: 34px;
+  background-image: url("ICON_SEARCH");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+  background-size: 15px;
+}
+/* press feedback on the drawer surfaces (hover is pointer-only; on touch
+   these rows gave no response at all — 2026-08-03 design review) */
+.st-key-cai_tools button:active, .st-key-cai_recent button:active,
+[class*="st-key-cai_sgrp"] button:active {
+  background: rgba(236,237,230,.07) !important;
+}
+.st-key-open_settings button:active, .st-key-drawer_close button:active {
+  background-color: rgba(236,237,230,.13) !important; transform: scale(.94);
+}
+.st-key-pf_type_w [data-testid="stButtonGroup"] button:not([aria-checked="true"]):active {
+  background: #2A3120 !important;
+}
 </style>
 """
 for _k, _u in _ICON.items():
@@ -5332,7 +5414,7 @@ def handle_question(question: str):
         metrics.refund(st.session_state.session_id)  # failures don't burn quota
         st.session_state.messages.append({
             "role": "assistant",
-            "content": "⚠️ **אין כרגע חיבור לשירות.**\n\n"
+            "content": "**אין כרגע חיבור לשירות.**\n\n"
                        "בדוק את החיבור לאינטרנט ושלח את השאלה שוב בעוד רגע.",
             "error": True,
         })
@@ -5347,7 +5429,7 @@ def handle_question(question: str):
             msg = ("⏸️ **המערכת בהשהיה זמנית עקב מגבלת שימוש.**\n\n"
                    "זו לא תקלה אצלך ואין טעם לשלוח שוב עכשיו — נסה שוב מחר.")
         else:
-            msg = "⚠️ **אירעה שגיאה זמנית בעיבוד השאלה.**\n\nנסה לשלוח אותה שוב."
+            msg = "**אירעה שגיאה זמנית בעיבוד השאלה.**\n\nנסה לשלוח אותה שוב."
         st.session_state.messages.append({"role": "assistant", "content": msg, "error": True})
         return
     except Exception as e:
@@ -5358,7 +5440,7 @@ def handle_question(question: str):
         metrics.refund(st.session_state.session_id)
         st.session_state.messages.append({
             "role": "assistant",
-            "content": "⚠️ **אירעה שגיאה זמנית בעיבוד השאלה.**\n\n"
+            "content": "**אירעה שגיאה זמנית בעיבוד השאלה.**\n\n"
                        "נסה לשלוח אותה שוב.",
             "error": True,
         })
@@ -5381,7 +5463,7 @@ def handle_question(question: str):
             metrics.refund(st.session_state.session_id)
             st.session_state.messages.append({
                 "role": "assistant",
-                "content": "⚠️ **התשובה נקטעה באמצע.**\n\nשלח את השאלה שוב.",
+                "content": "**התשובה נקטעה באמצע.**\n\nשלח את השאלה שוב.",
                 "error": True,
             })
         raise
@@ -5509,7 +5591,7 @@ def _orders_panel(docs: list[dict]) -> str:
         body = (
             "<input class='cai-orders-q' type='search' autocomplete='off'"
             " enterkeyhint='search' aria-label='חיפוש פקודה'"
-            " placeholder='🔎 חיפוש פקודה...'>"
+            " placeholder='חיפוש פקודה...'>"
             f"<div class='cai-orders-scroll'>{rows}</div>"
             "<div class='cai-orders-empty' data-none hidden>לא נמצאו פקודות מתאימות</div>"
         )
@@ -5658,7 +5740,7 @@ with st.container(key="cai_drawer"):
     with st.container(key="cai_recent"):
         if role_history:
             for i, conv in role_history:
-                if st.button(f"💬 {conv['title']}", key=f"hist_{i}", use_container_width=True):
+                if st.button(conv["title"], key=f"hist_{i}", use_container_width=True):
                     # archive the active chat first, exactly like "שיחה חדשה"
                     # and logout do — otherwise switching conversations drops
                     # the current one for good
@@ -5810,7 +5892,9 @@ def _verdict_chip(content: str) -> tuple[str | None, str]:
             # is scope, not a conditional verdict ("אסור לנוע בתנאים קשים"
             # is a plain אסור). Otherwise color follows the OPENING term.
             if qual.startswith(("בתנאים", "חלקית")):
-                icon, cls = "⚠", "cond"
+                # U+FE0E forces TEXT presentation: bare U+26A0 is emoji-styled
+                # on iOS, breaking the chip's monochrome tint (2026-08-04)
+                icon, cls = "⚠︎", "cond"
             elif mt.group("neg") or mt.group("term") == "אסור":
                 icon, cls = "✗", "no"
             else:
@@ -5997,8 +6081,10 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
                 transition:color .15s,border-color .15s,background .15s; }}
         .act:hover {{ color:{ACCENT}; border-color:{ACCENT};
                       background:rgba(236,237,230,.02); }}
+        .act:active {{ color:{ACCENT}; border-color:{ACCENT};
+                       background:rgba(236,237,230,.06); transform:scale(.96); }}
         /* fit all pills WITHOUT scrolling on phones: tighten the chrome and
-           shorten שלח בוואטסאפ → וואטסאפ, 🖼 כרטיס → 🖼. 480, not 380: the
+           shorten שלח בוואטסאפ → וואטסאפ, "כרטיס" → icon only. 480, not 380: the
            user's iPhone gave the iframe ~390-430px and full labels
            overflowed — shrink well before the overflow point. */
         @media (max-width: 480px) {{
@@ -6007,14 +6093,14 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
         }}
         </style>
         <div class="row">
-          <button class="act" id="copy">⧉ העתק</button>
+          <button class="act" id="copy"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> העתק</button>
           <!-- one wrapping span: the pill is inline-flex with gap, so bare
                text + .xtra as separate flex items would put the 6px gap
                INSIDE the word ("שתף ב וואטסאפ") -->
           <!-- inline WhatsApp glyph, not "✆": at pill size the dingbat read
                as a block/slash icon (2026-08-03 audit) -->
           <a class="act" id="wa" target="_blank" rel="noopener"><span><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" style="vertical-align:-1px"><path d="M17.5 14.4c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.5 0 1.47 1.07 2.9 1.22 3.1.15.2 2.11 3.22 5.1 4.51.71.31 1.27.49 1.7.63.72.23 1.37.2 1.88.12.58-.09 1.76-.72 2.01-1.41.25-.7.25-1.3.17-1.42-.07-.12-.27-.2-.57-.35zM12.05 21.6h-.01a9.53 9.53 0 0 1-4.86-1.33l-.35-.21-3.62.95.97-3.53-.23-.36a9.54 9.54 0 1 1 8.1 4.48zm0-21.1C5.7.5.55 5.65.55 12a11.4 11.4 0 0 0 1.53 5.73L.5 23.5l5.93-1.56a11.5 11.5 0 0 0 5.61 1.46h.01c6.35 0 11.5-5.15 11.5-11.5S18.4.5 12.05.5z"/></svg> <span class="xtra">שלח ב</span>וואטסאפ</span></a>
-          <button class="act" id="card"><span>🖼<span class="xtra"> כרטיס</span></span></button>
+          <button class="act" id="card"><span><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m21 15-4.5-4.5L7 20"/></svg><span class="xtra"> כרטיס</span></span></button>
         </div>
         <script>
         const text = {payload};
@@ -6031,9 +6117,11 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
                 try {{ ok = document.execCommand("copy"); }} catch (e2) {{}}
                 ta.remove();
             }}
-            const prev = btn.textContent;
+            // innerHTML, not textContent — the label carries the inline copy
+            // SVG, which a textContent round-trip would flatten away
+            const prev = btn.innerHTML;
             btn.textContent = ok ? "✓ הועתק" : "ההעתקה נכשלה";
-            setTimeout(() => {{ btn.textContent = prev; }}, 1600);
+            setTimeout(() => {{ btn.innerHTML = prev; }}, 1600);
         }});
         // ── Share card: the answer drawn as a PNG (canvas API only) ──
         const cardBtn = document.getElementById("card");
@@ -6288,7 +6376,7 @@ def _escalation_strip(sources: list[dict] | None, question: str = "") -> None:
     st.markdown(
         f"<div class='cai-escal'>"
         f"<div class='cai-escal-row'>"
-        f"<span class='cai-escal-title'>🧭 למי פונים</span>"
+        f"<span class='cai-escal-title'>{_isvg(_I_COMPASS, size=12)} למי פונים</span>"
         f"{steps}"
         f"</div>"
         f"{note_html}"
@@ -6307,7 +6395,7 @@ def _clause_image(source_file: str, page: int, highlight: str):
     return fn(source_file, page, highlight) if fn else None
 
 
-@st.dialog("📄 סעיף המקור", width="large")
+@st.dialog("סעיף המקור", width="large")
 def _clause_dialog(primary: dict, page: int | None, full_href: str | None) -> None:
     """Show the cited clause INSIDE the app: the order's page rendered with
     the passage highlighted, so a soldier verifies the source without a lost
@@ -6428,7 +6516,7 @@ for msg_i, msg in enumerate(st.session_state.messages):
                 st.markdown(chip, unsafe_allow_html=True)
             st.markdown(body)
             if msg.get("truncated"):
-                st.warning("✂️ התשובה נקטעה בגלל אורך. אפשר לשאול על חלק ממוקד יותר לתשובה שלמה.")
+                st.warning("התשובה נקטעה בגלל אורך. אפשר לשאול על חלק ממוקד יותר לתשובה שלמה.")
         else:
             st.markdown(content)
         if msg["role"] == "assistant" and not msg.get("error"):
@@ -6458,7 +6546,7 @@ for msg_i, msg in enumerate(st.session_state.messages):
             # (answer content) → source button + share pills (chrome).
             _escalation_strip(msg.get("sources"), _question_for(msg_i))
             if primary and primary.get("source_file"):
-                if st.button("📄 הצג סעיף מקור", key=f"src_{msg_i}"):
+                if st.button("הצג סעיף מקור", key=f"src_{msg_i}"):
                     _clause_dialog(primary, page, full_href)
             _answer_actions(content, msg.get("sources"), pdf)
             # feedback keyed by a per-message id, NOT by position: widget
