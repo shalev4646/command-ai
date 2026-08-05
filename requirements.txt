@@ -3,6 +3,17 @@
 # reloads app.py but can keep an old backend module cached in memory)
 # reboot: 2026-07-21-e
 streamlit==1.58.0
+# Pinned transitively, not directly imported: starlette 1.4.0 (released
+# 2026-08-05 09:36 UTC) added a required keyword-only `thread_minimum_size` to
+# GZipResponder.__init__, and streamlit 1.58.0 subclasses it as
+# _MediaAwareGZipResponder without passing it. Every request then dies with a
+# TypeError in the middleware — the machine boots, reports "started", and
+# answers nothing, so the health check goes critical with no hint that the
+# cause is a dependency published hours earlier. Deploy v55 hit this the same
+# afternoon 1.4.0 landed; the code in that deploy was unrelated. 1.3.1 is what
+# the working venv (and every image through v54) resolved to. Unpin only after
+# checking that streamlit's subclass passes the argument.
+starlette==1.3.1
 anthropic==0.112.0
 chromadb==1.5.9
 python-dotenv==1.2.2
