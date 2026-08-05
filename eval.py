@@ -235,6 +235,22 @@ DIRTY = [
     # batch 12 (2026-08-02): live colloquial phrasings for the civil-rights docs
     ("reserve",   "הבוס שלי מאיים לפטר אותי בגלל המילואים", "זכויות-עבודה-מילואים"),
     ("reserve",   "כמה נקודות זכות מקבלים על מילואים?", "זכויות-סטודנטים-מילואים"),
+    # batch 13 (2026-08-05): two pilot questions refused live. Both are
+    # vocabulary gaps, not content gaps — the soldier's word and the order's
+    # word are different words for the same thing, and the embedding does not
+    # bridge them: לקבול↔קבילה (33.0336 ranked 137th) and הפניה↔"מועד בדיקה"
+    # (61.0104 ranked 25th). "התיישנות" made the second one worse than
+    # neutral — it appears in the pardon/criminal-record orders and nowhere in
+    # 33.0336, so the lexical rerank actively promoted the wrong orders.
+    ("soldier",   "אני רוצה לקבול את אחד המפקדים האם יש חוק התיישנות על המקרה?", "33.0336"),
+    ("soldier",   "אני קבעתי הפניה לעוד שבוע ועדכנתי את המפקד שלי על זה שבוע מראש כדי שיוכל "
+                  "לסדר את הכח אדם וזה אחרי שלפני חודש הוא ביטל לי שתי הפניות כי לא עדכנתי "
+                  "אותו שבוע מראש ואמרתי סבבה עכשיו הוא רוצה לבטל לי את ההפניה בעוד שבוע "
+                  "האם זה חוקי?", "61.0104"),
+    # same two intents in phrasings NOT used as anchors — guards against
+    # fixing the exact string instead of the vocabulary gap behind it
+    ("soldier",   "המפקד ביטל לי את ההפניה לרופא שקבעתי מראש, זה חוקי?", "61.0104"),
+    ("soldier",   "עברו כמה חודשים מהמקרה, אפשר עוד לקבול על המפקד?", "33.0336"),
 ]
 
 # (role, question, expected_doc_id) — heavy-typo questions that go through the

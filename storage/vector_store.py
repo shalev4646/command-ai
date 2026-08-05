@@ -507,9 +507,23 @@ def retrieve(
     # handed the model a colophon/dates chunk while the curated offense
     # summary sat at rank 404. Curated key-facts are the answers the anchor
     # questions were written against, so they are the doc's representative.
+    #
+    # WHICH key-facts clause gets the lift is a coin flip, though. An anchor win
+    # means every clause of that doc scored poorly against the query — the
+    # dilution is why the anchor had to carry it at all — so at clause
+    # granularity they all sit inside the model's noise: 33.0336's five spread
+    # over 0.25–0.33 cosine, and ranking them by the winning anchor instead of
+    # the query is the same coin (0.69–0.77 across the same five, measured).
+    # Both 2026-08-05 pilot misses landed the right order and the wrong
+    # paragraph that way: "יש חוק התיישנות?" lifted the reserve-eligibility
+    # clause over the filing deadline, "המפקד ביטל לי תור" lifted
+    # sick-on-call-up-day over the appointment rule. So the winning document
+    # stops choosing and hands over its key-facts section as one merged block
+    # (below). Merged, not promoted clause by clause: individually they took
+    # four of the eight slots, which cost 12 probes and the source-page link.
     sq_best: dict[str, float] = {}
     best_real: dict[str, dict] = {}
-    best_kf: dict[str, dict] = {}
+    kf_by_doc: dict[str, list[dict]] = {}
     real_candidates = []
     for c in candidates:
         if c["section"] == "sq":
@@ -520,14 +534,44 @@ def retrieve(
             if cur is None or c["score"] > cur["score"]:
                 best_real[c["doc_id"]] = c
             if c["section"].startswith("key-facts"):
-                cur_kf = best_kf.get(c["doc_id"])
-                if cur_kf is None or c["score"] > cur_kf["score"]:
-                    best_kf[c["doc_id"]] = c
+                kf_by_doc.setdefault(c["doc_id"], []).append(c)
     candidates = real_candidates
+    lifted: dict[str, dict] = {}
     for doc_id, anchor_score in sq_best.items():
         best = best_real.get(doc_id)
-        if best is not None and anchor_score > best["score"]:
-            best_kf.get(doc_id, best)["score"] = anchor_score
+        if best is None or anchor_score <= best["score"]:
+            continue
+        kfs = kf_by_doc.get(doc_id)
+        # the doc's highest-scoring clause carries the lift and keeps its own
+        # identity — it is what the source card cites and the only one with a
+        # chance of a page mapping
+        target = max(kfs, key=lambda x: x["score"]) if kfs else best
+        target["score"] = anchor_score
+        lifted[doc_id] = target
+
+    # ...and the WINNING document's remaining clauses fold into that block. Only
+    # the winner: it is the order the answer is built on, so a wrong clause
+    # there is the refusal, while a supporting order contributing its
+    # second-best clause costs nothing. Merging every lifted document instead
+    # grew retrieved context 38% (837→1157 words over the eval sets) for no
+    # additional probe passing — real money at ~$0.04 a question.
+    winner = max(candidates, key=lambda c: c["score"], default=None)
+    lead = lifted.get(winner["doc_id"]) if winner is not None else None
+    if lead is not None:
+        rest = sorted(
+            (c for c in kf_by_doc.get(winner["doc_id"], []) if c is not lead),
+            key=lambda x: x["score"], reverse=True,
+        )
+        folded, words = set(), len(lead["text"].split())
+        for extra in rest:
+            body = extra["text"].split("\n", 1)[-1]
+            if words + len(body.split()) > _KEY_FACTS_MERGE_WORDS:
+                break
+            lead["text"] += "\n" + body
+            words += len(body.split())
+            folded.add(id(extra))
+        if folded:
+            candidates = [c for c in candidates if id(c) not in folded]
 
     chunks = []
     per_doc_count: dict[str, int] = {}
@@ -562,6 +606,14 @@ def retrieve(
 # stripped from query terms so "בריתוק" still matches a chunk containing "ריתוק".
 _HEB_PREFIXES = "הובלמכש"
 _LEXICAL_WEIGHT = 0.25
+# Word budget for the winning document's merged key-facts block (see
+# retrieve()). One raw window, so the block costs the model about what the
+# single clause it replaced plus its neighbours would have: at two windows'
+# worth, retrieved context ran 1157 words against a 837-word baseline over the
+# eval sets, and that is real money at ~$0.04 a question. The median key-facts
+# section is 109 words and fits whole; the long ones lose their least relevant
+# clauses, which is what the ranking is for.
+_KEY_FACTS_MERGE_WORDS = _CHUNK_WORDS
 # final-form letters fold to their medial form so "זמן" matches "זמני"
 _FINALS = str.maketrans("םןץףך", "מנצפכ")
 
