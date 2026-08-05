@@ -736,6 +736,18 @@ def publish_static(name: str, data: bytes) -> str:
     because Streamlit's handler falls back to the SPA document for unknown
     paths. A 200 is therefore NOT proof an asset exists — always compare the
     bytes or the content-type.
+
+    The path stays stable forever (an installed icon must never meet a 404),
+    but the returned URL carries ?v=<content-hash>, because Streamlit serves
+    /static/ as `public, immutable, max-age=31536000`. `immutable` is a promise
+    that the bytes at this URL will never change — and we were breaking it on
+    every deploy, so WebKit kept the ones it already had and never even sent a
+    conditional request. That is why the 2026-08-04 dark launch chain was
+    invisible on the pilot's phone: the sage PNG was cached under the exact URL
+    the dark one was published to, and removing + re-adding the home-screen
+    icon does not purge WebKit's shared HTTP cache (verified 2026-08-05 from a
+    device video — 665-1300ms of sage while production served #14170E). Same
+    gotcha, same fix as the sw.js registration.
     """
     try:
         d = _index_path().parent / "static" / "cai"
@@ -743,7 +755,7 @@ def publish_static(name: str, data: bytes) -> str:
         p = d / name
         if not p.exists() or p.read_bytes() != data:
             p.write_bytes(data)
-        return "/static/cai/" + name
+        return "/static/cai/" + name + "?v=" + hashlib.sha1(data).hexdigest()[:8]
     except Exception:
         return ""
 

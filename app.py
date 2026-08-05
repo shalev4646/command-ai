@@ -1770,6 +1770,16 @@ div[data-testid="stButton"] > button:active {{
 .cai-greet {{ font: 400 30px 'Suez One', serif; color: var(--text); margin: 0 0 7px;
     text-align: center;
     animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .08s; }}
+/* The greeting breaks into two DELIBERATE lines instead of letting the name
+   decide. Measured at 375px (343px of text width, real Suez One metrics):
+   "היי <name>, במה אפשר לעזור?" is 315px for a 3-letter name but 352px for
+   "צוריאל" and 402px for a hyphenated one — so every name past ~4 letters
+   overflowed, and the wrap orphaned the "?" onto a line of its own (device
+   video 2026-08-05). Split, each line is safe for any name: the question is a
+   fixed 213px, and the greeting line is 96-184px across the names tested. */
+.cai-greet-hi, .cai-greet-q {{ display: block; }}
+.cai-greet-q {{ white-space: nowrap; }}
+.cai-greet-hi {{ white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
 /* Stale-greeting guard: the greeting + suggestion cards are gated in Python
    (they don't re-render once a question exists), but Streamlit prunes
    un-re-rendered elements only when the SCRIPT RUN ENDS — and the first
@@ -6598,7 +6608,9 @@ if prompt := st.chat_input("שאל על פקודה..."):
 # when nothing is queued: the instant a question is asked (tap or type) the
 # welcome block must vanish, or it sits stale above the answer being streamed.
 if not st.session_state.messages and not st.session_state.pending_question:
-    _greet = f"היי {html.escape(_dn)}, במה אפשר לעזור?" if _dn else "במה אפשר לעזור?"
+    _q = "<span class='cai-greet-q'>במה אפשר לעזור?</span>"
+    _greet = (f"<span class='cai-greet-hi'>היי {html.escape(_dn)},</span>{_q}"
+              if _dn else _q)
     st.markdown(
         f"<div class='cai-greet'>{_greet}</div>"
         f"<div class='cai-greet-sub'>שאלות נפוצות מפקודות המטכ\"ל במערכת</div>",
