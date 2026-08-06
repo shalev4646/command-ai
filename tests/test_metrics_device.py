@@ -132,6 +132,78 @@ def test_dashboard_ignores_other_days_and_blanks():
     assert d["devices_today"] == 0, "got %r" % d["devices_today"]
 
 
+def _swap_config(present):
+    """Replace _sheets_config for the status cases and return the original.
+
+    Needed because st.secrets is unavailable outside a Streamlit runtime, so
+    the real _sheets_config always reports "no config" here -- which is the
+    one branch these tests must NOT be stuck in."""
+    real = metrics._sheets_config
+    metrics._sheets_config = (
+        (lambda: ({"client_email": "x"}, "http://sheet")) if present else (lambda: None))
+    return real
+
+
+def test_status_not_configured_without_secrets():
+    s = _fresh_store()
+    real = _swap_config(False)
+    try:
+        s["sheets_status"] = "not_configured"
+        assert metrics.dashboard_data()["sheets_status"] == "not_configured"
+        # a stale "ok" left over from before the config was lost must not be
+        # reported as a live connection
+        s["sheets_status"] = "ok"
+        assert metrics.dashboard_data()["sheets_status"] == "not_configured"
+    finally:
+        metrics._sheets_config = real
+
+
+def test_status_configured_before_any_write():
+    """The exact bug being fixed: configured-but-idle read as not-configured,
+    which is the normal state of a machine that has just been deployed."""
+    s = _fresh_store()
+    real = _swap_config(True)
+    try:
+        s["sheets_status"] = "not_configured"  # the value _store() boots with
+        assert metrics.dashboard_data()["sheets_status"] == "configured"
+    finally:
+        metrics._sheets_config = real
+
+
+def test_status_preserves_ok_and_error():
+    s = _fresh_store()
+    real = _swap_config(True)
+    try:
+        for want in ("ok", "error"):
+            s["sheets_status"] = want
+            got = metrics.dashboard_data()["sheets_status"]
+            assert got == want, "%s became %s" % (want, got)
+    finally:
+        metrics._sheets_config = real
+
+
+def test_check_sheets_reports_missing_config():
+    real = _swap_config(False)
+    try:
+        ok, msg = metrics.check_sheets()
+        assert ok is False
+        assert msg.strip(), "a failed probe must explain itself"
+    finally:
+        metrics._sheets_config = real
+
+
+def test_check_sheets_reports_a_bad_key_instead_of_raising():
+    """A broken service account must surface as a message, not a traceback --
+    the probe runs inside the admin page and must never take it down."""
+    real = _swap_config(True)
+    try:
+        ok, msg = metrics.check_sheets()
+        assert ok is False
+        assert msg.strip()
+    finally:
+        metrics._sheets_config = real
+
+
 if __name__ == "__main__":
     fails = 0
     for name, fn in sorted({k: v for k, v in globals().items() if k.startswith("test_")}.items()):

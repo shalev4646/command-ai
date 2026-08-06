@@ -264,7 +264,18 @@ def dashboard_data() -> dict:
                                   if q.get("device") and q["ts"][:10] == s["day"]}),
             "questions": list(s["questions"]),
             "feedback": list(s["feedback"]),
-            "sheets_status": s["sheets_status"] if config else "not_configured",
+            # Four states, not three. "configured" means the secrets are there
+            # but nothing has been written since this process booted, so the
+            # chain is untested — which is the NORMAL state right after a
+            # deploy, and used to render as "not configured". Those two look
+            # identical to the reader and mean opposite things: one sends you
+            # hunting a config bug that isn't there, the other lets you trust a
+            # sheet that was never reachable. check_sheets() settles it.
+            "sheets_status": (
+                "not_configured" if not config
+                else s["sheets_status"] if s["sheets_status"] in ("ok", "error")
+                else "configured"
+            ),
             "sheets_error": s["sheets_error"],
             "sheet_url": config[1] if config else "",
         }
@@ -280,6 +291,50 @@ def recent_questions() -> list[dict]:
             return list(s["questions"])
     except Exception:
         return []
+
+
+def check_sheets() -> tuple[bool, str]:
+    """Probe the whole Sheets chain on demand and say plainly what happened.
+
+    Exists because the passive status only turns "ok" after a real append, so
+    a freshly booted machine that is configured correctly is indistinguishable
+    from one that is not — and the only other way to tell them apart is to
+    spend a paid question and see whether a row lands.
+
+    It performs a real WRITE, not just a read: append permission is what the
+    logger actually needs, and a sheet shared read-only would pass any
+    read-only probe and then silently drop every row. The write goes to its
+    own _healthcheck tab so it never touches the metrics data.
+
+    Synchronous, unlike _append_to_sheet — this runs from the admin page,
+    where waiting a second for a true answer beats a thread nobody watches.
+    """
+    config = _sheets_config()
+    if not config:
+        return False, ("אין הגדרות — gcp_service_account או metrics.sheet_url "
+                       "חסרים ב-secrets. בפרודקשן זה בדרך כלל אומר שהסוד "
+                       "STREAMLIT_SECRETS_TOML_B64 לא מוגדר או לא הגיע לקונטיינר.")
+    try:
+        import gspread
+        from google.oauth2.service_account import Credentials
+
+        creds = Credentials.from_service_account_info(
+            config[0], scopes=["https://www.googleapis.com/auth/spreadsheets"])
+        sheet = gspread.authorize(creds).open_by_url(config[1])
+        try:
+            ws = sheet.worksheet("_healthcheck")
+        except gspread.WorksheetNotFound:
+            ws = sheet.add_worksheet(title="_healthcheck", rows=10, cols=2)
+        stamp = datetime.now().isoformat(timespec="seconds")
+        ws.update_cell(1, 1, "last ok: " + stamp)
+        # a successful write is the same proof an append gives, so promote the
+        # passive indicator too — the admin should not have to remember that
+        # the badge above the button is now stale
+        _store()["sheets_status"] = "ok"
+        return True, "כתיבה הצליחה לגיליון '%s' בשעה %s. שורות המדדים יישמרו." % (
+            sheet.title, stamp)
+    except Exception as e:
+        return False, "%s: %s" % (type(e).__name__, e)
 
 
 def new_session_id() -> str:

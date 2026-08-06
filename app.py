@@ -1007,14 +1007,33 @@ def _render_admin():
     recent_cost = sum(q["cost_usd"] for q in d["questions"])
     c4.metric("עלות מצטברת (מאז אתחול)", f"${recent_cost:.2f}")
 
+    # .get, not [..]: a deploy can pair a new metrics.py (which emits the new
+    # "configured" state) with an app.py still cached from the previous build,
+    # and a KeyError here would take the whole dashboard down.
     sheets_label = {
         "ok": "✅ מחובר — כל שאלה ומשוב נשמרים בגיליון",
         "error": f"⚠️ שגיאת חיבור: {d['sheets_error']}",
+        "configured": "🕓 מוגדר, אך טרם נכתבה שורה מאז עליית השרת — החיבור לא נבדק בפועל",
         "not_configured": "❌ לא מוגדר — הנתונים נשמרים רק בזיכרון עד האתחול הבא",
-    }[d["sheets_status"]]
+    }.get(d["sheets_status"], f"סטטוס לא מוכר: {d['sheets_status']}")
     st.caption(f"Google Sheets: {sheets_label}")
     if d["sheet_url"]:
         st.markdown(f"🔗 [פתח את הגיליון המלא (כל ההיסטוריה)]({d['sheet_url']})")
+
+    # The stake behind this whole block: fly.toml has no [mounts], so
+    # storage/metrics_log.jsonl dies with every deploy and restart. If Sheets
+    # is not writable, the pilot ends with nothing — so make that verifiable
+    # here instead of by spending a paid question and hoping a row appears.
+    if d["sheets_status"] != "ok":
+        st.warning("אין אחסון קבוע לקובץ המקומי (ל-fly.toml אין [mounts]) — "
+                   "הגיליון הוא השכבה העמידה היחידה. כל עוד הוא לא מאומת, "
+                   "נתוני הפיילוט עלולים להימחק בדיפלוי הבא.")
+    if st.button("בדוק חיבור לגיליון עכשיו", key="admin_sheets_probe"):
+        with st.spinner("כותב שורת בדיקה לגיליון…"):
+            _sheet_ok, _sheet_msg = metrics.check_sheets()
+        (st.success if _sheet_ok else st.error)(_sheet_msg)
+        st.caption("הבדיקה כותבת חותמת-זמן ללשונית _healthcheck בלבד — "
+                   "היא לא נוגעת בנתוני המדדים.")
     st.caption(f"מכסות: {d['user_limit']} שאלות ליום לכל טאב, {d['global_limit']} ליום לכולם. "
                "הטבלאות למטה מציגות את הפעילות מאז האתחול האחרון של השרת; "
                "ההיסטוריה המלאה נשמרת בגיליון. עמודת device היא מזהה מכשיר "
