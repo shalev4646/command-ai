@@ -432,12 +432,39 @@ def index_all_documents(json_dir: Path | None = None) -> int:
     return total
 
 
+# How much a routed document's real chunks gain.
+#
+# Deliberately a BONUS, not a filter: scoping retrieval to the router's picks
+# measured slightly better on paper (86.1% vs 85.9% on the anchor-stripped
+# hold-out) but bought it by creating 22 new failures — when the three picks
+# are wrong the right order was deleted before scoring and nothing downstream
+# can recover it. A bonus can only reorder, never exclude.
+#
+# 0.05 is the largest value that breaks none of the 382 questions that pass
+# today. The two gates pull against each other, measured:
+#
+#   boost   anchored gate    anchor-stripped hold-out
+#   0.00      382/382              273 (71.5%)
+#   0.05      382/382              304 (79.6%)   ← here
+#   0.08      381/382              312 (81.7%)
+#   0.10      381/382              318 (83.2%)
+#   0.15      378/382              328 (85.9%)
+#
+# Raising it trades questions that work today for questions nobody has
+# phrased yet — a real gain on paper, but the regressions are the ones users
+# would notice. The four that break at 0.15 are all order-boundary cases
+# (traffic offence → discipline vs licence suspension, alcohol → intoxicants
+# vs discipline); anchor them first, then this can go up.
+_ROUTE_BOOST = 0.05
+
+
 def retrieve(
     query: str,
     n_results: int = 10,
     max_per_doc: int = 4,
     doc_ids: list[str] | None = None,
     top_doc_depth: int = 4,
+    boost_docs: set[str] | None = None,
 ) -> list[dict]:
     """Return the globally most relevant chunks, capped per document.
 
@@ -461,6 +488,11 @@ def retrieve(
     `doc_ids`, if given, restricts the search to that set of documents —
     used to scope retrieval to whatever's relevant for the active role
     (soldier/commander/reserve).
+
+    `boost_docs` is the document router's shortlist (see backend._route_docs):
+    those documents' chunks get _ROUTE_BOOST added to their score. It is a
+    hint, not a scope — an empty or wrong shortlist leaves retrieval exactly
+    as it would have been.
     """
     if doc_ids is not None and not doc_ids:
         return []
@@ -495,6 +527,20 @@ def retrieve(
     ]
 
     _lexical_rerank(query, candidates)
+
+    # Router bonus — real chunks only, never anchors. Boosting anchors too
+    # cost 12 of the 382 gated questions: an anchor's score becomes its
+    # document's score in the fold below, so a boosted anchor on a
+    # mis-routed order outranked the correctly-anchored one. Anchors and the
+    # router answer different halves of the problem — a human wrote an anchor
+    # for the phrasings someone anticipated, the router covers everything
+    # else — so the router must not be able to outbid a live anchor match.
+    # On the anchor-stripped hold-out the two forms are identical by
+    # construction, so this costs nothing there (85.9% either way).
+    if boost_docs:
+        for c in candidates:
+            if c["doc_id"] in boost_docs and c["section"] != "sq":
+                c["score"] = round(c["score"] + _ROUTE_BOOST, 3)
 
     # Fold suggested-question anchors into their document's real chunks: a
     # strong question-to-question match lifts one of the doc's real chunks to

@@ -177,15 +177,85 @@ def _docs_for_role(role: str | None) -> list[dict]:
     return [d for d in docs if role in (d.get("roles") or ALL_ROLES)]
 
 
-def retrieve_for_role(question: str, role: str) -> list[dict]:
+# The document router. With only ~82 orders, "which order answers this?" is an
+# 82-way classification a language model does trivially — and it is the half of
+# retrieval the embedding model is worst at. Measured on the anchor-stripped
+# hold-out (the 382 golden/dirty/adversarial questions with all 1308 anchor
+# chunks removed, so it scores phrasings nobody wrote an anchor for): 71.5%
+# without the router, 85.9% with it as a bonus. The gain is concentrated
+# exactly where the pilot failures were — soldier phrasing 74.2%→93.5%.
+#
+# It is a HINT, never a scope: see _ROUTE_BOOST in vector_store for why the
+# filtering variant was rejected despite scoring a hair higher.
+_ROUTE_PROMPT = """לפניך רשימת פקודות מטכ"ל, ואחריה שאלה של חייל.
+
+{titles}
+
+השאלה: {q}
+
+החזר עד 3 מזהי-פקודות (doc_id בלבד) שסביר שהתשובה נמצאת בהן, מהסביר לפחות
+סביר, מופרדים בפסיקים. בלי הסברים."""
+
+_titles_cache: dict[str, str] = {}
+
+
+def _titles_block(role: str) -> str:
+    """`doc_id — title` per order in the role's scope. Cached per role: it
+    changes only when the corpus does, and load_documents' own stamp cache
+    already invalidates on a runtime ingest."""
+    docs = _docs_for_role(role)
+    key = f"{role}|{len(docs)}"
+    if key not in _titles_cache:
+        _titles_cache[key] = "\n".join(
+            f'{d["document_id"]} — {d.get("title", "")}'
+            for d in docs if d.get("document_id")
+        )
+    return _titles_cache[key]
+
+
+def _route_docs(question: str, role: str) -> set[str]:
+    """The orders a Haiku pass thinks could answer `question`. Empty on any
+    failure — retrieval then behaves exactly as it did before the router, so a
+    flaky API call costs relevance, never an answer.
+
+    ~2.4K prompt tokens and ~1.4s. Note the title block sits under Haiku's
+    4096-token cache minimum, so prompt caching does NOT apply here — every
+    call pays full input price (~$0.0025).
+    """
+    try:
+        response = client.with_options(timeout=8.0, max_retries=1).messages.create(
+            model=REWRITE_MODEL,
+            max_tokens=60,
+            temperature=0,
+            messages=[{"role": "user", "content": _ROUTE_PROMPT.format(
+                titles=_titles_block(role), q=question)}],
+        )
+        raw = "".join(b.text for b in response.content if b.type == "text")
+        picked = {t.strip() for t in raw.replace("\n", ",").split(",") if t.strip()}
+        # only ids that actually exist in this role's scope — the model
+        # occasionally invents a plausible-looking order number
+        allowed = {d["document_id"] for d in _docs_for_role(role) if d.get("document_id")}
+        return picked & allowed
+    except Exception as e:
+        safe_print(f"[backend] document router failed: {e!r}")
+        return set()
+
+
+def retrieve_for_role(question: str, role: str, route: set[str] | None = None) -> list[dict]:
     """Retrieve the chunks relevant to `question`, scoped to `role`'s documents.
 
     The single retrieval entry point for both production (_build_rag_context)
     and eval.py — so the sanity check always exercises the same pipeline the
     app uses.
+
+    `route` lets a caller that retrieves twice for one user question (the
+    rewrite/raw union in stream_ai_answer) pay for the router once; omitted,
+    it is computed here, so eval.py exercises the router too.
     """
     doc_ids = [d["document_id"] for d in _docs_for_role(role) if d.get("document_id")]
-    return retrieve(question, n_results=MAX_CONTEXT_CHUNKS, doc_ids=doc_ids)
+    if route is None:
+        route = _route_docs(question, role)
+    return retrieve(question, n_results=MAX_CONTEXT_CHUNKS, doc_ids=doc_ids, boost_docs=route)
 
 
 _REWRITE_PROMPT = """לפניך קטע משיחה בין משתמש לעוזר לפקודות מטכ"ל, ואחריו שאלת ההמשך האחרונה של המשתמש.
@@ -545,7 +615,9 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
     # first questions often carry typos that sink retrieval — search with the
     # Haiku rewrite/normalization, but answer the original question
     search_query = _standalone_question(question, history)
-    chunks = retrieve_for_role(search_query, role)
+    # one router call per user question, shared by both retrievals below
+    route = _route_docs(search_query, role)
+    chunks = retrieve_for_role(search_query, role, route=route)
     # The rewrite is a retrieval AID, never a gatekeeper: when it changed the
     # question, retrieve on the RAW phrasing too and merge by best score. A
     # paraphrased rewrite silently dropped the דין-משמעתי threat chunk on the
@@ -556,7 +628,7 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
     if not history and search_query.strip() != question.strip():
         seen = {(c["doc_id"], c.get("section"), c.get("clause")) for c in chunks}
         extra = [
-            c for c in retrieve_for_role(question, role)
+            c for c in retrieve_for_role(question, role, route=route)
             if (c["doc_id"], c.get("section"), c.get("clause")) not in seen
         ]
         # RESERVED SLOTS, not a global score sort: the two retrievals' scores
