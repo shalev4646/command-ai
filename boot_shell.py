@@ -1039,14 +1039,25 @@ def patch_index_html() -> bool:
         head_raw = _HEAD_TEMPLATE.replace("__FACE__", face)
         # OFF BY DEFAULT, opt in with CAI_SW=1.
         #
-        # The worker was built to kill the launch flash, and re-adding the home
-        # screen icon killed it first — measured on the 2026-07-31 23:29 video,
-        # where the launch now runs black -> grey -> olive with no light surface
-        # anywhere. So its remaining value is speed (~3.9s a launch), which is
-        # real but is not worth shipping an unproven-on-iOS-Safari worker days
-        # before the pilot. The flag keeps the code on main and out of
-        # production until someone decides otherwise, and it means an unrelated
-        # fix in this file can deploy without dragging the worker along.
+        # The worker was built to kill the launch flash. An earlier note here
+        # claimed re-adding the icon had killed it first — that was wrong, and
+        # the 2026-08-05 17:37 device video (shot on a fully dark chain, after
+        # the ?v= cache fix) shows why: the launch image cross-fades out over
+        # three frames at ~1.7s, and solving the blend from two regions gives
+        # alpha 0.92 -> 0.84 over a backdrop of (249,253,246). That backdrop is
+        # the web view's own white canvas, not a colour we set anywhere, so no
+        # page-side change reaches it — the gap opens before the document
+        # exists. Every cheap lever was already spent between v10 and v21 (dark
+        # html, color-scheme, progressive paint, inlined font, static
+        # theme-color); this worker is the only remaining one, because serving
+        # the shell from cache makes first paint beat the fade.
+        #
+        # It stays off anyway: the flash is ~50ms, and shipping an
+        # unproven-on-iOS-Safari worker days before the pilot is the worse
+        # trade — especially now that we know this codebase's caching
+        # assumptions can bite (the immutable /static/ incident, same day).
+        # Turn it on after the pilot, when the ~3.9s-a-launch win comes with it,
+        # and verify cache invalidation across a deploy BEFORE trusting it.
         sw_on = os.environ.get("CAI_SW") == "1"
         # the registration rides at the end of the boot script, so it is part of
         # the stamped payload like everything else
