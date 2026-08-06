@@ -19,6 +19,15 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Application source (secrets excluded via .dockerignore).
 COPY . .
 
+# The service worker flag MUST be set before the patch below and must match the
+# runtime value in fly.toml, because the shell is patched in BOTH places: here,
+# so the baked image already carries the worker (otherwise the first request
+# after a deploy — the one iOS makes on launch — gets a shell without it), and
+# again at runtime by app._patch_boot_shell(). If the two disagree the runtime
+# pass rewrites the shell to match ITSELF, silently stripping the worker the
+# build just added. Change this and fly.toml's [env] together, never one alone.
+ENV CAI_SW=1
+
 # 1) Brand Streamlit's static index.html — olive splash from t=0, every request.
 RUN python -c "import boot_shell, sys; sys.exit(0 if boot_shell.patch_index_html() else 1)"
 # Bake the PWA assets into the image. Doing this at runtime instead means a

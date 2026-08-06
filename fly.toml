@@ -20,6 +20,22 @@ primary_region = "fra"
 # 2026-08-01, across many deploys that all "succeeded".
 swap_size_mb = 768
 
+# The boot shell's service worker, off by default in code (boot_shell.py reads
+# CAI_SW). Turned on for the launch flash: the OS launch image cross-fades out
+# at ~1.7s and reveals the web view's white canvas for ~50ms because our first
+# paint has not landed yet. That the gap is OUR paint timing and not an OS layer
+# is not a guess — deblocking Streamlit's stylesheet already moved the same
+# flash from 130ms to 50ms. The worker serves the shell from cache
+# (domInteractive 21.7ms, transferSize 0), so first paint beats the fade and
+# there is nothing left to bleed through. It also saves ~3.9s a launch.
+#
+# Escape hatch if it ever misbehaves: ?nosw=1 in the address bar tears it out
+# and sticks (localStorage), ?nosw=0 puts it back. Removing this key and
+# redeploying stops NEW registrations but does not unregister existing ones —
+# use ?nosw=1 for that.
+[env]
+  CAI_SW = "1"
+
 [build]
 
 [http_service]
