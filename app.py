@@ -91,6 +91,23 @@ try:
     import miluim_guide as _mg
 except Exception:
     _mg = None
+# commander kit (2026-08-06 spec) — same defensive contract
+try:
+    import keva_benefits as _kb
+except Exception:
+    _kb = None
+try:
+    import absence_guide as _ab
+except Exception:
+    _ab = None
+try:
+    import distress_guide as _dg
+except Exception:
+    _dg = None
+try:
+    import incident_guide as _ig
+except Exception:
+    _ig = None
 
 try:
     import backend
@@ -3684,6 +3701,13 @@ div[data-testid="stDialog"] [data-testid="InputInstructions"] { display: none !i
     background: rgba(233,214,150,.07); border: 1px solid rgba(233,214,150,.35); margin-top: 8px; }
 .cai-mil-warn .t { font: 600 12.5px Heebo, sans-serif; color: #E9D696; line-height: 1.5; }
 .cai-mil-warn .c { font: 400 10.5px Heebo, sans-serif; color: rgba(233,214,150,.6); margin-top: 4px; }
+/* the distress tool's act-now card — the warn card's red-muted sibling */
+.cai-mil-crit { direction: rtl; text-align: right; border-radius: 13px; padding: 11px 13px;
+    background: rgba(226,120,110,.09); border: 1px solid rgba(226,120,110,.4); margin-top: 8px; }
+.cai-mil-crit .t { font: 600 12.5px Heebo, sans-serif; color: #E8AFA5; line-height: 1.5; }
+.cai-mil-crit .r { font: 400 12px Heebo, sans-serif; color: rgba(232,175,165,.85);
+    line-height: 1.55; margin-top: 4px; }
+.cai-mil-crit .c { font: 400 10.5px Heebo, sans-serif; color: rgba(232,175,165,.55); margin-top: 4px; }
 .cai-mil-tline { display: flex; align-items: center; direction: rtl; margin-top: 10px; }
 .cai-mil-tline .d { width: 10px; height: 10px; border-radius: 50%; flex: none;
     background: var(--accent-soft); border: 2px solid var(--accent); }
@@ -4210,6 +4234,169 @@ def _miluim_guide_dialog():
             st.caption("מעוגן בפקודות: " + " · ".join(s["title"] for s in srcs[:2]))
 
 
+def _guide_steps_html(steps: list) -> str:
+    """Numbered step cards for the commander guides — the miluim guide's
+    markup, plus the spec-§4 body: rule lines (✓), action lines (‹), one
+    official link, and the citation. First card opens by default."""
+    out = []
+    for i, s in enumerate(steps, start=1):
+        lines = "".join(
+            f"<div class='cai-mil-how'><span class='g'>✓</span><span>{html.escape(ln)}</span></div>"
+            for ln in s["lines"]
+        )
+        hows = "".join(
+            f"<div class='cai-mil-how'><span class='g'>‹</span><span>{html.escape(h)}</span></div>"
+            for h in s.get("how") or []
+        )
+        link = (f"<a class='cai-mil-link' href='{html.escape(s['link'], quote=True)}' "
+                f"target='_blank' rel='noopener'>{html.escape(s.get('link_label') or 'למקור הרשמי')} ↗</a>"
+                if s.get("link") else "")
+        out.append(
+            f"<details class='cai-mil-det'{' open' if i == 1 else ''}>"
+            f"<summary><span class='cai-mil-num'>{i}</span>"
+            f"<span class='tt'>{html.escape(s['title'])}</span></summary>"
+            f"<div class='cai-mil-body'>{lines}{hows}{link}"
+            f"<div class='cai-mil-cite'>{html.escape(s['cite'])}</div></div></details>"
+        )
+    return "".join(out)
+
+
+@st.dialog("מה מגיע לי בקבע", width="large")
+def _keva_benefits_dialog():
+    """The keva mirror of the miluim map: curated rows from keva_benefits.py,
+    deterministic, NO Anthropic call, no quota. The two light inputs live in
+    session state only — deliberately no device-cookie mirror, so every other
+    user's cookie payload stays byte-identical to today's format."""
+    if not _kb:
+        return
+    st.markdown(_modal_header("מה מגיע לי בקבע"), unsafe_allow_html=True)
+    years = st.number_input("שנות שירות (כולל שירות החובה)", min_value=0, max_value=50,
+                            step=1, value=st.session_state.get("kv_years"),
+                            placeholder="למשל: 6", key="kv_years_w")
+    family = st.toggle("יש בן/בת זוג או ילדים עד גיל 18",
+                       value=bool(st.session_state.get("kv_family")), key="kv_family_w")
+    st.session_state.kv_years = int(years) if years is not None else None
+    st.session_state.kv_family = bool(family)
+
+    if years is not None:
+        lv = _kb.seniority_leave(int(years))
+        st.markdown(
+            f"<div class='cai-mil-hero'><div class='t'>{lv['days']} ימי חופשה שנתית</div>"
+            f"<div class='s'>{html.escape(lv['tier_label'])}</div>"
+            f"<div class='cai-mil-cite'>{html.escape(lv['cite'])}</div></div>",
+            unsafe_allow_html=True,
+        )
+
+    rows = _kb.benefit_rows(int(years or 0), bool(family))
+    by_sec: dict[str, list] = {}
+    for r in rows:
+        by_sec.setdefault(r["section"], []).append(r)
+    parts = []
+    for sec in _kb.SECTION_ORDER:
+        if not by_sec.get(sec):
+            continue
+        parts.append(f"<div class='cai-mil-sec'><span>{html.escape(_kb.SECTION_LABELS[sec])}</span></div>")
+        parts.extend(_mil_details_row(r) for r in by_sec[sec])
+    parts.append(
+        f"<div class='cai-mil-foot'>🔄 המקורות נבדקו לאחרונה: {_kb.LAST_VERIFIED}"
+        f"<br>⚠️ {html.escape(_kb.DISCLAIMER)}</div>"
+    )
+    st.markdown("".join(parts), unsafe_allow_html=True)
+
+
+@st.dialog("חייל לא התייצב", width="large")
+def _absence_dialog():
+    """The commander's absence track in the "קיבלתי צו" shape: branch picker,
+    timeline, the pinned check-before-declaring warning, cited steps.
+    Deterministic (absence_guide.py), no quota."""
+    if not _ab:
+        return
+    st.markdown(_modal_header("חייל לא התייצב"), unsafe_allow_html=True)
+    tline = ("<div class='cai-mil-tline'><span class='d'></span><span class='seg'></span>"
+             "<span class='d'></span><span class='seg'></span><span class='d'></span>"
+             "<span class='seg'></span><span class='d'></span></div>"
+             "<div class='cai-mil-tcaps'>"
+             + "".join(f"<span>{html.escape(t)}</span>" for t in _ab.TIMELINE)
+             + "</div>")
+    warn = (f"<div class='cai-mil-warn'><div class='t'>{_isvg(_I_ALERT, size=12)} "
+            f"{html.escape(_ab.STANDING_WARNING['text'])}</div>"
+            f"<div class='c'>{html.escape(_ab.STANDING_WARNING['cite'])}</div></div>")
+    st.markdown(tline + warn, unsafe_allow_html=True)
+    labels = dict(_ab.BRANCHES)
+    branch = st.radio("מי החייל?", [k for k, _ in _ab.BRANCHES],
+                      format_func=lambda k: labels[k], horizontal=True, key="ab_branch")
+    g = _ab.guide_for(branch)
+    if not g:
+        return
+    st.markdown(_guide_steps_html(g["steps"]), unsafe_allow_html=True)
+    st.markdown(f"<div class='cai-mil-foot'>⚠️ {html.escape(_ab.DISCLAIMER)}</div>",
+                unsafe_allow_html=True)
+
+
+@st.dialog("חייל במצוקה נפשית", width="large")
+def _distress_dialog():
+    """Emergency-first: the act-now card, the cited steps, the explicit
+    prohibitions, and the externally-verified civilian hotlines. Deterministic
+    (distress_guide.py), no quota."""
+    if not _dg:
+        return
+    st.markdown(_modal_header("חייל במצוקה נפשית"), unsafe_allow_html=True)
+    em = _dg.EMERGENCY
+    crit = (f"<div class='cai-mil-crit'><div class='t'>{_isvg(_I_ALERT, size=12)} "
+            f"{html.escape(em['title'])}</div>"
+            + "".join(f"<div class='r'>{html.escape(l)}</div>" for l in em["lines"])
+            + f"<div class='c'>{html.escape(em['cite'])}</div></div>")
+    st.markdown(crit + _guide_steps_html(_dg.STEPS), unsafe_allow_html=True)
+    forb = ["<div class='cai-mil-sec'><span>מה אסור</span></div>"]
+    for f in _dg.FORBIDDEN:
+        tag = f"<span class='cai-mil-tag'>{html.escape(f['tag'])}</span>" if f.get("tag") else ""
+        forb.append(
+            "<div class='cai-mil-det' style='padding:11px 13px'>"
+            f"<div class='tt'>{html.escape(f['title'])} {tag}</div>"
+            f"<div class='cai-mil-cite'>{html.escape(f['cite'])}</div></div>"
+        )
+    hot_rows = []
+    for h in _dg.HOTLINES:
+        nm = html.escape(h["name"])
+        if h.get("link"):
+            nm = (f"<a class='cai-mil-link' style='margin-top:0' "
+                  f"href='{html.escape(h['link'], quote=True)}' "
+                  f"target='_blank' rel='noopener'>{nm} ↗</a>")
+        phone = (f" · <a class='cai-mil-link' style='margin-top:0' "
+                 f"href='tel:{html.escape(h['phone'], quote=True)}'>{html.escape(h['phone'])}</a>"
+                 if h.get("phone") else "")
+        hot_rows.append(f"<div class='cai-mil-how'><span class='g'>‹</span><span>{nm}{phone}</span></div>")
+    hot = ("<div class='cai-mil-sec'><span>קווי סיוע אזרחיים</span></div>"
+           "<div class='cai-mil-det' style='padding:11px 13px'>" + "".join(hot_rows)
+           + f"<div class='cai-mil-cite'>המספרים אומתו לאחרונה: {_dg.HOTLINES_VERIFIED}</div></div>")
+    st.markdown("".join(forb) + hot
+                + f"<div class='cai-mil-foot'>⚠️ {html.escape(_dg.DISCLAIMER)}</div>",
+                unsafe_allow_html=True)
+
+
+@st.dialog("אירוע ביחידה — למי מדווחים", width="large")
+def _incident_dialog():
+    """The incident router: pick what happened, get who-to-report, what not to
+    do alone, and what to do until the investigators arrive. Deterministic
+    (incident_guide.py), no quota."""
+    if not _ig:
+        return
+    st.markdown(_modal_header("אירוע ביחידה"), unsafe_allow_html=True)
+    warn = (f"<div class='cai-mil-warn'><div class='t'>{_isvg(_I_ALERT, size=12)} "
+            f"{html.escape(_ig.STANDING_WARNING['text'])}</div>"
+            f"<div class='c'>{html.escape(_ig.STANDING_WARNING['cite'])}</div></div>")
+    st.markdown(warn, unsafe_allow_html=True)
+    labels = dict(_ig.EVENTS)
+    ev = st.radio("מה קרה?", [k for k, _ in _ig.EVENTS],
+                  format_func=lambda k: labels[k], horizontal=True, key="ig_event")
+    g = _ig.guide_for(ev)
+    if not g:
+        return
+    st.markdown(_guide_steps_html(g["steps"]), unsafe_allow_html=True)
+    st.markdown(f"<div class='cai-mil-foot'>⚠️ {html.escape(_ig.DISCLAIMER)}</div>",
+                unsafe_allow_html=True)
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Drawer + Settings — redesigned surface (mockup 2a + 8a–8e).
 # The settings screens are an APP-OWNED overlay (a keyed st.container + a
@@ -4256,6 +4443,12 @@ _ICON = {
     "medal": _svg("<circle cx='12' cy='9' r='5'/><path d='M9 13.5 7 21l5-2 5 2-2-7.5'/>"),
     "clipboard": _svg("<rect x='6' y='4' width='12' height='17' rx='2'/>"
                       "<path d='M9 2h6v4H9z'/><path d='M9.5 11h5M9.5 15h5'/>"),
+    # commander kit: star (keva map), heart (distress protocol); the absence
+    # and incident rows reuse the existing clock/bell strokes
+    "star": _svg("<path d='M12 3l2.7 5.6 6.2.9-4.5 4.3 1.1 6.2-5.5-2.9-5.5 2.9 "
+                 "1.1-6.2L3.1 9.5l6.2-.9z'/>"),
+    "heart": _svg("<path d='M19.5 12.6 12 20l-7.5-7.4a5 5 0 1 1 7.5-6.6 "
+                  "5 5 0 1 1 7.5 6.6'/>"),
     "book": _svg("<rect x='4' y='3' width='12' height='16' rx='2'/><path d='M8 3v16'/>"
                  "<path d='M18 6v13a2 2 0 0 1-2 2H7'/>", stroke="#C4CE92"),
     "user": _svg("<path d='M20 21a8 8 0 0 0-16 0'/><circle cx='12' cy='7' r='4'/>"),
@@ -4517,6 +4710,10 @@ html.cai-orders-open .cai-kb-card {
 .st-key-open_entitlements button::before { background-image: url("ICON_CALC"); }
 .st-key-open_mil_benefits button::before { background-image: url("ICON_MEDAL"); }
 .st-key-open_mil_guide button::before { background-image: url("ICON_CLIPBOARD"); }
+.st-key-open_keva_benefits button::before { background-image: url("ICON_STAR"); }
+.st-key-open_absence button::before { background-image: url("ICON_CLOCK"); }
+.st-key-open_distress button::before { background-image: url("ICON_HEART"); }
+.st-key-open_incident button::before { background-image: url("ICON_BELL"); }
 .st-key-cai_tools button::after, .st-key-cai_recent button::after {
   content: "‹"; position: absolute; inset-inline-end: 14px; top: 50%;
   transform: translateY(-50%); color: rgba(236,237,230,.3); font-size: 14px;
@@ -5702,9 +5899,10 @@ with st.container(key="cai_drawer"):
         st.markdown(_orders_panel(docs), unsafe_allow_html=True)
 
     # ── tools (grouped card) — role-aware: each persona sees its own set.
-    # RESERVE gets the miluim tools; the חובה entitlements calculator and the
-    # (4/5 soldier-oriented) letters generator are actively misleading there.
-    # soldier/commander keep today's exact set — keys/order untouched. ──
+    # RESERVE gets the miluim tools; COMMANDER gets the command kit (the חובה
+    # entitlements calculator and the 4/5-soldier-oriented letters generator
+    # left this drawer on purpose — 2026-08-06 commander-tools spec: everyday
+    # entitlement questions belong in chat); SOLDIER keeps today's exact set. ──
     st.markdown("<div class='cai-sec-label'>כלים</div>", unsafe_allow_html=True)
     with st.container(key="cai_tools"):
         # the tool dialogs overlay a live drawer that stays open behind
@@ -5715,6 +5913,21 @@ with st.container(key="cai_drawer"):
                 _miluim_benefits_dialog()
             if _mg and st.button("קיבלתי צו — דחייה והתייצבות", key="open_mil_guide", use_container_width=True):
                 _miluim_guide_dialog()
+            if _pa and st.button("בודק סמכות עונש", key="open_punishment", use_container_width=True):
+                _punishment_dialog()
+        elif st.session_state.role == "commander":
+            # the personal-value slot follows the profile's service type: only
+            # a keva commander sees the keva map — a חובה commander asks
+            # entitlement questions in chat (the product's core)
+            if _kb and _service_type_shown() == "קבע" and st.button(
+                    "מה מגיע לי בקבע", key="open_keva_benefits", use_container_width=True):
+                _keva_benefits_dialog()
+            if _ab and st.button("חייל לא התייצב", key="open_absence", use_container_width=True):
+                _absence_dialog()
+            if _dg and st.button("חייל במצוקה נפשית", key="open_distress", use_container_width=True):
+                _distress_dialog()
+            if _ig and st.button("אירוע ביחידה — למי מדווחים", key="open_incident", use_container_width=True):
+                _incident_dialog()
             if _pa and st.button("בודק סמכות עונש", key="open_punishment", use_container_width=True):
                 _punishment_dialog()
         else:
