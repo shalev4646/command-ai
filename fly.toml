@@ -35,6 +35,11 @@ swap_size_mb = 768
 # use ?nosw=1 for that.
 [env]
   CAI_SW = "1"
+  # TEMPORARY — remove together with _FLASH_PROBE in boot_shell.py and the
+  # matching ENV in the Dockerfile once the launch flash is settled. It draws a
+  # full-screen diagnostic overlay 3s into every launch, so it must NOT be live
+  # when testers are on the app.
+  CAI_FLASHPROBE = "1"
 
 [build]
 

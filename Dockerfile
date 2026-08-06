@@ -27,6 +27,8 @@ COPY . .
 # pass rewrites the shell to match ITSELF, silently stripping the worker the
 # build just added. Change this and fly.toml's [env] together, never one alone.
 ENV CAI_SW=1
+# TEMPORARY diagnostic, paired with fly.toml's [env] — see the note there.
+ENV CAI_FLASHPROBE=1
 
 # 1) Brand Streamlit's static index.html — olive splash from t=0, every request.
 RUN python -c "import boot_shell, sys; sys.exit(0 if boot_shell.patch_index_html() else 1)"
