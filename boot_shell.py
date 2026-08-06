@@ -975,69 +975,6 @@ self.addEventListener('fetch', function (e) {
 # shell permanently. Versioning the REGISTRATION URL sidesteps the question:
 # a new stamp is a new script URL, which is an unconditional install no cache
 # can intercept. Query strings do not affect scope, so this still controls /.
-# TEMPORARY, opt in with CAI_FLASHPROBE=1. Delete once the launch flash is
-# settled — it exists to answer ONE question and then go away.
-#
-# Four device videos have shown a ~2-frame, uniform +64 luminance lift over our
-# already-painted splash, at the standalone launch-image hand-off only, and
-# compressed video cannot say what paints it: the noise floor between adjacent
-# dark frames is 13.5 luma, and every page-side hypothesis (re-add, paint
-# timing via the service worker, a runtime viewport mutation, PNG alpha) has
-# been falsified by measurement. This samples the DOM instead of the pixels,
-# every animation frame for 3s, and draws the transitions on screen so a
-# screenshot carries them off the device.
-#
-# If html/body turn light, or the splash's opacity dips, the flash is ours and
-# the log will name it. If nothing in the page moves while the screen brightens,
-# it is outside the web view and no page change can reach it.
-_FLASH_PROBE = """
-      (function () {
-        try {
-          var t0 = performance.now(), rows = [], last = '';
-          var cs = function (el) { return el ? getComputedStyle(el) : null; };
-          var sample = function () {
-            var h = document.documentElement, b = document.body;
-            var sp = document.getElementById('cai-boot-splash');
-            var hs = cs(h), bs = cs(b), ss = cs(sp);
-            var mid = null;
-            try { mid = document.elementFromPoint(innerWidth / 2, innerHeight / 2); } catch (e) {}
-            var rec = [
-              hs ? hs.backgroundColor : '-',
-              bs ? bs.backgroundColor : '-',
-              ss ? ss.opacity : 'no-splash',
-              ss ? ss.backgroundColor : '-',
-              mid ? (mid.id || mid.tagName) : '-',
-              document.visibilityState
-            ].join(' | ');
-            if (rec !== last) { rows.push([Math.round(performance.now() - t0), rec]); last = rec; }
-            if (performance.now() - t0 < 3000) requestAnimationFrame(sample);
-            else draw(rows);
-          };
-          // Safety net: rAF does not fire in a backgrounded web view, and a
-          // probe that silently collects nothing costs a whole device cycle.
-          // Draw whatever exists at 3.5s if the frame loop never got there.
-          var drawn = false;
-          setTimeout(function () { if (!drawn) draw(rows); }, 3500);
-          var draw = function (rows) {
-            if (drawn) return;
-            drawn = true;
-            var d = document.createElement('div');
-            d.style.cssText = 'position:fixed;inset:0;z-index:2147483600;background:#000;' +
-              'color:#0f0;font:10px/1.35 ui-monospace,Menlo,monospace;padding:40px 6px;' +
-              'overflow:auto;white-space:pre;direction:ltr;text-align:left';
-            var txt = 'FLASH PROBE  (tap to dismiss)\\n' +
-              'html-bg | body-bg | splash-opacity | splash-bg | mid-element | vis\\n\\n';
-            for (var i = 0; i < rows.length; i++) txt += rows[i][0] + 'ms  ' + rows[i][1] + '\\n';
-            txt += '\\n' + rows.length + ' transitions in 3000ms';
-            d.textContent = txt;
-            d.addEventListener('click', function () { d.remove(); });
-            document.body.appendChild(d);
-          };
-          requestAnimationFrame(sample);
-        } catch (e) {}
-      })();
-"""
-
 _SW_REG = """
       // isSecureContext, not a protocol test: it is true for https AND for
       // localhost, which is the only way this is testable before it ships.
@@ -1122,16 +1059,10 @@ def patch_index_html() -> bool:
         # Turn it on after the pilot, when the ~3.9s-a-launch win comes with it,
         # and verify cache invalidation across a deploy BEFORE trusting it.
         sw_on = os.environ.get("CAI_SW") == "1"
-        probe_on = os.environ.get("CAI_FLASHPROBE") == "1"
-        # both ride at the end of the boot script, so they are part of the
-        # stamped payload like everything else. The probe goes LAST so it is
-        # the outermost thing running, and so removing it restores the exact
-        # previous stamp.
-        boot_js = _BOOT_JS
-        if sw_on:
-            boot_js = boot_js.replace("    </script>", _SW_REG + "    </script>", 1)
-        if probe_on:
-            boot_js = boot_js.replace("    </script>", _FLASH_PROBE + "    </script>", 1)
+        # the registration rides at the end of the boot script, so it is part of
+        # the stamped payload like everything else
+        boot_js = (_BOOT_JS.replace("    </script>", _SW_REG + "    </script>", 1)
+                   if sw_on else _BOOT_JS)
         # stamped with a hash of exactly what is about to be written — including
         # the font bytes — so a swapped font file re-patches too
         stamp = _VERSION + "-" + hashlib.sha256(

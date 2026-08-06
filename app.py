@@ -1442,6 +1442,15 @@ a[href*="share.streamlit.io"] {{ display: none !important; }}
 [data-testid="stElementContainer"] iframe,
 iframe[data-testid="stIFrame"] {{ background: transparent !important; }}
 [data-testid="stAppViewContainer"], [data-testid="stBottom"], [data-testid="stSidebar"] {{ direction: rtl; }}
+/* <body> keeps Streamlit's own dark base (#0E1117) rather than ours: the theme
+   config's backgroundColor reaches stApp, not the body element. Nothing visible
+   sat on it — every surface above is painted — so it went unnoticed until the
+   2026-08-06 boot probe sampled the computed background frame by frame and
+   printed it. Dark-on-dark, but it is still a second near-black in a palette
+   that is supposed to have one, and it would show the moment anything above it
+   goes translucent. html is set by boot_shell's micro-style; this is the pair
+   to it. */
+body {{ background: #14170E !important; }}
 
 /* Hide Streamlit chrome, but keep the sidebar toggle (lives inside <header>) visible. */
 #MainMenu, footer {{ visibility: hidden; }}
