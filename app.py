@@ -3676,6 +3676,13 @@ div[data-testid="stDialog"] [data-testid="InputInstructions"] { display: none !i
     color: rgba(236,237,230,.35); font-size: 15px; transform: rotate(-90deg);
     transition: transform .18s ease; }
 .cai-mil-det[open] summary::after { transform: rotate(90deg); }
+/* press feedback — the 2026-08-04 composite language (tint + accent border;
+   scale-alone read as "no response"). Without these the dialog cards were the
+   only surface under a finger that stayed silent (2026-08-06 device pass).
+   summary-scoped, so the static cards (מה אסור / קווי סיוע) invite no tap. */
+.cai-mil-det summary:active { background: rgba(236,237,230,.06); }
+.cai-mil-det:has(> summary:active) { border-color: var(--accent-border); }
+div[data-testid="stDialog"] [data-testid="stRadio"] label:active { filter: brightness(1.18); }
 .cai-mil-det .tt { font: 600 14px Heebo, sans-serif; color: var(--text); }
 .cai-mil-det .sb { font: 400 12px Heebo, sans-serif; color: rgba(236,237,230,.6);
     margin-top: 2px; line-height: 1.45; }
