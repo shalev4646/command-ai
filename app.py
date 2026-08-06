@@ -4,6 +4,7 @@ import inspect
 from pathlib import Path
 import itertools
 import json
+import os
 import random
 import urllib.parse
 import re
@@ -962,7 +963,25 @@ _start_media_reaper()
 
 
 def _secret(name: str, default: str = "") -> str:
-    """st.secrets.get that tolerates a missing secrets.toml entirely."""
+    """A secret from the environment first, then secrets.toml.
+
+    The environment wins on purpose. In production every st.secrets value
+    arrives inside ONE base64 Fly secret that also carries the Google
+    service-account private key, so changing just the admin password meant
+    rebuilding and re-uploading that whole blob — an operation whose failure
+    mode is silently replacing working credentials with broken ones and taking
+    the metrics sheet down with them. A plain
+
+        fly secrets set CAI_ADMIN_PASSWORD=... -a commandai
+
+    now overrides one value without the blob ever being opened.
+
+    Empty env values are ignored rather than honoured: an unset-but-declared
+    variable must not be able to blank out a working password.
+    """
+    env = os.environ.get("CAI_" + name.upper())
+    if env:
+        return env
     try:
         return st.secrets.get(name, default)
     except Exception:
