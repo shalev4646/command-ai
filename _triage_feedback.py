@@ -42,17 +42,26 @@ Known limits, so the counts aren't over-read:
     `corpus` verdict can also be read as "the matcher can't bridge these two
     forms" rather than "this subject is missing entirely".
 
+The report also carries a USERS section, built from the questions log rather
+than the feedback log: who came back, how many questions one person really
+asks in a day, who hit the daily cap and who walked around it. Those are the
+numbers the pilot exists to produce, and they only became answerable once the
+log started carrying a per-device id — session_id is per TAB, so one person
+who reopens the app looks like two people.
+
 Usage:
     python _triage_feedback.py                # local storage/metrics_log.jsonl
     python _triage_feedback.py --sheets       # the pilot's Google Sheet
     python _triage_feedback.py --all          # include 'up' rows too
+    python _triage_feedback.py --users        # the users section on its own
 """
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
-from collections import Counter
+from collections import Counter, defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -194,10 +203,11 @@ def _rows_from_jsonl() -> list[dict]:
     return [r for r in rows if r.get("tab") == "feedback"]
 
 
-def _rows_from_sheets() -> list[dict]:
-    """The pilot's real feedback. Reads the service account straight out of
+def _open_sheet():
+    """The pilot's spreadsheet. Reads the service account straight out of
     .streamlit/secrets.toml — st.secrets needs a Streamlit runtime, and this
-    is a command-line tool."""
+    is a command-line tool. The scope stays read-only on purpose: a tool whose
+    only job is to read the pilot's data should not be able to damage it."""
     try:
         import tomllib
 
@@ -216,21 +226,147 @@ def _rows_from_sheets() -> list[dict]:
 
     creds = Credentials.from_service_account_info(
         dict(info), scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"])
-    ws = gspread.authorize(creds).open_by_url(url).worksheet("feedback")
-    return ws.get_all_records()
+    return gspread.authorize(creds).open_by_url(url)
+
+
+def _rows_from_sheets() -> list[dict]:
+    return _open_sheet().worksheet("feedback").get_all_records()
+
+
+def _question_rows_from_jsonl() -> list[dict]:
+    if not _JSONL.exists():
+        sys.exit(f"אין קובץ יומן ב-{_JSONL}")
+    rows = [json.loads(line) for line in _JSONL.read_text(encoding="utf-8").splitlines() if line.strip()]
+    return [r for r in rows if r.get("tab") == "questions"]
+
+
+def _question_rows_from_sheets() -> list[dict]:
+    """Same credentials path as _rows_from_sheets, other tab. The tab is only
+    created on the first question ever logged, so a missing one means an empty
+    pilot, not a broken setup — say so instead of raising."""
+    try:
+        return _open_sheet().worksheet("questions").get_all_records()
+    except Exception as e:
+        if "WorksheetNotFound" in type(e).__name__:
+            print("אין עדיין לשונית 'questions' בגיליון — לא נרשמה אף שאלה.")
+            return []
+        raise
+
+
+def _daily_limit(default: int = 5) -> int:
+    """USER_DAILY_LIMIT, read out of metrics.py as text rather than imported.
+
+    Importing metrics pulls in Streamlit for a number, and this is a plain
+    command-line tool. Reading the source keeps the two in sync without the
+    cost, and falls back rather than dying if the constant is ever renamed."""
+    try:
+        src = (_ROOT / "metrics.py").read_text(encoding="utf-8")
+        m = re.search(r"^USER_DAILY_LIMIT\s*=\s*(\d+)", src, re.M)
+        return int(m.group(1)) if m else default
+    except Exception:
+        return default
+
+
+_ROLE_HE = {"soldier": "חייל", "commander": "מפקד", "reserve": "מילואים"}
+
+
+def _print_users(rows: list[dict]) -> None:
+    """Per-person view of the questions log.
+
+    Everything here groups on `device`, never on `session`: session is the
+    per-tab id the quota keys on, so grouping by it splits one person who
+    reopened the app into several and quietly inflates the head count. The
+    gap between the two is itself a finding, so both are printed.
+    """
+    limit = _daily_limit()
+    per_device: dict[str, dict] = defaultdict(
+        lambda: {"q": 0, "days": Counter(), "tabs": set(), "roles": Counter(), "cost": 0.0})
+    undated = 0
+
+    for r in rows:
+        did = str(r.get("device", "")).strip()
+        if not did:
+            undated += 1
+            continue
+        d = per_device[did]
+        d["q"] += 1
+        d["days"][str(r.get("ts", ""))[:10]] += 1
+        d["tabs"].add(str(r.get("session", "")))
+        role = str(r.get("role", "")).strip()
+        if role:
+            d["roles"][role] += 1
+        try:
+            d["cost"] += float(r.get("cost_usd") or 0)
+        except (TypeError, ValueError):
+            pass
+
+    print("=" * 64)
+    print("משתמשים")
+    print("=" * 64)
+
+    if undated:
+        # rows logged before the device column existed. Counting them as one
+        # anonymous person would be worse than saying they can't be attributed
+        print(f"⚠ {undated} שורות בלי מזהה מכשיר (נרשמו לפני שהעמודה נוספה) — לא ניתנות לשיוך.\n")
+    if not per_device:
+        print("אין עדיין שורות עם מזהה מכשיר.")
+        return
+
+    tabs = len({t for d in per_device.values() for t in d["tabs"]})
+    days = sorted({day for d in per_device.values() for day in d["days"]})
+    total_q = sum(d["q"] for d in per_device.values())
+    print(f"{len(per_device)} מכשירים · {tabs} טאבים · {total_q} שאלות · "
+          f"{len(days)} ימי פעילות ({days[0]} — {days[-1]})\n")
+
+    for did, d in sorted(per_device.items(), key=lambda kv: -kv[1]["q"]):
+        peak = max(d["days"].values())
+        role = _ROLE_HE.get(d["roles"].most_common(1)[0][0], "—") if d["roles"] else "—"
+        # "1 ימים" reads as a bug in a report meant to be trusted
+        nd, nt = len(d["days"]), len(d["tabs"])
+        print(f"  {did}  {role:<8} {d['q']:>3} שאלות · "
+              f"{'יום אחד' if nd == 1 else f'{nd} ימים'} · מקס' {peak} ביום · "
+              f"{'טאב אחד' if nt == 1 else f'{nt} טאבים'} · ${d['cost']:.2f}")
+
+    peaks = [max(d["days"].values()) for d in per_device.values()]
+    active_days = sorted(n for d in per_device.values() for n in d["days"].values())
+    median = active_days[len(active_days) // 2]
+    returned = sum(1 for d in per_device.values() if len(d["days"]) > 1)
+    hit = sum(1 for p in peaks if p >= limit)
+    over = sum(1 for p in peaks if p > limit)
+
+    print()
+    print(f"חזרו ביותר מיום אחד:        {returned} מתוך {len(per_device)}")
+    print(f"חציון שאלות ליום פעיל:      {median}")
+    print(f"הגיעו לתקרת {limit} ביום:        {hit} מתוך {len(per_device)}")
+    # >limit in one day is only reachable by starting a fresh tab after the
+    # quota bit -- the quota keys on session, so this counts real bypasses
+    print(f"עקפו את התקרה (טאב נוסף):   {over} מתוך {len(per_device)}")
+    print("=" * 64)
+    if not over:
+        print("אף אחד לא עקף — החשש מ'אנונימי יאפס מכסה' תיאורטי בשלב הזה.")
+    print("חזרה נמוכה ⇒ בעיית ערך, לא בעיית מכסה. תקרה נגועה אצל הרוב ⇒ 5 נמוך מדי.")
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="סיווג פידבק הפיילוט לשלוש מחלקות-כשל")
+    ap = argparse.ArgumentParser(description="סיווג פידבק הפיילוט לשלוש מחלקות-כשל + מבט משתמשים")
     ap.add_argument("--sheets", action="store_true", help="לקרוא מהגיליון במקום מהיומן המקומי")
     ap.add_argument("--all", action="store_true", help="לכלול גם אגודל-למעלה")
+    ap.add_argument("--users", action="store_true", help="להדפיס רק את מדור המשתמשים")
     args = ap.parse_args()
+
+    if args.users:
+        _print_users(_question_rows_from_sheets() if args.sheets else _question_rows_from_jsonl())
+        return 0
 
     rows = _rows_from_sheets() if args.sheets else _rows_from_jsonl()
     if not args.all:
         rows = [r for r in rows if str(r.get("verdict", "")).lower() in ("down", "comment")]
+    q_rows = _question_rows_from_sheets() if args.sheets else _question_rows_from_jsonl()
+
     if not rows:
-        print("אין רשומות פידבק שליליות — אין מה לסווג.")
+        # no negative feedback is good news, not a reason to withhold the rest
+        print("אין רשומות פידבק שליליות — אין מה לסווג.\n")
+        _print_users(q_rows)
         return 0
 
     corpus = _load_corpus()
@@ -270,6 +406,8 @@ def main() -> int:
         print(f"{n:>3}  {label[verdict]}")
     print("=" * 64)
     print("הרוב ב'אחזור' ⇒ הרחבת-שאילתה/מקודד. הרוב ב'פער-תוכן' ⇒ הכסף הולך לקורפוס.")
+    print()
+    _print_users(q_rows)
     return 0
 
 
