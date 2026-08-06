@@ -4361,6 +4361,15 @@ def _keva_benefits_dialog():
             continue
         parts.append(f"<div class='cai-mil-sec'><span>{html.escape(_kb.SECTION_LABELS[sec])}</span></div>")
         parts.extend(_mil_details_row(r) for r in by_sec[sec])
+    lp = _kb.LOCAL_POINTER
+    if lp:
+        parts.append(
+            "<div class='cai-mil-det' style='padding:12px 13px'>"
+            f"<div class='tt'>{html.escape(lp['title'])}</div>"
+            f"<div class='sb'>{html.escape(lp['sub'])}</div>"
+            f"<a class='cai-mil-link' href='{html.escape(lp['link'], quote=True)}' "
+            f"target='_blank' rel='noopener'>{html.escape(lp['cite'])} ↗</a></div>"
+        )
     parts.append(
         f"<div class='cai-mil-foot'>🔄 המקורות נבדקו לאחרונה: {_kb.LAST_VERIFIED}"
         f"<br>⚠️ {html.escape(_kb.DISCLAIMER)}</div>"

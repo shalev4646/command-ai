@@ -40,7 +40,14 @@ def test_rows_shape_and_spec4():
     keys = [r["key"] for r in rows]
     assert len(keys) == len(set(keys)), "duplicate row keys"
     assert {"annual_leave", "sick_leave", "unpaid_leave", "pension",
-            "release_grant", "benefits_return"} <= set(keys)
+            "release_grant", "benefits_return", "rent_participation",
+            "transit_free", "arava_flights", "parenthood", "haver_club"} <= set(keys)
+
+
+def test_pointer_exists_and_valid():
+    lp = kb.LOCAL_POINTER
+    assert lp and lp["title"].strip() and lp["cite"].strip()
+    assert lp["link"].startswith("https://")
 
 
 def test_family_gating():
