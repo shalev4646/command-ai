@@ -252,6 +252,21 @@ if "conversation_history" not in st.session_state:
 if "session_id" not in st.session_state:
     # anonymous per-tab id — keys the daily usage quota and the metrics log
     st.session_state.session_id = metrics.new_session_id()
+# Anonymous per-DEVICE id, restored from the profile cookie. LOG-ONLY: the
+# quota still keys on session_id (metrics.reserve is untouched), so this
+# changes no user-visible behaviour. It exists because session_id is per-tab —
+# a person who reopens the app looks like a second person in the log, which
+# hides the two numbers the pilot has to produce: return-visits, and how many
+# questions ONE person asks per day.
+if "device_id" not in st.session_state:
+    _did = _ck.get("did")
+    # cookie values are attacker-writable and this one lands in a log and a
+    # spreadsheet — accept only the exact shape new_session_id() emits
+    st.session_state.device_id = (
+        _did if isinstance(_did, str) and len(_did) == 12
+        and all(c in "0123456789abcdef" for c in _did)
+        else metrics.new_session_id()
+    )
 
 # ── Profile & settings (session-only; no DB). These MIRROR the settings-dialog
 # widgets: Streamlit drops a widget's session key on any run where the widget
@@ -979,11 +994,18 @@ def _render_admin():
         return
 
     d = metrics.dashboard_data()
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, c4 = st.columns(4)
     c1.metric("שאלות היום", f"{d['global_count']} / {d['global_limit']}")
-    c2.metric("משתמשים היום", d["sessions_today"])
+    # Two numbers, not one. "טאבים" is what the quota actually keys on;
+    # "מכשירים" is the closest thing we have to people. A gap between them is
+    # someone who reopened the app — which is also how the per-tab quota gets
+    # reset, so the gap is the bypass rate, readable at a glance.
+    # .get: Streamlit Cloud can run this app.py against a metrics module still
+    # cached from the previous build (same reason _FALLBACK_QUESTIONS exists).
+    c2.metric("מכשירים היום", d.get("devices_today", 0))
+    c3.metric("טאבים היום", d["sessions_today"])
     recent_cost = sum(q["cost_usd"] for q in d["questions"])
-    c3.metric("עלות מצטברת (מאז אתחול)", f"${recent_cost:.2f}")
+    c4.metric("עלות מצטברת (מאז אתחול)", f"${recent_cost:.2f}")
 
     sheets_label = {
         "ok": "✅ מחובר — כל שאלה ומשוב נשמרים בגיליון",
@@ -993,9 +1015,10 @@ def _render_admin():
     st.caption(f"Google Sheets: {sheets_label}")
     if d["sheet_url"]:
         st.markdown(f"🔗 [פתח את הגיליון המלא (כל ההיסטוריה)]({d['sheet_url']})")
-    st.caption(f"מכסות: {d['user_limit']} שאלות ליום למשתמש, {d['global_limit']} ליום לכולם. "
+    st.caption(f"מכסות: {d['user_limit']} שאלות ליום לכל טאב, {d['global_limit']} ליום לכולם. "
                "הטבלאות למטה מציגות את הפעילות מאז האתחול האחרון של השרת; "
-               "ההיסטוריה המלאה נשמרת בגיליון.")
+               "ההיסטוריה המלאה נשמרת בגיליון. עמודת device היא מזהה מכשיר "
+               "אנונימי — קבצו לפיה כדי לספור אנשים ולא טאבים.")
 
     def _dark_dataframe(rows):
         # st.dataframe paints cell backgrounds with theme.backgroundColor on
@@ -3046,6 +3069,10 @@ _ck_dict = {
     "role": st.session_state.role,
     "name": (st.session_state.get("profile_name") or "")[:40],
     "asked": bool(st.session_state.get("name_asked")),
+    # unconditional, unlike "mil" below: the id is worthless if it only
+    # survives for users who filled a form. Written on the same run as the
+    # first role tap, which is always before the first question.
+    "did": st.session_state.device_id,
 }
 # miluim-tool inputs ride the same device cookie — only once saved, so every
 # other user's payload stays byte-identical to the pre-miluim format
@@ -3262,6 +3289,7 @@ def _letters_dialog():
                 if st.session_state.get("share_analytics", True):
                     metrics.log_question(
                         session_id=st.session_state.session_id,
+                        device_id=st.session_state.device_id,
                         role=st.session_state.role or "",
                         question=f"[מכתב] {LETTER_TYPES[kind]['title']}",
                         answer=draft["text"],
@@ -4198,6 +4226,7 @@ def _miluim_guide_dialog():
                 if st.session_state.get("share_analytics", True):
                     metrics.log_question(
                         session_id=st.session_state.session_id,
+                        device_id=st.session_state.device_id,
                         role=st.session_state.role or "",
                         question=f"[מכתב] {lt['title']}",
                         answer=draft["text"],
@@ -5187,6 +5216,11 @@ def _wipe_all():
     st.session_state.show_settings = False
     st.session_state.service_track = ""
     st.session_state.service_type = "סדיר"
+    # "a fresh device" has to mean the analytics id too, or a user who tapped
+    # מחק הכל stays joinable to everything they did before the wipe. Rotated
+    # rather than deleted: the key must exist for the log call sites, and the
+    # sync writer below persists the new value with the emptied payload.
+    st.session_state.device_id = metrics.new_session_id()
     # drop the settings widgets' keys so they reseed from the reset mirrors
     for _k in ("profile_statuses", "pf_name_w", "pf_type_w", "pf_track_w", "gate_name_w"):
         st.session_state.pop(_k, None)
@@ -5694,6 +5728,7 @@ def handle_question(question: str):
     if st.session_state.get("share_analytics", True):
         metrics.log_question(
             session_id=st.session_state.session_id,
+            device_id=st.session_state.device_id,
             role=st.session_state.role or "",
             question=question,
             answer=text,
@@ -6788,6 +6823,7 @@ for msg_i, msg in enumerate(st.session_state.messages):
                 msg["fb_value"] = fb
                 metrics.log_feedback(
                     session_id=st.session_state.session_id,
+                    device_id=st.session_state.device_id,
                     role=st.session_state.role or "",
                     verdict="up" if fb == 1 else "down",
                     question=_question_for(msg_i),
@@ -6804,6 +6840,7 @@ for msg_i, msg in enumerate(st.session_state.messages):
                 if send_col.button("שלח", key=f"fbs_{mid}") and fb_comment.strip():
                     metrics.log_feedback(
                         session_id=st.session_state.session_id,
+                        device_id=st.session_state.device_id,
                         role=st.session_state.role or "",
                         verdict="comment",
                         question=_question_for(msg_i),

@@ -35,14 +35,19 @@ _PRICE_CACHE_READ, _PRICE_CACHE_WRITE = 0.5, 6.25
 
 _JSONL_PATH = Path(__file__).parent / "storage" / "metrics_log.jsonl"
 
+# "device" is LAST on purpose, in both lists. _append_to_sheet writes rows
+# POSITIONALLY against a header that was created on the tab's first-ever use —
+# inserting a column in the middle would shift every future row against the
+# existing header and silently corrupt the sheet. Appending is safe, and the
+# stale header gets one repair pass (see _append_to_sheet).
 _QUESTION_COLUMNS = [
     "ts", "session", "role", "question", "search_query", "doc_ids",
     "input_tokens", "cache_read", "cache_write", "output_tokens",
-    "cost_usd", "latency_s", "answer_preview",
+    "cost_usd", "latency_s", "answer_preview", "device",
 ]
 _FEEDBACK_COLUMNS = [
     "ts", "session", "role", "verdict", "question", "comment",
-    "answer_preview", "doc_ids",
+    "answer_preview", "doc_ids", "device",
 ]
 
 
@@ -149,6 +154,17 @@ def _append_to_sheet(tab: str, columns: list[str], row: list, config: tuple) -> 
         except gspread.WorksheetNotFound:
             ws = sheet.add_worksheet(title=tab, rows=1000, cols=len(columns))
             ws.append_row(columns, value_input_option="RAW")
+        else:
+            # A tab created before a column was appended still carries the old
+            # header, so the new values would land under a blank heading. Name
+            # them once per tab per process. update_cell (not update) — its
+            # signature is stable across gspread majors, and the loop runs at
+            # most once since the header is only ever short before the repair.
+            if tab not in s.setdefault("_hdr_checked", set()):
+                s["_hdr_checked"].add(tab)
+                head = ws.row_values(1)
+                for i in range(len(head), len(columns)):
+                    ws.update_cell(1, i + 1, columns[i])
         ws.append_row(row, value_input_option="RAW")
         s["sheets_status"] = "ok"
     except Exception as e:
@@ -178,11 +194,22 @@ def _persist(tab: str, columns: list[str], record: dict) -> None:
 
 def log_question(session_id: str, role: str, question: str, answer: str,
                  sources: list[dict] | None, usage: dict | None,
-                 latency_s: float) -> None:
+                 latency_s: float, device_id: str = "") -> None:
+    """Log one answered question.
+
+    device_id is LOG-ONLY — reserve()/refund() still key on session_id, so
+    passing it changes no quota behaviour. It exists because session_id is
+    per-TAB: without it the log cannot tell one person's two tabs from two
+    people, which hides return-visits and per-person question counts. Optional
+    so a caller that has no device (or a test) simply logs an empty cell.
+    """
     usage = usage or {}
     record = {
         "ts": datetime.now().isoformat(timespec="seconds"),
         "session": session_id,
+        # sits next to "session" here for a readable JSONL/dashboard row; the
+        # Sheets column order comes from _QUESTION_COLUMNS, where it is last
+        "device": device_id,
         "role": role,
         "question": question,
         "search_query": usage.get("search_query", ""),
@@ -200,10 +227,12 @@ def log_question(session_id: str, role: str, question: str, answer: str,
 
 
 def log_feedback(session_id: str, role: str, verdict: str, question: str,
-                 answer: str, sources: list[dict] | None, comment: str = "") -> None:
+                 answer: str, sources: list[dict] | None, comment: str = "",
+                 device_id: str = "") -> None:
     record = {
         "ts": datetime.now().isoformat(timespec="seconds"),
         "session": session_id,
+        "device": device_id,  # log-only, same contract as log_question
         "role": role,
         "verdict": verdict,  # "up" | "down" | "comment"
         "question": question,
@@ -227,6 +256,12 @@ def dashboard_data() -> dict:
             "global_limit": GLOBAL_DAILY_LIMIT,
             "user_limit": USER_DAILY_LIMIT,
             "sessions_today": len(s["session_counts"]),
+            # distinct devices, derived from the ring buffer rather than a
+            # counter: session_counts is keyed per tab, so it over-counts a
+            # person who reopened the app. Filtered to today because the ring
+            # buffer spans server uptime, which _reset_if_new_day never clears.
+            "devices_today": len({q["device"] for q in s["questions"]
+                                  if q.get("device") and q["ts"][:10] == s["day"]}),
             "questions": list(s["questions"]),
             "feedback": list(s["feedback"]),
             "sheets_status": s["sheets_status"] if config else "not_configured",
