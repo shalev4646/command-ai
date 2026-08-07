@@ -1,4 +1,5 @@
 import base64
+import datetime as _dt
 import html
 import inspect
 from pathlib import Path
@@ -109,6 +110,16 @@ try:
     import incident_guide as _ig
 except Exception:
     _ig = None
+# soldier kit (2026-08-06 spec) — the conscript map replaces the entitlements
+# calculator in the drawer; entitlements.py stays as its verified data source
+try:
+    import conscript_map as _cm
+except Exception:
+    _cm = None
+try:
+    import soldier_distress as _sd
+except Exception:
+    _sd = None
 
 try:
     import backend
@@ -315,6 +326,31 @@ st.session_state.setdefault("mil_salary", _mil_int(_mil_ck.get("sal"), 200000))
 st.session_state.setdefault("mil_saved", bool(_mil_ck.get("sv"))
                             and _mil_int(_mil_ck.get("dy"), 400) is not None
                             and _mil_int(_mil_ck.get("d3"), 1000) is not None)
+# ── conscript profile ("מה מגיע לי בשירות חובה") — cookie slot "sol".
+# Unlike the miluim map this profile gates NOTHING: the map renders in full
+# with an empty profile, and these values only sharpen the sub-lines (soldier
+# kit spec §4, "הקלט מחדד, לא פותח"). Dates ride the cookie as ISO strings.
+_sol_ck = _ck.get("sol") if isinstance(_ck.get("sol"), dict) else {}
+
+
+def _sol_date(v):
+    """Cookie values are attacker-writable device state — parse or drop."""
+    if not isinstance(v, str):
+        return None
+    try:
+        return _dt.date.fromisoformat(v[:10])
+    except ValueError:
+        return None
+
+
+st.session_state.setdefault("sol_enlist", _sol_date(_sol_ck.get("en")))
+st.session_state.setdefault("sol_discharge", _sol_date(_sol_ck.get("di")))
+st.session_state.setdefault("sol_track", _sol_ck.get("tr")
+                            if _sol_ck.get("tr") in ("lohem", "tomekh", "oref") else None)
+st.session_state.setdefault("sol_single", bool(_sol_ck.get("sg")))
+st.session_state.setdefault("sol_married", bool(_sol_ck.get("mr")))
+# "saved" only means the user touched the form — the map never depends on it
+st.session_state.setdefault("sol_saved", bool(_sol_ck.get("sv")))
 st.session_state.setdefault("share_analytics", True)
 st.session_state.setdefault("show_settings", False)
 st.session_state.setdefault("settings_screen", "hub")
@@ -3131,6 +3167,19 @@ if st.session_state.get("mil_saved"):
         "sal": st.session_state.get("mil_salary"),
         "sv": True,
     }
+# conscript-map inputs, same conditional contract: absent for anyone who never
+# opened the tool, so their cookie payload stays byte-identical
+if st.session_state.get("sol_saved"):
+    _sol_en = st.session_state.get("sol_enlist")
+    _sol_di = st.session_state.get("sol_discharge")
+    _ck_dict["sol"] = {
+        "en": _sol_en.isoformat() if _sol_en else None,
+        "di": _sol_di.isoformat() if _sol_di else None,
+        "tr": st.session_state.get("sol_track"),
+        "sg": bool(st.session_state.get("sol_single")),
+        "mr": bool(st.session_state.get("sol_married")),
+        "sv": True,
+    }
 _ck_payload = urllib.parse.quote(json.dumps(_ck_dict, ensure_ascii=False), safe="")
 if _sync_settled:
     components.html(
@@ -3777,6 +3826,11 @@ div[data-testid="stDialog"] [data-testid="stRadio"] label:active { filter: brigh
     margin-top: 9px; }
 .cai-mil-cite { font: 400 11px Heebo, sans-serif; color: rgba(236,237,230,.42);
     margin-top: 8px; line-height: 1.5; }
+/* the question a card raises (soldier kit §3.1) — quieter than a link, since
+   it is a prompt to ask and not a control; the real buttons sit at the foot
+   of the dialog */
+.cai-mil-ask { font: 400 11.5px Heebo, sans-serif; color: var(--accent-bright);
+    margin-top: 9px; line-height: 1.55; opacity: .85; }
 .cai-mil-foot { font: 400 11px Heebo, sans-serif; color: rgba(236,237,230,.42);
     direction: rtl; text-align: right; margin-top: 14px; line-height: 1.6; }
 .cai-mil-warn { direction: rtl; text-align: right; border-radius: 13px; padding: 11px 13px;
@@ -3833,6 +3887,22 @@ def _punishment_dialog():
     if not _pa:
         return
     st.markdown(_modal_header("בודק סמכות עונש"), unsafe_allow_html=True)
+    # The deadline leads. Everything else in this dialog is information the
+    # soldier can read next week; this is the one thing that expires, and it
+    # used to sit in a paragraph at the very bottom. Plain language first,
+    # official term alongside (soldier-kit spec §3.3).
+    _ap = _pa.APPEAL
+    if _ap.get("deadline_days"):
+        st.markdown(
+            "<div class='cai-mil-crit'>"
+            f"<div class='t'>{html.escape(_ap['plain'])} יש לך "
+            f"{_ap['deadline_days']} ימים</div>"
+            f"<div class='s'>מיום מתן הפסק · {_ap['deadline_days_prosecutor']} ימים "
+            "אם הדיון נערך על-פי הוראת פרקליט</div>"
+            f"<div class='cai-mil-cite'>{html.escape(_ap['term_note'])} · "
+            f"{html.escape(_ap['clause'])}</div></div>",
+            unsafe_allow_html=True,
+        )
     st.markdown(
         "<div class='cai-pa-intro'>בחר את סוג קצין השיפוט כדי לראות אילו עונשים "
         "מרביים הוא מוסמך להטיל בדין משמעתי, לפי פ\"מ 33.0302 — ואת נתיב הערר.</div>",
@@ -4063,6 +4133,14 @@ def _mil_details_row(r: dict) -> str:
             f"target='_blank' rel='noopener'>{html.escape(r.get('link_label') or 'למקור הרשמי')} ↗</a>"
             if r.get("link") else "")
     asof = f" · נכון ל-{html.escape(r['asof'])}" if r.get("asof") else ""
+    # 2026-08-06 soldier-kit spec §3.1: a card is a funnel INTO the chat, which
+    # is the product — so a row may carry the question it raises. Shown as text
+    # and not a control on purpose: the whole map is ONE st.markdown, so a
+    # per-row Streamlit button is impossible, and simulating a click from JS is
+    # the class of thing that breaks in standalone Safari. The dialog's bottom
+    # strip turns these same questions into real buttons.
+    ask = (f"<div class='cai-mil-ask'>אפשר לשאול: «{html.escape(r['ask'])}»</div>"
+           if r.get("ask") else "")
     return (
         "<details class='cai-mil-det'>"
         "<summary><span style='min-width:0'>"
@@ -4071,8 +4149,35 @@ def _mil_details_row(r: dict) -> str:
         "</span></summary>"
         f"<div class='cai-mil-body'>{hows}{link}"
         f"<div class='cai-mil-cite'>{html.escape(r['cite'])}{asof}</div>"
-        "</div></details>"
+        f"{ask}</div></details>"
     )
+
+
+def _ask_strip(rows: list[dict], key_prefix: str, limit: int = 4) -> None:
+    """The funnel back into the chat (soldier-kit spec §3.1).
+
+    The map is one st.markdown, so the per-row question can only be TEXT.
+    These are the same questions as real buttons: tapping one closes the
+    dialog (a full rerun does), queues the question, and lets the main script
+    answer it — the tool's job is to hand the user off to the product.
+    """
+    asks = [r["ask"] for r in rows if r.get("ask")][:limit]
+    if not asks:
+        return
+    st.markdown("<div class='cai-mil-sec'><span>לשאול על זה בצ׳אט</span>"
+                f"<span>{len(asks)}</span></div>", unsafe_allow_html=True)
+    for i, q in enumerate(asks):
+        if st.button(q, key=f"{key_prefix}_{i}", use_container_width=True):
+            queue_question(q)
+            # the dialog opened over a drawer that is still open behind it;
+            # the drawer is a client-side class, so drop it the same way the
+            # cookie is written — otherwise the answer streams out of sight
+            components.html(
+                "<script>try{window.top.document.documentElement.classList"
+                ".remove('cai-drawer-open','cai-drawer-drag');}catch(e){}</script>",
+                height=0,
+            )
+            st.rerun()
 
 
 @st.dialog("מה מגיע לי במילואים", width="large")
@@ -4394,6 +4499,142 @@ def _keva_benefits_dialog():
         f"<br>⚠️ {html.escape(_kb.DISCLAIMER)}</div>"
     )
     st.markdown("".join(parts), unsafe_allow_html=True)
+
+
+@st.dialog("מה מגיע לי בשירות חובה", width="large")
+def _conscript_map_dialog():
+    """The conscript flagship: a rights map on a SERVICE AXIS, from curated
+    source-cited data (conscript_map.py). Deterministic, NO Anthropic call.
+
+    Two spec rules shape this function:
+      * "הקלט מחדד, לא פותח" — the map is rendered BEFORE the form is even
+        offered, and every row appears with an empty profile. This is what
+        lets it replace the entitlements calculator, which answered without
+        asking anything.
+      * The discharge date is an INPUT. Mandatory-service length is in no
+        order in the corpus, so the tool never derives it — the soldier
+        supplies a date they know by heart and everything else is arithmetic
+        on their own data.
+    """
+    if not _cm:
+        return
+    st.markdown(_modal_header("מה מגיע לי בשירות חובה"), unsafe_allow_html=True)
+
+    prof = {
+        "enlist": st.session_state.get("sol_enlist"),
+        "discharge": st.session_state.get("sol_discharge"),
+        "track": st.session_state.get("sol_track"),
+        "single": st.session_state.get("sol_single"),
+        "married": st.session_state.get("sol_married"),
+    }
+    status = _cm.service_status(prof["enlist"], prof["discharge"])
+
+    # ── the personalisation strip. An expander, not a gate: closed it costs
+    # one line, and the map below is already complete without it. ──
+    _has = any((prof["enlist"], prof["discharge"], prof["track"]))
+    with st.expander("התאמה אישית" if not _has else "עדכון הנתונים שלי",
+                     expanded=False):
+        _c1, _c2 = st.columns(2)
+        with _c1:
+            _en = st.date_input("תאריך גיוס", value=prof["enlist"], format="DD/MM/YYYY",
+                                min_value=_dt.date(2015, 1, 1),
+                                max_value=_dt.date(2035, 12, 31), key="sol_en_w")
+        with _c2:
+            _di = st.date_input("תאריך שחרור צפוי", value=prof["discharge"],
+                                format="DD/MM/YYYY", min_value=_dt.date(2015, 1, 1),
+                                max_value=_dt.date(2035, 12, 31), key="sol_di_w")
+        _tr_labels = [_cm.TRACKS[k]["label"] for k in _cm.TRACK_ORDER]
+        _tr_idx = (_cm.TRACK_ORDER.index(prof["track"])
+                   if prof["track"] in _cm.TRACK_ORDER else 0)
+        _tr = st.radio("מסלול", _tr_labels, index=_tr_idx, horizontal=True,
+                       key="sol_tr_w")
+        _sg = st.checkbox("חייל בודד", value=bool(prof["single"]), key="sol_sg_w")
+        _mr = st.checkbox("נשוי", value=bool(prof["married"]), key="sol_mr_w")
+        if st.button("עדכון המפה", key="sol_go", use_container_width=True):
+            st.session_state.sol_enlist = _en
+            st.session_state.sol_discharge = _di
+            st.session_state.sol_track = _cm.TRACK_ORDER[_tr_labels.index(_tr)]
+            st.session_state.sol_single = _sg
+            st.session_state.sol_married = _mr
+            st.session_state.sol_saved = True
+            # fragment scope: a full rerun would CLOSE the dialog and strand
+            # the user back in the drawer (the miluim lesson)
+            st.rerun(scope="fragment")
+        st.markdown(
+            "<div class='cai-sc-disc'>הנתונים נשמרים במכשיר בלבד ואינם נשלחים "
+            "לצ׳אט. תאריך השחרור נלקח ממך ואינו מחושב — אורך שירות החובה נקבע "
+            "בחקיקה ואינו מופיע בפקודות.</div>",
+            unsafe_allow_html=True,
+        )
+
+    parts: list[str] = []
+    if status["days_left"] is not None and not status["released"]:
+        _served = (f" · {status['months_served']} חודשי שירות"
+                   if status["months_served"] is not None else "")
+        parts.append(
+            "<div class='cai-mil-hero'><div class='t'>נשארו "
+            f"{status['days_left']:,} ימים</div>"
+            f"<div class='s'>עד {_cm._fmt(prof['discharge'])}{_served}</div></div>"
+        )
+    elif status["released"]:
+        parts.append(
+            "<div class='cai-mil-hero'><div class='t'>אחרי השחרור</div>"
+            "<div class='s'>מוצגות גם הזכויות שממשיכות אחרי תום השירות</div></div>"
+        )
+
+    for sec, rows in _cm.rows_by_section(prof):
+        parts.append(
+            f"<div class='cai-mil-sec'><span>{html.escape(_cm.SECTION_LABELS[sec])}</span>"
+            f"<span>{len(rows)}</span></div>"
+            + "".join(_mil_details_row(r) for r in rows)
+        )
+    parts.append(
+        f"<div class='cai-mil-foot'>{_isvg(_I_REFRESH, size=11)} המקורות נבדקו "
+        f"לאחרונה: {_cm.LAST_VERIFIED}"
+        f"<br>{_isvg(_I_ALERT, size=11)} {html.escape(_cm.DISCLAIMER)}</div>"
+    )
+    st.markdown("".join(parts), unsafe_allow_html=True)
+    _ask_strip(_cm.benefit_rows(prof), "solask")
+
+
+@st.dialog("אני במצוקה", width="large")
+def _soldier_distress_dialog():
+    """The soldier's side of distress. Separate module from distress_guide
+    (the commander asks "how do I help my soldier", the soldier asks "what
+    happens to me") — same three verified orders, different audience.
+
+    The emergency card is rendered OUTSIDE the accordion on purpose: someone
+    in a bad moment should not have to tap to reach a phone number.
+    """
+    if not _sd:
+        return
+    st.markdown(_modal_header("אני במצוקה"), unsafe_allow_html=True)
+
+    lines = "".join(
+        (f"<div class='cai-mil-how'><span class='g'>•</span><span>"
+         f"{html.escape(h['name'])} — <b>{html.escape(h['phone'])}</b></span></div>")
+        for h in _sd.hotlines()
+    )
+    parts = [
+        "<div class='cai-mil-crit'>"
+        f"<div class='t'>{html.escape(_sd.EMERGENCY['title'])}</div>"
+        f"<div class='s'>{html.escape(_sd.EMERGENCY['sub'])}</div>"
+        f"{lines}"
+        f"<div class='cai-mil-cite'>{html.escape(_sd.EMERGENCY['life_threat'])}</div>"
+        "</div>"
+    ]
+    parts.append(
+        "<div class='cai-mil-sec'><span>מה חשוב לדעת</span>"
+        f"<span>{len(_sd.cards())}</span></div>"
+        + "".join(_mil_details_row(c) for c in _sd.cards())
+    )
+    parts.append(
+        f"<div class='cai-mil-foot'>{_isvg(_I_REFRESH, size=11)} קווי הסיוע "
+        f"אומתו: {_sd.HOTLINES_VERIFIED}"
+        f"<br>{_isvg(_I_ALERT, size=11)} {html.escape(_sd.DISCLAIMER)}</div>"
+    )
+    st.markdown("".join(parts), unsafe_allow_html=True)
+    _ask_strip(_sd.cards(), "sdask")
 
 
 @st.dialog("חייל לא התייצב", width="large")
@@ -4806,6 +5047,11 @@ html.cai-orders-open .cai-kb-card {
 .st-key-open_absence button::before { background-image: url("ICON_CLOCK"); }
 .st-key-open_distress button::before { background-image: url("ICON_HEART"); }
 .st-key-open_incident button::before { background-image: url("ICON_BELL"); }
+/* soldier kit — the map reuses the medal (it is the "מה מגיע לי" slot, same
+   as the miluim map), distress reuses the heart from the commander's */
+.st-key-open_cmap button::before,
+.st-key-open_cmap_cmd button::before { background-image: url("ICON_MEDAL"); }
+.st-key-open_sdistress button::before { background-image: url("ICON_HEART"); }
 .st-key-cai_tools button::after, .st-key-cai_recent button::after {
   content: "‹"; position: absolute; inset-inline-end: 14px; top: 50%;
   transform: translateY(-50%); color: rgba(236,237,230,.3); font-size: 14px;
@@ -6014,12 +6260,17 @@ with st.container(key="cai_drawer"):
             if _pa and st.button("בודק סמכות עונש", key="open_punishment", use_container_width=True):
                 _punishment_dialog()
         elif st.session_state.role == "commander":
-            # the personal-value slot follows the profile's service type: only
-            # a keva commander sees the keva map — a חובה commander asks
-            # entitlement questions in chat (the product's core)
+            # the personal-value slot follows the profile's service type. The
+            # 2026-08-06 commander spec left a חובה commander with NO map,
+            # because no conscript map existed yet; now one does, and a מ"כ or
+            # a קצין בחובה is a conscript for every entitlement purpose.
             if _kb and _service_type_shown() == "קבע" and st.button(
                     "מה מגיע לי בקבע", key="open_keva_benefits", use_container_width=True):
                 _keva_benefits_dialog()
+            if _cm and _service_type_shown() != "קבע" and st.button(
+                    "מה מגיע לי בשירות חובה", key="open_cmap_cmd",
+                    use_container_width=True):
+                _conscript_map_dialog()
             if _ab and st.button("חייל לא התייצב", key="open_absence", use_container_width=True):
                 _absence_dialog()
             if _dg and st.button("חייל במצוקה נפשית", key="open_distress", use_container_width=True):
@@ -6029,13 +6280,23 @@ with st.container(key="cai_drawer"):
             if _pa and st.button("בודק סמכות עונש", key="open_punishment", use_container_width=True):
                 _punishment_dialog()
         else:
-            if LETTER_TYPES and st.button("מחולל מכתבים", key="open_letters", use_container_width=True):
-                _letters_dialog()
+            # SOLDIER — four items, no category headers: a flat list of four is
+            # scanned in a second, which is why the seven-tool version of the
+            # spec was dropped. The map REPLACES the entitlements calculator
+            # (entitlements.py stays on as its verified data source): two
+            # buttons answering the same question force a choice the user
+            # cannot yet make.
+            if _cm and st.button("מה מגיע לי בשירות חובה", key="open_cmap",
+                                 use_container_width=True):
+                _conscript_map_dialog()
+            if _sd and st.button("אני במצוקה", key="open_sdistress",
+                                 use_container_width=True):
+                _soldier_distress_dialog()
             # deterministic tools, zero-token, no quota — each gated on its module
             if _pa and st.button("בודק סמכות עונש", key="open_punishment", use_container_width=True):
                 _punishment_dialog()
-            if entitlements and st.button("מחשבון זכאויות", key="open_entitlements", use_container_width=True):
-                _entitlements_dialog()
+            if LETTER_TYPES and st.button("מחולל מכתבים", key="open_letters", use_container_width=True):
+                _letters_dialog()
 
     # ── recent conversations — only this role's (restoring a cross-role
     # chat would mix personas/doc scopes in one thread) ──

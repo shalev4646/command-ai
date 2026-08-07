@@ -122,6 +122,17 @@ OFFICER_TYPES: dict[str, dict] = _build_officer_types()
 
 # ── Appeal path (ערר) — סעיפים 127, 223, 226 ────────────────────────────────
 APPEAL: dict[str, str] = {
+    # The deadline is broken out as data because it is the one thing in this
+    # dialog that expires: a soldier who reads it late has lost the right, not
+    # just the information. The UI renders it as a headline card at the top,
+    # in plain language with the official term alongside — "ערר" is the legal
+    # name (a court-martial verdict is appealed by "ערעור", a different
+    # procedure), and a 19-year-old who does not recognise the word closes the
+    # card instead of asking.
+    "deadline_days": 3,
+    "deadline_days_prosecutor": 15,
+    "plain": "רוצה לערער על העונש?",
+    "term_note": 'ההליך נקרא ערר, ומוגש לקצין שיפוט בכיר ממונה',
     "text": 'לחייל שנשפט בדין משמעתי יש זכות להגיש ערר על הפסק. הערר מוגש '
             'בתוך שלושה ימים מיום מתן הפסק (או בתוך 15 ימים אם הדיון נערך '
             'על-פי הוראת פרקליט), ונדון בפני קצין שיפוט בכיר ממונה (קש"ב '
