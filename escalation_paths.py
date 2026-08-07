@@ -43,7 +43,7 @@ DEFAULT_PATH = _path(
 
 # document_id -> path. Orders NOT listed here ride DEFAULT_PATH on purpose
 # (routine/camp-regime orders whose only real first stop is the direct
-# commander): 5040.05, 05.104, 33-05-01, 33.0220, 33.0501, 35.0818,
+# commander): 5040.05, 33-05-01, 33.0220, 33.0501, 35.0408, 35.0818,
 # PM-33.0137, PM-33.0161, PM-33.0202, PM-33.0207, PM-33.0213.
 PATHS: dict[str, dict] = {
     # welfare / money (ת"ש)
