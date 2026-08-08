@@ -19,6 +19,11 @@
     "raw": null,
     "marker": null
   },
+  "2018.83": {
+    "date": null,
+    "raw": null,
+    "marker": null
+  },
   "21.0113": {
     "date": null,
     "raw": null,
@@ -47,6 +52,11 @@
   "31.0103": {
     "date": "1998-07-01",
     "raw": "יולי98",
+    "marker": "tokef-clause;2digit-year;month-precision"
+  },
+  "31.0106": {
+    "date": "1995-10-01",
+    "raw": "אוק95",
     "marker": "tokef-clause;2digit-year;month-precision"
   },
   "31.0109": {
@@ -98,6 +108,11 @@
     "date": null,
     "raw": null,
     "marker": null
+  },
+  "31.0606": {
+    "date": "1987-06-01",
+    "raw": "יוני87",
+    "marker": "tokef-clause;2digit-year;month-precision"
   },
   "31.0701": {
     "date": "2020-09-17",
@@ -158,6 +173,11 @@
     "date": "1948-01-01",
     "raw": "ינו48",
     "marker": "corner-stamp;2digit-year;month-precision"
+  },
+  "33.0160": {
+    "date": null,
+    "raw": null,
+    "marker": null
   },
   "33.0201": {
     "date": "2026-01-21",
@@ -244,6 +264,11 @@
     "raw": "14 בפברואר2021",
     "marker": "tokef-clause"
   },
+  "35.0306": {
+    "date": null,
+    "raw": null,
+    "marker": null
+  },
   "35.0307": {
     "date": "1998-09-01",
     "raw": "ספט98",
@@ -268,6 +293,11 @@
     "date": "2021-02-14",
     "raw": "14 בפברואר2021",
     "marker": "tokef-clause"
+  },
+  "35.0809": {
+    "date": "1987-01-01",
+    "raw": "ינו87",
+    "marker": "corner-stamp;2digit-year;month-precision"
   },
   "35.0818": {
     "date": null,
@@ -339,6 +369,11 @@
     "raw": "במרץ 2026",
     "marker": "update-dates-list;month-precision"
   },
+  "58.0214": {
+    "date": null,
+    "raw": null,
+    "marker": null
+  },
   "61.0104": {
     "date": "2024-05-12",
     "raw": "2024במאי12",
@@ -353,6 +388,11 @@
     "date": "2002-07-01",
     "raw": "יולי2002",
     "marker": "standalone-stamp;month-precision"
+  },
+  "9.11.16": {
+    "date": "2016-11-09",
+    "raw": "9.11.16",
+    "marker": "updated-line"
   },
   "PM-21.0203": {
     "date": null,
@@ -394,7 +434,22 @@
     "raw": "מאי66",
     "marker": "tokef-clause;2digit-year;month-precision"
   },
+  "PM-33.0316": {
+    "date": "1979-02-01",
+    "raw": "פבר79",
+    "marker": "tokef-clause;2digit-year;month-precision"
+  },
+  "PM-33.0333": {
+    "date": "2021-01-13",
+    "raw": "13.01.2021",
+    "marker": "updated-line"
+  },
   "PM-33.0352": {
+    "date": null,
+    "raw": null,
+    "marker": null
+  },
+  "PM-331.116": {
     "date": null,
     "raw": null,
     "marker": null

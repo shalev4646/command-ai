@@ -532,8 +532,10 @@ def _run_retrieval_set(name: str, cases: list) -> int:
     for role, question, expected in cases:
         # `expected` is one doc id, or a tuple when sibling orders both answer
         # the question legitimately (e.g. 32.0401 קביעה / 32.0402 שינוי for
-        # "להוריד פרופיל") — any of them in the top-K passes
-        accepted = expected if isinstance(expected, tuple) else (expected,)
+        # "להוריד פרופיל") — any of them in the top-K passes. The adversarial
+        # set comes from JSON, where a multi-doc expectation arrives as a list,
+        # not a tuple — matching only tuple silently failed every such probe.
+        accepted = tuple(expected) if isinstance(expected, (list, tuple)) else (expected,)
         try:
             chunks = retrieve_for_role(question, role)
             top_docs = []
