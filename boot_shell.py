@@ -637,13 +637,46 @@ _BOOT_JS = """
           // behind it. Whichever fires first wins; `started` keeps it to one.
           // 80ms because the rAF path now needs TWO frames (33ms) and must be
           // allowed to win whenever frames are being produced at all.
+          // ...and DWELL there, because one frame at 0.999 is enough for the
+          // canvas and not for the app.
+          //
+          // Measured on the 2026-08-09 18:31 video, four launches: the curtain
+          // finishes its slide and the app then assembles itself ON SCREEN over
+          // 117ms — composer, then chips, then the greeting, then the header,
+          // bottom to top, trailing the curtain edge. For ~60ms of that the
+          // screen is nearly empty (luma 24.7) before filling to 31.5-33.0.
+          // That is the "it doesn't come up clean" report, and it is the same
+          // mechanism this manoeuvre already documents for the status bar:
+          // WebKit skips painting whatever an opaque full-screen element
+          // covers, so nothing behind the curtain has EVER been painted when
+          // the slide starts.
+          //
+          // 117ms in all four launches, to the millisecond, while the boots
+          // themselves ranged 3.08-3.30s — a fixed pipeline cost, not a race
+          // with Streamlit. A rerun-timing race would have varied.
+          //
+          // So hold the curtain non-opaque long enough for that paint to
+          // happen underneath it, where it is invisible, and let the slide
+          // uncover a finished screen. PAINT_MS has ~55% headroom over the
+          // measured 117ms. It costs that long before the slide begins and
+          // buys back the 117ms of assembly at the end, so the boot grows by
+          // well under the number the eye actually notices.
+          //
+          // The rAF pair still comes first: the dwell has to start from a
+          // frame that was really composited at 0.999, which is the whole
+          // point of the double rAF above. The timer fallback has to outlast
+          // the dwell or it would pre-empt it — but it must still fire in a
+          // hidden web view where rAF never runs at all.
+          var PAINT_MS = 180;
           var started = false;
           var go = function () { if (started) return; started = true; slide(); };
           el.style.opacity = '0.999';
           if (window.requestAnimationFrame) {
-            requestAnimationFrame(function () { requestAnimationFrame(go); });
+            requestAnimationFrame(function () {
+              requestAnimationFrame(function () { setTimeout(go, PAINT_MS); });
+            });
           }
-          setTimeout(go, 80);
+          setTimeout(go, PAINT_MS + 80);
         };
         // Wait for a COMPLETE screen, not for any markdown: the app emits its
         // CSS as a markdown element long before it renders anything a person
