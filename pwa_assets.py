@@ -173,6 +173,22 @@ def _startup_png(w: int, h: int, dpr: int) -> bytes:
     draw = ImageDraw.Draw(img, "RGBA")
     dd = 32 * 0.7071 * dpr          # apex-to-arm-tip reach of the 32px box
     tv = 6 * 1.4142 * dpr           # vertical band thickness of a 6px stroke
+    # The arm tips are MITERED, and blunt tips are what betrayed the hand-off.
+    # Once the 2026-08-09 hand-off finally went flash-free, the PNG->HTML swap
+    # was STILL visible on the chevrons alone (the user pointed straight at
+    # them). Pixel rows off the 21:34 video, all four launches: bright ink
+    # ended at apex+29 before the swap vs apex+21 after, dim tail at ~80 luma
+    # down to +52 before vs ~46 down to +39 after — the arms visibly retract.
+    # The reason is how each renderer ends the stroke. This polygon used to
+    # close the tips with a full-thickness vertical cut; WebKit draws the
+    # splash's chevron as border-top+border-left of a rotated square, and a
+    # border strip meeting a zero-width neighbour ends in a MITER: the outer
+    # corner is cut diagonally back to the inner edge. Rotated 45°, that cut
+    # runs from the tip (dd, dd) inward+down by 6/√2 on each axis — the tip
+    # tapers, it does not end square. Same spec geometry in Blink/WebKit, so
+    # matching the miter makes the two chevrons agree to antialiasing noise,
+    # and the swap has nothing left to show.
+    tc = 6 * 0.7071 * dpr           # the miter cut's inward/downward reach
     cx = w / 2
     sat = _STARTUP_SAT.get((w, h, dpr), 47)
     apex = (sat + 0.14 * (h / dpr) - 6.6) * dpr
@@ -180,7 +196,8 @@ def _startup_png(w: int, h: int, dpr: int) -> bytes:
         ay = apex + i * 23 * dpr
         draw.polygon(
             [(cx - dd, ay + dd), (cx, ay), (cx + dd, ay + dd),
-             (cx + dd, ay + dd + tv), (cx, ay + tv), (cx - dd, ay + dd + tv)],
+             (cx + dd - tc, ay + dd + tc), (cx, ay + tv),
+             (cx - dd + tc, ay + dd + tc)],
             fill=color,
         )
     # ── wordmark ──────────────────────────────────────────────────────────
