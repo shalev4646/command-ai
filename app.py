@@ -120,6 +120,17 @@ try:
     import soldier_distress as _sd
 except Exception:
     _sd = None
+# curation of the greeting-screen chips (2026-08-08 sweep). Optional like the
+# tools above: a missing module must degrade to the raw ingestion pool, never
+# to a boot failure.
+try:
+    import question_bank
+except Exception:
+    class _NoBank:
+        @staticmethod
+        def curate(qs):
+            return qs
+    question_bank = _NoBank()
 
 try:
     import backend
@@ -2709,6 +2720,7 @@ components.html(
         window.__caiSwipe = true;
         var doc = document, root = doc.documentElement;
         var EDGE = 30;   // px of right edge that arms the open gesture
+        var EDGE_BACK = 44;  // ditto for "back" while an overlay is up
         var SLOP = 12;   // px before the gesture commits to an axis
 
         var drawer = function () { return doc.querySelector(".st-key-cai_drawer"); };
@@ -2731,6 +2743,29 @@ components.html(
             if (b) b.style.opacity = "";
         };
 
+        // ── the BACK target ──
+        // Anything the user "went into" answers the same right-edge swipe that
+        // every iOS app answers: settings and its four sub-screens, and the
+        // tool dialogs. Both are overlays the server owns, so the gesture can
+        // only move them — the navigation itself is the button they already
+        // have, pressed for them.
+        //
+        // Returns the panel to drag and the control to press, or null when
+        // nothing is open (then the drawer gestures own the screen).
+        var backTarget = function () {
+            var dlg = doc.querySelector('[data-testid="stDialog"]');
+            if (dlg) {
+                var close = dlg.querySelector('button[aria-label="Close"]');
+                if (close) return { panel: dlg.querySelector('[role="dialog"]') || dlg, btn: close };
+            }
+            var set = doc.querySelector(".st-key-cai_settings");
+            if (set) {
+                var back = doc.querySelector(".st-key-settings_back button");
+                if (back) return { panel: set, btn: back };
+            }
+            return null;
+        };
+
         // a live drag ends in a click on whatever was under the finger.
         // Swallow the next real one — isTrusted keeps synthetic clicks alive.
         var swallowClick = function () {
@@ -2749,12 +2784,25 @@ components.html(
         doc.addEventListener("touchstart", function (e) {
             g = null;
             if (e.touches.length !== 1) return;
-            // a dialog or the settings overlay owns the screen
-            if (doc.querySelector('[data-testid="stDialog"], .st-key-cai_settings')) return;
+            var t0 = e.touches[0];
+            // never steal a caret drag inside the composer or a form field
+            if (t0.target && t0.target.closest &&
+                t0.target.closest("input, textarea, [contenteditable]")) return;
+            // an overlay owns the screen: the same edge swipe means "back".
+            // Edge-armed like iOS, and a little wider than the drawer's 30 —
+            // nothing else lives on that strip while an overlay is up, and the
+            // panels underneath scroll vertically, which still wins on dy.
+            var bt = backTarget();
+            if (bt) {
+                if (t0.clientX >= window.innerWidth - EDGE_BACK) {
+                    g = { mode: "back", x: t0.clientX, y: t0.clientY, live: false,
+                          travel: 0, w: Math.max(1, bt.panel.getBoundingClientRect().width),
+                          slop: SLOP, panel: bt.panel, btn: bt.btn };
+                }
+                return;
+            }
             if (!hamburger()) return;                                    // no drawer on this screen
             var t = e.touches[0];
-            // never steal a caret drag inside the composer
-            if (t.target && t.target.closest && t.target.closest("input, textarea, [contenteditable]")) return;
             if (isOpen()) {
                 // a touch that STARTS on a tap target inside the panel (the
                 // orders card, a tool button, an order link) is almost always
@@ -2783,10 +2831,33 @@ components.html(
             if (!g.live) {
                 if (Math.abs(dx) < g.slop) { if (Math.abs(dy) > SLOP) g = null; return; }
                 if (Math.abs(dy) > Math.abs(dx)) { g = null; return; }         // vertical scroll wins
-                if (g.mode === "open" ? dx > 0 : dx < 0) { g = null; return; } // wrong way
-                if (!drawer()) { g = null; return; }
+                // "close" travels right; "open" and "back" both travel left
+                if (g.mode === "close" ? dx < 0 : dx > 0) { g = null; return; }
+                if (g.mode !== "back" && !drawer()) { g = null; return; }
                 g.live = true;
-                root.classList.add("cai-drawer-drag");
+                if (g.mode === "back") {
+                    g.panel.style.transition = "none";
+                    // A back-drag that never gets its touchend leaves an
+                    // overlay parked off-screen, which reads as a dead app.
+                    // touchcancel covers the ordinary interruptions; this
+                    // covers the ones it does not (a rerun swapping the node
+                    // out from under the finger, a dropped event). Cleared in
+                    // finish(), so it only ever fires on a gesture that died.
+                    var stuck = g;
+                    g.guard = setTimeout(function () {
+                        if (g === stuck) { g = null; backReset(stuck.panel); }
+                    }, 4000);
+                }
+                else { root.classList.add("cai-drawer-drag"); }
+            }
+            if (g.mode === "back") {
+                // rubber-banded: the panel is allowed to leave, but a finger
+                // that keeps going does not drag it a screen and a half
+                g.travel = Math.max(0, Math.min(-dx, g.w));
+                g.panel.style.transform = "translateX(" + (-g.travel) + "px)";
+                g.panel.style.opacity = String(1 - (g.travel / g.w) * 0.35);
+                e.preventDefault();
+                return;
             }
             g.travel = Math.max(0, Math.min(g.mode === "open" ? -dx : dx, g.w));
             var off = g.mode === "open" ? g.w - g.travel : g.travel;
@@ -2796,12 +2867,39 @@ components.html(
             e.preventDefault();
         }, { passive: false, capture: true });
 
+        // hand the panel back to the stylesheet. Called on spring-back, on the
+        // far side of a commit, and defensively from the sweep — an overlay
+        // stranded mid-transform is the one failure this gesture could leave
+        // behind, and it would look exactly like the app had died.
+        var backReset = function (panel) {
+            if (!panel) return;
+            panel.style.transition = "";
+            panel.style.transform = "";
+            panel.style.opacity = "";
+        };
+
         var finish = function () {
             var cur = g;
             g = null;
+            if (cur && cur.guard) clearTimeout(cur.guard);
             if (!cur || !cur.live) return;
             swallowClick();
             var commit = cur.travel > Math.min(90, cur.w * 0.3);
+            if (cur.mode === "back") {
+                var panel = cur.panel;
+                panel.style.transition = "transform .19s cubic-bezier(.4,0,.2,1), opacity .19s ease";
+                if (!commit) { panel.style.transform = ""; panel.style.opacity = ""; return; }
+                // see it leave, then press the control the user would have
+                panel.style.transform = "translateX(-100%)";
+                panel.style.opacity = "0";
+                cur.btn.click();
+                // Streamlit answers in its own time. Whichever lands first is
+                // fine: a fast rerun replaces this node (nothing to undo), a
+                // slow one finds the panel back in place rather than stranded
+                // off-screen. 380ms = the slide plus a beat.
+                setTimeout(function () { backReset(panel); }, 380);
+                return;
+            }
             settle(cur.mode === "open" ? commit : !commit);
         };
         doc.addEventListener("touchend", finish, { passive: true, capture: true });
@@ -2960,10 +3058,81 @@ components.html(
             if (box !== doc.activeElement) box.value = q;
             filterOrders(q);
         };
+        // ── datepicker: pin the calendar as a sheet, and speak Hebrew ──
+        // BaseWeb portals the calendar to <body> and positions it with an
+        // INLINE transform written by popper, which no stylesheet rule can
+        // outrank — so the pinning has to happen here. Everything else about
+        // the panel is CSS (see the calendar block in _MODAL_CSS).
+        //
+        // Why pin at all: popper anchors to the field's rect at open time, and
+        // inside a dialog whose expander is still animating that rect is
+        // stale — measured on device, the panel landed above the field and
+        // covered it, over a fully transparent background. A centred sheet has
+        // no anchor to go stale.
+        var CAL_MONTHS = {
+            January: "ינואר", February: "פברואר", March: "מרץ", April: "אפריל",
+            May: "מאי", June: "יוני", July: "יולי", August: "אוגוסט",
+            September: "ספטמבר", October: "אוקטובר", November: "נובמבר",
+            December: "דצמבר"
+        };
+        var CAL_DAYS = { Su: "א", Mo: "ב", Tu: "ג", We: "ד", Th: "ה", Fr: "ו", Sa: "ש" };
+        // The geometry is written INLINE, not via a class: the popover div is
+        // React-owned and emotion rewrites its className on every re-render, so
+        // a class we add survives until the first month change and no longer
+        // (measured — the panel came back 326px wide at 0,0). An inline
+        // declaration marked !important also outranks popper's own inline
+        // write, which is non-important.
+        var CAL_SHEET = [
+            ["position", "fixed"],
+            ["left", "50%"],
+            ["right", "auto"],
+            ["top", "auto"],
+            ["bottom", "calc(env(safe-area-inset-bottom, 0px) + 20px)"],
+            ["width", "min(340px, calc(100vw - 28px))"],
+            ["margin", "0"],
+            // translateX alone: popper's placement offset is what has to go
+            ["transform", "translateX(-50%)"],
+            ["z-index", "1000090"]
+        ];
+        var calSkin = function () {
+            var cal = doc.querySelector('[data-baseweb="calendar"]');
+            if (!cal) return;
+            var pop = cal.closest('[data-baseweb="popover"]');
+            if (pop) {
+                for (var i = 0; i < CAL_SHEET.length; i++) {
+                    var k = CAL_SHEET[i][0], v = CAL_SHEET[i][1];
+                    // guarded: writing an unchanged value is still a mutation,
+                    // and this runs FROM the MutationObserver
+                    if (pop.style.getPropertyValue(k) !== v) {
+                        pop.style.setProperty(k, v, "important");
+                    }
+                }
+            }
+            // Streamlit exposes no locale for st.date_input, so translate the
+            // rendered labels. Exact matches only — day NUMBERS share this
+            // subtree, and a substring pass would maul them.
+            var w = doc.createTreeWalker(cal, NodeFilter.SHOW_TEXT);
+            var n;
+            while ((n = w.nextNode())) {
+                var t = n.nodeValue.trim();
+                var heb = CAL_MONTHS[t] || (t.length === 2 ? CAL_DAYS[t] : null);
+                if (heb) n.nodeValue = heb;
+            }
+        };
+
         var sweep = function () {
             if (isOpen() && !hamburger()) settle(false);
+            // an overlay that is on screen and not under a live finger must
+            // never be carrying a drag transform
+            if (!g) {
+                var set = doc.querySelector(".st-key-cai_settings");
+                if (set && set.style.transform && !set.style.transition) backReset(set);
+                var card = doc.querySelector('[data-testid="stDialog"] [role="dialog"]');
+                if (card && card.style.transform && !card.style.transition) backReset(card);
+            }
             restoreOrders();
             pfSync();
+            calSkin();
         };
         new MutationObserver(sweep).observe(doc.body, { childList: true, subtree: true });
         sweep();
@@ -3283,6 +3452,15 @@ _FALLBACK_QUESTIONS = {
 
 if "suggested" not in st.session_state:
     all_q = get_suggested_questions(role=st.session_state.role)
+    # A chip is the app's only unprompted claim about what it can answer, so
+    # the raw ingestion pool is curated before it is sampled — see
+    # question_bank for the 86 questions that failed a cold read and why the
+    # fix lives here and not in json_store (those strings are also retrieval
+    # anchors). Guarded: a curation bug must not empty the greeting screen.
+    try:
+        all_q = question_bank.curate(all_q)
+    except Exception:
+        pass
     # older backend builds return the generic defaults instead of an empty
     # pool — treat both as "no real pool yet" and don't cache
     if all_q and all_q != _FALLBACK_QUESTIONS.get(st.session_state.role):
@@ -3409,7 +3587,7 @@ def _letters_dialog():
     # standing note under the button (matches the design mock): sets the
     # expectation that the output is an order-grounded draft to review
     st.markdown(
-        "<div style='font:400 11.5px Heebo,sans-serif;color:rgba(236,237,230,.42);"
+        "<div style='font:400 11.5px Heebo,sans-serif;color:rgba(236,237,230,.58);"
         "direction:rtl;text-align:right;margin:10px 2px 0;line-height:1.55'>"
         "הטיוטה נוסחה לפי לשון הפקודה — יש לעבור עליה לפני הגשה.</div>",
         unsafe_allow_html=True,
@@ -3531,7 +3709,10 @@ div[data-testid="stDialog"] [data-testid="stRadio"] > label {
    so phones showed big cream labels instead of the mock's small dim ones */
 div[data-testid="stDialog"] [data-testid="stWidgetLabel"] p {
     font-size: 11px !important; font-weight: 600 !important;
-    color: rgba(236,237,230,.45) !important; letter-spacing: .02em;
+    /* .45 measured 4.0:1 on the dialog fill — under AA for 11px text that
+       names the field underneath it. .6 measures 5.4:1 and keeps the mock's
+       hierarchy (still well below the field's own cream). */
+    color: rgba(236,237,230,.6) !important; letter-spacing: .02em;
 }
 
 /* ---- Select fields -> dark pill with olive chevron ---- */
@@ -3643,7 +3824,17 @@ div[data-testid="stDialog"] .stDownloadButton button:hover { border-color: var(-
    scoped to the dialog — and it inherited the same olive theme.backgroundColor
    leak as the modal card. Style it globally (selects only appear in these
    dialogs). The <ul> is the visible menu; the popover + its wrapper divs must go
-   transparent so only the dark <ul> shows. Options are already light-on-transparent. */
+   transparent so only the dark <ul> shows. Options are already light-on-transparent.
+
+   ⚠ "selects only appear in these dialogs" stopped being true when the conscript
+   map added two st.date_input fields. A datepicker portals through the SAME
+   popover, but its body is a [data-baseweb="calendar"] and not a <ul> — so these
+   three rules stripped the background off the ONLY thing that paints it, and the
+   calendar came up fully see-through with the tool's own cards reading through
+   the date grid (user device screenshot 2026-08-08). The calendar block below
+   paints itself back at HIGHER SPECIFICITY rather than these rules carving out
+   a :has() exception: an unsupported :has() invalidates the whole selector, and
+   that failure mode would hand every SELECT its olive default back. */
 div[data-baseweb="popover"],
 div[data-baseweb="popover"] > div,
 div[data-baseweb="popover"] > div > div { background: transparent !important; }
@@ -3663,9 +3854,121 @@ div[data-baseweb="popover"] li[role="option"][aria-selected="true"] {
     background: var(--accent-soft) !important; color: var(--accent-bright) !important;
 }
 
+/* ---- Datepicker calendar (st.date_input — the conscript map's two dates) ----
+   Every selector here carries the popover ancestor so it outranks the three
+   transparency rules above (0,1,3); the calendar rule alone (0,1,1) loses to
+   them and the panel comes up see-through.
+
+   The calendar is pinned CENTRE-SCREEN as a sheet rather than left where
+   BaseWeb put it. Two reasons, both measured: popper anchors to the field's
+   rect at open time, and inside a dialog whose expander is still animating
+   that rect is stale — the panel landed 20px ABOVE the field it belongs to
+   and covered it. And at 375px a 340px panel has nowhere to be but centred.
+   The pinning itself is in the gesture engine: popper writes its offset as an
+   inline transform, which no stylesheet rule can outrank.
+
+   direction:rtl on the whole subtree puts Sunday on the right, where a Hebrew
+   calendar has it (verified: day 2 lands at x=473, day 8 at x=221). The month
+   names and day initials are translated there too — BaseWeb ships en-US and
+   Streamlit exposes no locale. */
+div[data-baseweb="popover"] div[data-baseweb="calendar"],
+div[data-baseweb="popover"] > div > div[data-baseweb="calendar"],
+div[data-baseweb="popover"] > div > div > div[data-baseweb="calendar"] {
+    background: #1E2216 !important;
+    border: 1px solid rgba(236,237,230,.13) !important;
+    border-radius: 18px !important;
+    box-shadow: 0 26px 60px -18px rgba(0,0,0,.75) !important;
+    padding: 10px 8px 12px !important;
+    width: 100% !important;
+    direction: rtl !important;
+    font-family: Heebo, sans-serif !important;
+}
+div[data-baseweb="popover"] div[data-baseweb="calendar"] * {
+    direction: rtl !important; font-family: Heebo, sans-serif !important;
+}
+/* month/year buttons — BaseWeb's default is a light-theme pill */
+div[data-baseweb="popover"] div[data-baseweb="calendar"] button {
+    background: transparent !important; color: var(--text) !important;
+    font: 600 15px Heebo, sans-serif !important; border-radius: 10px !important;
+}
+div[data-baseweb="popover"] div[data-baseweb="calendar"] button:hover {
+    background: rgba(236,237,230,.07) !important;
+}
+div[data-baseweb="popover"] div[data-baseweb="calendar"] svg { fill: var(--text) !important; }
+/* the arrows are drawn for LTR: in an RTL month strip "previous" sits on the
+   right and must point right */
+div[data-baseweb="popover"] div[data-baseweb="calendar"] button > svg[data-baseweb="icon"] {
+    transform: scaleX(-1);
+}
+div[data-baseweb="popover"] div[data-baseweb="calendar"] [role="gridcell"] {
+    color: var(--text) !important; font: 500 14px Heebo, sans-serif !important;
+    border-radius: 10px !important;
+}
+/* the day-of-week strip and out-of-month days read as secondary */
+div[data-baseweb="popover"] div[data-baseweb="calendar"] [role="gridcell"][aria-disabled="true"],
+div[data-baseweb="popover"] div[data-baseweb="calendar"] [role="gridcell"][aria-hidden="true"] {
+    color: rgba(236,237,230,.28) !important;
+}
+div[data-baseweb="popover"] div[data-baseweb="calendar"] [role="gridcell"][aria-selected="true"] > div,
+div[data-baseweb="popover"] div[data-baseweb="calendar"] [aria-selected="true"] {
+    background: var(--accent) !important; color: #14170E !important; font-weight: 700 !important;
+}
+/* The sheet is bottom-anchored rather than vertically centred: the panel is
+   40px taller in a 6-week month than a 5-week one, and an anchor that moves
+   with the month reads as broken. Its geometry is written inline by the gesture
+   engine (emotion rewrites this node's className on re-render, so a class does
+   not survive a month change) — only the scrim is left to CSS, because it is
+   decorative and may safely be absent where :has() is not supported.
+   pointer-events:none keeps the tap that dismisses the sheet flowing through
+   to BaseWeb's own outside-click handler. */
+div[data-baseweb="popover"]:has(div[data-baseweb="calendar"])::before {
+    content: ""; position: fixed; inset: 0; z-index: -1;
+    background: rgba(8,10,6,.58); pointer-events: none;
+}
+
 /* ---- Hide "Press Enter to apply" — it overlaps the typed RTL text and reads
    as leftover default chrome inside the styled fields ---- */
 div[data-testid="stDialog"] [data-testid="InputInstructions"] { display: none !important; }
+
+/* ---- Phone width: stop paying for the same gutter twice ----
+   Measured at 375px: the card takes 16px of margin and 22px of its own
+   padding, and then Streamlit's own dialog body adds ANOTHER 24px inside it.
+   62px per side — a third of the screen — left a 243px content column, which
+   is why the authority selectbox could not show a rank range and every card
+   wrapped a line early. The card keeps a gutter; the inner one goes, and the
+   column comes back to 306px (+26%). Phones only: on a desktop the dialog is
+   nowhere near width-bound and the extra padding is what makes it read as a
+   card rather than a page. */
+@media (max-width: 520px) {
+  div[data-testid="stDialog"] div[role="dialog"] {
+      padding-left: 14px !important; padding-right: 14px !important;
+  }
+  div[data-testid="stDialog"] div[role="dialog"] > div {
+      padding-left: 0 !important; padding-right: 0 !important;
+  }
+  /* Streamlit's close button is 33px — under the 44px thumb floor, and it is
+     the control every one of these dialogs is dismissed with */
+  div[data-testid="stDialog"] button[aria-label="Close"] {
+      width: 44px !important; height: 44px !important;
+  }
+  /* BaseWeb ellipsises the selected option on one nowrap line. "קצין שיפוט
+     זוטר (קש״ז) — דרגת סגן עד סרן" needs 263px and had 236, so the rank range
+     — the entire point of the option — was the part that got cut. Let it wrap
+     and let the control grow to meet it. */
+  div[data-testid="stDialog"] [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+      height: auto !important; min-height: 44px !important;
+  }
+  div[data-testid="stDialog"] [data-testid="stSelectbox"] div[data-baseweb="select"] [class] {
+      white-space: normal !important; text-overflow: clip !important;
+  }
+  /* number-input steppers ship 31px wide — the obvious way to bump "years of
+     service" by one, and too narrow for the thumb that wants to */
+  div[data-testid="stDialog"] [data-testid="stNumberInputStepUp"],
+  div[data-testid="stDialog"] [data-testid="stNumberInputStepDown"] {
+      width: 46px !important; min-width: 46px !important; height: 44px !important;
+  }
+  div[data-testid="stDialog"] [data-testid="stNumberInput"] input { min-height: 44px !important; }
+}
 
 /* ---- Result card (shared by all three) ---- */
 .cai-ent-card { position: relative; overflow: hidden; border-radius: 18px;
@@ -3713,7 +4016,10 @@ div[data-testid="stDialog"] [data-testid="InputInstructions"] { display: none !i
 .cai-pa-row:not(:last-child) { border-bottom: 1px solid rgba(236,237,230,.07); }
 .cai-pa-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .cai-pa-pun { font: 600 13.5px Heebo, sans-serif; color: var(--text); }
-.cai-pa-clause { font: 500 10.5px Heebo, sans-serif; color: var(--text-faint); }
+/* --text-faint (.4) measures 3.48:1 at 10.5px — under AA. Raised locally
+   rather than at the token, which is also used for decorative monospace where
+   the faintness is the point; the app-wide sweep is a separate job. */
+.cai-pa-clause { font: 500 10.5px Heebo, sans-serif; color: rgba(239,240,232,.58); }
 .cai-pa-max { flex: 0 0 auto; border-radius: 9px; padding: 4px 12px; white-space: nowrap;
     font: 700 12.5px Heebo, sans-serif; border: 1px solid; }
 .cai-pa-max.ok    { color:#A9C687; background:rgba(148,183,110,.13); border-color:rgba(148,183,110,.4); }
@@ -3772,12 +4078,15 @@ div[data-testid="stDialog"] [data-testid="InputInstructions"] { display: none !i
 .cai-sc-cta:hover { background: color-mix(in srgb, var(--accent) 22%, transparent) !important;
     border-color: var(--accent) !important; }
 .cai-sc-disc { text-align: center; font: 400 11px Heebo, sans-serif; direction: rtl;
-    color: rgba(236,237,230,.4); margin-top: 10px; line-height: 1.5; }
+    color: rgba(236,237,230,.56); margin-top: 10px; line-height: 1.5; }
 
 /* ---- Miluim tools (מה מגיע לי / קיבלתי צו) ---- */
+/* the section headings that split a tool into chapters — at .45 they measured
+   3.98:1, which for 11px letter-spaced caps is the hardest text in the tool to
+   read on a phone outdoors. .6 is 5.4:1 and still clearly a label, not a title. */
 .cai-mil-sec { display: flex; justify-content: space-between; align-items: baseline;
     font: 600 11px Heebo, sans-serif; letter-spacing: .06em; direction: rtl;
-    color: rgba(236,237,230,.45); margin: 16px 2px 2px; }
+    color: rgba(236,237,230,.6); margin: 16px 2px 2px; }
 .cai-mil-hero { direction: rtl; text-align: right; border-radius: 14px; padding: 13px 14px;
     background: var(--accent-soft); border: 1px solid var(--accent-border); margin-top: 8px; }
 .cai-mil-hero .t { font: 700 15.5px Heebo, sans-serif; color: var(--accent-bright); }
@@ -3821,17 +4130,31 @@ div[data-testid="stDialog"] [data-testid="stRadio"] label:active { filter: brigh
     font: 400 12.5px Heebo, sans-serif; color: rgba(236,237,230,.78);
     line-height: 1.5; margin-top: 8px; }
 .cai-mil-how .g { color: var(--accent); flex: none; font-weight: 700; }
-.cai-mil-link { display: inline-block; font: 600 12.5px Heebo, sans-serif;
+/* The hotline links. These were 18px tall and, for a bare number like "1201",
+   28px wide — the smallest targets in the app, sitting in the one tool a
+   soldier opens with a shaking thumb. Padding to a 44px box, and the number
+   links get a visible pill so a dialled number reads as a button and not as
+   running text. inline-flex + min-height rather than a fixed height so a
+   two-line label still centres. */
+.cai-mil-link { display: inline-flex; align-items: center;
+    min-height: 44px; padding: 0 12px; border-radius: 11px;
+    font: 600 12.5px Heebo, sans-serif;
     color: var(--accent-bright) !important; text-decoration: none !important;
-    margin-top: 9px; }
-.cai-mil-cite { font: 400 11px Heebo, sans-serif; color: rgba(236,237,230,.42);
+    background: rgba(var(--accent-rgb),.10);
+    border: 1px solid rgba(var(--accent-rgb),.26);
+    margin-top: 9px; -webkit-tap-highlight-color: transparent; }
+.cai-mil-link:active { background: rgba(var(--accent-rgb),.20); }
+/* .42 on the card fill measured 3.5:1 — under AA for 11px, and these carry the
+   clause the whole card rests on. .58 measures 4.9:1 and still reads as the
+   quietest thing on the card. */
+.cai-mil-cite { font: 400 11px Heebo, sans-serif; color: rgba(236,237,230,.58);
     margin-top: 8px; line-height: 1.5; }
 /* the question a card raises (soldier kit §3.1) — quieter than a link, since
    it is a prompt to ask and not a control; the real buttons sit at the foot
    of the dialog */
 .cai-mil-ask { font: 400 11.5px Heebo, sans-serif; color: var(--accent-bright);
     margin-top: 9px; line-height: 1.55; opacity: .85; }
-.cai-mil-foot { font: 400 11px Heebo, sans-serif; color: rgba(236,237,230,.42);
+.cai-mil-foot { font: 400 11px Heebo, sans-serif; color: rgba(236,237,230,.56);
     direction: rtl; text-align: right; margin-top: 14px; line-height: 1.6; }
 .cai-mil-warn { direction: rtl; text-align: right; border-radius: 13px; padding: 11px 13px;
     background: rgba(233,214,150,.07); border: 1px solid rgba(233,214,150,.35); margin-top: 8px; }
@@ -3843,7 +4166,7 @@ div[data-testid="stDialog"] [data-testid="stRadio"] label:active { filter: brigh
 .cai-mil-crit .t { font: 600 12.5px Heebo, sans-serif; color: #E8AFA5; line-height: 1.5; }
 .cai-mil-crit .r { font: 400 12px Heebo, sans-serif; color: rgba(232,175,165,.85);
     line-height: 1.55; margin-top: 4px; }
-.cai-mil-crit .c { font: 400 10.5px Heebo, sans-serif; color: rgba(232,175,165,.55); margin-top: 4px; }
+.cai-mil-crit .c { font: 400 10.5px Heebo, sans-serif; color: rgba(232,175,165,.75); margin-top: 4px; }
 .cai-mil-tline { display: flex; align-items: center; direction: rtl; margin-top: 10px; }
 .cai-mil-tline .d { width: 10px; height: 10px; border-radius: 50%; flex: none;
     background: var(--accent-soft); border: 2px solid var(--accent); }
@@ -4837,8 +5160,18 @@ html.cai-drawer-drag .st-key-drawer_backdrop {
 html.cai-drawer-drag .st-key-drawer_backdrop { pointer-events: none !important; }
 /* the page header ducks while the drawer moves or sits open: mid-drag the
    identity cluster floated over the incoming panel and the two "headers"
-   interleaved (device screenshot 2026-08-03) */
-html.cai-drawer-open .cai-header, html.cai-drawer-drag .cai-header {
+   interleaved (device screenshot 2026-08-03).
+
+   ⚠ Duck the CONTENTS, never the header itself. `.cai-header` is not just a
+   row of text — it is the only thing that paints the status-bar strip: it
+   grows UP by --cai-sat precisely so its tint and blur sit behind the
+   translucent clock (see its rule above, and the seam the same band caused
+   once already). Fading the element took that fill away with it, so the
+   instant a finger touched the drawer the strip behind the clock dropped to
+   bare canvas and a lighter band appeared across the top — the 2026-08-08
+   device screenshot. The children carry the interleaving; the band carries
+   the strip. Only the children go. */
+html.cai-drawer-open .cai-header > *, html.cai-drawer-drag .cai-header > * {
   opacity: 0; transition: opacity .18s ease;
 }
 
@@ -4883,9 +5216,12 @@ div[data-testid="stDialog"] [data-testid="stMarkdownContainer"] { margin-bottom:
 .st-key-cai_settings div[data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; gap: 8px !important; }
 .st-key-cai_drawer div[data-testid="stColumn"],
 .st-key-cai_settings div[data-testid="stColumn"] { min-width: 0 !important; }
+/* 44px, not 36: these two sit in the top corners of the drawer — the least
+   accurate reach on a phone — and 36 is under the tap floor. The glyphs keep
+   their 18px size; only the boxes grow. Same call as .st-key-settings_back. */
 .st-key-open_settings button, .st-key-drawer_close button {
-  width: 36px !important; height: 36px !important; min-height: 36px !important;
-  border-radius: 10px !important; padding: 0 !important;
+  width: 44px !important; height: 44px !important; min-height: 44px !important;
+  border-radius: 12px !important; padding: 0 !important;
   background-color: rgba(236,237,230,.06) !important;
   border: 1px solid rgba(236,237,230,.12) !important;
   color: rgba(236,237,230,.65) !important;
@@ -4913,7 +5249,7 @@ div[data-testid="stDialog"] [data-testid="stMarkdownContainer"] { margin-bottom:
   font: 700 20px 'Suez One', serif; color: #171A12;
 }
 .cai-role-meta { flex: 1; min-width: 0; }
-.cai-role-k { font: 600 10px Heebo; letter-spacing: 1px; color: rgba(236,237,230,.45); }
+.cai-role-k { font: 600 10px Heebo; letter-spacing: 1px; color: rgba(236,237,230,.6); }
 .cai-role-nm { font: 400 17px 'Suez One', serif; color: #ECEDE6; line-height: 1.15; margin-top: 1px; }
 .cai-role-badge {
   font: 600 10.5px Heebo; color: rgba(196,206,146,.9); flex: none;
@@ -4922,7 +5258,8 @@ div[data-testid="stDialog"] [data-testid="stMarkdownContainer"] { margin-bottom:
 }
 
 /* section label */
-.cai-sec-label { font: 600 11px Heebo; letter-spacing: 1px; color: rgba(236,237,230,.4); margin: 16px 0 8px; }
+/* the drawer's group headings — same 4.5:1 floor as the settings ones */
+.cai-sec-label { font: 600 11px Heebo; letter-spacing: 1px; color: rgba(236,237,230,.58); margin: 16px 0 8px; }
 /* RTL hard-pin (user video, iPhone): Streamlit right-pane CSS lands
    text-align:left on plain markdown <div>s even under direction:rtl, so the
    section labels (מאגר הידע / כלים / שיחות אחרונות), the role-card texts and
@@ -5062,7 +5399,7 @@ html.cai-orders-open .cai-kb-card {
 
 /* recent head row */
 .cai-recent-head { display: flex; align-items: center; gap: 8px; margin: 16px 0 8px; }
-.cai-recent-t { font: 600 11px Heebo; letter-spacing: 1px; color: rgba(236,237,230,.4); }
+.cai-recent-t { font: 600 11px Heebo; letter-spacing: 1px; color: rgba(236,237,230,.58); }
 .cai-recent-n { font: 700 10px Heebo; color: rgba(196,206,146,.9); background: rgba(var(--accent-rgb),.14); border-radius: 99px; padding: 1px 7px; }
 .st-key-clear_recent { display: flex; justify-content: flex-end; }
 .st-key-clear_recent button {
@@ -5084,7 +5421,11 @@ html.cai-orders-open .cai-kb-card {
 .cai-drawer-foot {
   /* safe-area clearance now lives on the drawer's own padding-bottom */
   text-align: center; margin: 8px 0 2px;
-  font: 600 9px ui-monospace, Menlo, monospace; letter-spacing: 2px; color: rgba(236,237,230,.3);
+  /* .3 at 9px measured 2.43:1. It is styled as a whisper on purpose, but this
+     particular whisper is the CLASSIFICATION MARKING — the one string in the
+     app that has to be readable on a bright parade ground. .5 is 4.0:1, still
+     the quietest element on the panel. */
+  font: 600 9px ui-monospace, Menlo, monospace; letter-spacing: 2px; color: rgba(236,237,230,.5);
 }
 
 /* ═══ SETTINGS overlay (mockup 8a–8e) ═══ */
@@ -5141,14 +5482,20 @@ html.cai-orders-open .cai-kb-card {
 .st-key-cai_settings [data-testid="stElementContainer"] { margin-bottom: 0; }
 /* header: back + title */
 .st-key-cai_settings div[data-testid="stHorizontalBlock"]:first-of-type { align-items: center; gap: 12px; }
+/* 44px, not the mock's 36: this is the control that leaves every settings
+   screen, it sits in the top corner where the thumb is least accurate, and
+   36px is under the tap floor. The glyph keeps its size — only the box grows. */
 .st-key-settings_back button {
-  width: 36px !important; height: 36px !important; min-height: 36px !important;
-  border-radius: 10px !important; padding: 0 !important;
+  width: 44px !important; height: 44px !important; min-height: 44px !important;
+  border-radius: 12px !important; padding: 0 !important;
   background: rgba(236,237,230,.06) !important; border: 1px solid rgba(236,237,230,.12) !important;
 }
 .st-key-settings_back button p { font: 600 20px Heebo !important; color: rgba(236,237,230,.7) !important; }
 .cai-set-title { font: 400 21px 'Suez One', serif; color: #ECEDE6; padding: 4px 0; }
-.cai-set-seclabel { font: 600 10px Heebo; letter-spacing: 2px; color: rgba(236,237,230,.38); margin: 22px 0 9px; }
+/* 10px letter-spaced caps at .38 measured 3.19:1 — the worst contrast in the
+   app, on the six labels that tell you what each settings group IS. .56 is
+   4.6:1 and keeps them subordinate to the rows they head. */
+.cai-set-seclabel { font: 600 10px Heebo; letter-spacing: 2px; color: rgba(236,237,230,.56); margin: 22px 0 9px; }
 
 /* settings grouped card + nav rows */
 [class*="st-key-cai_sgrp"] {
@@ -5205,7 +5552,7 @@ html.cai-orders-open .cai-kb-card {
 .cai-row .ic { width: 18px; height: 18px; flex: none; background-repeat: no-repeat; background-position: center; background-size: 18px; }
 .cai-row .tx { flex: 1; }
 .cai-row .t { font: 500 14px Heebo; color: #ECEDE6; }
-.cai-row .s { font: 400 11px Heebo; color: rgba(236,237,230,.45); margin-top: 1px; }
+.cai-row .s { font: 400 11px Heebo; color: rgba(236,237,230,.6); margin-top: 1px; }
 .cai-row .val { font: 600 12px Heebo; color: rgba(196,206,146,.85); }
 .cai-row .chev { color: rgba(236,237,230,.3); font-size: 14px; flex: none; }
 .cai-div { height: 1px; background: rgba(236,237,230,.07); margin: 0 14px; }
@@ -5497,35 +5844,61 @@ def _clear_history():
     st.session_state.messages = []
 
 
-def _wipe_all():
-    """Full on-device wipe: chats + profile back to defaults (mockup 8d)."""
-    st.session_state.conversation_history = []
-    st.session_state.messages = []
+def _reset_identity():
+    """Forget WHO this device is: role, name, profile, and the tool inputs.
+
+    Shared by logout and by the full wipe, because the two drifting apart is
+    exactly how the 2026-08-08 report happened — logout reset `role` alone, so
+    the cookie kept `{"name": "...", "asked": true}` and the next role pick
+    skipped the name gate and greeted the previous user by name.
+
+    Everything cleared here is personal or derived from a person: the display
+    name, the status pills, the service track/type, and the two tool profiles
+    (`sol_*` carries enlistment and discharge dates, `mil_*` carries a salary).
+    A sign-out that leaves a salary behind is not a sign-out.
+    """
     st.session_state.profile_saved = []
     st.session_state.profile_customized = False
     st.session_state.profile_name = ""
-    # a wiped device is a fresh device: back to the role picker, and the
-    # one-time name prompt asks again on the next role pick. Without
-    # role=None the gate (derived from name_asked) would pop over the
-    # settings screen. cai_wipe_pending lets the sync writer render the
-    # all-empty payload — its settled-gate otherwise skips empty states
-    # (the guard that stops a cold cloud boot from clobbering the store).
+    # back to the role picker, and the one-time name prompt asks again on the
+    # next role pick. Without role=None the gate (derived from name_asked)
+    # would pop over the settings screen. cai_wipe_pending lets the sync writer
+    # render the all-empty payload — its settled-gate otherwise skips empty
+    # states (the guard that stops a cold cloud boot from clobbering the
+    # store), which would leave the OLD cookie, name and all, on the device.
     st.session_state.name_asked = False
     st.session_state.cai_wipe_pending = True
     st.session_state.role = None
     st.session_state.pending_question = None
     st.session_state.pop("suggested", None)
     st.session_state.show_settings = False
+    st.session_state.settings_screen = "hub"
     st.session_state.service_track = ""
     st.session_state.service_type = "סדיר"
+    # the tool profiles ride the same device cookie (see the sync writer): the
+    # "sv" flags are what put them in the payload at all, so dropping the flag
+    # is what actually removes them from the device
+    for _k in ("sol_saved", "sol_enlist", "sol_discharge", "sol_track",
+               "sol_single", "sol_married",
+               "mil_saved", "mil_days_year", "mil_days_3y", "mil_emp", "mil_salary"):
+        st.session_state.pop(_k, None)
+    # drop the widgets' keys so they reseed from the reset mirrors
+    for _k in ("profile_statuses", "pf_name_w", "pf_type_w", "pf_track_w", "gate_name_w",
+               "sol_en_w", "sol_di_w", "sol_tr_w", "sol_sg_w", "sol_mr_w"):
+        st.session_state.pop(_k, None)
+
+
+def _wipe_all():
+    """Full on-device wipe: chats + profile back to defaults (mockup 8d)."""
+    _clear_history()
+    _reset_identity()
     # "a fresh device" has to mean the analytics id too, or a user who tapped
     # מחק הכל stays joinable to everything they did before the wipe. Rotated
     # rather than deleted: the key must exist for the log call sites, and the
-    # sync writer below persists the new value with the emptied payload.
+    # sync writer below persists the new value with the emptied payload. This
+    # is the ONE thing logout does not do — logging out is still the same
+    # device, and the pilot's usage numbers depend on that staying true.
     st.session_state.device_id = metrics.new_session_id()
-    # drop the settings widgets' keys so they reseed from the reset mirrors
-    for _k in ("profile_statuses", "pf_name_w", "pf_type_w", "pf_track_w", "gate_name_w"):
-        st.session_state.pop(_k, None)
 
 
 def _settings_hub():
@@ -5586,14 +5959,15 @@ def _settings_hub():
             st.session_state.settings_screen = "about"
             st.rerun()
 
-    # logout = reset to the role picker (no real auth; mirrors switch-role)
+    # logout = sign the person out, not just switch role (no real auth). It
+    # used to clear `role` alone, which left the name in the device cookie and
+    # greeted the next user as the last one; _reset_identity is the whole set.
+    # Chats go too: the app returns to the role picker, and leaving the
+    # previous user's conversations one tap inside "שיחות אחרונות" is not what
+    # "התנתקות" says. They are session-state only, so nothing durable is lost.
     if st.button("התנתקות", key="danger_logout", use_container_width=True):
-        archive_current_conversation()
-        st.session_state.role = None
-        st.session_state.messages = []
-        st.session_state.pending_question = None
-        st.session_state.pop("suggested", None)
-        st.session_state.show_settings = False
+        _clear_history()
+        _reset_identity()
         st.rerun()
     st.markdown("<div class='cai-drawer-foot'>בלמ\"ס · לשימוש פנימי בלבד</div>", unsafe_allow_html=True)
 
