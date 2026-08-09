@@ -21,6 +21,8 @@ from pathlib import Path
 
 import streamlit as st
 
+from common import is_refusal
+
 # ── מכסות (נבחרו 2026-07-09: תקרת תקציב ~27$/חודש בניצול מלא) ──
 USER_DAILY_LIMIT = 5     # שאלות ליום לכל session (טאב דפדפן; אין auth)
 # שאלות ליום לכל האפליקציה — השומר האמיתי על התקציב. 80 (הועלה 2026-07-23
@@ -40,14 +42,16 @@ _JSONL_PATH = Path(__file__).parent / "storage" / "metrics_log.jsonl"
 # inserting a column in the middle would shift every future row against the
 # existing header and silently corrupt the sheet. Appending is safe, and the
 # stale header gets one repair pass (see _append_to_sheet).
+# "refused" is appended last on purpose: _append_to_sheet repairs a tab whose
+# header predates a new column, but only by extending it rightwards.
 _QUESTION_COLUMNS = [
     "ts", "session", "role", "question", "search_query", "doc_ids",
     "input_tokens", "cache_read", "cache_write", "output_tokens",
-    "cost_usd", "latency_s", "answer_preview", "device",
+    "cost_usd", "latency_s", "answer_preview", "device", "refused",
 ]
 _FEEDBACK_COLUMNS = [
     "ts", "session", "role", "verdict", "question", "comment",
-    "answer_preview", "doc_ids", "device",
+    "answer_preview", "doc_ids", "device", "refused",
 ]
 
 
@@ -221,6 +225,12 @@ def log_question(session_id: str, role: str, question: str, answer: str,
         "cost_usd": estimate_cost(usage),
         "latency_s": round(latency_s, 1),
         "answer_preview": answer[:1500],
+        # Classified at write time, not by grepping answer_preview offline: the
+        # preview truncates at 1500 chars and the offline tools had to re-derive
+        # the rule. One column turns "read every answer" into "filter a column",
+        # and it is what splits a pilot's failures into content gap / retrieval
+        # miss / over-strict answer — each of which has a different fix.
+        "refused": is_refusal(answer),
     }
     _store()["questions"].appendleft(record)
     _persist("questions", _QUESTION_COLUMNS, record)
@@ -239,6 +249,9 @@ def log_feedback(session_id: str, role: str, verdict: str, question: str,
         "comment": comment,
         "answer_preview": answer[:1500],
         "doc_ids": ", ".join(s0["doc_id"] for s0 in (sources or [])),
+        # a thumbs-down on a refusal means something different from a
+        # thumbs-down on a wrong answer — keep the two separable
+        "refused": is_refusal(answer),
     }
     _store()["feedback"].appendleft(record)
     _persist("feedback", _FEEDBACK_COLUMNS, record)
