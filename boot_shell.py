@@ -887,6 +887,88 @@ def _strip(src: str) -> str:
 _SW_JS = """/* CommandAI service worker — __VER__ */
 var SHELL = 'cai-__VER__', DOC = '/';
 
+/* ── the launch flash, and why the document is served in two pieces ──
+ *
+ * Measured on four device videos (2026-07-31, 08-05, 08-06, 08-09), same
+ * estimator each time: iOS cross-fades its launch image out over a web view
+ * that has not painted, so what washes in is the view's own WHITE canvas.
+ * Solved from 220 screen patches at once as obs = (1-a)*base + a*C, the
+ * 2026-08-09 clip gives C = (251,253,237) — white, the green tint being
+ * WhatsApp's chroma bleed — with a climbing 0.017 -> 0.063 -> 0.151 over three
+ * frames and then a one-frame snap back to dark. Luma 18.5 -> 53.3, i.e. the
+ * screen reads 2.88x brighter for 50ms. a is flat across the screen (0.135 to
+ * 0.158 by fifths) and the status bar washes with it: a full-screen composite,
+ * nothing in the DOM can reach it.
+ *
+ * THE FACT THAT PICKS THIS FIX. Between 08-06 and 08-09 the boot got twice as
+ * fast — the flash moved from t=1.51s to t=0.80s — and it stayed THREE FRAMES
+ * long. The gap between 'iOS starts the dissolve' and 'WebKit paints' is a
+ * constant ~2-3 frames, so loading faster can never close it: it moves both
+ * ends together. That is why every earlier lever failed (the 27KB diet,
+ * color-scheme:dark, progressive paint, the inlined font, the static
+ * theme-color, the manifest background_color, and this very worker, which cut
+ * first paint 433ms -> 67ms and changed the flash by zero).
+ *
+ * But the dissolve EASES IN, so a roughly doubles every frame — 3 frames
+ * reached 0.261 on 08-06, 2 frames 0.151 on 08-09. Each single frame (16.7ms)
+ * won cuts the flash about in half. So the lever is not 'paint sooner', it is
+ * 'do not let the response finish until the splash is on the glass'.
+ *
+ * Hence: flush everything up to and including the splash markup, hold, then
+ * send the rest. The first chunk is a COMPLETE paintable screen on its own —
+ * cai-micro, cai-pad, the cai-boot style with the inlined font, and the splash
+ * div all live above the split — so WebKit parses and paints it during the
+ * hold, and only then does the response end. Both ends of the gap move the
+ * right way, which is what none of the earlier attempts did.
+ *
+ * HOLD_MS is deliberately generous for the first deployment. The measured gap
+ * is 33-50ms and ~100ms should do, but the first video has to answer one
+ * question unambiguously — does iOS time the hand-off on response end at all?
+ * That is a correlation from three videos, not a proof; if the answer is no,
+ * this costs 250ms and buys nothing, and the escape hatch is ?nosw=1.
+ *
+ * Cache hits only. On a miss the response streams off the network anyway and
+ * holding would add latency for nothing.
+ */
+var HOLD_MS = 250, SPLIT = '<!--/cai-boot-splash-->';
+
+function held(res, e) {
+  if (typeof ReadableStream === 'undefined' || typeof TextEncoder === 'undefined') {
+    return Promise.resolve(res);
+  }
+  var copy = res.clone();
+  return res.text().then(function (html) {
+    var i = html.indexOf(SPLIT);
+    if (i < 0) return copy;                      /* unpatched shell — leave alone */
+    var cut = i + SPLIT.length;
+    var enc = new TextEncoder();
+    var head = enc.encode(html.slice(0, cut)), tail = enc.encode(html.slice(cut));
+    /* Keep the worker alive across the hold. respondWith settles as soon as the
+     * headers are ready, so without this the body could be cut off by a worker
+     * shutdown mid-pause. */
+    var done;
+    e.waitUntil(new Promise(function (r) { done = r; }));
+    var body = new ReadableStream({
+      start: function (ctl) {
+        ctl.enqueue(head);
+        setTimeout(function () {
+          try { ctl.enqueue(tail); ctl.close(); } catch (err) {}
+          done();
+        }, HOLD_MS);
+      },
+      cancel: function () { done(); }
+    });
+    /* content-length and content-encoding MUST go. The cache stores what the
+     * server sent — Streamlit gzips — and .text() has already decoded it, so
+     * re-emitting plain UTF-8 under the original headers would have the engine
+     * try to gunzip cleartext, and the stale length would truncate the page. */
+    var h = new Headers(res.headers);
+    h['delete']('content-length');
+    h['delete']('content-encoding');
+    return new Response(body, {status: res.status, statusText: res.statusText, headers: h});
+  }).catch(function () { return copy; });
+}
+
 function bypass(u) {
   var p = u.pathname;
   return p.indexOf('/_stcore') === 0 || p.indexOf('/media') === 0
@@ -940,7 +1022,7 @@ self.addEventListener('fetch', function (e) {
           if (res && res.ok) { c.put(DOC, res.clone()); precache(c, res); }
           return res;
         });
-        if (hit) { net.catch(function () {}); return hit; }
+        if (hit) { net.catch(function () {}); return held(hit, e); }
         return net;
       });
     }));
