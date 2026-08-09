@@ -253,6 +253,14 @@ def build_manifest(start_url: str, icons: dict) -> bytes:
         "start_url": start_url,
         "scope": "/",
         "display": "standalone",
+        # Portrait-locked on purpose. Nothing in the app reads
+        # env(safe-area-inset-left/right) — every inset in the CSS is top or
+        # bottom — so in landscape the Dynamic Island eats the leading edge of
+        # the header and the drawer. The launch images are portrait-only too
+        # (_STARTUP_SIZES), so a landscape cold start has no art to show.
+        # Chat in one hand is a portrait posture anyway; if landscape is ever
+        # wanted, the lateral insets have to land FIRST.
+        "orientation": "portrait",
         "background_color": "#14170E",   # the dark chain: webview pre-paint matches the app
         "theme_color": "#14170E",
         "icons": [

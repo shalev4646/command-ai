@@ -74,6 +74,12 @@ except Exception:
     # line stays body text — the same graceful "feature hides" degradation
     # as the sibling modules above
     _VERDICT_TERM_RE = _QUAL_CONFLICT_RE = re.compile(r"(?!x)x")
+try:
+    from scope_routes import MARK_OUT_OF_SCOPE as _MARK_OOS, MARK_MISSING as _MARK_MISS
+except Exception:
+    # same fail-closed degradation: with no markers to match, a refusal falls
+    # back to the original neutral "לא נמצא במאגר" chip
+    _MARK_OOS = _MARK_MISS = "\x00"
 # Deterministic, order-cited lookup tools (no LLM, no quota). Defensive
 # imports like the sibling modules above: a stale cached cloud build pairing
 # a new app.py with an older tree just hides the tool's button.
@@ -311,6 +317,16 @@ st.session_state.setdefault("name_asked", bool(_ck.get("asked")))
 # gate. The name is optional and settable in הגדרות, so a dropped prompt costs
 # less than a gate that appears unprompted on every launch.
 st.session_state.setdefault("role_picked_here", False)
+# ── text scale ── The app pins maximum-scale=1 and preventDefaults the iOS
+# gesture events (a deliberate, documented fix for the focus auto-zoom bug),
+# and it sets -webkit-text-size-adjust:100% with every size in fixed px. The
+# three together leave a low-vision user with NO way to enlarge anything:
+# not pinch, not iOS Dynamic Type, not browser zoom. This is the replacement
+# path — an app-owned multiplier applied to the READING surfaces only, so the
+# fixed iOS geometry (header band, composer, drawer) is untouched.
+_CK_FS = {"s": 1.0, "m": 1.15, "l": 1.3}
+st.session_state.setdefault(
+    "text_scale", _CK_FS.get(str(_ck.get("fs") or ""), 1.0))
 st.session_state.setdefault("service_type", "סדיר")
 st.session_state.setdefault("service_track", "")
 st.session_state.setdefault("profile_customized", False)
@@ -820,6 +836,42 @@ components.html(
                     window.__caiHealT = setTimeout(heal, 250);
                 });
             }
+            // ── network banner ── Streamlit's own status widget reports the
+            // WEBSOCKET, which on a dead radio just spins: it cannot tell
+            // "server is slow" from "you have no signal", and it says nothing
+            // in Hebrew either way. navigator.onLine answers the second
+            // question directly, and that is the one the user can act on.
+            // Sticky (no auto-dismiss) — unlike a normal toast this describes
+            // a state, not an event, so it must stay for as long as it is true.
+            var netToast = function (on) {
+                try {
+                    var id = "cai-net-toast", cur = document.getElementById(id);
+                    if (on) {
+                        if (cur) return;
+                        var t = document.createElement("div");
+                        t.id = id;
+                        t.className = "cai-toast";
+                        t.setAttribute("data-tone", "warn");
+                        t.setAttribute("role", "status");
+                        t.setAttribute("aria-live", "polite");
+                        t.innerHTML = '<span class="cai-toast-dot"></span>' +
+                            '<span>אין חיבור לרשת — השאלה תישלח כשהחיבור יחזור</span>';
+                        document.body.appendChild(t);
+                    } else if (cur) {
+                        cur.className = "cai-toast cai-toast-out";
+                        setTimeout(function () {
+                            try { cur.remove(); } catch (e) {}
+                        }, 220);
+                    }
+                } catch (e) {}
+            };
+            window.addEventListener("offline", function () { netToast(true); });
+            window.addEventListener("online", function () { netToast(false); });
+            // Streamlit re-renders the body on every run and can carry the
+            // node away with it; re-assert on a slow tick rather than trusting
+            // the one-shot event, which may have fired before this ran.
+            setInterval(function () { netToast(!navigator.onLine); }, 2000);
+            if (!navigator.onLine) netToast(true);
             // ── role-pick navigation veil ── Streamlit tears the entry screen
             // down piecewise on the role tap (header vanishes, cards float
             // ~0.2-0.9s on 3G — the "small stall" the user flagged). The tap
@@ -1236,7 +1288,14 @@ st.markdown(f"""
     --text: #EFF0E8;
     --text-sec: rgba(239,240,232,.6);
     --text-dim: rgba(239,240,232,.55);
-    --text-faint: rgba(239,240,232,.4);
+    /* .55, not .4. Measured on the live page against --bg #14170E: .4 gives
+       3.49:1, under the 4.5:1 floor, and it was carrying the legal
+       disclaimer under the composer — the liability line ("not legal advice;
+       official orders prevail") was the least readable text in the app, at
+       10.5px, for users who read it outdoors in daylight. .50 = 4.75:1 clears
+       the bar; .55 = 5.49:1 takes the sunlight headroom and matches
+       --text-dim, which measured fine. */
+    --text-faint: rgba(239,240,232,.55);
     --border: rgba(239,240,232,.12);
     --border-strong: rgba(239,240,232,.16);
     --accent: {ACCENT};
@@ -1246,6 +1305,11 @@ st.markdown(f"""
     --accent-bright: {ACCENT_BRIGHT};
     --accent-rgb: {ACCENT_RGB};
     --ehold: {EHOLD};
+    /* reading-text multiplier — see the text_scale note at the top of the
+       file. Applied ONLY to answer/question prose: scaling the chrome would
+       move the header band, composer and drawer, which are pinned to measured
+       iOS geometry and are the last thing that should follow a font setting. */
+    --cai-fs: {st.session_state.get("text_scale", 1.0)};
 }}
 
 @keyframes enterUp {{ from {{ opacity:0; transform:translateY(18px); }} to {{ opacity:1; transform:none; }} }}
@@ -1485,16 +1549,41 @@ html {{ -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }}
 body::-webkit-scrollbar {{ display: none !important; width: 0 !important; }}
 /* hide Streamlit Cloud viewer badges — the crown "hosted with Streamlit"
    pill and the creator-avatar bubble injected at the bottom corner (their
-   class hashes vary by build, so match every known naming scheme) */
+   class hashes vary by build, so match every known naming scheme).
+   stStatusWidget is DELIBERATELY NOT in this list: it looks like one more
+   Cloud badge but it is the running/connection indicator, and on a Streamlit
+   app the websocket IS the app. It was hidden here until 2026-08-10, which
+   meant a dropped socket (a soldier on a base with bad reception — the modal
+   case, not the edge case) left a live-looking screen whose send button did
+   nothing and said nothing. It is kept and restyled below instead. */
 [class*="viewerBadge"],
 [class*="_viewerBadge"],
 [class*="_profileContainer"],
 [class*="_profilePreview"],
 [class*="_profileImage"],
 [data-testid="appCreatorAvatar"],
-[data-testid="stStatusWidget"],
 a[href*="streamlit.io/cloud"],
 a[href*="share.streamlit.io"] {{ display: none !important; }}
+/* The connection indicator, in the app's language. Parked under the header
+   band on the drawer-button side, where nothing else lives. Streamlit only
+   mounts it while running or when the socket is unhealthy, so in the normal
+   case this rule paints nothing at all. */
+[data-testid="stStatusWidget"] {{
+    position: fixed !important;
+    top: calc(var(--cai-sat, 0px) + 70px) !important;
+    inset-inline-start: 18px !important; inset-inline-end: auto !important;
+    z-index: 90 !important;                 /* under .cai-header's 100 */
+    background: var(--surface) !important;
+    border: 1px solid var(--border-strong) !important;
+    border-radius: 99px !important;
+    padding: 5px 12px !important;
+    box-shadow: 0 6px 20px rgba(0,0,0,.45) !important;
+}}
+[data-testid="stStatusWidget"] * {{
+    font: 500 11.5px Heebo, sans-serif !important;
+    color: var(--text-dim) !important;
+}}
+[data-testid="stStatusWidget"] svg {{ fill: var(--accent) !important; }}
 /* the shell-darkener injects `iframe{{background:#14170E}}` into every
    same-origin ancestor document INCLUDING this one; keep component iframes
    in THIS document out of it (the injected rule keeps its real job:
@@ -1561,17 +1650,30 @@ header {{ visibility: hidden; }}
    platform sidebar behavior can take them away. */
 .st-key-drawer_open_btn {{
     position: fixed; top: calc(var(--cai-sat, 0px) + 11px); inset-inline-start: 18px;
-    width: 42px; z-index: 110;
+    width: 44px; z-index: 110;
 }}
-/* 9a: 42px CIRCLE, olive-tinted, three 15×2 olive bars (gap 4) */
+/* 44px CIRCLE (was 42 — the header's padding-right of 60 = 18 inset + 42 button
+   is updated to match below), olive-tinted, three 15×2 olive bars (gap 4) */
 .st-key-drawer_open_btn button {{
-    width: 42px !important; height: 42px !important; min-height: 42px !important;
+    width: 44px !important; height: 44px !important; min-height: 44px !important;
     background-color: rgba(163,174,110,.14) !important;
     border: 1px solid rgba(163,174,110,.3) !important; border-radius: 50% !important;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='15' height='14'%3E%3Crect width='15' height='2' y='0' rx='1' fill='%23A3AE6E'/%3E%3Crect width='15' height='2' y='6' rx='1' fill='%23A3AE6E'/%3E%3Crect width='15' height='2' y='12' rx='1' fill='%23A3AE6E'/%3E%3C/svg%3E") !important;
     background-repeat: no-repeat !important; background-position: center !important;
 }}
-.st-key-drawer_open_btn button p {{ display: none; }}
+/* sr-only, NOT display:none — the icon is a background-image, so this <p> is
+   the button's ONLY accessible name, and display:none deletes it from the
+   accessibility tree. Absolute positioning keeps it out of flow, so the 42px
+   circle and its centred background-image are unaffected. Same reasoning for
+   the two backdrops below: a full-viewport button that VoiceOver announces as
+   an unlabelled "button" is the worst offender on the page. */
+.st-key-drawer_open_btn button p,
+.st-key-drawer_backdrop button p {{
+    position: absolute !important; width: 1px !important; height: 1px !important;
+    padding: 0 !important; margin: -1px !important; overflow: hidden !important;
+    clip-path: inset(50%) !important; white-space: nowrap !important;
+    border: 0 !important;
+}}
 @media (hover: hover) {{
     .st-key-drawer_open_btn button:hover {{ background-color: rgba(163,174,110,.24) !important; }}
 }}
@@ -1594,7 +1696,7 @@ header {{ visibility: hidden; }}
     background: rgba(9, 11, 7, .62) !important;
     border: none !important; border-radius: 0 !important; box-shadow: none !important;
 }}
-.st-key-drawer_backdrop button p {{ display: none; }}
+/* (its sr-only rule is grouped with the hamburger's above) */
 .st-key-cai_drawer {{
     position: fixed; top: 0; bottom: 0; inset-inline-start: 0;
     width: min(78vw, 340px); z-index: 130;
@@ -1618,20 +1720,22 @@ header {{ visibility: hidden; }}
 .st-key-drawer_close [data-testid="stElementContainer"],
 .st-key-cai_drawer .st-key-drawer_close {{ margin-bottom: 2px; }}
 .st-key-drawer_close {{ display: flex; justify-content: flex-end; }}
-/* close button — small circle in the hamburger's olive-tint style */
-.st-key-drawer_close button {{
-    width: 36px !important; height: 36px !important; min-height: 36px !important;
-    border-radius: 50% !important;
-    background-color: rgba(163,174,110,.14) !important;
-    border: 1px solid rgba(163,174,110,.3) !important;
-    color: var(--accent) !important;
-}}
-.st-key-drawer_close button p {{ color: var(--accent) !important; }}
+/* The close button is styled in _DS_CSS (44px square, radius 12, cool tint)
+   alongside .st-key-open_settings — its top-corner twin. A 36px olive circle
+   used to be declared HERE as well, with !important on every property, and
+   the two disagreed on size, radius, background, border and colour; the only
+   reason the 44px version won is that _DS_CSS is markdown'd later in the
+   document. Deleted rather than reconciled — one owner per control. */
 
 /* ── Main container — mobile-first column, max 430px ── */
 [data-testid="stMainBlockContainer"], .main .block-container {{
     max-width: 560px;
-    padding: {MAIN_TOP_PADDING} 22px 7rem 22px !important;
+    /* lateral max(): no-op in portrait, keeps the column off the Island when
+       an in-browser tab is rotated (see the .cai-header note) */
+    padding: {MAIN_TOP_PADDING}
+             max(22px, env(safe-area-inset-right, 0px))
+             7rem
+             max(22px, env(safe-area-inset-left, 0px)) !important;
     margin: 0 auto;
 }}
 
@@ -1646,7 +1750,12 @@ header {{ visibility: hidden; }}
 /* ── Entry screen header (staggers in after the splash lifts) ── */
 .cai-entry {{ text-align: center; padding-top: 7vh; }}
 .cai-entry > div {{ animation: enterUp .6s cubic-bezier(.2,.7,.2,1) both; }}
-.cai-entry-classif {{ font: 600 11px ui-monospace, Menlo, monospace; letter-spacing: 3px; color: #99A26B;
+/* var(--accent), not the literal #99A26B: that was the pre-2026-08-03 olive,
+   retired when the palette rebased to #A3AE6E (see _ACCENT_OLIVE). It kept
+   shipping here and on the divider below, so the FIRST screen of the app was
+   the one surface still painting the old accent — two olives, 6px apart in
+   hue, side by side with the chevron's #A3AE6E. */
+.cai-entry-classif {{ font: 600 11px ui-monospace, Menlo, monospace; letter-spacing: 3px; color: var(--accent);
     animation-delay: calc(var(--ehold) + .2s) !important; }}
 .cai-entry-chev {{ display:flex; flex-direction:column; align-items:center; margin-top: 26px;
     animation-delay: calc(var(--ehold) + .3s) !important; }}
@@ -1657,7 +1766,7 @@ header {{ visibility: hidden; }}
     animation-delay: calc(var(--ehold) + .38s) !important; }}
 .cai-entry-sub {{ font: 400 15px Heebo, sans-serif; color: var(--text-sec); margin-top: 6px;
     animation-delay: calc(var(--ehold) + .46s) !important; }}
-.cai-entry-divider {{ width: 44px; height: 2px; background: #99A26B; margin: 26px auto 0;
+.cai-entry-divider {{ width: 44px; height: 2px; background: var(--accent); margin: 26px auto 0;
     animation-delay: calc(var(--ehold) + .54s) !important; }}
 .cai-entry-choose {{ font: 500 13px Heebo, sans-serif; color: rgba(236,237,230,.55); margin: 26px 0 14px;
     animation-delay: calc(var(--ehold) + .62s) !important; }}
@@ -1797,9 +1906,12 @@ div[data-testid="stButton"] > button:active {{
     background: transparent !important; color: var(--text) !important;
     font: 400 15px Heebo, sans-serif !important; direction: rtl;
     padding: 12px 14px !important;
+    /* 38px measured — under the 44px thumb floor, and this is the very first
+       control a new user is asked to hit */
+    min-height: 44px !important; box-sizing: border-box !important;
 }}
 .st-key-cai_name_card [data-testid="stTextInput"] input::placeholder {{
-    color: rgba(239,240,232,.38) !important;
+    color: rgba(239,240,232,.5) !important;
 }}
 /* המשך/דלג side by side even on phones (Streamlit stacks columns <640px) */
 .st-key-cai_name_card [data-testid="stHorizontalBlock"] {{
@@ -1861,11 +1973,21 @@ div[data-testid="stButton"] > button:active {{
     -webkit-backdrop-filter: blur(10px);
     /* gap 0, not 12: the wordmark centers via auto margins between the
        button-side padding edge and the pill — a fixed gap would bias it.
-       Button-side padding 60 = 18px inset + 42px button, EXACTLY the drawer
+       Button-side padding 62 = 18px inset + 44px button, EXACTLY the drawer
        button's footprint, so the padding edge IS the button's inner edge
-       (72 overshot by 12px and pulled the wordmark 6px off center). */
+       (72 overshot by 12px and pulled the wordmark 6px off center).
+       This tracks .st-key-drawer_open_btn: the button went 42->44 for the
+       thumb floor on 2026-08-10, so this went 60->62 in the same change. */
     display: flex; align-items: center; gap: 0;
-    padding: var(--cai-sat, 0px) 60px 0 18px;
+    /* the lateral max() pair is a no-op in portrait (both insets read 0) and
+       only bites when an in-browser Safari tab is rotated — the manifest
+       orientation lock only governs the installed/standalone app, so the
+       browser path needs the insets to keep the drawer button and wordmark
+       clear of the Dynamic Island. */
+    padding: var(--cai-sat, 0px)
+             max(62px, env(safe-area-inset-right, 0px))
+             0
+             max(18px, env(safe-area-inset-left, 0px));
     /* 9a: NO divider line beneath the header */
     /* no entrance animation: a transform on a fixed element re-anchors it
        and Streamlit can freeze the animation at its from-state (top: 18px) */
@@ -2067,7 +2189,7 @@ html:not(.cai-standalone) [data-testid="stBottom"] {{
     max-height: 132px !important;
     overflow-y: auto !important;
 }}
-[data-testid="stChatInput"] textarea::placeholder {{ color: rgba(239,240,232,.4) !important; }}
+[data-testid="stChatInput"] textarea::placeholder {{ color: rgba(239,240,232,.5) !important; }}
 [data-testid="stChatInputSubmitButton"] {{
     background-color: var(--accent) !important;
     border-radius: 50% !important;
@@ -2084,7 +2206,8 @@ html:not(.cai-standalone) [data-testid="stBottom"] {{
     content: "כלי עזר מבוסס בינה מלאכותית — אינו ייעוץ משפטי או פקודה מחייבת. בכל סתירה, פקודות מטכ״ל הרשמיות הן הקובעות.";
     display: block; text-align: center; margin-top: 10px;
     line-height: 1.55; max-width: 460px; margin-inline: auto;
-    font: 400 10.5px Heebo, sans-serif; color: var(--text-faint);
+    /* 11.5px, not 10.5: this is read in daylight, and it is the disclaimer */
+    font: 400 11.5px Heebo, sans-serif; color: var(--text-faint);
 }}
 
 /* ── "thinking" indicator (in-bubble, until the first answer token) ── */
@@ -2155,16 +2278,19 @@ html:not(.cai-standalone) [data-testid="stBottom"] {{
     text-align: right;
 }}
 [data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] p {{
-    font-size: 15px !important;
+    font-size: calc(15px * var(--cai-fs, 1)) !important;
     line-height: 1.65 !important;
     text-align: right;
+}}
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] li {{
+    font-size: calc(15px * var(--cai-fs, 1)) !important;
 }}
 [data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] h1,
 [data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] h2,
 [data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] h3,
 [data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] h4 {{
     font-family: Heebo, sans-serif !important;
-    font-size: 16px !important;
+    font-size: calc(16px * var(--cai-fs, 1)) !important;
     font-weight: 700 !important;
     color: var(--text) !important;
     text-align: right !important;
@@ -2539,7 +2665,7 @@ a.cai-order-link:hover {{
    this?" is answered in the list itself */
 .cai-order-date {{
     font: 400 10.5px Heebo, sans-serif;
-    color: rgba(239,240,232,.38);
+    color: var(--text-faint);
     flex: none;
     white-space: nowrap;
 }}
@@ -2561,7 +2687,7 @@ a.cai-order-link:hover {{
     padding: 8px 12px !important;
 }}
 .st-key-cai_drawer [data-testid="stTextInput"] input::placeholder {{
-    color: rgba(239,240,232,.4) !important;
+    color: rgba(239,240,232,.5) !important;
 }}
 
 /* ── Caption / small text ── */
@@ -2570,10 +2696,81 @@ a.cai-order-link:hover {{
 /* ── Spinner ── */
 .stSpinner > div {{ border-top-color: var(--accent) !important; }}
 
+/* ── Focus & disabled ── two states the app never defined.
+
+   FOCUS: there was no :focus-visible rule anywhere, so keyboard and iOS
+   Switch Control users navigated on whatever the UA happened to draw over a
+   dark olive surface. :focus-visible (not :focus) is the point — it fires for
+   keyboard/AT traversal and NOT for touch or mouse, so the ring never appears
+   under a thumb. Paired with the existing -webkit-tap-highlight-color:
+   transparent, which removed the touch affordance on four controls.
+
+   DISABLED: the only "disabled" match in the file was a calendar gridcell
+   selector, so a disabled control was indistinguishable from a live one —
+   it just silently did nothing when pressed. */
+:where(button, [role="button"], a, input, textarea, select,
+       [tabindex]:not([tabindex="-1"])):focus-visible {{
+    outline: 2px solid var(--accent) !important;
+    outline-offset: 2px !important;
+    border-radius: 6px;
+}}
+/* the composer is a pill with its own focus-within treatment — a rectangular
+   ring around it would fight the capsule */
+[data-testid="stChatInput"] textarea:focus-visible {{ outline: none !important; }}
+
+button:disabled, button[disabled], [aria-disabled="true"] {{
+    opacity: .42 !important;
+    cursor: not-allowed !important;
+    filter: grayscale(.35);
+}}
+button:disabled *, button[disabled] * {{ pointer-events: none; }}
+
+/* ── Toast ── the app had no transient-message surface at all, so anything
+   that is neither an answer nor a dialog (connection lost, copied, saved)
+   had nowhere to go. Floats just under the header band rather than over it:
+   the header's status-bar geometry is the most delicately tuned thing on the
+   page and a banner that reflows it would put that at risk for a message
+   that lasts three seconds. */
+.cai-toast {{
+    position: fixed; z-index: 95;               /* under .cai-header's 100 */
+    top: calc(var(--cai-sat, 0px) + 70px);
+    inset-inline: 0; margin-inline: auto;
+    width: max-content; max-width: min(88vw, 420px);
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 16px; border-radius: 99px;
+    direction: rtl; text-align: center;
+    font: 500 12.5px/1.45 Heebo, sans-serif;
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border-strong);
+    box-shadow: 0 8px 28px rgba(0,0,0,.5);
+    animation: caiToastIn .22s ease both;
+}}
+.cai-toast[data-tone="warn"] {{
+    background: #D9B36A; color: #14170E; border-color: rgba(20,23,14,.25);
+}}
+.cai-toast[data-tone="warn"] .cai-toast-dot {{ background: #14170E; }}
+.cai-toast-dot {{
+    width: 7px; height: 7px; border-radius: 99px; flex: none;
+    background: var(--accent);
+}}
+.cai-toast.cai-toast-out {{ animation: caiToastOut .2s ease both; }}
+@keyframes caiToastIn  {{ from {{ opacity:0; transform: translateY(-8px); }}
+                          to   {{ opacity:1; transform: none; }} }}
+@keyframes caiToastOut {{ from {{ opacity:1; transform: none; }}
+                          to   {{ opacity:0; transform: translateY(-8px); }} }}
+
 /* ── Accessibility: honor prefers-reduced-motion — animations jump straight
-   to their end state (splash still ends offscreen thanks to fill:both) ── */
+   to their end state (splash still ends offscreen thanks to fill:both).
+   transition-duration belongs here too: the block used to reset animations
+   only, so all 21 `transition:` declarations (drawer slide, modal moves,
+   border fades) still ran at full speed for a user who had explicitly asked
+   the OS for less motion. ── */
 @media (prefers-reduced-motion: reduce) {{
-    * {{ animation-duration: .01ms !important; animation-delay: 0s !important; }}
+    * {{
+        animation-duration: .01ms !important; animation-delay: 0s !important;
+        transition-duration: .01ms !important; transition-delay: 0s !important;
+        scroll-behavior: auto !important;
+    }}
 }}
 </style>
 """, unsafe_allow_html=True)
@@ -2907,6 +3104,38 @@ components.html(
             if (g) g.travel = 0;   // an interrupted drag always springs back
             finish();
         }, { passive: true, capture: true });
+
+        // ── accessible names for the glyph controls ──
+        // Streamlit gives no way to set attributes on a button, and these two
+        // carry a GLYPH as their label: "⚙" (hidden behind font-size:0 and a
+        // background-image, but still the accessible name) and "«". VoiceOver
+        // reads those as "gear" and "left-pointing double angle quotation
+        // mark". Everything else on the page names itself from its Hebrew
+        // label; only these two need to be told. Re-applied on every rerun
+        // because Streamlit replaces the nodes.
+        // The two backdrops and the hamburger DO carry an sr-only <p> now, but
+        // an explicit aria-label removes any dependence on how a given engine
+        // treats clipped text — it wins outright and costs nothing. The
+        // sr-only text stays as the no-CSS fallback.
+        var NAMES = {
+            ".st-key-open_settings button": "הגדרות",
+            ".st-key-drawer_close button": "סגירת התפריט",
+            ".st-key-settings_back button": "חזרה",
+            ".st-key-drawer_open_btn button": "תפריט",
+            ".st-key-drawer_backdrop button": "סגירת התפריט",
+            ".st-key-settings_backdrop button": "סגירת הגדרות"
+        };
+        var nameCtrls = function () {
+            try {
+                Object.keys(NAMES).forEach(function (sel) {
+                    var el = doc.querySelector(sel);
+                    if (el && el.getAttribute("aria-label") !== NAMES[sel])
+                        el.setAttribute("aria-label", NAMES[sel]);
+                });
+            } catch (e) {}
+        };
+        nameCtrls();
+        setInterval(nameCtrls, 1200);
 
         // ── taps ──
         var TOGGLES = ".st-key-drawer_open_btn button";
@@ -3326,6 +3555,12 @@ _ck_dict = {
     # first role tap, which is always before the first question.
     "did": st.session_state.device_id,
 }
+# text scale rides the device cookie, and like "mil"/"sol" it is written ONLY
+# when it differs from the default — so the payload of everyone who never
+# touched the setting stays byte-identical to the pre-text-scale format.
+_fs_key = {1.15: "m", 1.3: "l"}.get(float(st.session_state.get("text_scale", 1.0)))
+if _fs_key:
+    _ck_dict["fs"] = _fs_key
 # miluim-tool inputs ride the same device cookie — only once saved, so every
 # other user's payload stays byte-identical to the pre-miluim format
 if st.session_state.get("mil_saved"):
@@ -3626,7 +3861,7 @@ def _letters_dialog():
 _MODAL_CSS = """
 <style>
 /* ---- Modal surface: Streamlit paints the VISIBLE card ([role="dialog"], the
-   inner box) with the olive theme.backgroundColor (#99A26B) — the > div behind
+   inner box) with the olive theme.backgroundColor (var(--accent)) — the > div behind
    it is only a full-viewport positioning layer. Force the dark gradient onto the
    card itself, or the whole modal reads olive/"cheap" no matter what's inside. ---- */
 /* Backdrop: Streamlit's default overlay is a LIGHT cream tint that WASHES the
@@ -3648,7 +3883,7 @@ div[data-testid="stDialog"] [role="dialog"] { animation: caiCardIn .15s cubic-be
 }
 div[data-testid="stDialog"] [role="dialog"] {
     direction: rtl;
-    background: linear-gradient(180deg,#1E2216 0%,#181B12 100%) !important;
+    background: linear-gradient(180deg,var(--surface) 0%,#181B12 100%) !important;
     border: 1px solid rgba(236,237,230,.10) !important;
     border-radius: 26px !important;
     box-shadow: 0 -1px 0 rgba(255,255,255,.05) inset,
@@ -3717,7 +3952,7 @@ div[data-testid="stDialog"] [data-testid="stWidgetLabel"] p {
 
 /* ---- Select fields -> dark pill with olive chevron ---- */
 div[data-testid="stDialog"] [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
-    background: #22271A !important; border: 1px solid rgba(236,237,230,.13) !important;
+    background: var(--surface) !important; border: 1px solid var(--border) !important;
     border-radius: 12px !important; min-height: 50px; padding: 4px 12px !important;
     direction: rtl; transition: border-color .15s ease;
 }
@@ -3736,7 +3971,7 @@ div[data-testid="stDialog"] [data-testid="stSelectbox"] div[data-baseweb="select
 /* ---- Text inputs (letters) -> same dark pill ---- */
 div[data-testid="stDialog"] [data-testid="stTextInput"] div[data-baseweb="input"],
 div[data-testid="stDialog"] [data-testid="stTextInput"] div[data-baseweb="base-input"] {
-    background: #22271A !important; border: 1px solid rgba(236,237,230,.13) !important;
+    background: var(--surface) !important; border: 1px solid var(--border) !important;
     border-radius: 12px !important;
 }
 div[data-testid="stDialog"] [data-testid="stTextInput"] div[data-baseweb="base-input"] {
@@ -3752,8 +3987,8 @@ div[data-testid="stDialog"] [data-testid="stTextInput"] input::placeholder {
 /* ---- Draft textarea -> dark pill ---- */
 div[data-testid="stDialog"] [data-testid="stTextArea"] div[data-baseweb="base-input"],
 div[data-testid="stDialog"] [data-testid="stTextArea"] textarea {
-    background: #22271A !important; border-radius: 12px !important;
-    border-color: rgba(236,237,230,.13) !important; color: var(--text) !important;
+    background: var(--surface) !important; border-radius: 12px !important;
+    border-color: var(--border) !important; color: var(--text) !important;
 }
 
 /* ---- Radio -> segmented control ("מה לחשב?") ---- */
@@ -3795,10 +4030,10 @@ div[data-testid="stDialog"] .stDownloadButton button {
 /* dark fill + olive outline + olive text (the mock's OUTLINED button), not the
    green-tinted accent-soft fill that read as a solid olive block */
 div[data-testid="stDialog"] .st-key-letter_go button {
-    background: #22271A !important;
+    background: var(--surface) !important;
     border: 1px solid var(--accent-border) !important; box-shadow: none !important;
 }
-/* accent-hover, not accent-bright: #C4CE92 reads as plain white on phone
+/* accent-hover, not accent-bright: var(--accent-bright) reads as plain white on phone
    panels — the mock's button text is a clearly-olive #AAB37C */
 div[data-testid="stDialog"] .st-key-letter_go button p { color: var(--accent-hover) !important; font-weight: 700 !important; }
 /* the mock's pen glyph: monochrome, accent-tinted via mask (an emoji in the
@@ -3839,7 +4074,7 @@ div[data-baseweb="popover"],
 div[data-baseweb="popover"] > div,
 div[data-baseweb="popover"] > div > div { background: transparent !important; }
 div[data-baseweb="popover"] ul {
-    background: #1E2216 !important; border: 1px solid rgba(236,237,230,.13) !important;
+    background: var(--surface) !important; border: 1px solid var(--border) !important;
     border-radius: 12px !important; padding: 5px !important;
     box-shadow: 0 18px 40px -14px rgba(0,0,0,.6) !important;
 }
@@ -3874,8 +4109,8 @@ div[data-baseweb="popover"] li[role="option"][aria-selected="true"] {
 div[data-baseweb="popover"] div[data-baseweb="calendar"],
 div[data-baseweb="popover"] > div > div[data-baseweb="calendar"],
 div[data-baseweb="popover"] > div > div > div[data-baseweb="calendar"] {
-    background: #1E2216 !important;
-    border: 1px solid rgba(236,237,230,.13) !important;
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
     border-radius: 18px !important;
     box-shadow: 0 26px 60px -18px rgba(0,0,0,.75) !important;
     padding: 10px 8px 12px !important;
@@ -4000,8 +4235,10 @@ div[data-testid="stDialog"] [data-testid="InputInstructions"] { display: none !i
 .cai-ent-cite::before { content: ""; width: 12px; height: 12px; flex: none;
     border: 1.5px solid var(--accent); border-radius: 3px; transform: rotate(45deg); }
 .cai-ent-disc { display: flex; gap: 7px; margin: 16px 2px 0; direction: rtl; text-align: right; }
-.cai-ent-disc span.g { flex: none; font-size: 12px; line-height: 1.55; color: rgba(236,237,230,.45); }
-.cai-ent-disc span.t { font: 400 11px Heebo, sans-serif; color: rgba(236,237,230,.4); line-height: 1.55; }
+/* another disclaimer, same reasoning as the composer's — routed through the
+   token so it tracks --text-faint rather than drifting on its own */
+.cai-ent-disc span.g { flex: none; font-size: 12px; line-height: 1.55; color: var(--text-faint); }
+.cai-ent-disc span.t { font: 400 11px Heebo, sans-serif; color: var(--text-faint); line-height: 1.55; }
 
 /* ---- Punishment-authority views (share the card shell) ---- */
 .cai-pa-intro { direction: rtl; text-align: right; font: 400 12.5px/1.6 Heebo, sans-serif;
@@ -4067,7 +4304,7 @@ div[data-testid="stDialog"] [data-testid="InputInstructions"] { display: none !i
     background: repeating-linear-gradient(135deg,#15180F 0 11px,#12140C 11px 22px); }
 .cai-sc-ph svg { opacity: .6; margin-bottom: 10px; }
 .cai-sc-ph div { font: 600 11px ui-monospace, Menlo, monospace;
-    letter-spacing: 1px; color: rgba(236,237,230,.4); }
+    letter-spacing: 1px; color: var(--text-faint); }
 /* full-order CTA restyled as a solid olive button (kept an <a> to the PDF) */
 .cai-sc-cta { display: flex; align-items: center; justify-content: center; gap: 9px;
     width: 100%; margin-top: 16px; padding: 13px; border-radius: 13px; box-sizing: border-box;
@@ -4097,11 +4334,11 @@ div[data-testid="stDialog"] [data-testid="InputInstructions"] { display: none !i
     border: 1px solid var(--accent-border); }
 .cai-mil-chip.off { color: rgba(236,237,230,.45); background: transparent;
     border-color: rgba(236,237,230,.16); }
-.cai-mil-bar { height: 5px; border-radius: 99px; background: rgba(236,237,230,.1);
+.cai-mil-bar { height: 5px; border-radius: 99px; background: var(--border);
     overflow: hidden; margin-top: 9px; direction: rtl; }
 .cai-mil-bar > span { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
 .cai-mil-det { direction: rtl; text-align: right; border-radius: 13px; margin-top: 8px;
-    background: #22271A; border: 1px solid rgba(236,237,230,.11); }
+    background: var(--surface); border: 1px solid var(--border); }
 .cai-mil-det summary { list-style: none; cursor: pointer; padding: 12px 13px;
     display: flex; align-items: center; gap: 9px; -webkit-tap-highlight-color: transparent; }
 .cai-mil-det summary::-webkit-details-marker { display: none; }
@@ -5250,7 +5487,7 @@ div[data-testid="stDialog"] [data-testid="stMarkdownContainer"] { margin-bottom:
 }
 .cai-role-meta { flex: 1; min-width: 0; }
 .cai-role-k { font: 600 10px Heebo; letter-spacing: 1px; color: rgba(236,237,230,.6); }
-.cai-role-nm { font: 400 17px 'Suez One', serif; color: #ECEDE6; line-height: 1.15; margin-top: 1px; }
+.cai-role-nm { font: 400 17px 'Suez One', serif; color: var(--text); line-height: 1.15; margin-top: 1px; }
 .cai-role-badge {
   font: 600 10.5px Heebo; color: rgba(196,206,146,.9); flex: none;
   background: rgba(var(--accent-rgb),.14); border: 1px solid rgba(var(--accent-rgb),.34);
@@ -5290,7 +5527,7 @@ div[data-testid="stDialog"] [data-testid="stMarkdownContainer"] { margin-bottom:
   -webkit-tap-highlight-color: transparent;
 }
 .cai-kb-card .kb-ic { width: 18px; height: 18px; flex: none; background: url("ICON_BOOK") center / 18px no-repeat; }
-.cai-kb-card .kb-title { flex: 1; font: 700 14px Heebo; color: #ECEDE6; }
+.cai-kb-card .kb-title { flex: 1; font: 700 14px Heebo; color: var(--text); }
 .cai-kb-card .kb-badge { flex: none; font: 800 11px Heebo; color: #171A12; background: var(--accent); border-radius: 99px; padding: 2px 9px; }
 .cai-kb-card .kb-chev { flex: none; color: rgba(196,206,146,.8); font-size: 15px; direction: ltr; transition: transform .18s ease; }
 .cai-kb-card .kb-chev::before { content: "‹"; }
@@ -5319,7 +5556,7 @@ html.cai-orders-open .cai-kb-card {
   color: var(--text); font: 400 13px Heebo, sans-serif;
   direction: rtl; padding: 8px 12px; outline: none;
 }
-.cai-orders-q::placeholder { color: rgba(239,240,232,.4); }
+.cai-orders-q::placeholder { color: rgba(239,240,232,.5); }
 .cai-orders-q:focus { border-color: rgba(var(--accent-rgb),.5); }
 .cai-orders-q::-webkit-search-cancel-button { -webkit-appearance: none; }
 .cai-orders-empty { font: 400 12px Heebo; color: var(--text-faint); padding: 10px 14px; }
@@ -5340,7 +5577,7 @@ html.cai-orders-open .cai-kb-card {
 /* grouped card of rows (tools + recent) */
 .st-key-cai_tools, .st-key-cai_recent {
   border-radius: 15px; overflow: hidden;
-  background: #232A18; border: 1px solid rgba(236,237,230,.1);
+  background: var(--surface); border: 1px solid var(--border);
 }
 .st-key-cai_tools [data-testid="stElementContainer"],
 .st-key-cai_recent [data-testid="stElementContainer"] { margin: 0 !important; }
@@ -5359,7 +5596,7 @@ html.cai-orders-open .cai-kb-card {
 .st-key-cai_tools [data-testid="stElementContainer"]:first-child button,
 .st-key-cai_recent [data-testid="stElementContainer"]:first-child button { border-top: none !important; }
 .st-key-cai_tools button p, .st-key-cai_recent button p {
-  font: 500 14px Heebo !important; color: #ECEDE6 !important; text-align: right !important;
+  font: 500 14px Heebo !important; color: var(--text) !important; text-align: right !important;
   width: 100%; box-sizing: border-box;
   padding-inline-start: 40px; padding-inline-end: 24px;
 }
@@ -5444,7 +5681,13 @@ html.cai-orders-open .cai-kb-card {
   background: rgba(9,11,7,.85) !important; border: none !important;
   border-radius: 0 !important; box-shadow: none !important;
 }
-.st-key-settings_backdrop button p { display: none; }
+/* sr-only rather than display:none — this scrim covers the whole screen and
+   "סגירת הגדרות" is its only accessible name (see the drawer backdrop note) */
+.st-key-settings_backdrop button p {
+  position: absolute !important; width: 1px !important; height: 1px !important;
+  padding: 0 !important; margin: -1px !important; overflow: hidden !important;
+  clip-path: inset(50%) !important; white-space: nowrap !important; border: 0 !important;
+}
 .st-key-cai_settings {
   position: fixed; inset: 0; z-index: 140;
   width: min(100vw, 440px); margin: 0 auto;
@@ -5491,7 +5734,7 @@ html.cai-orders-open .cai-kb-card {
   background: rgba(236,237,230,.06) !important; border: 1px solid rgba(236,237,230,.12) !important;
 }
 .st-key-settings_back button p { font: 600 20px Heebo !important; color: rgba(236,237,230,.7) !important; }
-.cai-set-title { font: 400 21px 'Suez One', serif; color: #ECEDE6; padding: 4px 0; }
+.cai-set-title { font: 400 21px 'Suez One', serif; color: var(--text); padding: 4px 0; }
 /* 10px letter-spaced caps at .38 measured 3.19:1 — the worst contrast in the
    app, on the six labels that tell you what each settings group IS. .56 is
    4.6:1 and keeps them subordinate to the rows they head. */
@@ -5500,7 +5743,7 @@ html.cai-orders-open .cai-kb-card {
 /* settings grouped card + nav rows */
 [class*="st-key-cai_sgrp"] {
   border-radius: 15px; overflow: hidden;
-  background: #1E2416; border: 1px solid rgba(236,237,230,.1);
+  background: var(--surface); border: 1px solid var(--border);
 }
 [class*="st-key-cai_sgrp"] [data-testid="stElementContainer"] { margin: 0 !important; }
 [class*="st-key-cai_sgrp"] button {
@@ -5511,7 +5754,7 @@ html.cai-orders-open .cai-kb-card {
 }
 [class*="st-key-cai_sgrp"] [data-testid="stElementContainer"]:first-child button { border-top: none !important; }
 [class*="st-key-cai_sgrp"] button p {
-  font: 500 14px Heebo !important; color: #ECEDE6 !important; text-align: right !important;
+  font: 500 14px Heebo !important; color: var(--text) !important; text-align: right !important;
   width: 100%; box-sizing: border-box;
   padding-inline-start: 42px; padding-inline-end: 24px;
 }
@@ -5544,14 +5787,14 @@ html.cai-orders-open .cai-kb-card {
   font: 700 22px 'Suez One', serif; color: #171A12;
 }
 .cai-set-profile .m { flex: 1; min-width: 0; }
-.cai-set-profile .nm { font: 700 16px Heebo; color: #ECEDE6; }
+.cai-set-profile .nm { font: 700 16px Heebo; color: var(--text); }
 .cai-set-profile .sub { font: 500 12px Heebo; color: rgba(196,206,146,.85); margin-top: 2px; }
 
 /* toggle-display + coming-soon chip + inline row (for בקרוב items) */
 .cai-row { display: flex; align-items: center; gap: 13px; padding: 14px; }
 .cai-row .ic { width: 18px; height: 18px; flex: none; background-repeat: no-repeat; background-position: center; background-size: 18px; }
 .cai-row .tx { flex: 1; }
-.cai-row .t { font: 500 14px Heebo; color: #ECEDE6; }
+.cai-row .t { font: 500 14px Heebo; color: var(--text); }
 .cai-row .s { font: 400 11px Heebo; color: rgba(236,237,230,.6); margin-top: 1px; }
 .cai-row .val { font: 600 12px Heebo; color: rgba(196,206,146,.85); }
 .cai-row .chev { color: rgba(236,237,230,.3); font-size: 14px; flex: none; }
@@ -5571,7 +5814,7 @@ html.cai-orders-open .cai-kb-card {
 .cai-banner { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 16px; margin-top: 4px;
   background: linear-gradient(135deg,rgba(var(--accent-rgb),.16),rgba(var(--accent-rgb),.04)); border: 1px solid rgba(var(--accent-rgb),.3); }
 .cai-banner .bi { width: 26px; height: 26px; flex: none; background-repeat: no-repeat; background-position: center; background-size: 26px; }
-.cai-banner .bt { font: 700 14px Heebo; color: #ECEDE6; }
+.cai-banner .bt { font: 700 14px Heebo; color: var(--text); }
 .cai-banner .bs { font: 400 11.5px Heebo; color: rgba(196,206,146,.85); margin-top: 2px; line-height: 1.45; }
 .cai-info { display: flex; align-items: center; gap: 9px; margin-top: 16px; padding: 12px 14px; border-radius: 13px;
   background: rgba(var(--accent-rgb),.08); border: 1px solid rgba(var(--accent-rgb),.2); }
@@ -5596,7 +5839,7 @@ html.cai-orders-open .cai-kb-card {
 .cai-svc-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .cai-svc-brand { font: 400 12px 'Suez One', serif; color: var(--accent-bright); letter-spacing: .04em; }
 .cai-svc-stamp {
-  font: 600 8.5px Heebo; letter-spacing: .2em; color: rgba(236,237,230,.4);
+  font: 600 8.5px Heebo; letter-spacing: .2em; color: var(--text-faint);
   border: 1px solid rgba(236,237,230,.12); border-radius: 4px; padding: 4px 6px;
 }
 .cai-svc-id { display: flex; align-items: center; gap: 12px; }
@@ -5607,7 +5850,7 @@ html.cai-orders-open .cai-kb-card {
   display: flex; align-items: center; justify-content: center;
 }
 .cai-svc-txt { min-width: 0; }
-.cai-svc-nm { font: 400 20px 'Suez One', serif; color: #ECEDE6; line-height: 1.1;
+.cai-svc-nm { font: 400 20px 'Suez One', serif; color: var(--text); line-height: 1.1;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cai-svc-meta { font: 500 11.5px Heebo; color: rgba(236,237,230,.55); margin-top: 4px; }
 /* perforation: the one flourish, and it earns its place by reading as a card
@@ -5615,31 +5858,50 @@ html.cai-orders-open .cai-kb-card {
 .cai-svc-perf { margin: 14px 0 9px; height: 1px;
   background: repeating-linear-gradient(90deg, rgba(236,237,230,.12) 0 4px, transparent 4px 9px); }
 .cai-svc-foot { display: flex; justify-content: space-between; gap: 10px;
-  font: 400 10.5px Heebo; color: rgba(236,237,230,.4); }
-.cai-svc-hint { font: 400 11.5px Heebo; color: rgba(236,237,230,.4); margin: 0 3px 4px; }
+  font: 400 10.5px Heebo; color: var(--text-faint); }
+.cai-svc-hint { font: 400 11.5px Heebo; color: var(--text-faint); margin: 0 3px 4px; }
 
 /* personal: grouped identity fields — hairline-separated rows inside one card,
    the same language as the settings hub so this screen belongs to it */
 .st-key-cai_pf_ident {
-  background: #21261A; border: 1px solid rgba(236,237,230,.1);
+  background: var(--surface); border: 1px solid var(--border);
   border-radius: 15px; overflow: hidden;
 }
 [class*="st-key-cai_pf_fld"] { padding: 12px 13px; }
-[class*="st-key-cai_pf_fld"] + [class*="st-key-cai_pf_fld"] { border-top: 1px solid rgba(236,237,230,.1); }
+[class*="st-key-cai_pf_fld"] + [class*="st-key-cai_pf_fld"] { border-top: 1px solid var(--border); }
 .cai-fld-label { font: 600 11px Heebo; color: rgba(236,237,230,.45); margin: 0 0 7px; }
 .cai-lang-note { font: 400 11.5px Heebo; color: rgba(236,237,230,.5); margin: 6px 2px 14px; line-height: 1.55; }
 
 /* language rows */
-.cai-lang-card { border-radius: 15px; overflow: hidden; background: #1E2416; border: 1px solid rgba(236,237,230,.1); }
+/* ── text-size screen ── the sample reads at the CANDIDATE size (its own --s),
+   not at the live --cai-fs, so the card shows what the setting will do */
+.cai-fs-sample {
+  border-radius: 15px; background: var(--surface);
+  border: 1px solid var(--border); padding: 14px 16px 4px; margin-bottom: 14px;
+  direction: rtl; text-align: right;
+}
+.cai-fs-sample .lb {
+  font: 600 10px Heebo; letter-spacing: .18em; color: var(--text-faint);
+  margin-bottom: 6px;
+}
+.cai-fs-sample p {
+  margin: 0 0 10px; color: var(--text);
+  font: 400 calc(15px * var(--s, 1))/1.65 Heebo, sans-serif;
+}
+.st-key-cai_fs_opts [data-testid="stColumn"] { min-width: 0 !important; }
+.st-key-cai_fs_opts button { min-height: 44px !important; }
+.st-key-cai_fs_opts button p { font: 500 13px Heebo !important; }
+
+.cai-lang-card { border-radius: 15px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); }
 .cai-lang-row { display: flex; align-items: center; gap: 13px; padding: 15px 14px; }
 .cai-lang-row .fl { font-size: 20px; flex: none; }
-.cai-lang-row .nm { flex: 1; font: 600 14.5px Heebo; color: #ECEDE6; }
+.cai-lang-row .nm { flex: 1; font: 600 14.5px Heebo; color: var(--text); }
 .cai-lang-row.dim .nm { color: rgba(236,237,230,.5); font-weight: 500; }
 .cai-lang-row .def { font: 400 11px Heebo; color: rgba(236,237,230,.4); margin-top: 1px; }
 .cai-lang-row .ok { color: var(--accent); font-size: 18px; font-weight: 700; }
 
 /* ToS */
-.cai-tos-lead { font: 400 21px 'Suez One', serif; color: #ECEDE6; margin-bottom: 4px; }
+.cai-tos-lead { font: 400 21px 'Suez One', serif; color: var(--text); margin-bottom: 4px; }
 .cai-tos-sub { font: 500 12px Heebo; color: rgba(236,237,230,.4); margin-bottom: 20px; }
 .cai-tos-h { font: 700 14.5px Heebo; color: var(--accent-bright); margin-bottom: 6px; }
 .cai-tos-b { font: 400 13px Heebo; color: rgba(236,237,230,.78); line-height: 1.7; }
@@ -5699,12 +5961,12 @@ html.cai-orders-open .cai-kb-card {
 
 /* privacy banner icon + real analytics toggle */
 .cai-banner .bi { background-image: url("ICON_SHIELD"); }
-.st-key-cai_analytics { border-radius: 15px; background: #1E2416; border: 1px solid rgba(236,237,230,.1); padding: 10px 14px 12px; margin-bottom: 8px; }
+.st-key-cai_analytics { border-radius: 15px; background: var(--surface); border: 1px solid var(--border); padding: 10px 14px 12px; margin-bottom: 8px; }
 .st-key-cai_analytics [data-testid="stElementContainer"] { margin: 0 !important; }
 /* zero flex gap left the switch knob touching the first letter of the label
    ("שיתוף" read as swallowed — 2026-08-03 audit) */
 .st-key-cai_analytics [data-testid="stCheckbox"] label { gap: 10px !important; }
-.st-key-share_analytics_w label { font: 500 14px Heebo !important; color: #ECEDE6 !important; }
+.st-key-share_analytics_w label { font: 500 14px Heebo !important; color: var(--text) !important; }
 .st-key-share_analytics_w [data-baseweb="checkbox"] > div:first-child { background: var(--accent) !important; }
 .cai-analytics-sub { font: 400 11px Heebo; color: rgba(236,237,230,.45); margin: 2px 0 0; }
 
@@ -5712,14 +5974,14 @@ html.cai-orders-open .cai-kb-card {
 .st-key-pf_name_w [data-baseweb="input"], .st-key-pf_name_w [data-baseweb="base-input"] {
   background: transparent !important; border: none !important; }
 .st-key-pf_name_w input {
-  background: #22271A !important; border: 1px solid rgba(236,237,230,.13) !important;
-  border-radius: 12px !important; color: #ECEDE6 !important;
+  background: var(--surface) !important; border: 1px solid var(--border) !important;
+  border-radius: 12px !important; color: var(--text) !important;
   font: 500 14.5px Heebo !important; padding: 13px 15px !important; }
 .st-key-pf_track_w [data-baseweb="select"] > div {
-  background: #22271A !important; border: 1px solid rgba(236,237,230,.13) !important;
+  background: var(--surface) !important; border: 1px solid var(--border) !important;
   border-radius: 12px !important; min-height: 48px !important; }
 .st-key-pf_track_w [data-baseweb="select"] div, .st-key-pf_track_w [data-baseweb="select"] span {
-  color: #ECEDE6 !important; font: 500 14px Heebo !important; }
+  color: var(--text) !important; font: 500 14px Heebo !important; }
 /* service-type: 3 equal separated tabs.
    The grid MUST sit on the inner [role="radiogroup"], not on stButtonGroup:
    in 1.58 stButtonGroup holds [collapsed <label>, radiogroup], so a
@@ -5740,7 +6002,7 @@ html.cai-orders-open .cai-kb-card {
   grid-template-columns: 1fr 1fr 1fr !important; gap: 7px !important; }
 .st-key-pf_type_w [data-testid="stButtonGroup"] button {
   width: 100% !important; border-radius: 11px !important; min-height: 44px !important;
-  background: #22271A !important; border: 1px solid rgba(236,237,230,.13) !important;
+  background: var(--surface) !important; border: 1px solid var(--border) !important;
   color: rgba(236,237,230,.7) !important;
   /* BaseWeb's 16px side padding left "מילואים" one px from ellipsis at the
      77px track (and phones DID ellipsize it — 2026-08-03 audit) */
@@ -5796,10 +6058,10 @@ html.cai-orders-open .cai-kb-card {
   background: rgba(236,237,230,.07) !important;
 }
 .st-key-open_settings button:active, .st-key-drawer_close button:active {
-  background-color: rgba(236,237,230,.13) !important; transform: scale(.94);
+  background-color: var(--border) !important; transform: scale(.94);
 }
 .st-key-pf_type_w [data-testid="stButtonGroup"] button:not([aria-checked="true"]):active {
-  background: #2A3120 !important;
+  background: var(--surface-hover) !important;
 }
 </style>
 """
@@ -5938,10 +6200,13 @@ def _settings_hub():
         "<div class='cai-tgl'><span class='k'></span></div>"
         "</div></div>", unsafe_allow_html=True)
 
-    st.markdown("<div class='cai-set-seclabel'>שפה</div>", unsafe_allow_html=True)
+    st.markdown("<div class='cai-set-seclabel'>שפה ותצוגה</div>", unsafe_allow_html=True)
     with st.container(key="cai_sgrp_lang"):
         if st.button("שפה", key="nav_language", use_container_width=True):
             st.session_state.settings_screen = "language"
+            st.rerun()
+        if st.button("גודל טקסט", key="nav_access", use_container_width=True):
+            st.session_state.settings_screen = "access"
             st.rerun()
 
     st.markdown("<div class='cai-set-seclabel'>פרטיות ונתונים</div>", unsafe_allow_html=True)
@@ -6137,6 +6402,38 @@ def _settings_language():
         "<span>שינוי שפה יחיל מיד את הכיווניות המתאימה לממשק.</span></div>", unsafe_allow_html=True)
 
 
+def _settings_access():
+    """Text size — the app's replacement for the zoom it deliberately blocks.
+
+    Three steps, not a slider: a slider on a 44px-thumb surface invites a drag
+    the user cannot land precisely, and there is no meaningful value between
+    "normal" and "large" for a 15px base. The sample paragraph above the
+    controls is the point — the setting is judged by reading, not by a number.
+    """
+    st.markdown(
+        "<div class='cai-lang-note'>הגדלת הטקסט חלה על גוף התשובות והשאלות. "
+        "התפריטים והכפתורים נשארים בגודלם כדי שהמסך לא יזוז.</div>",
+        unsafe_allow_html=True)
+    _cur = float(st.session_state.get("text_scale", 1.0))
+    st.markdown(
+        f"<div class='cai-fs-sample' style='--s:{_cur}'>"
+        "<div class='lb'>דוגמה</div>"
+        "<p>חייל זכאי לשבע שעות שינה רצופות. חריגה מחייבת אישור "
+        "של הגורם שנקבע בפקודה.</p></div>",
+        unsafe_allow_html=True)
+    _opts = [("רגיל", 1.0), ("גדול", 1.15), ("גדול מאוד", 1.3)]
+    with st.container(key="cai_fs_opts"):
+        _cols = st.columns(len(_opts))
+        for _c, (_lbl, _val) in zip(_cols, _opts):
+            with _c:
+                # type="primary" is the selected marker: it is the one visual
+                # state Streamlit gives a button that survives our CSS reset
+                if st.button(_lbl, key=f"fs_{_val}", use_container_width=True,
+                             type="primary" if abs(_cur - _val) < 1e-6 else "secondary"):
+                    st.session_state.text_scale = _val
+                    st.rerun()
+
+
 def _settings_privacy():
     """8d — privacy: honest בקרוב locks + a real analytics toggle + wipes."""
     st.markdown(
@@ -6213,6 +6510,7 @@ def _render_settings():
         st.rerun()
     screen = st.session_state.get("settings_screen", "hub")
     titles = {"hub": "הגדרות", "personal": "פרטים אישיים", "language": "שפה",
+              "access": "גודל טקסט",
               "privacy": "פרטיות ואבטחה", "about": "תנאי שימוש"}
     with st.container(key="cai_settings"):
         _cb, _ct = st.columns([1, 5])
@@ -6230,6 +6528,8 @@ def _render_settings():
             _settings_personal()
         elif screen == "language":
             _settings_language()
+        elif screen == "access":
+            _settings_access()
         elif screen == "privacy":
             _settings_privacy()
         elif screen == "about":
@@ -6881,7 +7181,21 @@ def _verdict_chip(content: str) -> tuple[str | None, str]:
     # verdict before the sentence pushes it past that.
     idx = content.find(_REFUSAL_SENTENCE)
     if 0 <= idx < 80:
-        return '<span class="verdict-chip verdict-none">ⓘ לא נמצא במאגר</span>', content
+        # Rule 2א tiers the refusal: a question the orders were never the tool
+        # for gets routed to the framework that DOES govern it, and one that
+        # belongs in an order we simply do not hold says so. Both are honest
+        # "no ruling" states, so both keep the neutral colour — only the label
+        # changes, because "לא נמצא במאגר" reads as a dead end and was the
+        # single most common thing users hit (10.08.2026 blind measurement:
+        # 12 of 16 unanswered asks had no order behind them at all, and about a
+        # third of those no order will ever answer). The bare chip stays as the
+        # fallback for an answer that skipped the marker.
+        label = "לא נמצא במאגר"
+        if _MARK_OOS in content:
+            label = "לא נקבע בפקודות"
+        elif _MARK_MISS in content:
+            label = "טרם במאגר"
+        return f'<span class="verdict-chip verdict-none">ⓘ {label}</span>', content
     return None, content
 
 

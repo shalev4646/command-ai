@@ -26,10 +26,18 @@ enableStaticServing = true
 # dark override).
 [theme]
 base = "dark"
-primaryColor = "#99A26B"
+# Must track _ACCENT_OLIVE["accent"] in app.py. #99A26B was the pre-2026-08-03
+# olive; when the palette rebased to #A3AE6E this file was missed, so every
+# control Streamlit paints ITSELF (focus rings, spinners, checkboxes, slider
+# tracks) kept drawing the old accent beside the app's new one.
+primaryColor = "#A3AE6E"
 backgroundColor = "#14170E"
 secondaryBackgroundColor = "#21261A"
-textColor = "#ECEDE6"
+# Matches the --text token (#EFF0E8). These were 3 units apart, which put two
+# near-whites in the app at once: everything Streamlit painted by default used
+# #ECEDE6 while every var(--text) surface used #EFF0E8. Invisible individually,
+# but it is what let the app-authored CSS drift to a third value unnoticed.
+textColor = "#EFF0E8"
 # dataframe headers default to a mix of backgroundColor (now olive) — keep
 # the admin tables' header row on the dark surface color instead
 dataframeHeaderBackgroundColor = "#21261A"
