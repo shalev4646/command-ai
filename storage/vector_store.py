@@ -282,9 +282,11 @@ def index_document(doc: dict, save_cache: bool = True) -> int:
 
 
 def _index_document_locked(doc: dict, save_cache: bool) -> int:
-    global _corpus, _vocab
+    global _corpus, _vocab, _folded_corpus_cache
     _corpus = None  # upserts invalidate the in-memory corpus cache
     _vocab = None   # ...and the typo-gate vocabulary derived from it
+    _folded_corpus_cache = None  # ...and the folded copy df counting reads
+    _df_counts.clear()           # ...and the corpus term frequencies
     col = _get_collection()
     doc_id = doc.get("document_id", "unknown")
     title = doc.get("title", "")
@@ -691,6 +693,29 @@ def _term_variants(word: str) -> set[str]:
 # invalidated together with the corpus cache on upsert.
 _vocab: set[str] | None = None
 
+# Corpus-level term statistics for the lexical bonus. Counted over the WHOLE
+# index, once, instead of over each query's candidate set. Candidate-set df
+# made every score a function of who else happened to be scored: the same
+# question scored differently for a soldier and a commander, and every
+# ingested chunk nudged every score in the corpus. Measured on the 11-order
+# round: 382 of 382 eval questions changed score, and PM-33.0302 slid from
+# rank 2 to rank 4 on "כמה מחבוש אפשר לחטוף על משפט בצבא?" — a golden case
+# lost to nothing but arithmetic.
+#
+# Anchor chunks (section == "sq") are counted like any other chunk. Leaving
+# them out is defensible — they are questions, not order text, and they are
+# 43% of the index — but it measures worse: 273/282 on the adversarial set
+# against 278/282 with them in.
+_folded_corpus_cache: list[str] | None = None
+_df_counts: dict[tuple[str, ...], int] = {}
+
+# A term appearing in 5% of the index weighs exactly 1.0. Both the term's idf
+# and this reference are functions of df/N, so neither carries an N that grows:
+# log(1 + N/(1+df)) ≈ log(1 + 1/(df/N)).
+_IDF_REFERENCE = math.log(21.0)   # == log(1 + 1/0.05)
+_IDF_CAP = 1.5
+_IDF_STEP = 0.25
+
 
 def _get_vocab() -> set[str]:
     global _vocab
@@ -725,34 +750,67 @@ def has_unknown_terms(query: str) -> bool:
     return False
 
 
+def _folded_corpus() -> list[str]:
+    """Every indexed chunk's text, finals-folded once, for df counting."""
+    global _folded_corpus_cache
+    if _folded_corpus_cache is None:
+        _folded_corpus_cache = [c["text"].translate(_FINALS) for c in _get_corpus()]
+    return _folded_corpus_cache
+
+
+def _term_weight(variants: set[str]) -> float:
+    """Rarity weight for one query term. Three properties, each load-bearing
+    for keeping the ranking still while the corpus grows:
+
+    * df over the whole index, not over this query's candidate set — the
+      weight of "מחבוש" is a property of the corpus, not of the asker's role
+      or of what else happened to be scored.
+    * measured against a FIXED reference rarity instead of against the other
+      query terms. The old `/ sum(idf)` made every term's weight a function of
+      every other term's df, so one new document moved the entire bonus for
+      every query sharing any word with it.
+    * snapped to a 0.25 grid. df/N moves continuously as documents arrive; the
+      grid means it has to move a long way before any score changes at all.
+      This is the part that actually stops the drift — ungridded, 381 of 382
+      eval questions still shifted on the 87→98 step; gridded, 116 do.
+
+    Capped at 1.5 so a term nothing else contains cannot outbid the vector
+    score outright. The cap is a plateau: 1.4, 1.5 and 1.6 measure identically.
+    """
+    key = tuple(sorted(variants))
+    df = _df_counts.get(key)
+    if df is None:
+        df = sum(1 for t in _folded_corpus() if any(v in t for v in variants))
+        if len(_df_counts) > 20000:
+            _df_counts.clear()   # query vocabulary is unbounded; this is a cache
+        _df_counts[key] = df
+    w = math.log(1.0 + len(_folded_corpus()) / (1.0 + df)) / _IDF_REFERENCE
+    return round(min(w, _IDF_CAP) / _IDF_STEP) * _IDF_STEP
+
+
 def _lexical_rerank(query: str, candidates: list[dict]) -> None:
     """Blend a lexical-overlap bonus into each candidate's vector score.
 
     Pure vector retrieval dilutes rare, decisive terms (e.g. "ריתוק משקי")
-    inside long mean-pooled chunks, so the one document that actually answers the
-    question can rank below generically-similar chunks. Each query term is
-    weighted by its rarity across the scored chunks (a poor man's IDF —
-    a term found in only one chunk is near-decisive, one found in all
-    of them says nothing), and candidates containing the rare terms get a
-    proportional boost of up to _LEXICAL_WEIGHT. Mutates scores in place.
+    inside long mean-pooled chunks, so the one document that actually answers
+    the question can rank below generically-similar chunks. Each query term is
+    weighted by how rare it is IN THE CORPUS (see _term_weight), and candidates
+    containing the rare terms get a bonus of up to 1.5 * _LEXICAL_WEIGHT.
+    Mutates scores in place.
     """
     terms = [v for v in (_term_variants(w) for w in query.split()) if v]
     if not terms or not candidates:
         return
 
-    n = len(candidates)
+    weights = [_term_weight(v) for v in terms]
     texts = [c["text"].translate(_FINALS) for c in candidates]
     matches = [
         [any(v in text for v in variants) for text in texts]
         for variants in terms
     ]
-    idf = [math.log(1 + n / (1 + sum(m))) for m in matches]
-    total = sum(idf)
-    if total <= 0:
-        return
     for i, c in enumerate(candidates):
-        overlap = sum(w for w, m in zip(idf, matches) if m[i])
-        c["score"] = round(c["score"] + _LEXICAL_WEIGHT * overlap / total, 3)
+        overlap = sum(w for w, m in zip(weights, matches) if m[i])
+        c["score"] = round(c["score"] + _LEXICAL_WEIGHT * overlap / len(terms), 3)
 
 
 def _expand_neighbors(chunks: list[dict], corpus: list[dict], top_k: int = 2) -> list[dict]:
