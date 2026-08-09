@@ -339,7 +339,40 @@ _SPLASH_HTML = """
         <button class="r" type="button">נסה שוב</button>
         <div class="w"></div>
       </div>
-    </div><!--/cai-boot-splash-->
+    </div><script id="cai-painted">
+      // TELL THE WORKER THE MOMENT THE SPLASH IS ON THE GLASS.
+      //
+      // The worker holds this response open so iOS cannot start dissolving its
+      // launch image before the splash is painted (see held() in _SW_JS). It
+      // used to hold for a fixed 250ms, and a fixed number is a guess: measured
+      // on the 2026-08-09 20:47 video, four launches, the paint lands within a
+      // frame of the response ending either way, so two launches came out clean
+      // (1.01x, 1.08x) and two caught a single white frame (1.31x, 1.43x). The
+      // guess bought two frames of the original three; it cannot buy the third,
+      // because the thing it is racing varies per launch.
+      //
+      // So stop guessing and report. Double rAF is "after the frame that
+      // painted what has been parsed so far", and this script sits immediately
+      // after the complete splash markup, so that frame IS the splash.
+      //
+      // Deliberately NOT deferred to the boot script at the end of <body>:
+      // that lives after the split and would not arrive until the hold is
+      // already over — it could never report anything in time.
+      (function () {
+        try {
+          var sw = navigator.serviceWorker;
+          if (!sw || !sw.controller) return;
+          var ping = function () {
+            try { sw.controller.postMessage('cai-painted'); } catch (e) {}
+          };
+          if (window.requestAnimationFrame) {
+            requestAnimationFrame(function () { requestAnimationFrame(ping); });
+          } else {
+            setTimeout(ping, 50);
+          }
+        } catch (e) {}
+      })();
+    </script><!--/cai-boot-splash-->
 """
 
 _BOOT_JS = """
@@ -963,7 +996,28 @@ var SHELL = 'cai-__VER__', DOC = '/';
  * Cache hits only. On a miss the response streams off the network anyway and
  * holding would add latency for nothing.
  */
-var HOLD_MS = 250, SPLIT = '<!--/cai-boot-splash-->';
+/* HOLD_MAX is a backstop, not the mechanism. The page reports its first paint
+ * (see the cai-painted script in the splash markup) and that is what releases
+ * the rest of the document; this only covers the case where the message never
+ * arrives — an uncontrolled load, rAF never firing in a backgrounded view, a
+ * shell too old to carry the reporter. It has to be comfortably longer than any
+ * real paint, because expiring early is exactly the old fixed-guess failure.
+ *
+ * GRACE_MS covers the gap between "rAF says the frame is painted" and the
+ * pixels actually being composited to the glass — a frame or two. Cheap
+ * insurance on the only thing this whole exercise is trying to win. */
+var HOLD_MAX = 600, GRACE_MS = 50, SPLIT = '<!--/cai-boot-splash-->';
+
+/* Resolvers for documents currently held open, released by the paint message.
+ * An array, not a single slot: a reload can overlap the previous navigation,
+ * and a stranded resolver would hold that response until its backstop. */
+var waitingForPaint = [];
+self.addEventListener('message', function (e) {
+  if (e.data !== 'cai-painted') return;
+  var w = waitingForPaint;
+  waitingForPaint = [];
+  w.forEach(function (f) { setTimeout(f, GRACE_MS); });
+});
 
 function held(res, e) {
   if (typeof ReadableStream === 'undefined' || typeof TextEncoder === 'undefined') {
@@ -984,10 +1038,15 @@ function held(res, e) {
     var body = new ReadableStream({
       start: function (ctl) {
         ctl.enqueue(head);
-        setTimeout(function () {
+        var sent = false;
+        var finish = function () {
+          if (sent) return;
+          sent = true;
           try { ctl.enqueue(tail); ctl.close(); } catch (err) {}
           done();
-        }, HOLD_MS);
+        };
+        waitingForPaint.push(finish);
+        setTimeout(finish, HOLD_MAX);
       },
       cancel: function () { done(); }
     });
