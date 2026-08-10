@@ -34,7 +34,8 @@ from night import config as C
 from night.ledger import Ledger, cost_usd
 
 MODEL = "claude-haiku-4-5"
-client = anthropic.Anthropic()
+client = backend.client      # one authenticated client, loaded from .env by backend
+PARTIAL = C.OUT / "questions_partial.jsonl"
 rng = random.Random(20260810)   # fixed: a re-run reproduces the same set
 
 # --- blind generation --------------------------------------------------------
@@ -179,6 +180,18 @@ def _ask(prompt: str, max_tokens: int = 1500) -> tuple[list[str], float]:
         return [], usd
 
 
+def _section_body(doc: dict, limit: int = 1800) -> str:
+    """Flatten a document's curated sections into prompt text."""
+    out = []
+    for s in doc.get("sections") or []:
+        if not isinstance(s, dict):
+            continue
+        out.append(str(s.get("title", "")))
+        for cl in s.get("clauses") or []:
+            out.append(f"- {cl.get('number','')}: {str(cl.get('text',''))[:300]}")
+    return "\n".join(out)[:limit]
+
+
 def _sectionless_doc_ids(docs: list[dict]) -> set[str]:
     """Orders with no `sections` — reachable only via anchors, so double-weighted."""
     return {
@@ -192,40 +205,52 @@ def generate(ledger: Ledger) -> int:
     sectionless = _sectionless_doc_ids(docs)
     C.log(f"[genq] {len(docs)} docs, {len(sectionless)} without sections (double-weighted)")
 
-    rid = ledger.reserve("genq", 0.90)
+    rid = ledger.reserve("genq", 0.40)
     spent = 0.0
-    rows: list[dict] = []
+    # Every generated batch is appended to disk immediately. The first run
+    # crashed after paying for 504 blind questions and lost all of them,
+    # because the single write happened at the end.
+    rows: list[dict] = C.read_jsonl(PARTIAL)
+    if rows:
+        C.log(f"[genq] resuming from {len(rows)} questions already on disk")
 
     # --- blind ---------------------------------------------------------------
+    have_blind = sum(1 for r in rows if r["source"] == "blind")
     combos = [(role, p, s) for role, ps in PERSONAS.items() for p in ps for s in SITUATIONS]
     rng.shuffle(combos)
     per_call = 8
     needed = -(-C.N_BLIND // per_call)
-    for role, persona, situation in combos[:needed]:
+    for role, persona, situation in combos[have_blind // per_call:needed]:
         qs, usd = _ask(_BLIND_PROMPT.format(persona=persona, situation=situation, n=per_call))
         spent += usd
-        for q in qs:
-            rows.append({"q": q, "source": "blind", "role": role,
-                         "persona": persona, "situation": situation, "target_doc": None})
+        batch = [{"q": q, "source": "blind", "role": role, "persona": persona,
+                  "situation": situation, "target_doc": None} for q in qs]
+        rows += batch
+        for b in batch:
+            C.append_jsonl(PARTIAL, b)
         if len(rows) % 200 < per_call:
             C.log(f"[genq] blind: {len(rows)} questions, ${spent:.2f}")
 
     # --- inside-out ----------------------------------------------------------
     n_blind = len(rows)
+    done_docs = {r["target_doc"] for r in rows if r["source"] == "inside_out"}
     for d in docs:
         doc_id = d.get("document_id")
-        if not doc_id:
+        if not doc_id or doc_id in done_docs:
             continue
         n = C.N_INSIDE_OUT
-        secs = d.get("sections") or {}
-        body = "\n".join(f"{k}: {str(v)[:300]}" for k, v in list(secs.items())[:6]) \
-            or str(d.get("raw_text", ""))[:1800]
+        # `sections` is a LIST of {id, title, clauses} (vector_store.py:319),
+        # not a mapping — treating it as one is what killed the first run after
+        # it had already paid for 504 blind questions.
+        body = _section_body(d) or str(d.get("raw_text", ""))[:1800]
         qs, usd = _ask(_INSIDE_OUT_PROMPT.format(title=d.get("title", ""), body=body, n=n))
         spent += usd
         role = "reserve" if "מילואים" in str(d.get("title", "")) else "soldier"
-        for q in qs:
-            rows.append({"q": q, "source": "inside_out", "role": role,
-                         "persona": None, "situation": None, "target_doc": doc_id})
+        batch = [{"q": q, "source": "inside_out", "role": role, "persona": None,
+                  "situation": None, "target_doc": doc_id} for q in qs]
+        rows += batch
+        for b in batch:
+            C.append_jsonl(PARTIAL, b)
     C.log(f"[genq] inside-out: {len(rows) - n_blind} questions, ${spent:.2f} total")
 
     # --- degrade a quarter ---------------------------------------------------
