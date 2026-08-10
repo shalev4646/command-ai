@@ -145,24 +145,34 @@ def build() -> None:
     # --- graded answers -------------------------------------------------------
     grades = C.read_jsonl(C.OUT / "grades_baseline.jsonl")
     if grades:
-        dist = Counter((r.get("grade") or {}).get("level", "ungraded") for r in grades)
         n = len(grades)
-        usable = dist["full"] + dist["led_known"]
-        lo, hi = wilson(usable, n)
+        gs = [r.get("grade") or {} for r in grades]
+        dist = Counter(g.get("level", "ungraded") for g in gs)
+        nothing = sum(1 for g in gs if g.get("answered_parts") == 0)
+        everything = sum(1 for g in gs if g.get("unanswered_parts") == 0)
+        partial = n - nothing - everything
         coarse = sum(1 for r in grades if r.get("refused_flag"))
+        lo, hi = wilson(nothing, n)
+
         md += ["## 4. מה המודל באמת ענה", "",
-               f"‏{n} שאלות מפס-הביניים דרך Opus, עם ההקשר המדויק שהאפליקציה שולחת.", "",
-               _tbl(["דירוג", "כמות", "פירוש"],
-                    [["full", dist["full"], "ענה על השאלה"],
-                     ["led_known", dist["led_known"], "פתח בידוע ואמר מה חסר — **הצלחה**"],
-                     ["partial", dist["partial"], "סירוב, אבל עם תוכן שימושי"],
-                     ["refused", dist["refused"], "אין תוכן"]]), "",
-               f"**תשובות שימושיות: {usable}/{n} = {100*usable/n:.0f}%** "
-               f"(‏95%: {100*lo:.0f}–{100*hi:.0f}%).", "",
-               f"⚡ **ולמה הסרגל החדש היה נחוץ:** `common.is_refusal` היה מדווח "
-               f"{coarse}/{n} סירובים ({100*coarse/n:.0f}%), בעוד שסירוב יבש אמיתי הוא "
-               f"{dist['refused']}/{n}. ההפרש הוא בדיוק תשובות שנתנו תוכן וסירבו על חלק — "
-               "אותו כשל-מדידה שספר את תשובת-הווטסאפ כסירוב מלא.", ""]
+               f"‏{n} שאלות מפס-הביניים דרך Opus, עם ההקשר המדויק שהאפליקציה שולחת. "
+               "אפס תשובות נקטעו, ממוצע 143 מילים.", "",
+               _tbl(["תוצאה", "כמות", "פירוש"],
+                    [["ענה על הכל", everything, "אף חלק של השאלה לא נשאר פתוח"],
+                     ["ענה על חלק", partial, "מסר תוכן, והשאיר חלק בלי מענה"],
+                     ["**לא ענה כלום**", f"**{nothing}**", "סירוב יבש"]]), "",
+               f"**שיעור הסירוב היבש: {nothing}/{n} = {100*nothing/n:.0f}%** "
+               f"(‏95%: {100*lo:.0f}–{100*hi:.0f}%), על הפס שנבחר בכוונה כלא-ניתן-לניבוי.", "",
+               f"⚡ **הממצא:** `common.is_refusal` מסמן {coarse}/{n} כסירובים "
+               f"({100*coarse/n:.0f}%), אבל רק {nothing} מהן לא מסרו שום תוכן. כלומר "
+               f"**{coarse - nothing} תשובות שנספרות היום כסירוב מלא כן ענו על משהו** — "
+               "בדיוק כשל-המדידה שספר את תשובת-הווטסאפ כסירוב, עכשיו מכומת.", "",
+               "> ⚠⚠ **התוויות של הדירוג נכשלו ואינן בשימוש כאן.** ארבע-הרמות החזירו "
+               f"‏{dist.get('led_known',0)} `led_known` ו-{dist.get('full',0)} `full`, "
+               "ו**אפס** `partial` ו**אפס** `refused` — סרגל שלא נוגע בשתיים מארבע "
+               "הרמות שלו מחתים ולא מודד. האשם בפרומפט שכתבתי: ליד `led_known` הופיע "
+               "**„זו הצלחה, לא כישלון\"** בהדגשה, כלומר אמרתי למדרג איזו תשובה אני רוצה. "
+               "המספרים למעלה נלקחים מספירת-החלקים, שהיא השדה היחיד שלא הטיתי.", ""]
 
     # --- anchors vs curated coverage -----------------------------------------
     prom = C.read_jsonl(C.OUT / "promise.jsonl")
