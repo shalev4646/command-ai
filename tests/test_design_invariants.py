@@ -269,6 +269,35 @@ def test_the_answer_body_renders_through_the_formatter():
     assert "st.markdown(body)" not in loop
 
 
+# ── the source row must survive any clause the model writes ─────────────────
+
+def test_source_row_cannot_be_overflowed_by_a_long_clause():
+    """.c is sized by CONTENT the model wrote, and nothing caps its length.
+
+    Measured on production at 320px AND 430px: a clause of "סעיף חופשה
+    שנתית — מכסה שנתית: ..." rendered .c at 496px inside a 312px row, which
+    squeezed .t — the ORDER NUMBER — to width 0 and pushed the text to
+    x=-298, outside a viewport that cannot scroll sideways. A ruling whose
+    provenance is invisible is the one failure this app cannot ship.
+    """
+    row = APP.split(".cai-ans-src .r {{")[1].split("}}")[0]
+    assert "flex-wrap: wrap" in row, "the source row must wrap"
+
+    clause = APP.split(".cai-ans-src .c {{")[1].split("}}")[0]
+    assert "white-space: nowrap" not in clause, (
+        "a nowrap badge cannot hold model-written text"
+    )
+    assert "flex: 0 1 auto" in clause and "min-width: 0" in clause, (
+        "the clause must be allowed to shrink"
+    )
+
+    title = APP.split(".cai-ans-src .t {{")[1].split("}}")[0]
+    assert "min-width: 10ch" in title, (
+        "the order number needs a FLOOR, not min-width:0 — with 0 it still "
+        "collapsed to nothing whenever the clause won the space fight"
+    )
+
+
 if __name__ == "__main__":
     failures = 0
     for name, fn in sorted(globals().items()):

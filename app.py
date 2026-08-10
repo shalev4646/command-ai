@@ -2369,14 +2369,27 @@ html:not(.cai-standalone) [data-testid="stBottom"] {{
 /* שורת-מקור. כפתור "הצג סעיף מקור" נשאר מתחת לתשובה — השורה הזו היא התווית
    הקריאה שלו, לא מתחרה בו על אותה פעולה. */
 .cai-ans-src {{ display: flex; flex-direction: column; gap: 6px; }}
-.cai-ans-src .r {{ display: flex; align-items: center; gap: 8px;
+/* wrap, because .c is sized by CONTENT the model wrote and nothing caps its
+   length. Measured on production 2026-08-10 at every phone width: a clause of
+   "סעיף חופשה שנתית — מכסה שנתית: ..." rendered .c at 496px inside a 312px
+   row, which (a) squeezed .t — THE ORDER NUMBER, the one thing a ruling is
+   worth nothing without — to width 0, and (b) pushed the text to x=-188,
+   outside a viewport that cannot scroll sideways, so it was invisible rather
+   than merely ugly. Wrapping drops the clause to its own line and gives .t
+   the row back; a short clause still sits inline exactly as designed. */
+.cai-ans-src .r {{ display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
     border: 1px solid var(--accent-border); background: var(--accent-soft);
     border-radius: 10px; padding: 7px 10px; }}
 .cai-ans-src .ic {{ flex: 0 0 16px; width: 16px; height: 16px; color: var(--accent); }}
 .cai-ans-src .ic svg {{ width: 100%; height: 100%; display: block; }}
-.cai-ans-src .t {{ flex: 1; min-width: 0;
+/* min-width is a FLOOR here, not 0: with 0 the title still collapsed to
+   nothing whenever the clause won the space fight */
+.cai-ans-src .t {{ flex: 1 1 auto; min-width: 10ch;
     font: 500 calc(12.5px * var(--cai-fs, 1)) Heebo, sans-serif; color: var(--text); }}
-.cai-ans-src .c {{ flex: 0 0 auto; white-space: nowrap;
+/* 0 1 auto + normal: keeps its compact badge shape while it fits, then
+   shrinks and wraps instead of overflowing */
+.cai-ans-src .c {{ flex: 0 1 auto; min-width: 0; white-space: normal;
+    overflow-wrap: break-word;
     font: 500 calc(11px * var(--cai-fs, 1)) Heebo, sans-serif; color: var(--accent);
     border: 1px solid var(--accent-border); border-radius: 5px; padding: 1px 6px; }}
 
