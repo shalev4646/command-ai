@@ -112,3 +112,20 @@ def test_body_keeps_the_routing_sentence():
     body = f"{REFUSAL}\n\n{scope_routes.MARK_OUT_OF_SCOPE} האגף והקרן לחיילים משוחררים"
     _, shown = _chip(body)
     assert "האגף והקרן לחיילים משוחררים" in shown
+
+
+if __name__ == "__main__":
+    # Plain-assert runner, matching every other suite in tests/. Without it
+    # `python tests/test_scope_routes.py` imported the module, ran nothing and
+    # exited 0 — eleven tests that looked green because they never executed.
+    failures = 0
+    for _name, _fn in sorted(globals().items()):
+        if _name.startswith("test_") and callable(_fn):
+            try:
+                _fn()
+                print("PASS", _name)
+            except AssertionError as _exc:
+                failures += 1
+                print("FAIL", _name, "-",
+                      str(_exc).encode("ascii", "replace").decode())
+    sys.exit(1 if failures else 0)
