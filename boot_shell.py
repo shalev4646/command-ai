@@ -918,6 +918,12 @@ def _strip(src: str) -> str:
     src = re.sub(r'\s*<link id="cai-boot-font"[^>]*>', "", src)
     src = re.sub(r'\s*<meta id="cai-theme"[^>]*>', "", src)
     src = re.sub(r'\s*<meta id="cai-scheme"[^>]*>', "", src)
+    # the static PWA links (manifest / icon / launch images) — anchored on our
+    # own id/class, glued back-to-back by _pwa_links so no whitespace to eat
+    src = re.sub(r'<link id="cai-manifest"[^>]*>', "", src)
+    src = re.sub(r'<link id="cai-icon"[^>]*>', "", src)
+    src = re.sub(r'<link rel="apple-touch-startup-image" class="cai-launch"[^>]*>',
+                 "", src)
     src = re.sub(r'<style id="cai-micro"[^>]*>.*?</style>', "", src, flags=re.S)
     src = re.sub(r'<script id="cai-pad">.*?</script>', "", src, flags=re.S)
     src = re.sub(r'\s*<style id="cai-boot".*?</style>', "", src, flags=re.S)
@@ -1215,6 +1221,45 @@ _SW_REG = """
 """
 
 
+def _pwa_links() -> str:
+    """The manifest / icon / launch-image <link>s, as STATIC markup.
+
+    These lived only in app.py's runtime injector, and the 2026-08-10 reinstall
+    exposed what that costs: iOS builds a home-screen icon from the RAW HTML it
+    fetches at add-to-home-screen time — JS-injected links are invisible to it.
+    A fresh install therefore had no launch image at all, and the measured
+    result was 0.9s of pure black (luma 0.7 — darker than #14170E's ~20) from
+    tap to first paint, on every launch. The old icon only ever had art because
+    iOS *refreshes* an installed webclip from the live DOM across launches —
+    which is also exactly how the mitered-chevron PNG propagated in 3 launches
+    on the 2026-08-09 18:37 video. Fresh installs never got that grace, and the
+    pilot will be nothing but fresh installs.
+
+    Baked here, the links ride in the first streamed chunk with everything
+    else, so the A2HS parser and the boot path see the same truth. URLs are
+    content-hashed by publish_static, so a changed PNG re-stamps the shell.
+    Lazy import: pwa_assets imports publish_static from this module.
+    """
+    try:
+        import pwa_assets
+        pub = pwa_assets.publish_all("/")
+        if not pub:
+            return ""
+        links = (f'<link id="cai-manifest" rel="manifest" href="{pub["manifest"]}">'
+                 f'<link id="cai-icon" rel="apple-touch-icon" href="{pub[180]}">')
+        for (w, h, r, u) in pub["startup"]:
+            links += ('<link rel="apple-touch-startup-image" class="cai-launch" '
+                      f'media="(device-width: {w // r}px) and '
+                      f'(device-height: {h // r}px) and '
+                      f'(-webkit-device-pixel-ratio: {r}) and '
+                      f'(orientation: portrait)" href="{u}">')
+        return links
+    except Exception:
+        # a failed publish must never break the boot shell — the runtime
+        # injector still covers installed icons, exactly as before
+        return ""
+
+
 def patch_index_html() -> bool:
     """Inject the olive boot splash into Streamlit's static index.html.
 
@@ -1259,10 +1304,14 @@ def patch_index_html() -> bool:
         # the stamped payload like everything else
         boot_js = (_BOOT_JS.replace("    </script>", _SW_REG + "    </script>", 1)
                    if sw_on else _BOOT_JS)
+        # The PWA links join the stamped payload: their hrefs carry the assets'
+        # content hashes, so editing a launch PNG re-patches the shell exactly
+        # like editing the font does.
+        pwa_links = _pwa_links()
         # stamped with a hash of exactly what is about to be written — including
         # the font bytes — so a swapped font file re-patches too
         stamp = _VERSION + "-" + hashlib.sha256(
-            (_MICRO + _PAD_JS + head_raw + _SPLASH_HTML + boot_js
+            (_MICRO + _PAD_JS + head_raw + pwa_links + _SPLASH_HTML + boot_js
              + (_SW_JS if sw_on else "")
              + "".join(_STATIC_VIEWPORT_TOKENS)).encode("utf-8")
         ).hexdigest()[:8]
@@ -1294,7 +1343,7 @@ def patch_index_html() -> bool:
         patched = _cover_viewport(src)
         patched = patched.replace('<meta charset="UTF-8" />',
                                   '<meta charset="UTF-8" />' + _MICRO + _PAD_JS, 1)
-        patched = patched.replace("</head>", head + "  </head>", 1)
+        patched = patched.replace("</head>", head + pwa_links + "  </head>", 1)
         patched = _deblock_css(patched)
         patched = patched.replace("<body>", "<body>" + _SPLASH_HTML, 1)
         # regex, not a string replace: </body> carries the host file's own
@@ -1308,6 +1357,11 @@ def patch_index_html() -> bool:
                        "maximum-scale=1", "var(--cai-pad"):
             if marker not in patched:
                 return False
+        # only when the assets actually published — a read-only venv where
+        # publish fails still gets a valid (linkless) shell
+        if pwa_links and patched.count('class="cai-launch"') != len(
+                __import__("pwa_assets")._STARTUP_SIZES):
+            return False
         # cover would resize the app, not just the splash — see the comment on
         # _STATIC_VIEWPORT_TOKENS. Assert it never creeps back in.
         if "viewport-fit" in patched:
