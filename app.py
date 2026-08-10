@@ -3140,15 +3140,34 @@ components.html(
                 var panel = cur.panel;
                 panel.style.transition = "transform .19s cubic-bezier(.4,0,.2,1), opacity .19s ease";
                 if (!commit) { panel.style.transform = ""; panel.style.opacity = ""; return; }
-                // see it leave, then press the control the user would have
-                panel.style.transform = "translateX(-100%)";
-                panel.style.opacity = "0";
+                // ⚠ The panel must NOT leave the screen. Sliding it fully out
+                // and pressing the button looked right locally and was wrong on
+                // the device: the server owns the screen underneath, and a real
+                // rerun takes longer than the slide — so the phone showed ~270ms
+                // of EMPTY BLACK between the panel going and the previous screen
+                // arriving (device video 2026-08-10, "יוצא מוזר"). There is
+                // nothing to slide onto, so nothing slides off.
+                //
+                // Instead it eases back to rest and dims while the answer is in
+                // flight, and the new content arrives inside the same panel —
+                // which is what the user is looking at the whole time.
+                panel.style.transform = "translateX(0)";
+                panel.style.opacity = ".55";
                 cur.btn.click();
-                // Streamlit answers in its own time. Whichever lands first is
-                // fine: a fast rerun replaces this node (nothing to undo), a
-                // slow one finds the panel back in place rather than stranded
-                // off-screen. 380ms = the slide plus a beat.
-                setTimeout(function () { backReset(panel); }, 380);
+                // Clear on whichever comes first: the new screen landing (the
+                // panel's subtree changes) or a 1.4s backstop for a rerun that
+                // never arrives. Without the observer a fast rerun would leave
+                // the panel dimmed for the rest of the timeout.
+                var settled = false;
+                var done = function () {
+                    if (settled) return;
+                    settled = true;
+                    try { mo.disconnect(); } catch (e) {}
+                    backReset(panel);
+                };
+                var mo = new MutationObserver(done);
+                try { mo.observe(panel, { childList: true, subtree: true }); } catch (e) {}
+                setTimeout(done, 1400);
                 return;
             }
             settle(cur.mode === "open" ? commit : !commit);
@@ -3365,19 +3384,42 @@ components.html(
         // (measured — the panel came back 326px wide at 0,0). An inline
         // declaration marked !important also outranks popper's own inline
         // write, which is non-important.
+        // ⚠ Centred, not bottom-anchored. The bottom anchor was chosen so a
+        // 6-week month would not move the panel, and on the device it put the
+        // calendar down where the keyboard lives and where a thumb has to
+        // stretch ("זה עדיין ממש נמוך", 2026-08-10). Centring is height-stable
+        // in the only sense that matters — a taller month grows equally both
+        // ways, so the panel never appears to jump.
         var CAL_SHEET = [
             ["position", "fixed"],
             ["left", "50%"],
             ["right", "auto"],
-            ["top", "auto"],
-            ["bottom", "calc(env(safe-area-inset-bottom, 0px) + 20px)"],
+            ["bottom", "auto"],
+            ["top", "50%"],
             ["width", "min(340px, calc(100vw - 28px))"],
             ["margin", "0"],
-            // translateX alone: popper's placement offset is what has to go
-            ["transform", "translateX(-50%)"],
+            // popper's placement offset is what has to go; this replaces it
+            ["transform", "translate(-50%, -50%)"],
             ["z-index", "1000090"]
         ];
+        // A date field is a text input, so tapping it opens the iOS keyboard —
+        // over a date the user is about to pick with a calendar, never type
+        // ("זה ישר פותח מקלדת שאתה בכלל בוחר תאריך", 2026-08-10). readOnly is
+        // what actually suppresses the keyboard on iOS (inputmode="none" is
+        // honoured inconsistently); BaseWeb still opens the picker, because it
+        // listens for focus and click, both of which a readOnly input gets.
+        var dateFields = function () {
+            var ins = doc.querySelectorAll('[data-testid="stDateInput"] input');
+            for (var i = 0; i < ins.length; i++) {
+                if (!ins[i].readOnly) {
+                    ins[i].readOnly = true;
+                    ins[i].setAttribute("inputmode", "none");
+                }
+            }
+        };
+
         var calSkin = function () {
+            dateFields();
             var cal = doc.querySelector('[data-baseweb="calendar"]');
             if (!cal) return;
             var pop = cal.closest('[data-baseweb="popover"]');
@@ -5461,9 +5503,17 @@ html.cai-drawer-drag .st-key-drawer_backdrop { pointer-events: none !important; 
    instant a finger touched the drawer the strip behind the clock dropped to
    bare canvas and a lighter band appeared across the top — the 2026-08-08
    device screenshot. The children carry the interleaving; the band carries
-   the strip. Only the children go. */
+   the strip. Only the children go.
+
+   The delay is on the RETURN, not on the duck. Removing the class flips the
+   children back to opacity 1 in the same frame, while the panel still needs
+   its .26s to slide out — so for a quarter second the wordmark and the
+   identity sat ON TOP of a drawer that was still covering the screen (device
+   video 2026-08-10: panel caught at x=72, mid-exit, with the name over it).
+   Ducking must be instant; coming back must wait for the panel to clear. */
+.cai-header > * { transition: opacity .18s ease .22s; }
 html.cai-drawer-open .cai-header > *, html.cai-drawer-drag .cai-header > * {
-  opacity: 0; transition: opacity .18s ease;
+  opacity: 0; transition: opacity .18s ease 0s;
 }
 
 /* ═══ DRAWER — redesigned (mockup 2a) ═══ */
