@@ -75,14 +75,25 @@ def build() -> None:
     # --- sweep ----------------------------------------------------------------
     sweep = C.read_jsonl(C.SWEEP)
     if sweep:
-        bands = Counter(r["band"] for r in sweep)
+        blind_rows = [r for r in sweep if r["source"] == "blind"]
+        io_rows = [r for r in sweep if r["source"] == "inside_out"]
+        bb, bi = Counter(r["band"] for r in blind_rows), Counter(r["band"] for r in io_rows)
+
+        def _pct(c, rows, band):
+            return f"{c.get(band,0)} ({100*c.get(band,0)/max(1,len(rows)):.0f}%)"
+
         md += ["## 3. סריקת האחזור", "",
                f"‏{len(sweep)} שאלות דרך נתיב-הייצור האמיתי. הפסים מכוילים מול התפלגות "
                "הציונים של 102 שאלות-הזהב, לא מול מספר שהמצאתי.", "",
-               _tbl(["פס", "כמות", "פירוש"],
-                    [["ירוק", bands.get(C.BAND_GREEN, 0), "מאחזר כמו מקרה שידוע שנענה נכון"],
-                     ["צהוב", bands.get(C.BAND_YELLOW, 0), "סביר אך לא חד-משמעי — לשם הלך הכסף"],
-                     ["אדום", bands.get(C.BAND_RED, 0), "כלום לא עבר סף"]]), ""]
+               "**הפילוח מופרד בכוונה.** השאלות ההפוכות נוצרו מתוך הבלוקים המתוקננים "
+               "עצמם ולכן נבדקות מול הטקסט שילד אותן — הן מודדות תקינות-הטמעה, לא כיסוי. "
+               "**העמודה הכנה היא של השאלות העיוורות.**", "",
+               _tbl(["פס", f"עיוורות (n={len(blind_rows)}) ← הכנה", f"הפוכות (n={len(io_rows)}) ← מעגלי"],
+                    [["ירוק", _pct(bb, blind_rows, C.BAND_GREEN), _pct(bi, io_rows, C.BAND_GREEN)],
+                     ["צהוב", _pct(bb, blind_rows, C.BAND_YELLOW), _pct(bi, io_rows, C.BAND_YELLOW)],
+                     ["אדום", _pct(bb, blind_rows, C.BAND_RED), _pct(bi, io_rows, C.BAND_RED)]]), "",
+               "ירוק = מאחזר כמו מקרה שידוע שנענה נכון · צהוב = סביר אך לא חד-משמעי, "
+               "לשם הלך הכסף · אדום = כלום לא עבר סף.", ""]
 
         io = [r for r in sweep if r["source"] == "inside_out"]
         if io:
