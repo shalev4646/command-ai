@@ -189,17 +189,49 @@ def _startup_png(w: int, h: int, dpr: int) -> bytes:
     # matching the miter makes the two chevrons agree to antialiasing noise,
     # and the swap has nothing left to show.
     tc = 6 * 0.7071 * dpr           # the miter cut's inward/downward reach
+    # SUPERSAMPLED, because the geometry fix alone left a measurable seam.
+    # With the miter in place the device video (2026-08-10 22:32) still read
+    # the PNG's bright ink 4 rows lower than the HTML splash's, launch after
+    # launch — and profiling both rasters at 3x against the browser (same
+    # >120 threshold, rows apex+55..+79) pinned it: identical taper slope,
+    # but Pillow's hard-edged polygon runs 4-6px wider per row and ~2 rows
+    # longer, because draw.polygon paints full-brightness pixels right up to
+    # the vector edge while WebKit's antialiasing leaves partial-coverage
+    # pixels that fall below threshold. Same vectors, different rasters.
+    # Drawing 4x and reducing with a BOX filter is exact area-average
+    # coverage — the same quantity WebKit's AA computes — and the profiles
+    # line up to +-1px. The wordmark never had this problem: draw.text is
+    # antialiased already.
+    #
+    # TIP_TRIM is calibrated, not derived. With supersampling in place the
+    # arm BAND matches the browser exactly (bright-width 50==50 on every row
+    # through apex+65 at 3x), but the taper still began 2px lower than the
+    # engine's: browser tapers from +67 and dies at +79, the ideal-vector cut
+    # gave +69 and +81, a flat +4px per tip row. Where the engine puts the
+    # very end of a mitered stroke is its own business — so the cut is slid
+    # 0.35px (unscaled) up the arm to land on the measured raster, verified
+    # against the profile row by row. If the chevron size or border width
+    # ever changes, re-run the foreignObject profile and re-fit this.
     cx = w / 2
     sat = _STARTUP_SAT.get((w, h, dpr), 47)
     apex = (sat + 0.14 * (h / dpr) - 6.6) * dpr
+    S = 4
+    x0, y0 = int(cx - dd) - 2, int(apex) - 2
+    x1 = int(cx + dd) + 3
+    y1 = int(apex + 23 * dpr + dd + tv) + 3
+    layer = Image.new("RGBA", ((x1 - x0) * S, (y1 - y0) * S), (0, 0, 0, 0))
+    ldraw = ImageDraw.Draw(layer)
+    e = 0.35 * dpr                  # TIP_TRIM — see the calibration note above
     for i, color in enumerate([(163, 174, 110, 255), (163, 174, 110, 115)]):
         ay = apex + i * 23 * dpr
-        draw.polygon(
-            [(cx - dd, ay + dd), (cx, ay), (cx + dd, ay + dd),
-             (cx + dd - tc, ay + dd + tc), (cx, ay + tv),
-             (cx - dd + tc, ay + dd + tc)],
-            fill=color,
-        )
+        pts = [(cx - dd + e, ay + dd - e), (cx, ay), (cx + dd - e, ay + dd - e),
+               (cx + dd - e - tc, ay + dd - e + tc), (cx, ay + tv),
+               (cx - dd + e + tc, ay + dd - e + tc)]
+        ldraw.polygon([((px - x0) * S, (py - y0) * S) for px, py in pts],
+                      fill=color)
+    layer = layer.resize((x1 - x0, y1 - y0),
+                         getattr(Image, "Resampling", Image).BOX)
+    img.paste(layer, (x0, y0), layer)
     # ── wordmark ──────────────────────────────────────────────────────────
     # The launch image used to be chevron-only, on the theory that the splash
     # would supply the wordmark a moment later. On a phone that moment is
