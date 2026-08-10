@@ -688,7 +688,11 @@ components.html(
                 var vp = document.querySelector('meta[name="viewport"]');
                 if (vp && !window.__caiNudged) {
                     window.__caiNudged = true;
+                    // restore a CANONICAL string, never the captured read: a
+                    // torn read during another re-stamp would persist a
+                    // viewport with the zoom clamp missing
                     var c = vp.getAttribute("content") || "";
+                    if (c.indexOf("maximum-scale=1") < 0) c += ", maximum-scale=1";
                     vp.setAttribute("content", c + ", minimum-scale=1");
                     setTimeout(function () { try { vp.setAttribute("content", c); } catch (e) {} }, 120);
                 }
@@ -711,7 +715,9 @@ components.html(
                 window.scrollTo(0, 1); window.scrollTo(0, 0);
                 var vp = document.querySelector('meta[name="viewport"]');
                 if (vp) {
+                    // same canonical-restore rule as nudge() above
                     var c = vp.getAttribute("content") || "";
+                    if (c.indexOf("maximum-scale=1") < 0) c += ", maximum-scale=1";
                     vp.setAttribute("content", c + ", minimum-scale=1");
                     setTimeout(function () { try { vp.setAttribute("content", c); } catch (e) {} }, 60);
                 }
@@ -1858,7 +1864,10 @@ div[data-testid="stButton"] > button:active {{
 .st-key-cai_name_card [data-testid="stTextInput"] div[data-baseweb="base-input"] {{ border: none !important; background: transparent !important; }}
 .st-key-cai_name_card [data-testid="stTextInput"] input {{
     background: transparent !important; color: var(--text) !important;
-    font: 400 15px Heebo, sans-serif !important; direction: rtl;
+    /* 16px floor — same iOS focus-zoom trigger as the composer (see the
+       stChatInputTextArea comment); this is the first field every new user
+       types into */
+    font: 400 16px Heebo, sans-serif !important; direction: rtl;
     padding: 12px 14px !important;
     /* 38px measured — under the 44px thumb floor, and this is the very first
        control a new user is asked to hit */
@@ -2136,7 +2145,15 @@ html:not(.cai-standalone) [data-testid="stBottom"] {{
 [data-testid="stChatInput"] [data-testid="InputInstructions"] {{ display: none !important; }}
 [data-testid="stChatInput"]:focus-within {{ border-color: var(--accent-border) !important; }}
 [data-testid="stChatInputTextArea"] {{
-    color: var(--text) !important; font: 400 15px Heebo, sans-serif !important; direction: rtl;
+    /* 16px is a FLOOR, not taste: iOS zooms the whole page to any focused
+       control under 16px, and Streamlit focuses this one on mount. The boot
+       shell's focus freeze covers only the curtain window — a remount after
+       the lift (rerun, reconnect) gets a real focus, and the pilot filmed the
+       result 2026-08-10 23:20: the app standing at ~115% with the composer
+       filling the glass. maximum-scale=1 SHOULD block that zoom too, but the
+       nudge/kick viewport re-stamps leave WebKit mid-re-evaluation exactly
+       then — 16px removes the trigger no matter what the meta is doing. */
+    color: var(--text) !important; font: 400 16px Heebo, sans-serif !important; direction: rtl;
     padding: 0 14px !important;
     /* a pasted multi-line question must scroll INSIDE the pill, not paint
        over the header (pilot video 2026-07-27): ~6 lines, then scroll */
