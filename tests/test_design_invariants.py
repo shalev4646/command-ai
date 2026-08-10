@@ -298,6 +298,56 @@ def test_source_row_cannot_be_overflowed_by_a_long_clause():
     )
 
 
+def test_a_long_field_value_wraps_instead_of_being_crushed():
+    """The label/value row must let the FLEX LINE decide, not a fixed floor.
+
+    With `flex: 1; min-width: 140px` the 140px always fitted the ~239px
+    remainder, so a long value stayed beside the label in a 207px column —
+    measured on the first live production answer, where "מה עומד לרשותך" ran
+    five lines. `flex: 0 1 auto` makes the value's hypothetical size its
+    max-content: short values still sit inline, long ones cannot fit and wrap
+    to their own full-width line (measured 297px, four lines).
+    """
+    v = APP.split(".cai-ans-f .v {{")[1].split("}}")[0]
+    assert "flex: 0 1 auto" in v, "flex:1 crushes long values beside the label"
+    assert "min-width: 140px" not in v, "a fixed floor cannot discriminate by length"
+
+
+# ── the question must not compete with the ruling ───────────────────────────
+
+def test_the_question_hugs_its_text_instead_of_matching_the_answer():
+    """Measured on a 375px phone BEFORE: question and answer were the same box
+    — both 331px, radius 16, padding 12/16, type 15px/400 — and only a tint
+    told them apart, so a six-word question carried the weight of the ruling.
+    AFTER: 214px hugging the reading edge (right edge 353 on both, so they
+    still align), answer unchanged at 331."""
+    block = APP.split(
+        '[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {{'
+    )[1].split("}}")[0]
+    for decl in ("width: fit-content", "max-width: 88%", "margin-left: auto"):
+        assert decl in block, f"missing {decl!r} — the question would go full width again"
+    assert "calc(14px * var(--cai-fs, 1))" in APP, (
+        "the question sits one step below the answer's 15px and must still "
+        "ride the reading-size setting"
+    )
+
+
+def test_chat_avatars_are_hidden_but_stay_in_the_dom():
+    """Streamlit's avatars are Material LIGATURE icons: their text content is
+    literally "face" and "smart_toy", so a screen reader announces "face".
+    They also cost the answer 16% of its line — the content column measured
+    257px of the 299 available inside the bubble. display:none and NOT
+    removal, because the :has() selector that identifies the user bubble
+    needs the node to remain."""
+    assert (
+        '[data-testid="stChatMessage"] [data-testid^="stChatMessageAvatar"] '
+        "{{ display: none; }}" in APP
+    )
+    assert ':has([data-testid="stChatMessageAvatarUser"])' in APP, (
+        "hiding the avatar must not break how the user bubble is selected"
+    )
+
+
 if __name__ == "__main__":
     failures = 0
     for name, fn in sorted(globals().items()):

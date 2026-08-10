@@ -2211,19 +2211,36 @@ html:not(.cai-standalone) [data-testid="stBottom"] {{
     margin-bottom: 10px;
     direction: rtl;
 }}
+/* ── The question is context, not content. ──
+   It used to be the SAME box as the answer — measured on a 375px phone: both
+   331px wide, radius 16, padding 12/16, type 15/400, and only a tint telling
+   them apart. A six-word question therefore carried the visual weight of the
+   ruling, and every screen had two focal points. Now it hugs its own text at
+   the reading edge, one step down in size.
+   margin-left, not margin-inline-end: the flex parent Streamlit puts these in
+   is not itself RTL, so a logical property would resolve against the wrong
+   box. The app is Hebrew-only, so physical is unambiguous here. */
 [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {{
     background-color: var(--accent-soft);
     border-color: var(--accent-border);
+    width: fit-content;
+    max-width: 88%;
+    margin-left: auto;
+    padding: 9px 13px;
 }}
-/* avatars: recolor Streamlit's red/orange squares to theme tones */
-[data-testid="stChatMessage"] [data-testid^="stChatMessageAvatar"] {{
-    background-color: var(--accent-soft) !important;
-    border: 1px solid var(--accent-border) !important;
-    color: var(--accent) !important;
+[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"])
+    [data-testid="stMarkdownContainer"] p {{
+    font-size: calc(14px * var(--cai-fs, 1)) !important;
 }}
-[data-testid="stChatMessage"] [data-testid^="stChatMessageAvatar"] svg {{
-    fill: var(--accent) !important;
-}}
+/* Streamlit's chat avatars are Material LIGATURE icons: their text content is
+   literally "face" and "smart_toy", so a screen reader announces "face" and
+   the two least on-brand glyphs in the app sit next to every message. Hiding
+   them also hands the answer back its line: the content column measured 257px
+   of the 299 available inside a 375px bubble, i.e. a decorative robot was
+   costing every answer 16% of its width, on every line.
+   display:none keeps the node in the DOM, so the :has() selector above still
+   recognises the user bubble. */
+[data-testid="stChatMessage"] [data-testid^="stChatMessageAvatar"] {{ display: none; }}
 
 /* ── Hebrew (RTL) typography inside answers: right-aligned flow, modest
    heading sizes, bullets/numbers on the right, RTL tables and quotes ── */
@@ -2398,7 +2415,15 @@ html:not(.cai-standalone) [data-testid="stBottom"] {{
 .cai-ans-f .l, .cai-ans-lead .l, .cai-ans-route .l {{
     font: 600 calc(11px * var(--cai-fs, 1)) Heebo, sans-serif;
     color: var(--text-faint); letter-spacing: .02em; }}
-.cai-ans-f .v {{ flex: 1; min-width: 140px;
+/* ⚠ `flex: 0 1 auto`, NOT `flex: 1`. The value's hypothetical size is then its
+   max-content, so the flex line itself decides: a short value ("סא"ל ומעלה")
+   fits beside the label and stays inline; a long one cannot fit, wraps to its
+   own line and takes the full row. `flex:1 + min-width:140px` had no such
+   sense — 140px always fits in the ~239px remainder, so a five-line sentence
+   was crushed into a 207px column beside the label. Caught on the first live
+   production answer ("מה עומד לרשותך" ran five lines); measured after: 297px
+   wide, four lines, on its own line. Same mechanism .cai-ans-src .c uses. */
+.cai-ans-f .v {{ flex: 0 1 auto; min-width: 0;
     font: 400 calc(15px * var(--cai-fs, 1)) Heebo, sans-serif;
     color: var(--text); line-height: 1.65; }}
 
