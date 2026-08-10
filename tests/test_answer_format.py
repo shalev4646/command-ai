@@ -205,6 +205,43 @@ def test_gershayim_are_not_entity_escaped():
     assert "&quot;" not in rendered('**מקור:** פ"מ 33.0213 סעיף 4')
 
 
+# ── streaming: format complete lines, leave the one being typed alone ───────
+
+def test_stream_split_cuts_at_the_last_complete_line():
+    assert af.stream_split("שורה\nחלקי") == ("שורה\n", "חלקי")
+    assert af.stream_split("אין עדיין שורה") == ("", "אין עדיין שורה")
+    assert af.stream_split("שלמה\n") == ("שלמה\n", "")
+    assert af.stream_split("") == ("", "")
+
+
+def test_only_the_last_block_can_still_change():
+    """The whole append-only streaming design rests on this: every block but
+    the last is final, so it is painted once and never re-sent. A prose run is
+    the one that keeps growing — it absorbs lines until a label arrives."""
+    a = af.blocks(af.stream_split('**מקור:** פ"מ 33.0213 סעיף 4\nפסקה ראשונה\n')[0])
+    b = af.blocks(af.stream_split('**מקור:** פ"מ 33.0213 סעיף 4\nפסקה ראשונה\nוהמשכה\n')[0])
+    assert a[:-1] == b[:-1], "a settled block changed under a later line"
+    assert a[-1] != b[-1], "the trailing prose run must be the one that grows"
+
+
+def test_a_label_line_is_final_the_moment_its_line_closes():
+    """Once the newline lands, nothing later can reinterpret the label — which
+    is what makes it safe to freeze."""
+    partial = af.stream_split('**תנאים:** שבע שעות\n**מי מאשר:** סא')[0]
+    full = af.stream_split('**תנאים:** שבע שעות\n**מי מאשר:** סא"ל\n')[0]
+    assert af.blocks(partial)[0] == af.blocks(full)[0] == ("field", ("תנאים", "שבע שעות"))
+
+
+def test_the_streamed_end_state_equals_the_settled_render():
+    """If these ever diverge the answer would visibly re-flow at the end —
+    exactly the jump this design exists to remove."""
+    text = ('**מקור:** פ"מ 33.0213 סעיף 4\n**תנאים:**\n- שבע שעות\n'
+            'הפקודות אינן קובעות משך מרבי.\n')
+    settled, tail = af.stream_split(text)
+    assert tail == ""
+    assert af.blocks(settled) == af.blocks(text)
+
+
 if __name__ == "__main__":
     failures = 0
     for name, fn in sorted(globals().items()):

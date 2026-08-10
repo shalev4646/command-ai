@@ -7363,8 +7363,86 @@ def _stream_answer(text_gen, acc: list[str] | None = None, think=None) -> str:
         chip, lead = _verdict_chip(buf)
     if chip:
         st.markdown(chip, unsafe_allow_html=True)
-    shown = st.write_stream(itertools.chain([lead], it)) or ""
-    return buf + shown[len(lead):]
+    if answer_format is None:
+        shown = st.write_stream(itertools.chain([lead], it)) or ""
+        return buf + shown[len(lead):]
+
+    # ── Stream INTO the answer language, not ahead of it. ──
+    # write_stream paints raw markdown for the whole answer and the design
+    # only arrives on the rerun, so a user watches the answer be written in
+    # the old style and then rearrange itself (reported 2026-08-10; it also
+    # fooled my own production probe, which caught the unstyled mid-stream
+    # frame and nearly reported the formatter as missing).
+    #
+    # The naive fix — re-render everything through the formatter on each
+    # chunk — would re-send the entire answer HTML dozens of times. On the
+    # pilot's ~13KB/s link that buys design by adding seconds to the wait,
+    # i.e. it fixes the look by worsening what actually hurts.
+    #
+    # So: APPEND ONLY. answer_format.stream_split cuts at the last complete
+    # line, and every block except the last is final (proved in
+    # test_only_the_last_block_can_still_change) — each is painted once into
+    # its own placeholder and never re-sent. Only the trailing block plus the
+    # line being typed live in a placeholder that updates, so the text still
+    # arrives character by character, just inside the design instead of
+    # before it.
+    route_label = "verdict-none" not in (chip or "")
+    body = lead
+    painted = 0
+    live = st.empty()
+
+    def _paint(slot, block) -> None:
+        markup = answer_format.to_html(block, route_label=route_label)
+        if markup is None:
+            slot.markdown(block[1])
+        else:
+            slot.markdown(markup, unsafe_allow_html=True)
+
+    def _freeze(blocks_) -> None:
+        """Commit every block that can no longer change, newest last."""
+        nonlocal painted, live
+        while painted < len(blocks_) - 1:
+            _paint(live, blocks_[painted])
+            painted += 1
+            live = st.empty()   # the new live slot lands BELOW the frozen one
+
+    # The live region is REPLACED on each draw, not appended to, so its cost is
+    # its own size — and a long trailing prose run would be re-sent on every
+    # chunk (a 1KB paragraph over ~170 chunks sums to ~85KB where write_stream
+    # sent 1KB). A newline always draws, because that is what freezes a block
+    # and shrinks the live region again; between newlines a 150ms floor caps
+    # the re-sends at ~7/s no matter how fast the chunks arrive, which is still
+    # well above the rate an eye reads as continuous.
+    last_draw = 0.0
+    for chunk in it:
+        body += chunk
+        now = time.time()
+        if "\n" not in chunk and now - last_draw < 0.15:
+            continue
+        last_draw = now
+        settled, tail = answer_format.stream_split(body)
+        blocks_ = answer_format.blocks(settled)
+        _freeze(blocks_)
+        with live.container():
+            if painted < len(blocks_):
+                markup = answer_format.to_html(blocks_[painted], route_label=route_label)
+                st.markdown(markup or blocks_[painted][1],
+                            unsafe_allow_html=markup is not None)
+            if tail:
+                st.markdown(tail)
+
+    # The last line never carries a newline, so stream_split would leave it in
+    # the tail as raw text. Re-block the WHOLE body once at the end: this is
+    # the same call _render_body makes, which is what keeps the final frame
+    # identical to the post-rerun render (test_the_streamed_end_state_equals_
+    # the_settled_render) — the jump has nowhere left to hide.
+    blocks_ = answer_format.blocks(body)
+    _freeze(blocks_)
+    if painted < len(blocks_):
+        _paint(live, blocks_[painted])
+    else:
+        live.empty()
+    return buf + body[len(lead):]
 
 
 def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[str, str, int | None] | None = None) -> None:
