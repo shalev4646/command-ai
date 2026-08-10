@@ -39,6 +39,14 @@ def calibrate(rows: list[dict], routes: RouteCache) -> dict:
     med = tops[len(tops) // 2]
     C.log(f"[sweep] golden top-score distribution: p10={lo:.3f} p50={med:.3f} "
           f"min={tops[0]:.3f} max={tops[-1]:.3f}")
+    # MEASURED AFTERWARDS, AND THE CALIBRATION IS WRONG: golden questions are
+    # written close to the corpus' own language and score far higher than natural
+    # ones (golden p10=0.792 vs generated p50=0.724), so this cut labels the
+    # majority of ordinary questions "red". It still ORDERS correctly — inside-out
+    # target-hit rates came out 100% green / 88% yellow / 72% red — so treat the
+    # bands as a priority ranking, never as a pass/fail verdict. A future run
+    # should calibrate against the generated distribution, or better, against
+    # graded outcomes once a probe has produced them.
     return {"green": med, "red": lo}
 
 
