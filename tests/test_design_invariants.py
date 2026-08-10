@@ -211,6 +211,64 @@ def test_no_duplicate_owner_for_the_drawer_close_button():
     assert "width: 36px !important; height: 36px !important" not in APP
 
 
+# ── answer language (2026-08-10) ─────────────────────────────────────────────
+# The chat answer was the app's most-used surface and its least designed one:
+# a verdict chip over bare markdown. answer_format.py now dresses the label
+# grammar the prompt mandates. The values below were measured in a browser
+# against a reproduction of Streamlit's chat DOM, not chosen.
+
+ANS_CSS = APP.split(".cai-ans {{")[1].split("/* ── Escalation strip")[0]
+
+
+def test_answer_blocks_space_with_padding_not_margin():
+    """The blocks sit in a FLEX parent (stVerticalBlock), where margins never
+    collapse, and each carries stMarkdownContainer's margin-bottom:-1rem
+    inside it. Measured in the running app: gap = (previous padding-bottom
+    - 16) + next padding-top + 3. 27/11 puts every seam at 14px; an earlier
+    16/11 left block-to-paragraph at 3px and label-to-list at -8 (overlap)."""
+    decl = ANS_CSS.split("}}")[0]
+    assert "padding: 11px 0 27px" in decl, decl.strip()[:120]
+    assert "margin" not in decl, "margins do not collapse in a flex parent"
+
+
+def test_a_block_after_a_block_drops_its_top_padding():
+    """Without this the two paddings stack and consecutive blocks sit 25px
+    apart while everything else sits at 14."""
+    assert ':has(.cai-ans, .verdict-solo, .verdict-stack)' in APP
+    assert '+ [data-testid="stElementContainer"] .cai-ans {{ padding-top: 0; }}' in APP
+
+
+def test_every_chip_form_cancels_the_negative_margin_the_same_way():
+    """.verdict-stack had 22px (a 6px gap) and the single chip had nothing at
+    all — the answer language's first block overlapped a single chip by 5px
+    (measured). One number for both now."""
+    assert ".verdict-solo {{ padding-bottom: 27px; }}" in APP
+    assert "padding-bottom: 22px;" not in APP, ".verdict-stack must match"
+    assert APP.count('<div class="verdict-solo">') == 2, (
+        "both the verdict path and the neutral-refusal path must wrap"
+    )
+
+
+def test_answer_language_type_scales_with_the_reading_size():
+    """Answer text is reading text: every font in these blocks must ride
+    --cai-fs, or the text-size setting silently stops covering the surface it
+    matters most on."""
+    bare = re.findall(r"font:\s*\d+\s+(\d+(?:\.\d+)?px)", ANS_CSS)
+    assert not bare, f"fixed font sizes in the answer language: {bare}"
+
+
+def test_the_answer_body_renders_through_the_formatter():
+    """A bare st.markdown(body) in the conversation loop would silently
+    restore the old look. (_render_body keeps one as its stale-build
+    fallback — that one is deliberate and lives above the loop.)"""
+    loop = APP.split("# ── Conversation ──")[1]
+    assert "_render_body(body, chip)" in loop, (
+        "the chip must reach the formatter — it is how the routing block "
+        "knows the neutral pill already said its label"
+    )
+    assert "st.markdown(body)" not in loop
+
+
 if __name__ == "__main__":
     failures = 0
     for name, fn in sorted(globals().items()):

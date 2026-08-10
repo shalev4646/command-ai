@@ -62,6 +62,10 @@ except Exception:
     def _doc_date_badge(_id):
         return None
 try:
+    import answer_format
+except Exception:
+    answer_format = None   # the answer body falls back to bare markdown
+try:
     from verdict import verdict_clauses as _verdict_clauses, chip_clause as _chip_clause
     from verdict import CHIP_TERM_RE as _VERDICT_TERM_RE, QUAL_CONFLICT_RE as _QUAL_CONFLICT_RE
 except Exception:
@@ -2319,9 +2323,18 @@ html:not(.cai-standalone) [data-testid="stBottom"] {{
        <p>'s 16px). The stack is a raw <div> — no <p>, nothing cancels it, and
        the NEXT markdown block climbed 16px onto the second chip (phone
        screenshot, 2026-07-27). Padding, not margin: margins collapse.
-       16px cancel + 6px real gap below the pills. */
-    padding-bottom: 22px;
+       16px cancel + the 11px seam. Was 22 (a 6px gap) until the answer
+       language made every other seam 14px measured and this one the odd
+       one out — same mechanism, one number now. */
+    padding-bottom: 27px;
 }}
+/* A SINGLE chip has no wrapper of its own, so nothing in its markdown block
+   cancels the container's margin-bottom:-1rem — the same defect .verdict-stack
+   was given padding-bottom for. It went unnoticed while the next element was
+   a <p>, which sat 0-3px under the chip and read as "attached"; the answer
+   language put a bordered row there instead, and it overlapped the chip by
+   5px (measured). 27 = the 16px cancel + the 11px seam every block uses. */
+.verdict-solo {{ padding-bottom: 27px; }}
 /* the "לא נמצא..." no-rule clause carries a short sentence, not a badge
    term — let it wrap to two lines instead of overflowing the bubble */
 .verdict-wrap {{
@@ -2330,6 +2343,89 @@ html:not(.cai-standalone) [data-testid="stBottom"] {{
     border-radius: 16px;
     text-align: right;
 }}
+
+/* ── שפת התשובה — הדקדוק שהפרומפט מכתיב, לבוש. ──
+   הפירוק חי ב-answer_format.py (טהור ונבדק); כאן רק המראה. הצ'יפ שמעל היה
+   המילה הראשונה בשפה הזו — כל השאר ירד עד היום כמרקדאון חשוף, במשטח שכל
+   משתמש רואה בכל שאלה.
+
+   ‏`.cai-ans` הוא מעטפת-מרווח בלבד, ו**ריפוד** ולא שוליים. המודל נמדד
+   באפליקציה החיה ולא נגזר מהתיאוריה: ההורה הוא `stVerticalBlock` שהוא
+   **flex**, ולכן שוליים בין בלוקים אינם קורסים כלל; ובתוך כל בלוק
+   ‏`stMarkdownContainer` נושא `margin-bottom:-1rem` שמקזז את השוליים של ה-
+   ‏`<p>` האחרון. מכאן הנוסחה שנמדדה: מרווח = (ריפוד-תחתון של הקודם − 16) +
+   ריפוד-עליון של הבא + 3. פסקה תורמת 0 בשני הכיוונים (16 השוליים שלה
+   נאכלים), ולכן בלוק חייב 27 מלמטה כדי לתת 14 לפני פסקה — אבל אז שני בלוקים
+   עוקבים היו מקבלים 25. משם הכלל הבא: בלוק שיושב אחרי בלוק אחר משלנו מוותר
+   על הריפוד העליון שלו. בלי `:has` (מנוע ישן) התוצאה 25px — רווח, לא שבר.
+   הקופסה המעוצבת יושבת בפנים, אחרת רקע או מסגרת היו נמתחים מתחת לטקסט שלהם.
+   כל גופן נכפל ב---cai-fs כדי לכבד את הגדרת גודל-הטקסט. ── */
+.cai-ans {{ direction: rtl; text-align: right; padding: 11px 0 27px; }}
+[data-testid="stElementContainer"]:has(.cai-ans, .verdict-solo, .verdict-stack)
+    + [data-testid="stElementContainer"] .cai-ans {{ padding-top: 0; }}
+/* תווית שאין לה ערך היא כותרת לרשימה שמיד אחריה — נצמדת אליה (‏4px נמדדים) */
+.cai-ans-solo {{ padding-bottom: 14px; }}
+
+/* שורת-מקור. כפתור "הצג סעיף מקור" נשאר מתחת לתשובה — השורה הזו היא התווית
+   הקריאה שלו, לא מתחרה בו על אותה פעולה. */
+.cai-ans-src {{ display: flex; flex-direction: column; gap: 6px; }}
+.cai-ans-src .r {{ display: flex; align-items: center; gap: 8px;
+    border: 1px solid var(--accent-border); background: var(--accent-soft);
+    border-radius: 10px; padding: 7px 10px; }}
+.cai-ans-src .ic {{ flex: 0 0 16px; width: 16px; height: 16px; color: var(--accent); }}
+.cai-ans-src .ic svg {{ width: 100%; height: 100%; display: block; }}
+.cai-ans-src .t {{ flex: 1; min-width: 0;
+    font: 500 calc(12.5px * var(--cai-fs, 1)) Heebo, sans-serif; color: var(--text); }}
+.cai-ans-src .c {{ flex: 0 0 auto; white-space: nowrap;
+    font: 500 calc(11px * var(--cai-fs, 1)) Heebo, sans-serif; color: var(--accent);
+    border: 1px solid var(--accent-border); border-radius: 5px; padding: 1px 6px; }}
+
+/* תווית תלויה — מה שהיה `**תנאים:**` מודגש בתוך הזרימה */
+.cai-ans-f {{ display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }}
+.cai-ans-f .l, .cai-ans-lead .l, .cai-ans-route .l {{
+    font: 600 calc(11px * var(--cai-fs, 1)) Heebo, sans-serif;
+    color: var(--text-faint); letter-spacing: .02em; }}
+.cai-ans-f .v {{ flex: 1; min-width: 140px;
+    font: 400 calc(15px * var(--cai-fs, 1)) Heebo, sans-serif;
+    color: var(--text); line-height: 1.65; }}
+
+/* פתיח — שורת פסיקה שהצ'יפ סירב לצבוע (פסיקה מורכבת), או **תשובה:** בשאלה
+   עובדתית שאין לה צ'יפ כלל */
+.cai-ans-lead {{ display: flex; flex-direction: column; gap: 2px; }}
+.cai-ans-lead .v {{ font: 500 calc(15.5px * var(--cai-fs, 1)) Heebo, sans-serif;
+    color: var(--text); line-height: 1.6; }}
+
+/* עימות דו-צדדי — שני הצדדים כבלוקים מזווגים. בלי צבע: הצ'יפים שמעל כבר
+   נושאים את ההכרעה הצבועה לכל צד, וצבע כאן היה מקודד אותה פעמיים */
+.cai-ans-side {{ display: flex; flex-direction: column; gap: 3px;
+    border-right: 2px solid var(--border); padding-right: 10px; }}
+.cai-ans-side .p {{ font: 600 calc(12.5px * var(--cai-fs, 1)) Heebo, sans-serif; color: var(--text); }}
+.cai-ans-side .v {{ font: 400 calc(14px * var(--cai-fs, 1)) Heebo, sans-serif;
+    color: var(--text-sec); line-height: 1.6; }}
+
+/* קולאאוט שקט — "מה הפקודות לא קובעות" והערות. שקט בכוונה: זו הסתייגות,
+   לא אזהרה, ומשפחת צבעי-האזהרה שמורה למצבים שדורשים פעולה */
+.cai-ans-note {{ display: flex; gap: 8px; align-items: flex-start;
+    background: rgba(239,240,232,.04); border-radius: 8px; padding: 8px 10px; }}
+.cai-ans-note .ic {{ flex: 0 0 auto; color: var(--text-faint);
+    font-size: calc(13px * var(--cai-fs, 1)); line-height: 1.5; }}
+.cai-ans-note .v {{ font: 400 calc(13px * var(--cai-fs, 1)) Heebo, sans-serif;
+    color: var(--text-sec); line-height: 1.55; }}
+
+/* ניתוב — "לא נקבע בפקודות מטכ\"ל" / "טרם במאגר". זה הרגע שבו התשובה מפנה
+   הלאה במקום להכריע, והוא הכי שכיח שיש (מדידה עיוורת 10.08: 12 מ-16 השאלות
+   שלא נענו). השברון הכפול של המותג בגרסה מעומעמת מסמן אותו כמצב מתוכנן */
+.cai-ans-route {{ display: flex; gap: 10px; align-items: flex-start;
+    border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }}
+.cai-ans-route .bd {{ display: flex; flex-direction: column; gap: 3px; min-width: 0; }}
+.cai-ans-route .v {{ font: 400 calc(14px * var(--cai-fs, 1)) Heebo, sans-serif;
+    color: var(--text); line-height: 1.6; }}
+.cai-ans-chev {{ display: flex; flex-direction: column; align-items: center;
+    flex: 0 0 auto; padding-top: 4px; }}
+.cai-ans-chev span {{ display: block; width: 9px; height: 9px;
+    border-top: 2px solid rgba(163,174,110,.55); border-left: 2px solid rgba(163,174,110,.55);
+    transform: rotate(45deg); }}
+.cai-ans-chev span + span {{ border-color: rgba(163,174,110,.25); margin-top: -3px; }}
 
 /* ── Escalation strip — "למי פונים": one quiet line between the answer
    body and the action pills (deterministic lookup, see escalation_paths.py
@@ -2549,6 +2645,9 @@ div[data-testid="stDialog"] textarea {{ direction: rtl; font: 400 14px/1.7 Heebo
     font: 700 15px Heebo, sans-serif !important;
     text-align: center !important;
     justify-content: center;
+    /* measured 43px on-device widths — one pixel under the thumb floor, and
+       this is the drawer's primary action */
+    min-height: 44px !important;
 }}
 .st-key-new_chat button:hover {{ background-color: var(--accent-hover) !important; }}
 .st-key-new_chat button p {{ color: #14170E !important; font-weight: 700 !important; text-align: center !important; }}
@@ -7086,8 +7185,13 @@ def _verdict_chip(content: str) -> tuple[str | None, str]:
                 body += "\n\n" + remainder.lstrip("\n")
             body = body.lstrip()
             wrap = " verdict-wrap" if len(verdict) > _CHIP_WRAP_OVER else ""
-            chip = (f'<span class="verdict-chip verdict-{cls}{wrap}">'
-                    f"{icon} {html.escape(verdict)}</span>")
+            # .verdict-solo: the block-level wrapper that cancels Streamlit's
+            # margin-bottom:-1rem, exactly as .verdict-stack does for the
+            # two-chip case. A bare inline chip left the next block sitting on
+            # top of it (see the CSS note).
+            chip = (f'<div class="verdict-solo">'
+                    f'<span class="verdict-chip verdict-{cls}{wrap}">'
+                    f"{icon} {html.escape(verdict)}</span></div>")
             return chip, body
     # neutral chip only when the refusal IS the answer (sentence at the
     # top, incl. after a short topic prefix like "לגבי סכום המענק — ") —
@@ -7112,8 +7216,47 @@ def _verdict_chip(content: str) -> tuple[str | None, str]:
             label = "לא נקבע בפקודות"
         elif _MARK_MISS in content:
             label = "טרם במאגר"
-        return f'<span class="verdict-chip verdict-none">ⓘ {label}</span>', content
+        return (f'<div class="verdict-solo">'
+                f'<span class="verdict-chip verdict-none">ⓘ {label}</span></div>'), content
     return None, content
+
+
+def _render_body(body: str, chip: str | None = None) -> None:
+    """Draw a settled answer body through the answer-language formatter.
+
+    The prompt mandates a fixed label grammar (**מקור:**, **תנאים:**,
+    **התנהלות X:**, the two scope_routes markers), and answer_format turns
+    exactly those into styled rows — everything else stays a plain markdown
+    run and renders identically to before. Two properties this call site
+    depends on:
+
+    * Prose runs arrive WHOLE. Streamlit's stMarkdownContainer carries
+      margin-bottom:-1rem, so two adjacent st.markdown calls butt together
+      with no gap at all; splitting a paragraph across calls would read as a
+      rendering bug (see the run-merging note in answer_format).
+    * unsafe_allow_html is set ONLY on the formatter's own markup. Model text
+      inside it is html.escape'd there; prose still goes through the plain,
+      HTML-free path it always used.
+
+    `chip` is the already-rendered verdict pill, passed in only to spot the
+    NEUTRAL one: when it fires, "לא נקבע בפקודות מטכ\"ל" is on screen three
+    times over (pill, the model's refusal sentence, and the routing block's
+    own label), and a reader took that for the app refusing on content the
+    corpus holds. The routing block drops its label in that case and keeps it
+    in every other, where the pill carries a real verdict instead.
+
+    A stale cloud build without the module falls back to today's rendering.
+    """
+    if answer_format is None:
+        st.markdown(body)
+        return
+    route_label = "verdict-none" not in (chip or "")
+    for block in answer_format.blocks(body):
+        markup = answer_format.to_html(block, route_label=route_label)
+        if markup is None:
+            st.markdown(block[1])
+        else:
+            st.markdown(markup, unsafe_allow_html=True)
 
 
 # Shown inside the assistant bubble while the model reasons before its first
@@ -7701,7 +7844,7 @@ for msg_i, msg in enumerate(st.session_state.messages):
             chip, body = _verdict_chip(content)
             if chip:
                 st.markdown(chip, unsafe_allow_html=True)
-            st.markdown(body)
+            _render_body(body, chip)
             if msg.get("truncated"):
                 st.warning("התשובה נקטעה בגלל אורך. אפשר לשאול על חלק ממוקד יותר לתשובה שלמה.")
         else:
