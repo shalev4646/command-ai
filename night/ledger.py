@@ -32,6 +32,16 @@ class BudgetExceeded(RuntimeError):
     """Raised instead of making a call that would cross the ceiling."""
 
 
+# KNOWN GAP, measured rather than assumed: calls made *inside* backend —
+# `_route_docs` on a cache miss and `_standalone_question` on a typo'd question —
+# bill the API without passing through this ledger, because the sweep reuses the
+# production code path instead of reimplementing it. Measured at 150 questions
+# the leak was under $0.08, worst case $0.37 across the full set, so the run
+# books that worst case as spend up front. The ceiling therefore holds, but by
+# over-charging rather than by intercepting every call: treat `spent` as an
+# upper bound on the true bill, not an exact one.
+
+
 def cost_usd(model: str, *, input_tokens: int = 0, output_tokens: int = 0,
              cache_write_tokens: int = 0, cache_read_tokens: int = 0,
              batch: bool = False) -> float:
