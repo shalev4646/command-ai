@@ -92,14 +92,23 @@ def build() -> None:
                    "אלה שאלות שנוסחו מתוך הפקודה עצמה, כלומר זה **הרף העליון** של האחזור, "
                    "לא הביצועים על שאלה אמיתית.", ""]
 
-        ugly = [r for r in sweep if r["ugly"]]
-        clean = [r for r in sweep if not r["ugly"]]
+        # Split on whether the text ACTUALLY changed, not on the `ugly` label:
+        # 35% of labelled rows came back identical (an `ocr` pass over a question
+        # with no digits, a `slang` pass with no dictionary word present). Using
+        # the label would file 63 clean questions as degraded and dilute the very
+        # effect this comparison exists to measure.
+        ugly = [r for r in sweep if r["ugly"] and r["q"] != r["clean_q"]]
+        clean = [r for r in sweep if r["q"] == r["clean_q"]]
         if ugly and clean:
             ru = sum(1 for r in ugly if r["band"] == C.BAND_RED) / len(ugly)
             rc = sum(1 for r in clean if r["band"] == C.BAND_RED) / len(clean)
-            md += [f"**שאלות מכוערות מול נקיות:** {100*ru:.0f}% אדום מול {100*rc:.0f}%. "
-                   "הפרש גדול כאן הוא ממצא על **המנרמל**, לא על הקורפוס — אסור לערבב "
-                   "את השניים.", ""]
+            md += [f"**שאלות מכוערות מול נקיות:** {100*ru:.0f}% אדום ({len(ugly)} שאלות) "
+                   f"מול {100*rc:.0f}% ({len(clean)}). הפרש גדול כאן הוא ממצא על "
+                   "**המנרמל**, לא על הקורפוס — אסור לערבב את השניים.", "",
+                   f"נספרו רק שאלות שהטקסט שלהן באמת השתנה. "
+                   f"{sum(1 for r in sweep if r['ugly'] and r['q'] == r['clean_q'])} "
+                   "שאלות סומנו להרעשה אך יצאו זהות (‏OCR על טקסט בלי ספרות, סלנג בלי "
+                   "מילה מתאימה) — לספור אותן כמכוערות היה מדלל את האפקט.", ""]
 
     # --- graded answers -------------------------------------------------------
     grades = C.read_jsonl(C.OUT / "grades_baseline.jsonl")
