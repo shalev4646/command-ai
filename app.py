@@ -836,42 +836,12 @@ components.html(
                     window.__caiHealT = setTimeout(heal, 250);
                 });
             }
-            // ── network banner ── Streamlit's own status widget reports the
-            // WEBSOCKET, which on a dead radio just spins: it cannot tell
-            // "server is slow" from "you have no signal", and it says nothing
-            // in Hebrew either way. navigator.onLine answers the second
-            // question directly, and that is the one the user can act on.
-            // Sticky (no auto-dismiss) — unlike a normal toast this describes
-            // a state, not an event, so it must stay for as long as it is true.
-            var netToast = function (on) {
-                try {
-                    var id = "cai-net-toast", cur = document.getElementById(id);
-                    if (on) {
-                        if (cur) return;
-                        var t = document.createElement("div");
-                        t.id = id;
-                        t.className = "cai-toast";
-                        t.setAttribute("data-tone", "warn");
-                        t.setAttribute("role", "status");
-                        t.setAttribute("aria-live", "polite");
-                        t.innerHTML = '<span class="cai-toast-dot"></span>' +
-                            '<span>אין חיבור לרשת — השאלה תישלח כשהחיבור יחזור</span>';
-                        document.body.appendChild(t);
-                    } else if (cur) {
-                        cur.className = "cai-toast cai-toast-out";
-                        setTimeout(function () {
-                            try { cur.remove(); } catch (e) {}
-                        }, 220);
-                    }
-                } catch (e) {}
-            };
-            window.addEventListener("offline", function () { netToast(true); });
-            window.addEventListener("online", function () { netToast(false); });
-            // Streamlit re-renders the body on every run and can carry the
-            // node away with it; re-assert on a slow tick rather than trusting
-            // the one-shot event, which may have fired before this ran.
-            setInterval(function () { netToast(!navigator.onLine); }, 2000);
-            if (!navigator.onLine) netToast(true);
+            // NOTE: connection loss is NOT handled here. #cai-net-bar in
+            // boot_shell.py owns it — it wraps window.WebSocket before
+            // Streamlit's bundle loads, so it sees the real socket, and it
+            // lives outside #root so no rerun can take it away. A second
+            // banner in this engine was added and removed on 2026-08-10:
+            // it duplicated the bar's message and could stack with it.
             // ── role-pick navigation veil ── Streamlit tears the entry screen
             // down piecewise on the role tap (header vanishes, cards float
             // ~0.2-0.9s on 3G — the "small stall" the user flagged). The tap
@@ -1550,40 +1520,20 @@ body::-webkit-scrollbar {{ display: none !important; width: 0 !important; }}
 /* hide Streamlit Cloud viewer badges — the crown "hosted with Streamlit"
    pill and the creator-avatar bubble injected at the bottom corner (their
    class hashes vary by build, so match every known naming scheme).
-   stStatusWidget is DELIBERATELY NOT in this list: it looks like one more
-   Cloud badge but it is the running/connection indicator, and on a Streamlit
-   app the websocket IS the app. It was hidden here until 2026-08-10, which
-   meant a dropped socket (a soldier on a base with bad reception — the modal
-   case, not the edge case) left a live-looking screen whose send button did
-   nothing and said nothing. It is kept and restyled below instead. */
+   stStatusWidget is hidden by boot_shell.py's own rule, not here: it reports
+   "Connecting" from an invisible corner while every server-backed control is
+   dead, so #cai-net-bar (outside #root, socket-wrapped, with a refresh
+   button) speaks for the connection instead. Do not "restore" it — that was
+   tried on 2026-08-10 and is strictly worse than the bar. */
 [class*="viewerBadge"],
 [class*="_viewerBadge"],
 [class*="_profileContainer"],
 [class*="_profilePreview"],
 [class*="_profileImage"],
 [data-testid="appCreatorAvatar"],
+[data-testid="stStatusWidget"],
 a[href*="streamlit.io/cloud"],
 a[href*="share.streamlit.io"] {{ display: none !important; }}
-/* The connection indicator, in the app's language. Parked under the header
-   band on the drawer-button side, where nothing else lives. Streamlit only
-   mounts it while running or when the socket is unhealthy, so in the normal
-   case this rule paints nothing at all. */
-[data-testid="stStatusWidget"] {{
-    position: fixed !important;
-    top: calc(var(--cai-sat, 0px) + 70px) !important;
-    inset-inline-start: 18px !important; inset-inline-end: auto !important;
-    z-index: 90 !important;                 /* under .cai-header's 100 */
-    background: var(--surface) !important;
-    border: 1px solid var(--border-strong) !important;
-    border-radius: 99px !important;
-    padding: 5px 12px !important;
-    box-shadow: 0 6px 20px rgba(0,0,0,.45) !important;
-}}
-[data-testid="stStatusWidget"] * {{
-    font: 500 11.5px Heebo, sans-serif !important;
-    color: var(--text-dim) !important;
-}}
-[data-testid="stStatusWidget"] svg {{ fill: var(--accent) !important; }}
 /* the shell-darkener injects `iframe{{background:#14170E}}` into every
    same-origin ancestor document INCLUDING this one; keep component iframes
    in THIS document out of it (the injected rule keeps its real job:
@@ -2725,39 +2675,6 @@ button:disabled, button[disabled], [aria-disabled="true"] {{
 }}
 button:disabled *, button[disabled] * {{ pointer-events: none; }}
 
-/* ── Toast ── the app had no transient-message surface at all, so anything
-   that is neither an answer nor a dialog (connection lost, copied, saved)
-   had nowhere to go. Floats just under the header band rather than over it:
-   the header's status-bar geometry is the most delicately tuned thing on the
-   page and a banner that reflows it would put that at risk for a message
-   that lasts three seconds. */
-.cai-toast {{
-    position: fixed; z-index: 95;               /* under .cai-header's 100 */
-    top: calc(var(--cai-sat, 0px) + 70px);
-    inset-inline: 0; margin-inline: auto;
-    width: max-content; max-width: min(88vw, 420px);
-    display: flex; align-items: center; gap: 8px;
-    padding: 10px 16px; border-radius: 99px;
-    direction: rtl; text-align: center;
-    font: 500 12.5px/1.45 Heebo, sans-serif;
-    background: var(--surface); color: var(--text);
-    border: 1px solid var(--border-strong);
-    box-shadow: 0 8px 28px rgba(0,0,0,.5);
-    animation: caiToastIn .22s ease both;
-}}
-.cai-toast[data-tone="warn"] {{
-    background: #D9B36A; color: #14170E; border-color: rgba(20,23,14,.25);
-}}
-.cai-toast[data-tone="warn"] .cai-toast-dot {{ background: #14170E; }}
-.cai-toast-dot {{
-    width: 7px; height: 7px; border-radius: 99px; flex: none;
-    background: var(--accent);
-}}
-.cai-toast.cai-toast-out {{ animation: caiToastOut .2s ease both; }}
-@keyframes caiToastIn  {{ from {{ opacity:0; transform: translateY(-8px); }}
-                          to   {{ opacity:1; transform: none; }} }}
-@keyframes caiToastOut {{ from {{ opacity:1; transform: none; }}
-                          to   {{ opacity:0; transform: translateY(-8px); }} }}
 
 /* ── Accessibility: honor prefers-reduced-motion — animations jump straight
    to their end state (splash still ends offscreen thanks to fill:both).

@@ -452,6 +452,17 @@ _BOOT_JS = """
           // only ever flips on a successful open, so without this the bar
           // could never appear on a boot that fails outright
           setTimeout(function () { if (live <= 0) { armed = true; arm(); } }, 25000);
+          // A radio that is plainly off does not need the 4s debounce: that
+          // delay exists to ride out rerun-time socket blips, and this is not
+          // one. navigator.onLine going false is unambiguous, so say so at
+          // once instead of making the user wait out a timer meant for a
+          // different failure. The socket path still owns everything else —
+          // "online" only clears the timer, it does not hide the bar, because
+          // having a radio again is not the same as having the server back.
+          window.addEventListener('offline', function () {
+            if (armed || live <= 0) { clearTimeout(timer); show(); }
+          });
+          window.addEventListener('online', function () { if (live <= 0) arm(); });
         } catch (e) {}
       })();
       // ── focus freeze, curtain scope only ──

@@ -27,25 +27,35 @@ CONFIG = (ROOT / ".streamlit" / "config.toml").read_text(encoding="utf-8")
 PWA = (ROOT / "pwa_assets.py").read_text(encoding="utf-8")
 
 
-# ── C1: connection state is visible ──────────────────────────────────────────
+# ── C1: connection state ─────────────────────────────────────────────────────
+# The original audit called stStatusWidget a wrongly-hidden connection
+# indicator. That was WRONG: boot_shell.py already owns connection loss with
+# #cai-net-bar, and hides the widget on purpose because it reports
+# "Connecting" from an invisible corner while every control is dead. The
+# assertions below lock in the real design, not the audit's first reading.
 
-def test_status_widget_is_not_hidden():
-    """stStatusWidget is the running/connection indicator, not a Cloud badge.
-
-    It sat in the branding hide-list, so a dropped websocket produced a
-    live-looking screen that silently did nothing.
-    """
-    hide_block = APP.split("viewerBadge")[1].split("}}")[0]
-    assert "stStatusWidget" not in hide_block, (
-        "stStatusWidget is back in the Cloud-badge hide list — a dropped "
-        "socket would again be invisible to the user"
-    )
+SHELL = (ROOT / "boot_shell.py").read_text(encoding="utf-8")
 
 
-def test_offline_banner_exists():
-    assert "cai-net-toast" in APP
-    assert "navigator.onLine" in APP
-    assert "אין חיבור לרשת" in APP
+def test_connection_bar_owns_connection_loss():
+    """It must wrap WebSocket (to see the real socket), live outside #root (so
+    a rerun cannot remove it), and offer a way out."""
+    assert "cai-net-bar" in SHELL
+    assert "window.WebSocket = CW" in SHELL
+    assert "_stcore/stream" in SHELL
+    assert "רענון" in SHELL
+
+
+def test_offline_fires_the_bar_without_the_socket_debounce():
+    """The 4s debounce exists to ride out rerun blips; a radio that is off is
+    not a blip and should not wait for it."""
+    assert "window.addEventListener('offline'" in SHELL
+
+
+def test_app_does_not_add_a_second_connection_banner():
+    """A duplicate banner in app.py's engine was added and removed on
+    2026-08-10 — it repeated the bar's message and could stack with it."""
+    assert "cai-net-toast" not in APP
 
 
 # ── C2: orientation ──────────────────────────────────────────────────────────
