@@ -399,10 +399,13 @@ _BOOT_JS = """
           var OW = window.WebSocket;
           if (!OW || OW.__cai) return;
           var live = 0, armed = false, timer = null, bar = null;
-          var show = function () {
+          // force=true means "the radio is off, do not consult `live`" — the
+          // socket has not fired `close` yet at that moment, so the usual
+          // guard below would suppress the one case we are certain about.
+          var show = function (force) {
             // never over the curtain — the boot splash speaks for itself
             if (document.getElementById('cai-boot-splash')) {
-              setTimeout(show, 1000); return;
+              setTimeout(function () { show(force); }, 1000); return;
             }
             if (!bar) {
               bar = document.createElement('div');
@@ -417,7 +420,7 @@ _BOOT_JS = """
               bar.appendChild(t); bar.appendChild(b);
               document.body.appendChild(bar);
             }
-            if (live <= 0) bar.classList.add('on');
+            if (force || live <= 0) bar.classList.add('on');
           };
           var arm = function () {
             clearTimeout(timer);
@@ -456,13 +459,21 @@ _BOOT_JS = """
           // delay exists to ride out rerun-time socket blips, and this is not
           // one. navigator.onLine going false is unambiguous, so say so at
           // once instead of making the user wait out a timer meant for a
-          // different failure. The socket path still owns everything else —
-          // "online" only clears the timer, it does not hide the bar, because
-          // having a radio again is not the same as having the server back.
+          // different failure. Measured on 2026-08-10: without show(true) the
+          // bar stayed hidden here, because `close` has not fired yet at this
+          // point and the guard inside show() still saw live === 1.
           window.addEventListener('offline', function () {
-            if (armed || live <= 0) { clearTimeout(timer); show(); }
+            if (armed) { clearTimeout(timer); show(true); }
           });
-          window.addEventListener('online', function () { if (live <= 0) arm(); });
+          window.addEventListener('online', function () {
+            // A blink short enough that the socket never fired `close` leaves
+            // `live` at 1, so the open-handler that normally clears the bar
+            // will never run again — without this the forced bar would stay
+            // up for the rest of the session. If the socket DID die, fall
+            // back to the normal debounce rather than hiding prematurely.
+            if (live > 0) { if (bar) bar.classList.remove('on'); }
+            else arm();
+          });
         } catch (e) {}
       })();
       // ── focus freeze, curtain scope only ──
