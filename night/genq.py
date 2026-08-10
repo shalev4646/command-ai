@@ -216,7 +216,7 @@ def generate(ledger: Ledger) -> int:
         doc_id = d.get("document_id")
         if not doc_id:
             continue
-        n = 8 if doc_id in sectionless else 4
+        n = C.N_INSIDE_OUT
         secs = d.get("sections") or {}
         body = "\n".join(f"{k}: {str(v)[:300]}" for k, v in list(secs.items())[:6]) \
             or str(d.get("raw_text", ""))[:1800]

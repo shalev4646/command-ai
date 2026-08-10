@@ -39,13 +39,16 @@ BAND_YELLOW = "yellow"   # plausible but not decisive — where paid probing buy
 BAND_RED = "red"         # nothing crossed threshold — a gap
 
 # --- question generation -----------------------------------------------------
-N_BLIND = 800            # written with no corpus access — the honest coverage metric
-N_INSIDE_OUT = 400       # derived per-command — measures reachability, not coverage
+# Sized to what is left after curation over-ran its estimate ($4.59 of the $10
+# ceiling). The router is the constraint, not generation: every question costs
+# $0.00125 to route even in batch, and routing is what makes the sweep faithful.
+N_BLIND = 500            # written with no corpus access — the honest coverage metric
+N_INSIDE_OUT = 3         # questions per order (98 orders); reachability, not coverage
 UGLY_FRACTION = 0.25     # typos, slang, fragments, OCR-mangled order numbers
 
 # --- paid sampling -----------------------------------------------------------
-N_PROBE = 150            # baseline sample, drawn from the yellow band
-N_CONTROL = 20           # unchanged questions re-run after, to measure sampling flip-rate
+N_PROBE = 100            # baseline sample from the yellow band; ±10% at n=100
+N_CONTROL = 15           # unchanged questions re-run after, to measure sampling flip-rate
 
 
 def write_jsonl(path: Path, rows) -> int:
