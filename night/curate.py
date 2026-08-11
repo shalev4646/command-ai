@@ -215,7 +215,14 @@ def curate_one(doc: dict, ledger: Ledger, problems: list[str] | None = None
     rid = ledger.reserve(f"curate:{doc['document_id']}", est)
     try:
         r = backend.client.messages.create(
-            model=MODEL, max_tokens=8000,
+            # 8000 truncated 33.0306 mid-JSON and the $0.35 bought nothing:
+            # adaptive thinking at effort=high draws from this same budget, so a
+            # long order spends it reasoning and gets cut before closing the
+            # object. Raising the cap is free for the documents that do not need
+            # it — output is billed per token generated, and the orders that
+            # succeed land at $0.07-$0.18, nowhere near either ceiling. It only
+            # changes the truncating case, from total loss to a usable result.
+            model=MODEL, max_tokens=16000,
             thinking={"type": "adaptive"},
             output_config={"effort": "high",
                            "format": {"type": "json_schema", "schema": SCHEMA}},
