@@ -13,8 +13,12 @@ import json
 import threading
 from pathlib import Path
 
-CEILING_USD = 10.00          # approved by the user; do not raise in code
-PLANNED_USD = 7.80           # what the design budgeted — crossing this warns
+# Raised from 10.00 to 12.00 on the user's explicit approval of a recommendation
+# that carried its own price ("measure the red band — ~$2"). Raised here rather
+# than bypassed at the call site, so the guard still binds and the increase is
+# visible in the diff instead of buried in a flag.
+CEILING_USD = 12.00
+PLANNED_USD = 11.60          # $9.54 already spent + ~$2.06 for the red-band probe
 
 # $ per million tokens: (input, output)
 PRICES = {
