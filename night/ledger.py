@@ -13,12 +13,15 @@ import json
 import threading
 from pathlib import Path
 
-# Raised from 10.00 to 12.00 on the user's explicit approval of a recommendation
-# that carried its own price ("measure the red band — ~$2"). Raised here rather
-# than bypassed at the call site, so the guard still binds and the increase is
-# visible in the diff instead of buried in a flag.
-CEILING_USD = 12.00
-PLANNED_USD = 11.60          # $9.54 already spent + ~$2.06 for the red-band probe
+# Raised on explicit approval, in steps, each one visible in the diff rather
+# than bypassed at a call site: 10 -> 12 (red-band probe) -> 20 (launch work).
+# The $20 covers, in order of what is actually unblocked:
+#   ~$6   finish extending key-facts over the remaining 79 uncovered anchors
+#   ~$2   re-measure the saved 54 questions for a paired before/after
+#   ~$7   curate wave 1 (85 orders) once the PDFs are downloaded
+#   ~$0.5 grow the gate by 3 probes per new order
+CEILING_USD = 20.00
+PLANNED_USD = 19.50
 
 # $ per million tokens: (input, output)
 PRICES = {
