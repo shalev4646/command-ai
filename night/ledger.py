@@ -20,8 +20,12 @@ from pathlib import Path
 #   ~$2   re-measure the saved 54 questions for a paired before/after
 #   ~$7   curate wave 1 (85 orders) once the PDFs are downloaded
 #   ~$0.5 grow the gate by 3 probes per new order
-CEILING_USD = 20.00
-PLANNED_USD = 19.50
+CEILING_USD = 24.00
+PLANNED_USD = 22.50
+# Raised 20 -> 24 when wave 1 actually landed: $18.12 was already spent, and
+# the wave needs ~$2.2 to curate 26 orders, ~$0.15 for their gate probes, and
+# ~$2 for the paired re-measure. The $20 had assumed the wave would arrive with
+# more headroom than the anchor-extension experiment left it.
 
 # $ per million tokens: (input, output)
 PRICES = {

@@ -251,8 +251,15 @@ def curate_one(doc: dict, ledger: Ledger, problems: list[str] | None = None
 def run(limit: int | None = None) -> None:
     ledger = Ledger(C.LEDGER)
     from night.audit import _section_ids
+    # 20.0502 was curated, reviewed, and deliberately pulled: its source's
+    # digits are demonstrably scrambled ("25 בדצמבר3..2"=2003) and two money
+    # thresholds could not be traced to it. It has no sections, so it looks
+    # like a target forever — excluding it here keeps that decision from being
+    # silently undone by the next run.
+    NEVER = {"20.0502"}
     targets = [d for d in backend.load_documents()
-               if d.get("document_id") and not _section_ids(d)]
+               if d.get("document_id") and d["document_id"] not in NEVER
+               and not _section_ids(d)]
     if limit:
         targets = targets[:limit]
     C.log(f"[curate] {len(targets)} orders need a key-facts section "
