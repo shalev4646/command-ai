@@ -7,7 +7,9 @@
   "source_url": "https://www.kolzchut.org.il/he/סטודנטים_במילואים",
   "civil_source": true,
   "civil_label": "כללי המל\"ג",
-  "roles": ["reserve"],
+  "roles": [
+    "reserve"
+  ],
   "questions_curated": true,
   "suggested_questions": {
     "reserve": [

@@ -28,3 +28,5 @@ docs/
 *.html
 # ...except Streamlit component sources — these ARE source and must deploy
 !components/**/*.html
+night/out/
+REPORT_corpus.md
