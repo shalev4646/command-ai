@@ -15,6 +15,7 @@ tell us whether the additions broke something.
 """
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 
@@ -23,6 +24,55 @@ from night import config as C
 from night.ledger import Ledger
 
 PY = sys.executable
+
+
+def check_ids(new: set[str]) -> list[tuple[str, str, str]]:
+    """Flag orders whose number was read backwards out of the PDF header.
+
+    Wave 1 arrived with five of these: 310214x.pdf became order "4120.13",
+    500405x.pdf became "5040.05". The extractor handles Hebrew letters fine —
+    the body text of all five is clean, and 550 curated clauses across 102
+    documents contain zero reversed numbers — but the header band, where the
+    order number and publication date sit, comes out with its digit runs
+    mirrored. The damage is therefore narrow and entirely in derived metadata.
+
+    It is also silent, which is why this runs on every wave instead of living in
+    a note: a wrong document_id is not a crash. The order simply stops answering
+    to its real number, and any citation shown to a soldier points at an order
+    that does not exist. The filename carries the number the site published it
+    under, so it is the check: reverse the id and see if the filename agrees.
+    """
+    bad = []
+    for d in backend.load_documents():
+        did = str(d.get("document_id", ""))
+        if did not in new:
+            continue
+        want = _number_from_filename(str(d.get("source_file", "")))
+        if not want:
+            continue                      # slug-named guides, no number to check
+        core = did.replace("PM-", "").lstrip("0")
+        if core not in (want, want.replace(".", "")):
+            bad.append((did, want, str(d.get("source_file", ""))))
+    return bad
+
+
+def _number_from_filename(source_file: str) -> str | None:
+    """`500405x.pdf` and `פמ-33-0113-בחירות...` both mean order NN.NNNN.
+
+    Reading the whole digit run only works for the flat names; the dashed
+    Hebrew ones split the number across two groups, and grabbing the first
+    5-7 digits anywhere in the string picks up fragments of the Hebrew title
+    instead — which reported `פמ-33-0113` as order "011.1202" and buried the
+    real hits under false alarms.
+    """
+    runs = re.findall(r"\d+", re.sub(r"\.pdf$", "", source_file, flags=re.I))
+    if runs and len(runs[0]) in (5, 6):
+        digits = runs[0]
+    elif len(runs) > 1 and len(runs[0]) <= 2 and len(runs[1]) == 4:
+        digits = runs[0] + runs[1]
+    else:
+        return None
+    return f"{digits[:-4].lstrip('0') or '0'}.{digits[-4:]}"
 
 
 def _new_doc_ids(before: set[str]) -> set[str]:
@@ -52,6 +102,12 @@ def main() -> None:
     if not new:
         C.log("[intake] nothing new in pdf-ldf_law/ — drop the downloads there first")
         return
+
+    # 1b — a reversed order number is cheap to fix now and expensive later: the
+    #      id is baked into gate cases and citations the moment curation runs.
+    for did, want, src in check_ids(new):
+        C.log(f"[intake] SUSPECT ID {did} — {src} suggests {want}; "
+              f"fix storage/json_store before curating")
 
     # 2 — curate: every new order needs a key-facts block, or an anchor win
     #     hands the model a raw chunk (measured: usually the colophon).
