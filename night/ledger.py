@@ -10,6 +10,7 @@ Batch API halves everything; cache writes cost 1.25x input, reads 0.1x.
 from __future__ import annotations
 
 import json
+import os
 import threading
 from pathlib import Path
 
@@ -95,6 +96,34 @@ class Ledger:
         tmp.write_text(json.dumps(self._state, ensure_ascii=False, indent=1), encoding="utf-8")
         tmp.replace(self.path)
 
+    def _merge_disk(self) -> None:
+        """Fold in entries written by anyone else since we last read.
+
+        Without this the ledger loses money silently, and always in the unsafe
+        direction: a long run holds `_state` in memory for an hour, so a second
+        writer's entries are overwritten by the next settle() and the ceiling
+        then guards a total that is smaller than what was actually spent. That
+        is not hypothetical — an $18.12 carry-forward booked while a curation
+        run was live vanished exactly this way, leaving a $24 ceiling willing to
+        authorise roughly $42.
+
+        Entries are the source of truth and `spent`/`reserved` are derived from
+        them, so a merge cannot double-count: an id seen twice is one entry.
+        """
+        mine = {e["id"]: e for e in self._state["entries"]}
+        for e in self._load()["entries"]:
+            # an entry we already have, but settled elsewhere, keeps its actual
+            if e["id"] in mine and mine[e["id"]]["actual"] is None:
+                mine[e["id"]] = e
+            elif e["id"] not in mine:
+                mine[e["id"]] = e
+        entries = sorted(mine.values(), key=lambda e: e["id"])
+        self._state = {
+            "spent": sum(e["actual"] for e in entries if e["actual"] is not None),
+            "reserved": sum(e["estimate"] for e in entries if e["actual"] is None),
+            "entries": entries,
+        }
+
     @property
     def spent(self) -> float:
         return self._state["spent"]
@@ -110,13 +139,17 @@ class Ledger:
     def reserve(self, label: str, estimate_usd: float) -> str:
         """Claim budget before a call. Raises BudgetExceeded rather than overspending."""
         with self._lock:
+            self._merge_disk()
             if self.committed + estimate_usd > CEILING_USD:
                 raise BudgetExceeded(
                     f"{label}: ${estimate_usd:.2f} would put the run at "
                     f"${self.committed + estimate_usd:.2f}, over the ${CEILING_USD:.2f} ceiling "
                     f"(${self.remaining():.2f} left). Shrink the sample and retry."
                 )
-            rid = f"{label}#{len(self._state['entries'])}"
+            # pid-qualified: two processes both at entry 7 would otherwise mint
+            # the same id, and the merge would treat the second as a duplicate
+            # of the first and drop its cost.
+            rid = f"{label}#{os.getpid()}-{len(self._state['entries'])}"
             self._state["reserved"] += estimate_usd
             self._state["entries"].append(
                 {"id": rid, "label": label, "estimate": round(estimate_usd, 4), "actual": None}
@@ -127,13 +160,16 @@ class Ledger:
     def settle(self, rid: str, actual_usd: float) -> None:
         """Replace a reservation with the measured cost."""
         with self._lock:
+            self._merge_disk()
             for e in self._state["entries"]:
                 if e["id"] == rid and e["actual"] is None:
-                    self._state["reserved"] -= e["estimate"]
-                    self._state["reserved"] = max(0.0, self._state["reserved"])
-                    self._state["spent"] += actual_usd
                     e["actual"] = round(actual_usd, 4)
                     break
+            # totals are derived from entries, so recompute rather than adjust
+            self._state["spent"] = sum(
+                e["actual"] for e in self._state["entries"] if e["actual"] is not None)
+            self._state["reserved"] = sum(
+                e["estimate"] for e in self._state["entries"] if e["actual"] is None)
             self._save()
 
     def summary(self) -> str:
