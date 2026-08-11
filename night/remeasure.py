@@ -22,6 +22,16 @@ from night.probe import build_requests, run_batch
 from night.redband import _outcome, wilson
 
 N_CONTROL = 12
+# Hard cap on how many questions get re-asked, because the alternative failure
+# is worse than a small sample: run_batch reserves the whole batch up front, so
+# a set that does not fit under the ceiling raises BudgetExceeded and produces
+# no measurement at all. Capping trades interval width — which is honest and
+# reportable — for the run completing. Set to 0 for no cap.
+#
+# Pairing survives the cap: the same questions are compared before and after, so
+# the comparison stays paired and only its precision drops. The cap takes the
+# lowest ids so a re-run measures the same subset rather than a fresh draw.
+MAX_SAMPLE = int(__import__("os").environ.get("REMEASURE_MAX", "0"))
 OUT = C.OUT / "probe_remeasure.jsonl"
 
 
@@ -53,6 +63,16 @@ def run() -> None:
     sample = changed + same[:N_CONTROL]
     C.log(f"[remeasure] {len(changed)} questions whose context moved, "
           f"+{min(len(same), N_CONTROL)} controls -> {len(sample)} to re-run")
+    if MAX_SAMPLE and len(sample) > MAX_SAMPLE:
+        dropped = len(sample) - MAX_SAMPLE
+        sample = sorted(sample, key=lambda r: r["id"])[:MAX_SAMPLE]
+        C.log(f"[remeasure] CAPPED at {MAX_SAMPLE} — {dropped} questions not re-asked. "
+              f"Intervals below are wider than the full set would give, and the "
+              f"before/after totals are over this subset only.")
+        # the 'before' side has to shrink with it, or the comparison silently
+        # contrasts 54 old answers against a smaller, differently-composed new set
+        keep = {r["id"] for r in sample}
+        blind = [r for r in blind if r["id"] in keep]
 
     reqs, meta = build_requests([{**sweep[r["id"]]} for r in sample])
     for m, r in zip(meta, sample):
