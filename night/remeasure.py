@@ -81,8 +81,21 @@ def run() -> None:
 
     from night.grade import grade_file
     grade_file(OUT, Ledger(C.LEDGER), "remeasure")
+    report()
 
+
+def report() -> None:
+    """Print the paired before/after. Separate from run() so `night.collect`
+    can produce it for a batch that landed after its submitting process died."""
+    base = C.read_jsonl(C.OUT / "grades_baseline.jsonl")
+    sweep = {r["id"]: r for r in C.read_jsonl(C.SWEEP)}
+    blind = [r for r in base if sweep.get(r["id"], {}).get("source") == "blind"]
     after = C.read_jsonl(C.OUT / "grades_remeasure.jsonl")
+    # compare over the questions actually re-asked, not the full baseline
+    asked = {r["id"] for r in after}
+    if asked:
+        blind = [r for r in blind if r["id"] in asked]
+
     b_full = sum(1 for r in blind if _outcome(r) == "full")
     a_full = sum(1 for r in after if _outcome(r) == "full")
     lo_b, hi_b = wilson(b_full, len(blind))
@@ -92,9 +105,23 @@ def run() -> None:
           f"{a_full}/{len(after)} ({100*a_full/max(1,len(after)):.0f}%, "
           f"{100*lo_a:.0f}-{100*hi_a:.0f})")
 
+    # the headline is partiality, not fullness: the baseline was 7% full but
+    # 78% partial, so a wave that converts partial answers into full ones shows
+    # up here first and most clearly
+    import collections
+    for name, rows in (("before", blind), ("after ", after)):
+        c = collections.Counter(_outcome(r) for r in rows)
+        n = max(1, len(rows))
+        C.log(f"[remeasure] {name} (n={len(rows)}): " + " · ".join(
+            f"{k} {c[k]} ({100*c[k]/n:.0f}%)" for k in ("full", "partial", "nothing")))
+
     flips = [r for r in after if r.get("baseline_outcome") and
              _outcome(r) != r["baseline_outcome"]]
     C.log(f"[remeasure] verdicts that moved: {len(flips)}/{len(after)}")
+    moved = collections.Counter(
+        f'{r["baseline_outcome"]}->{_outcome(r)}' for r in flips)
+    for k, v in moved.most_common():
+        C.log(f"[remeasure]   {k}: {v}")
     (C.OUT / "remeasure_summary.json").write_text(json.dumps(
         {"before_full": b_full, "before_n": len(blind),
          "after_full": a_full, "after_n": len(after),

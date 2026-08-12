@@ -70,7 +70,20 @@ def run_batch(reqs, meta, ledger: Ledger, out_path, label: str) -> None:
           f"${ledger.remaining():.2f} left after)")
 
     batch = backend.client.messages.batches.create(requests=reqs)
-    C.log(f"[probe] batch {batch.id} submitted; polling every 60s")
+    # A batch is paid for at submit and lives on the server for 24h, but `meta`
+    # — the map from custom_id back to which question was asked — lives only in
+    # this process. Lose the process and the results become unattributable text.
+    # That is a real failure mode, not a hypothetical: a 30-request batch sat in
+    # the provider's queue for three hours here, well past the point where
+    # keeping a session open to babysit it is reasonable. Writing the claim
+    # ticket to disk lets `night.collect` finish the job later.
+    ticket = C.OUT / f"batch_{label}.json"
+    ticket.write_text(json.dumps(
+        {"batch_id": batch.id, "label": label, "rid": rid,
+         "out_path": str(out_path), "meta": meta}, ensure_ascii=False),
+        encoding="utf-8")
+    C.log(f"[probe] batch {batch.id} submitted; polling every 60s "
+          f"(claim ticket: {ticket.name})")
     while True:
         b = backend.client.messages.batches.retrieve(batch.id)
         if b.processing_status == "ended":
@@ -80,9 +93,20 @@ def run_batch(reqs, meta, ledger: Ledger, out_path, label: str) -> None:
               f"processing={b.request_counts.processing}")
         time.sleep(60)
 
+    collect_batch(batch.id, meta, rid, out_path, label, ledger)
+
+
+def collect_batch(batch_id: str, meta: list[dict], rid: str | None,
+                  out_path, label: str, ledger: Ledger) -> None:
+    """Turn a finished batch into graded rows. Split out so it can run later.
+
+    `rid` may be None when the reservation was already settled by a process
+    that died after paying — the results are still worth collecting, they were
+    bought and the ledger already knows about the money.
+    """
     actual = 0.0
     rows = []
-    for res in backend.client.messages.batches.results(batch.id):
+    for res in backend.client.messages.batches.results(batch_id):
         i = int(res.custom_id[1:])
         if res.result.type != "succeeded":
             rows.append({**meta[i], "answer": None, "error": res.result.type})
@@ -97,7 +121,8 @@ def run_batch(reqs, meta, ledger: Ledger, out_path, label: str) -> None:
         rows.append({**meta[i], "answer": text,
                      "truncated": m.stop_reason == "max_tokens",
                      "refused_flag": _is_refusal(text)})
-    ledger.settle(rid, actual)
+    if rid:
+        ledger.settle(rid, actual)
     C.write_jsonl(out_path, rows)
     C.log(f"[probe] {label}: {sum(1 for r in rows if r.get('answer'))}/{len(rows)} answered, "
           f"${actual:.2f} (ledger total ${ledger.spent:.2f})")
