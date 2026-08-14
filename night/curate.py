@@ -258,12 +258,25 @@ def curate_one(doc: dict, ledger: Ledger, problems: list[str] | None = None
 def run(limit: int | None = None) -> None:
     ledger = Ledger(C.LEDGER)
     from night.audit import _section_ids
-    # 20.0502 was curated, reviewed, and deliberately pulled: its source's
-    # digits are demonstrably scrambled ("25 בדצמבר3..2"=2003) and two money
-    # thresholds could not be traced to it. It has no sections, so it looks
-    # like a target forever — excluding it here keeps that decision from being
-    # silently undone by the next run.
-    NEVER = {"20.0502"}
+    # Orders deliberately left without key-facts. Each has no `sections`, so it
+    # looks like a fresh target on every run — this set is what stops a reviewed
+    # decision from being silently undone by automation.
+    #
+    # Both ids are listed for the discharge-grant order because it was renamed:
+    # the header digits that produced "20.0502" were themselves reversed and it
+    # is really הפ"ע 3.0502. A rename that does not update this set breaks the
+    # guard silently, which is exactly what happened once already.
+    #
+    #   3.0502 / 20.0502  curated, reviewed, pulled — the source's digits are
+    #                     demonstrably scrambled ("25 בדצמבר3..2"=2003) and two
+    #                     money thresholds could not be traced to it.
+    #   33.1010           rejected twice, ~$0.39 each, for citing clause [103]
+    #                     that does not exist. Its header announces "סעיפים 5 עד
+    #                     68" while the body only ever numbers 1-9, so the
+    #                     corrupted banner invites the model to cite clauses the
+    #                     text does not have. Retrying costs money and fails the
+    #                     same way; it needs a clean source PDF, not another run.
+    NEVER = {"20.0502", "3.0502", "33.1010"}
     targets = [d for d in backend.load_documents()
                if d.get("document_id") and d["document_id"] not in NEVER
                and not _section_ids(d)]
