@@ -744,10 +744,43 @@ def has_unknown_terms(query: str) -> bool:
     if not vocab:
         return False
     for word in query.split():
-        variants = _term_variants(word)
-        if variants and not any(v in vocab for v in variants):
+        if _strict_variants(word) and not _known(word, vocab):
             return True
     return False
+
+
+def _strict_variants(word: str) -> set[str]:
+    """Like _term_variants but WITHOUT prefix stripping.
+
+    Prefix stripping exists so retrieval can match "הפתיחה" against "פתיחת",
+    and there it earns its keep. In the typo gate it does the opposite job:
+    it strips a word down until it collides with an unrelated real one, and
+    then reports the query as fully understood.
+
+    Measured on the questions that actually fail: "כשורה" appears nowhere in
+    the corpus, but dropping its כ yields "שורה" — a common word meaning a row
+    — so the gate returned False and the spelling pass that could have turned
+    "נכנס לשמירה בשעה לא כשורה" into "מאחר לשמירה" never ran. Same for the
+    "שעות המוקדשות" query, where מוקדשות reduces to מוקדש.
+
+    Checking the word as written, with only finals folding and light suffix
+    stemming, fires on 31% of the gate's questions instead of 18%. The 55 extra
+    spelling passes cost about $0.0003 each, which is not a reason to keep a
+    gate that misses the cases it exists for.
+    """
+    w = word.strip("?.,:;!\"'()[]").translate(_FINALS)
+    if len(w) < 3:
+        return set()
+    forms = {w}
+    if len(w) > 4 and w[-1] in "הת":
+        forms.add(w[:-1])
+    if len(w) > 5 and w[-2:] in ("ים", "ות"):
+        forms.add(w[:-2])
+    return forms
+
+
+def _known(word: str, vocab: set[str]) -> bool:
+    return any(v in vocab for v in _strict_variants(word))
 
 
 def _folded_corpus() -> list[str]:
