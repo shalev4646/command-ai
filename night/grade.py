@@ -38,10 +38,13 @@ LEVELS = ("full", "led_known", "partial", "refused")
 PARTS = C.OUT / "question_parts.json"
 
 PARTS_SCHEMA = {
+    # no minItems/maxItems: the Batch API rejects them on array types
+    # ("For 'array' type, property 'maxItems' is not supported") and the whole
+    # batch dies at submit validation. The over-splitting guard lives in the
+    # prompt, and ensure_parts drops empty lists on read.
     "type": "object",
     "properties": {
-        "parts": {"type": "array", "items": {"type": "string"},
-                  "minItems": 1, "maxItems": 6},
+        "parts": {"type": "array", "items": {"type": "string"}},
     },
     "required": ["parts"],
     "additionalProperties": False,
