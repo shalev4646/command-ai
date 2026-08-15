@@ -26,6 +26,7 @@ before this branch merges, and the report says so.
 from __future__ import annotations
 
 import json
+import os
 import re
 
 import backend
@@ -33,7 +34,13 @@ from night import config as C
 from night.ledger import Ledger, BudgetExceeded, cost_usd
 from night.rehearse import doc_path
 
-MODEL = "claude-opus-4-8"
+# Overridable so a cheaper model can be tried against the same gates rather than
+# argued about. Haiku is 5x cheaper on both sides, and the gates here are
+# mechanical — a clause must cite numbers that exist in the source, and may not
+# raise a flagged topic the order is silent about — so a weaker model shows up
+# as rejections, not as quietly worse data. That makes the substitution a
+# measurable question: what fraction survives, at what cost per accepted order.
+MODEL = os.environ.get("CURATE_MODEL", "claude-opus-4-8")
 MAX_RAW_WORDS = 9000          # 33.0304, the largest, is 5,532
 
 # Topics where a fabricated sentence would be actively harmful: a soldier acting
