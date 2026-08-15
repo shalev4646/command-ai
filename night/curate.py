@@ -175,15 +175,31 @@ def _norm(text: str) -> set[str]:
 
 
 def is_numbered(raw: str) -> bool:
-    """True when the order really carries a run of clause markers.
+    """True when the order's clause numbering can actually be verified against.
 
-    Four of the 26 targets (5040.05, PM-21.0203, 20.0502, 33.0201) do not —
-    their raw text has no usable numbering at all, so demanding citations from
-    them would reject every candidate forever rather than catch anything.
+    Two distinct failures live here, and only the first was handled before.
+    Some orders carry no usable numbering at all, so demanding citations from
+    them rejects every candidate forever rather than catching anything.
+
+    The second is worse because it looks fine: the RTL extraction reverses digit
+    runs, so an order's markers come out as a plausible-looking but wrong set.
+    33.0808 yields {1,2,3,6,8,10,...,80,81,82,83,86,88} — 4, 5, 7 and 9 are
+    missing while 80-88 are the mirrored forms of 08-88, and its own header
+    reads "תוקף סעיפים1 עד82" where 82 is 28 reversed. A density test passes
+    that happily, so the model cited clause 4 correctly, the gate could not find
+    a "4" to match, and the order was rejected twice at full price for being
+    right. 33 of the 164 wave-2 targets are in this state.
+
+    Requiring an unbroken run from 1 separates the two: intact numbering starts
+    at 1 and counts up, mirrored numbering does not. When it fails, the order is
+    treated as unnumbered and citations are forbidden rather than fabricated —
+    an unverifiable reference is worth less than no reference.
     """
     nums = clause_numbers_in_raw(raw)
-    return max((len([x for x in range(s, s + 12) if x in nums])
-                for s in range(1, 90)), default=0) >= 6
+    run = 0
+    while run + 1 in nums:
+        run += 1
+    return run >= 5
 
 
 # A faithful paraphrase reuses the order's own vocabulary; an invented clause
