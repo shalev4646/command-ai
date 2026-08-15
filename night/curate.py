@@ -190,16 +190,30 @@ def is_numbered(raw: str) -> bool:
     a "4" to match, and the order was rejected twice at full price for being
     right. 33 of the 164 wave-2 targets are in this state.
 
-    Requiring an unbroken run from 1 separates the two: intact numbering starts
-    at 1 and counts up, mirrored numbering does not. When it fails, the order is
-    treated as unnumbered and citations are forbidden rather than fabricated —
-    an unverifiable reference is worth less than no reference.
+    Two tests are needed, because damage is not uniform across an order. An
+    unbroken run from 1 catches the wholly-mirrored case, but 30.0401 keeps its
+    low numbering intact and mirrors only the high end — markers come out as
+    {1,2,3,4,5,7,9,10..15,17,19,50,51,53,55,59}, so it passes a run test and
+    then rejects a correct citation of clause 20, twice, at full price.
+
+    Density catches that: a healthy order's markers fill their range (35.0223
+    yields 15 markers with a maximum of 15, 30.0603 yields 21 with a maximum of
+    21 — density 1.0), while a damaged one is sparse and reaches absurd values
+    (3.0110 and 33.0807 both land at density 0.01 with maxima near 900). The
+    two populations are separated by two orders of magnitude, so the threshold
+    is not delicate.
+
+    Failing either test means citations cannot be verified, so they are
+    forbidden rather than fabricated — an unverifiable reference is worth less
+    than no reference.
     """
-    nums = clause_numbers_in_raw(raw)
+    nums = {n for n in clause_numbers_in_raw(raw) if n > 0}
+    if not nums:
+        return False
     run = 0
     while run + 1 in nums:
         run += 1
-    return run >= 5
+    return run >= 5 and len(nums) / max(nums) >= 0.6
 
 
 # A faithful paraphrase reuses the order's own vocabulary; an invented clause
