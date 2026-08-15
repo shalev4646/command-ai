@@ -197,7 +197,15 @@ def targets(docs: list[dict]) -> list[dict]:
     Sectionless orders are excluded on purpose: an anchor lift hands the model
     the merged key-facts block, so anchoring an order without one recreates
     the liftable-but-empty trap the curation stage exists to close.
+
+    Orders whose digits did not survive extraction are excluded for the opposite
+    reason. An anchor's whole job is to make a document easier to reach, and
+    reaching a document whose dates, sums and day-counts are scrambled is not an
+    improvement — it is the corruption arriving at more questions. They stay
+    hard to find until their source is fixed.
     """
+    from night.digits import trustworthy
+
     out = []
     for d in docs:
         did = d.get("document_id")
@@ -206,6 +214,8 @@ def targets(docs: list[dict]) -> list[dict]:
         if d.get("anchor_questions"):
             continue
         if not any(s.get("id") == "key-facts" for s in d.get("sections") or []):
+            continue
+        if not trustworthy(d):
             continue
         out.append(d)
     return sorted(out, key=lambda d: d["document_id"])
