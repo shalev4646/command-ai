@@ -65,8 +65,7 @@ PROMPT = """לפניך הטקסט הגולמי של פקודת מטכ"ל. כתו
 כללים מחייבים:
 1. **רק מה שכתוב בפקודה.** אסור להסיק, להשלים מידע כללי, או לכתוב על נושא שהפקודה שותקת בו.
    אם הפקודה לא עוסקת בנושא כלשהו — פשוט אל תזכיר אותו. שתיקה עדיפה על ניחוש.
-2. **כל סעיף חייב לצטט מספרי סעיפים** מהפקודה, בסוגריים בסוף: "(סעיף 43)" או "(סעיפים 44–45)".
-   המספרים חייבים להיות מספרי הסעיפים האמיתיים שמהם לקחת את התוכן.
+2. {cite_rule}
 3. בין 4 ל-8 סעיפים. כל אחד 40–120 מילים.
 4. השדה `number` הוא **תווית בשפת המשתמש** — איך חייל היה שואל את זה. לא כותרת משפטית.
    דוגמה טובה: "מתי עד רשאי לסרב לטביעות אצבע". דוגמה רעה: "סעיף 28 — נטילת ראיות".
@@ -74,6 +73,19 @@ PROMPT = """לפניך הטקסט הגולמי של פקודת מטכ"ל. כתו
 6. כסה את מה שחייל או מפקד באמת ישאל, לא את מה שהפקודה מדגישה פרוצדורלית.
 
 """
+
+# Rule 2 depends on whether the order actually carries clause markers. Asking
+# for citations from an order that has none does not produce careful behaviour —
+# it produces invented numbers, which is how 18 already-curated orders came to
+# cite clauses that cannot exist. 41% of the wave-2 targets are in this state,
+# so the instruction has to be right for both.
+CITE_RULE = {
+    True: '**כל סעיף חייב לצטט מספרי סעיפים** מהפקודה, בסוגריים בסוף: "(סעיף 43)" או\n'
+          '   "(סעיפים 44–45)". המספרים חייבים להיות מספרי הסעיפים האמיתיים שמהם לקחת את התוכן.',
+    False: '**לפקודה הזו אין מספור סעיפים קריא — אסור לך לצטט מספרי סעיפים בכלל.**\n'
+           '   אל תכתוב "(סעיף 5)" או כל הפניה ממוספרת. חייל שינסה לחפש סעיף כזה לא ימצא אותו.\n'
+           '   אם צריך להפנות, השתמש בשם הנושא כפי שהוא מופיע בפקודה.',
+}
 
 # Structured outputs rather than "return JSON only": Hebrew legal text is full
 # of literal quotes (צה"ל, פ"מ, "אתה חשוד בביצוע עבירה פלונית"), and the first
@@ -198,8 +210,8 @@ def check(section: dict, raw: str) -> tuple[list[str], list[str]]:
         label = str(cl.get("number", "?"))[:40]
         if has_json_debris(txt):
             problems.append(f"clause {label!r}: JSON debris in user-facing text")
+        cites = cited_numbers(txt)
         if numbered:
-            cites = cited_numbers(txt)
             # A MISSING citation is a formatting miss, not an unfaithful claim —
             # rejecting on it cost 29 of the first run's 32 rejections and taught
             # nothing. A WRONG citation is invention and still fails.
@@ -208,6 +220,15 @@ def check(section: dict, raw: str) -> tuple[list[str], list[str]]:
                                 f"absent from raw_text")
             elif not cites:
                 warnings.append(f"clause {label!r}: no clause citation")
+        elif cites:
+            # An order with no clause markers cannot be cited by clause number,
+            # so ANY citation here is invented — and the gate used to be skipped
+            # entirely in this branch, which is how 18 already-curated orders
+            # ended up telling soldiers to look up clauses that do not exist.
+            # 41% of the wave-2 targets have no numbering, so this is the common
+            # case, not the exception.
+            problems.append(f"clause {label!r}: cites {sorted(cites)}, but this "
+                            f"order has no clause numbering at all")
         words = _norm(txt)
         if words:
             ungrounded = words - raw_vocab
@@ -248,11 +269,15 @@ def curate_one(doc: dict, ledger: Ledger, problems: list[str] | None = None
             # succeed land at $0.07-$0.18, nowhere near either ceiling. It only
             # changes the truncating case, from total loss to a usable result.
             model=MODEL, max_tokens=16000,
-            thinking={"type": "adaptive"},
-            output_config={"effort": "high",
+            # Haiku rejects both of these outright ("adaptive thinking is not
+            # supported on this model"), so passing them unconditionally makes
+            # the cheap model untestable rather than merely worse — five orders
+            # came back as 400s before any comparison could be made.
+            **({"thinking": {"type": "adaptive"}} if "opus" in MODEL else {}),
+            output_config={**({"effort": "high"} if "opus" in MODEL else {}),
                            "format": {"type": "json_schema", "schema": SCHEMA}},
             messages=[{"role": "user", "content": PROMPT.format(
-                title=doc.get("title", ""), raw=raw)
+                title=doc.get("title", ""), raw=raw, cite_rule=CITE_RULE[is_numbered(raw)])
                 + (RETRY_SUFFIX.format(problems="\n".join(f"- {p}" for p in problems))
                    if problems else "")}],
         )
