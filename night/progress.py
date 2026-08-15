@@ -20,8 +20,11 @@ from pathlib import Path
 
 # Windows consoles default to cp1252, which cannot encode a single Hebrew
 # letter — every print here would die on its first character.
-if hasattr(sys.stdout, "buffer"):
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+# reconfigure rather than re-wrap: a second TextIOWrapper over the same buffer
+# closes the first when it is collected, which kills stdout for anything that
+# imports two of these modules at once.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 ROOT = Path(__file__).resolve().parent.parent
 LINKS = ROOT / "DOWNLOAD_LINKS.md"

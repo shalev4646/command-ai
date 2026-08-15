@@ -357,9 +357,21 @@ def run(limit: int | None = None) -> None:
     #                     text does not have. Retrying costs money and fails the
     #                     same way; it needs a clean source PDF, not another run.
     NEVER = {"20.0502", "3.0502", "33.1010"}
-    targets = [d for d in backend.load_documents()
-               if d.get("document_id") and d["document_id"] not in NEVER
-               and not _section_ids(d)]
+    # Orders whose digits did not survive extraction are excluded outright, not
+    # gated harder. Every gate downstream checks a clause against the same raw
+    # text, so on a document with substituted digits they all confirm the
+    # corruption in unison — and the model quietly repairs some of it from world
+    # knowledge, producing a number that reads perfectly and appears nowhere in
+    # the order. A soldier acting on an invented deadline is worse off than one
+    # told nothing, and unlike silence it cannot be walked back.
+    from night.digits import trustworthy
+    all_targets = [d for d in backend.load_documents()
+                   if d.get("document_id") and d["document_id"] not in NEVER
+                   and not _section_ids(d)]
+    targets = [d for d in all_targets if trustworthy(d)]
+    skipped = len(all_targets) - len(targets)
+    if skipped:
+        C.log(f"[curate] skipping {skipped} orders whose digits are not verifiable")
     if limit:
         targets = targets[:limit]
     C.log(f"[curate] {len(targets)} orders need a key-facts section "

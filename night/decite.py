@@ -26,8 +26,11 @@ import re
 import sys
 from pathlib import Path
 
-if hasattr(sys.stdout, "buffer"):
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+# reconfigure rather than re-wrap: a second TextIOWrapper over the same buffer
+# closes the first when it is collected, which kills stdout for anything that
+# imports two of these modules at once.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 import backend
 from night.curate import cited_numbers, clause_numbers_in_raw, is_numbered
