@@ -104,9 +104,25 @@ def cited_numbers(text: str) -> set[int]:
     out: set[int] = set()
     for m in re.finditer(r"סעיפים?\s*(\d{1,3})\s*[–\-—]\s*(\d{1,3})", text):
         out |= {int(m.group(1)), int(m.group(2))}
+    # Comma lists — "(סעיפים 1, 7, 9)" / "(סעיפים 3, 4 ו-12)". The wave-1 review
+    # found 31.0519 citing this way; the form was invisible here, so its numbers
+    # were never checked against the source at all.
+    for m in re.finditer(r"סעיפים\s*(\d{1,3}(?:\s*,\s*(?:ו-?\s*)?\d{1,3})+"
+                         r"(?:\s*ו-?\s*\d{1,3})?)", text):
+        out |= {int(n) for n in re.findall(r"\d{1,3}", m.group(1))}
     for m in re.finditer(r"סעיף\s*(\d{1,3})", text):
         out.add(int(m.group(1)))
     return out
+
+
+# Structured output guarantees the envelope parses, not that the model kept the
+# envelope out of the payload: 31.0519's clause text ended in `}]}}, 8]}], "`.
+# Debris has no Hebrew letters, so the vocabulary gate cannot see it either.
+_JSON_DEBRIS = re.compile(r'[\]\}]\s*[\]\},]|"\s*[\]\}]|[\]\}]\s*"$')
+
+
+def has_json_debris(text: str) -> bool:
+    return bool(_JSON_DEBRIS.search(text))
 
 
 _HEB_PREFIXES = "הובלמכש"
@@ -173,6 +189,8 @@ def check(section: dict, raw: str) -> tuple[list[str], list[str]]:
     for cl in section.get("clauses", []):
         txt = cl.get("text", "")
         label = str(cl.get("number", "?"))[:40]
+        if has_json_debris(txt):
+            problems.append(f"clause {label!r}: JSON debris in user-facing text")
         if numbered:
             cites = cited_numbers(txt)
             # A MISSING citation is a formatting miss, not an unfaithful claim —
