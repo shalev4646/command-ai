@@ -221,6 +221,11 @@ def is_numbered(raw: str) -> bool:
 # supposed to introduce words the legal text never uses.
 MAX_UNGROUNDED = 0.50
 
+# The prompt asks for 40-120 words per clause. Ten is far below anything a real
+# answer needs and far above the two- and three-word fragments that truncation
+# leaves behind, so it separates the two without judging terseness.
+MIN_CLAUSE_WORDS = 10
+
 
 def check(section: dict, raw: str) -> tuple[list[str], list[str]]:
     """The faithfulness gates.
@@ -240,6 +245,16 @@ def check(section: dict, raw: str) -> tuple[list[str], list[str]]:
         label = str(cl.get("number", "?"))[:40]
         if has_json_debris(txt):
             problems.append(f"clause {label!r}: JSON debris in user-facing text")
+        # A clause cut off at a Hebrew gershayim: the model writes צה"ל or יו"ר
+        # and the text ends at the quote, leaving "צה" or "יו" as the whole
+        # clause. Structured output was supposed to close this, and mostly does
+        # — 5 of 115 Haiku blocks and 1 of 98 Opus ones still land here — but the
+        # vocabulary gate cannot see it, because a two-word clause has almost no
+        # vocabulary to be ungrounded. The prompt asks for 40-120 words, so
+        # anything this short is debris rather than a terse answer.
+        if len(txt.split()) < MIN_CLAUSE_WORDS:
+            problems.append(f"clause {label!r}: only {len(txt.split())} words — "
+                            f"truncated, probably at a gershayim")
         cites = cited_numbers(txt)
         if numbered:
             # A MISSING citation is a formatting miss, not an unfaithful claim —

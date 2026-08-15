@@ -110,7 +110,7 @@ def main(apply: bool = False) -> None:
         cls = doc["sections"][0]["clauses"]
         for i, _why, _nums in hits:
             cls[i]["text"] = strip(str(cls[i]["text"]))
-        p = doc_path(doc)
+        p = doc_path(doc["document_id"])
         json.dump(doc, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 
     verb = "stripped from" if apply else "would strip from"

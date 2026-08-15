@@ -247,7 +247,7 @@ def run(limit: int | None = None, apply: bool = False) -> None:
 
         doc["raw_text"] = apply_table(raw, table)
         doc["digits_recovered"] = {"table": table, "year_share": round(after, 2)}
-        json.dump(doc, open(doc_path(doc), "w", encoding="utf-8"),
+        json.dump(doc, open(doc_path(doc["document_id"]), "w", encoding="utf-8"),
                   ensure_ascii=False, indent=1)
         fixed += 1
         C.append_jsonl(ACCEPTED, {"doc_id": did, "table": table,
