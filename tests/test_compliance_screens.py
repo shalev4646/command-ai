@@ -177,6 +177,32 @@ def test_coverage_note_is_derived_not_hardcoded():
     )
 
 
+# ── P7: the app may not claim to be an internal military system ──────────────
+
+def test_app_does_not_claim_internal_use_only():
+    """'לשימוש פנימי בלבד' is the phrase of an official IDF document, and it sat
+    on the entry screen, the drawer foot and the settings foot of a PUBLIC app
+    whose own ToS clause 1 says 'not an official IDF tool, built by an
+    independent developer'. It is a factual claim the app cannot back -- the
+    same defect class as the privacy banner, one screen earlier.
+
+    'בלמ״ס' on its own is deliberately NOT tested here: it describes the orders
+    (which really are unclassified and carry the mark) and is the app's design
+    language. This pins the claim about the app, not the mark on the documents.
+    """
+    assert "לשימוש פנימי בלבד" not in APP, (
+        "the internal-use-only claim is back"
+    )
+
+
+def test_footers_carry_the_honest_line():
+    """One phrase, everywhere a footer states what the app is -- the About
+    screen already said it; the entry/drawer/settings footers contradicted it."""
+    assert APP.count("כלי עזר פרטי · אינו כלי רשמי של צה\\\"ל") >= 3, (
+        "entry, drawer and settings footers must all carry the honest line"
+    )
+
+
 if __name__ == "__main__":
     failures = 0
     for name, fn in sorted(globals().items()):

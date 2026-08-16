@@ -3758,7 +3758,13 @@ if st.session_state.role is None or _name_gate:
         st.session_state.role_picked_here = True
         st.rerun()
 
-    st.markdown("<div class='cai-entry-footer'>בלמ\"ס · לשימוש פנימי בלבד</div>", unsafe_allow_html=True)
+    # Until 2026-08-16 this read "בלמ״ס · [internal use only]" — the phrasing of
+    # an official IDF document, on the first screen of a public app whose ToS
+    # clause 1 says the opposite. Same defect class as the privacy banner. The
+    # About-screen footer already carried the honest line; this and the two
+    # other footers now say the same thing (tests/test_compliance_screens.py
+    # pins the wording, which is why the old phrase is not quoted here).
+    st.markdown("<div class='cai-entry-footer'>כלי עזר פרטי · אינו כלי רשמי של צה\"ל</div>", unsafe_allow_html=True)
 
     if _name_gate:
         # scrim (outer container) + card (inner) — plain keyed containers, no
@@ -6515,7 +6521,7 @@ def _settings_hub():
         _clear_history()
         _reset_identity()
         st.rerun()
-    st.markdown("<div class='cai-drawer-foot'>בלמ\"ס · לשימוש פנימי בלבד</div>", unsafe_allow_html=True)
+    st.markdown("<div class='cai-drawer-foot'>כלי עזר פרטי · אינו כלי רשמי של צה\"ל</div>", unsafe_allow_html=True)
 
 
 def _service_card(name: str, svc: str, track: str, marks: list[str]) -> str:
@@ -7447,7 +7453,7 @@ with st.container(key="cai_drawer"):
         archive_current_conversation()
         st.session_state.messages = []
         st.rerun()
-    st.markdown("<div class='cai-drawer-foot'>בלמ\"ס · לשימוש פנימי בלבד</div>", unsafe_allow_html=True)
+    st.markdown("<div class='cai-drawer-foot'>כלי עזר פרטי · אינו כלי רשמי של צה\"ל</div>", unsafe_allow_html=True)
 
 # settings overlay (state machine) — shown whenever the flag is set; opening it
 # leaves the drawer open underneath so closing returns there.
