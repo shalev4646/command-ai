@@ -2492,6 +2492,19 @@ html:not(.cai-standalone) [data-testid="stBottom"] {{
     transform: rotate(45deg); }}
 .cai-ans-chev span + span {{ border-color: rgba(163,174,110,.25); margin-top: -3px; }}
 
+/* ── 👎 follow-up line — the contact address under the "what was wrong?" row.
+   Disclaimer-class type (11.5px, --text-faint) so it reads as a footnote to
+   the comment box, not as a second call to action; the address itself in the
+   accent so it is recognisably a link on a dark surface. `.sent` is the
+   post-submit confirmation and gets one step more presence, since it is
+   then the only thing left in that slot. */
+.cai-fb-mail {{ font: 400 11.5px Heebo, sans-serif; color: var(--text-faint);
+    direction: rtl; text-align: right; margin: 2px 2px 0; line-height: 1.55; }}
+.cai-fb-mail a {{ color: var(--accent-bright) !important; text-decoration: none !important;
+    font-weight: 600; direction: ltr; unicode-bidi: isolate; }}
+.cai-fb-mail a:hover {{ text-decoration: underline !important; }}
+.cai-fb-mail.sent {{ color: var(--text-dim); margin-top: 6px; }}
+
 /* ── Escalation strip — "למי פונים": one quiet line between the answer
    body and the action pills (deterministic lookup, see escalation_paths.py
    — general guidance, not part of the ruling). Label and chain share a
@@ -5480,6 +5493,13 @@ _ICON = {
     "trash": _svg("<path d='M3 6h18'/><path d='M8 6V4h8v2'/><path d='M6 6l1 14h10l1-14'/>"),
     "lock": _svg("<rect x='4' y='10' width='16' height='11' rx='2'/><path d='M8 10V7a4 4 0 0 1 8 0v3'/>"),
     "info": _svg("<circle cx='12' cy='12' r='9'/><path d='M12 16v-4'/><path d='M12 8h.01'/>"),
+    # compliance rows (2026-08-16): same 18px/1.7 stroke family as the rest of
+    # the settings hub, so the four rows of the "אודות" group read as one set
+    "policy": _svg("<path d='M6 3h8l4 4v14H6z'/><path d='M14 3v4h4'/>"
+                   "<path d='M9 12h6M9 15.5h6'/><path d='M9 8.5h2'/>"),
+    "access": _svg("<circle cx='12' cy='4.5' r='1.6'/><path d='M5 8.5h14'/>"
+                   "<path d='M12 8.5v5'/><path d='M12 13.5l-3.5 7'/><path d='M12 13.5l3.5 7'/>"),
+    "mail": _svg("<rect x='3' y='5' width='18' height='14' rx='2'/><path d='M3 7l9 6 9-6'/>"),
     "clock": _svg("<path d='M12 2a10 10 0 1 0 10 10'/><path d='M12 6v6l4 2'/>"),
     "chart": _svg("<path d='M3 3v18h18'/><path d='M7 14l4-4 3 3 5-6'/>"),
     "chat": _svg("<path d='M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'/>"),
@@ -5909,6 +5929,9 @@ html.cai-orders-open .cai-kb-card {
 .st-key-nav_clearhist button::before, .st-key-nav_clearhist2 button::before { background-image: url("ICON_CHAT"); }
 .st-key-nav_privacy button::before { background-image: url("ICON_LOCK"); }
 .st-key-nav_about button::before { background-image: url("ICON_INFO"); }
+.st-key-nav_policy_about button::before, .st-key-nav_policy button::before { background-image: url("ICON_POLICY"); }
+.st-key-nav_a11y button::before { background-image: url("ICON_ACCESS"); }
+.st-key-nav_contact button::before { background-image: url("ICON_MAIL"); }
 @media (hover: hover) { [class*="st-key-cai_sgrp"] button:hover { background: rgba(236,237,230,.03) !important; } }
 
 /* hub profile card */
@@ -6054,15 +6077,22 @@ html.cai-orders-open .cai-kb-card {
    button does NOT do. */
 .cai-wipe-note { font: 400 11.5px Heebo; color: rgba(236,237,230,.55);
     line-height: 1.6; margin: 10px 2px 0; direction: rtl; text-align: right; }
-.cai-contact-mail { color: var(--accent-bright); text-decoration: none;
-    font-weight: 600; word-break: break-all; }
-.cai-contact-mail:hover { text-decoration: underline; }
+/* !important on colour + decoration: Streamlit's markdown stylesheet sets
+   `a { color: <link>; text-decoration: underline }` with higher specificity
+   than a bare class, and the first live check showed the address white and
+   underlined — indistinguishable from body text on the dark card. `display:
+   inline-block; direction: ltr` keeps the address on its own LTR run so the
+   RTL paragraph does not split it around the "@". */
+.cai-contact-mail { color: var(--accent-bright) !important; text-decoration: none !important;
+    font-weight: 600; word-break: break-all; display: inline-block; direction: ltr;
+    margin-top: 6px; }
+.cai-contact-mail:hover { text-decoration: underline !important; }
 /* The device id is a random string that has to be copied ACCURATELY into an
    email for an access/erasure request, so it gets a monospace face and room to
    breathe; user-select is forced on because the settings overlay disables
    selection on its surfaces. */
-.cai-device-id { font: 500 12px ui-monospace, Menlo, monospace; direction: ltr;
-    text-align: left; color: var(--accent-bright); margin-top: 10px;
+.cai-device-id { font: 500 12px ui-monospace, Menlo, monospace; direction: ltr !important;
+    text-align: left !important; unicode-bidi: isolate; color: var(--accent-bright); margin-top: 10px;
     padding: 9px 11px; border-radius: 9px; background: rgba(236,237,230,.05);
     border: 1px solid rgba(236,237,230,.09); word-break: break-all;
     -webkit-user-select: text !important; user-select: text !important; }
@@ -6316,7 +6346,7 @@ _PRIVACY_SECTIONS = [
      "<b>עיון:</b> אפשר לפנות ואנחנו נשלח את מה שרשום תחת מזהה המכשיר שלך.<br>"
      "<b>מחיקה:</b> אפשר לבקש מחיקה של אותן שורות.<br>"
      "<b>הפסקת איסוף:</b> מיידית ובלי לפנות לאיש — הכיבוי במסך «פרטיות ואבטחה».<br><br>"
-     "את מזהה המכשיר אפשר לראות במסך «יצירת קשר ודיווח»."),
+     "את מזהה המכשיר אפשר לראות במסך «יצירת קשר»."),
     ("אין להזין מידע מסווג",
      "האפליקציה אינה מערכת מסווגת, והמידע שתקליד בה יוצא אל מחוץ לרשת האזרחית שלך "
      "אל שרתי ספק חיצוני בחו\"ל.<br><br>"
@@ -6350,7 +6380,7 @@ _A11Y_SECTIONS = [
      "• הממשק בעברית בלבד; ערבית, אנגלית ורוסית טרם נתמכות.<br>"
      "• חלק מהפקודות מוצגות כקובצי PDF סרוקים, שנגישותם תלויה במקור ואינה בשליטתנו."),
     ("נתקלת בבעיית נגישות?",
-     "נשמח לשמוע, ונתקן. אפשר לפנות דרך מסך «יצירת קשר ודיווח» באפליקציה, או "
+     "נשמח לשמוע, ונתקן. אפשר לפנות דרך מסך «יצירת קשר» באפליקציה, או "
      f"ישירות בדוא\"ל {_CONTACT_EMAIL}.<br><br>"
      "נשתדל להשיב לכל פנייה בנושא נגישות בתוך שבעה ימי עסקים."),
 ]
@@ -6361,7 +6391,7 @@ _A11Y_SECTIONS = [
 _WIPE_NOTE = (
     "מוחק מהמכשיר הזה: השם, הפרופיל, היסטוריית השיחות והנתונים שהזנת בכלים. "
     "שורות שכבר נרשמו בלוג השימוש שלנו אינן נמחקות בפעולה הזו — "
-    "לכך יש לשלוח בקשת מחיקה ממסך «יצירת קשר ודיווח»."
+    "לכך יש לשלוח בקשת מחיקה ממסך «יצירת קשר»."
 )
 
 # Coverage, stated BEFORE a question is spent. The measured reality is that
@@ -6507,7 +6537,7 @@ def _settings_hub():
             st.rerun()
         # last in the group and reachable in one tap from the hub on purpose:
         # this is the row someone looks for while annoyed at a wrong answer
-        if st.button("יצירת קשר ודיווח", key="nav_contact", use_container_width=True):
+        if st.button("יצירת קשר", key="nav_contact", use_container_width=True):
             st.session_state.settings_screen = "contact"
             st.rerun()
 
@@ -6947,7 +6977,7 @@ def _render_settings():
               "access": "גודל טקסט",
               "privacy": "פרטיות ואבטחה", "about": "תנאי שימוש",
               "policy": "מדיניות פרטיות", "a11y": "הצהרת נגישות",
-              "contact": "יצירת קשר ודיווח"}
+              "contact": "יצירת קשר"}
     with st.container(key="cai_settings"):
         _cb, _ct = st.columns([1, 5])
         with _cb:
@@ -8419,6 +8449,23 @@ for msg_i, msg in enumerate(st.session_state.messages):
                     )
                     msg["fb_comment_sent"] = True
                     st.rerun()
+                # The comment lands in a sheet the soldier cannot see, so a
+                # sent report used to vanish without a trace — the channel
+                # looked like a black hole. Name the address here, at the
+                # moment of frustration and next to the answer in question,
+                # for anyone who wants a person to answer back.
+                st.markdown(
+                    "<div class='cai-fb-mail'>רוצה תשובה אישית? "
+                    f"<a href='mailto:{_CONTACT_EMAIL}'>{_CONTACT_EMAIL}</a></div>",
+                    unsafe_allow_html=True)
+            elif msg.get("fb_comment_sent"):
+                # the confirmation replaces the input row for good (the flag
+                # is on the message), so the thanks reads as final, not as a
+                # toast that will disappear
+                st.markdown(
+                    "<div class='cai-fb-mail sent'>תודה, הדיווח נשלח. "
+                    f"לתשובה אישית: <a href='mailto:{_CONTACT_EMAIL}'>{_CONTACT_EMAIL}</a></div>",
+                    unsafe_allow_html=True)
 
 # ── Chat input (always visible, sticky — renders at the viewport bottom
 #    regardless of code position). Routed through the SAME queue as the

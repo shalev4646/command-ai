@@ -128,6 +128,21 @@ def test_contact_screen_exists_and_is_reachable():
     assert 'nav_contact' in APP
 
 
+def test_thumbs_down_names_the_address():
+    """The 👎 comment row is the app's real 'this answer was wrong' channel --
+    next to the answer, at the moment of frustration, with question + answer
+    attached automatically. It logged into a sheet the soldier never sees, so
+    a sent report vanished without a trace. The address must appear both while
+    the box is open and in the post-send confirmation, via the constant."""
+    row = APP.split('placeholder="מה היה חסר או שגוי? (לא חובה)"')[1][:2600]
+    assert row.count("_CONTACT_EMAIL") >= 2, (
+        "the 👎 flow must name the contact address (open + sent states)"
+    )
+    assert "cai-fb-mail" in row
+    # the settings row is now just 'יצירת קשר': the 👎 flow owns reporting
+    assert "יצירת קשר ודיווח" not in APP
+
+
 def test_report_form_reuses_the_feedback_tab():
     """A new Sheets tab/column is a schema risk: _append_to_sheet writes rows
     POSITIONALLY against a header created on the tab's first use. log_feedback
