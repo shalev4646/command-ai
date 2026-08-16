@@ -36,6 +36,23 @@ REWRITE_MODEL = "claude-haiku-4-5-20251001"
 # the basic raw-text content out of the leading order's slots.
 MAX_CONTEXT_CHUNKS = 8
 
+# Serve only orders that carry a curated key-facts block. Measured on
+# 2026-08-16 (night/remeasure, paired, 30 questions / 63 frozen parts): wave 2
+# grew the corpus 124 -> 289 and answered parts FELL 20 -> 13. In all seven
+# questions that regressed, newly-indexed orders pushed the ones that had been
+# answering out of the 8-chunk context, and 6 of the 17 intruders had no
+# key-facts at all — a raw chunk displacing a curated block. Uncurated orders
+# are a cost, not coverage: they crowd the context and, when they win a slot,
+# hand the model raw text that answers nothing.
+#
+# Measured the same day with the flag on, same 30 questions, same corpus:
+# answered parts 13 -> 17 and the gate 387 -> 391 (+6 fixed, -2 broken, both
+# breaks 3.0502 — the one order pulled by design for unverifiable digits). Not
+# a full recovery to the 124-order baseline of 20 — the rest is curated wave-2
+# orders outranking the veterans that answered — but better than off on both
+# instruments, so on is the default. RETRIEVE_CURATED_ONLY=0 turns it off.
+RETRIEVE_CURATED_ONLY = os.environ.get("RETRIEVE_CURATED_ONLY", "1") == "1"
+
 # Header that marks the retrieved-context section inside a user turn. The
 # context rides in the user message (not the system prompt) so the system
 # prompt and past turns stay byte-identical across a conversation — the
@@ -280,10 +297,19 @@ def retrieve_for_role(question: str, role: str, route: set[str] | None = None) -
     rewrite/raw union in stream_ai_answer) pay for the router once; omitted,
     it is computed here, so eval.py exercises the router too.
     """
-    doc_ids = [d["document_id"] for d in _docs_for_role(role) if d.get("document_id")]
+    docs = _docs_for_role(role)
+    if RETRIEVE_CURATED_ONLY:
+        docs = [d for d in docs if _has_key_facts(d)]
+    doc_ids = [d["document_id"] for d in docs if d.get("document_id")]
     if route is None:
         route = _route_docs(question, role)
     return retrieve(question, n_results=MAX_CONTEXT_CHUNKS, doc_ids=doc_ids, boost_docs=route)
+
+
+def _has_key_facts(doc: dict) -> bool:
+    """Does the order carry a curated block? `sections` is a list of
+    {id,title,clauses}; the curated one is id `key-facts` (or a variant of it)."""
+    return any("key-facts" in (s.get("id") or "") for s in (doc.get("sections") or []))
 
 
 _REWRITE_PROMPT = """לפניך קטע משיחה בין משתמש לעוזר לפקודות מטכ"ל, ואחריו שאלת ההמשך האחרונה של המשתמש.

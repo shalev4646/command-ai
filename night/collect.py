@@ -44,12 +44,21 @@ def run(label: str) -> None:
     # a resumed collect passes rid=None so a dead process's settle is not repeated
     collect_batch(t["batch_id"], t["meta"], t.get("rid"), t["out_path"], label, ledger)
 
-    if label == "probe-remeasure":
+    # Any remeasure tag, not just the first one there ever was: runs are tagged
+    # (probe-remeasure3, ...) so they stop overwriting each other's history, and
+    # a hardcoded label here would silently skip the grading that makes the paid
+    # answers mean anything.
+    if label.startswith("probe-remeasure"):
+        tag = label[len("probe-"):]
+        import os
+        os.environ["REMEASURE_TAG"] = tag
         from night.grade import grade_file
-        grade_file(C.OUT / "probe_remeasure.jsonl", Ledger(C.LEDGER), "remeasure")
-        from night.remeasure import report
-        report()
+        grade_file(C.OUT / f"probe_{tag}.jsonl", Ledger(C.LEDGER), tag)
+        import importlib
+        import night.remeasure as rm
+        importlib.reload(rm)          # TAG is read at import time
+        rm.report()
 
 
 if __name__ == "__main__":
-    run(sys.argv[1] if len(sys.argv) > 1 else "probe-remeasure")
+    run(sys.argv[1] if len(sys.argv) > 1 else "probe-remeasure3")

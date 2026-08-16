@@ -1,0 +1,18 @@
+{
+ "tag": "remeasure4",
+ "before_full": 9,
+ "before_n": 30,
+ "after_full": 4,
+ "after_n": 30,
+ "before_parts": [
+  20,
+  63
+ ],
+ "after_parts": [
+  17,
+  63
+ ],
+ "flips": 7,
+ "controls": 3,
+ "control_flips": 0
+}

@@ -14,8 +14,8 @@ without it, a few flipped verdicts look like progress.
 from __future__ import annotations
 
 import json
+import os
 
-import backend
 from night import config as C
 from night.ledger import Ledger
 from night.probe import build_requests, run_batch
@@ -31,101 +31,151 @@ N_CONTROL = 12
 # Pairing survives the cap: the same questions are compared before and after, so
 # the comparison stays paired and only its precision drops. The cap takes the
 # lowest ids so a re-run measures the same subset rather than a fresh draw.
-MAX_SAMPLE = int(__import__("os").environ.get("REMEASURE_MAX", "0"))
-OUT = C.OUT / "probe_remeasure.jsonl"
+MAX_SAMPLE = int(os.environ.get("REMEASURE_MAX", "0"))
+
+# Each run writes under its own tag. `grades_remeasure.jsonl` from wave 1 is a
+# historical record of what the corpus answered at 124 orders; overwriting it to
+# save a filename would destroy the only copy of a number that was paid for.
+TAG = os.environ.get("REMEASURE_TAG", "remeasure3")
+OUT = C.OUT / f"probe_{TAG}.jsonl"
+
+# --- the before side ---------------------------------------------------------
+# The comparison is only paired if both sides are graded by the SAME ruler, and
+# this repo has two. The pre-2026-08-13 grader was handed the question and the
+# answer together and split the question differently every run (63 parts became
+# 79; one question went from 1 part to 4), so `grades_baseline.jsonl` and
+# `grades_remeasure.jsonl` are not comparable to anything graded since. The
+# frozen ruler decomposes from the question alone and caches the result in
+# question_parts.json; its rows carry `grade.parts`, which is how a file
+# declares which ruler produced it.
+#
+# Candidates newest first: wave 1's after-side is wave 2's before-side.
+BEFORE_CANDIDATES = ("grades_remeasure2.jsonl", "grades_base30.jsonl")
 
 
-def _context_fingerprint(row: dict) -> str:
-    """What retrieval hands the model, reduced to a comparable key."""
-    sq = row.get("search_query") or row["q"]
-    chunks = backend.retrieve_for_role(sq, row["role"],
-                                       route=backend._route_docs(sq, row["role"]))
-    return "|".join(f'{c["doc_id"]}:{c["section"]}' for c in chunks)
+def load_before() -> list[dict]:
+    """Newest frozen-ruler measurement, or refuse to run."""
+    for name in BEFORE_CANDIDATES:
+        if name == f"grades_{TAG}.jsonl":
+            continue          # a run is never its own before side
+        rows = C.read_jsonl(C.OUT / name)
+        if rows and all((r.get("grade") or {}).get("parts") for r in rows):
+            C.log(f"[remeasure] before side: {name} ({len(rows)} questions, "
+                  f"{sum(len(r['grade']['parts']) for r in rows)} parts)")
+            return rows
+    raise SystemExit(
+        "no frozen-ruler baseline on disk — the files that exist were graded by "
+        "the drifting ruler and cannot be compared against. Re-grade one first.")
+
+
+def _fingerprint(row: dict) -> str:
+    """What retrieval handed the model, reduced to a comparable key.
+
+    Read off the stored `sources` — the distinct orders behind the answer, which
+    build_requests records for every run — rather than recomputed. Recomputing
+    would mean a router call per question ($0.0025 each) to learn something the
+    paid run already wrote down, and it would answer with today's retrieval for
+    both sides, which is the one thing this must not do.
+    """
+    return "|".join(row.get("sources") or [])
 
 
 def run() -> None:
     ledger = Ledger(C.LEDGER)
-    base = C.read_jsonl(C.OUT / "grades_baseline.jsonl")
+    before = load_before()
     sweep = {r["id"]: r for r in C.read_jsonl(C.SWEEP)}
-    blind = [r for r in base if sweep.get(r["id"], {}).get("source") == "blind"]
-    if not blind:
-        raise SystemExit("no baseline to compare against")
 
-    changed, same = [], []
-    for r in blind:
-        row = sweep[r["id"]]
-        (changed if _context_fingerprint(row) != r.get("context_fp", "") else same).append(r)
-    # first run has no stored fingerprint, so everything reads as changed;
-    # fall back to re-running the lot when that happens
-    if not same and all("context_fp" not in r for r in blind):
-        C.log("[remeasure] no stored fingerprints — treating every question as changed")
-
-    sample = changed + same[:N_CONTROL]
-    C.log(f"[remeasure] {len(changed)} questions whose context moved, "
-          f"+{min(len(same), N_CONTROL)} controls -> {len(sample)} to re-run")
+    # The sample is not re-chosen. Whoever the before side asked is exactly who
+    # the after side asks — that is what makes the difference attributable to the
+    # corpus rather than to a different draw of questions. The cap applies only
+    # if it is tighter than the frozen set.
+    sample = sorted(before, key=lambda r: r["id"])
     if MAX_SAMPLE and len(sample) > MAX_SAMPLE:
-        dropped = len(sample) - MAX_SAMPLE
-        sample = sorted(sample, key=lambda r: r["id"])[:MAX_SAMPLE]
-        C.log(f"[remeasure] CAPPED at {MAX_SAMPLE} — {dropped} questions not re-asked. "
-              f"Intervals below are wider than the full set would give, and the "
-              f"before/after totals are over this subset only.")
-        # the 'before' side has to shrink with it, or the comparison silently
-        # contrasts 54 old answers against a smaller, differently-composed new set
-        keep = {r["id"] for r in sample}
-        blind = [r for r in blind if r["id"] in keep]
+        C.log(f"[remeasure] CAPPED at {MAX_SAMPLE} — {len(sample) - MAX_SAMPLE} "
+              f"of the frozen set not re-asked; intervals widen accordingly.")
+        sample = sample[:MAX_SAMPLE]
 
     reqs, meta = build_requests([{**sweep[r["id"]]} for r in sample])
     for m, r in zip(meta, sample):
         m["baseline_outcome"] = _outcome(r)
-    run_batch(reqs, meta, ledger, OUT, "probe-remeasure")
+        m["baseline_sources"] = r.get("sources") or []
+    run_batch(reqs, meta, ledger, OUT, f"probe-{TAG}")
 
     from night.grade import grade_file
-    grade_file(OUT, Ledger(C.LEDGER), "remeasure")
+    grade_file(OUT, Ledger(C.LEDGER), TAG)
     report()
 
 
 def report() -> None:
     """Print the paired before/after. Separate from run() so `night.collect`
     can produce it for a batch that landed after its submitting process died."""
-    base = C.read_jsonl(C.OUT / "grades_baseline.jsonl")
-    sweep = {r["id"]: r for r in C.read_jsonl(C.SWEEP)}
-    blind = [r for r in base if sweep.get(r["id"], {}).get("source") == "blind"]
-    after = C.read_jsonl(C.OUT / "grades_remeasure.jsonl")
-    # compare over the questions actually re-asked, not the full baseline
-    asked = {r["id"] for r in after}
-    if asked:
-        blind = [r for r in blind if r["id"] in asked]
+    import collections
 
-    b_full = sum(1 for r in blind if _outcome(r) == "full")
+    after = C.read_jsonl(C.OUT / f"grades_{TAG}.jsonl")
+    if not after:
+        raise SystemExit(f"nothing graded under tag {TAG}")
+    asked = {r["id"] for r in after}
+    before = [r for r in load_before() if r["id"] in asked]
+
+    b_full = sum(1 for r in before if _outcome(r) == "full")
     a_full = sum(1 for r in after if _outcome(r) == "full")
-    lo_b, hi_b = wilson(b_full, len(blind))
+    lo_b, hi_b = wilson(b_full, len(before))
     lo_a, hi_a = wilson(a_full, len(after))
-    C.log(f"[remeasure] full answers: {b_full}/{len(blind)} "
-          f"({100*b_full/len(blind):.0f}%, {100*lo_b:.0f}-{100*hi_b:.0f}) -> "
+    C.log(f"[remeasure] full answers: {b_full}/{len(before)} "
+          f"({100*b_full/max(1,len(before)):.0f}%, {100*lo_b:.0f}-{100*hi_b:.0f}) -> "
           f"{a_full}/{len(after)} ({100*a_full/max(1,len(after)):.0f}%, "
           f"{100*lo_a:.0f}-{100*hi_a:.0f})")
 
-    # the headline is partiality, not fullness: the baseline was 7% full but
-    # 78% partial, so a wave that converts partial answers into full ones shows
-    # up here first and most clearly
-    import collections
-    for name, rows in (("before", blind), ("after ", after)):
+    for name, rows in (("before", before), ("after ", after)):
         c = collections.Counter(_outcome(r) for r in rows)
         n = max(1, len(rows))
         C.log(f"[remeasure] {name} (n={len(rows)}): " + " · ".join(
             f"{k} {c[k]} ({100*c[k]/n:.0f}%)" for k in ("full", "partial", "nothing")))
 
-    flips = [r for r in after if r.get("baseline_outcome") and
-             _outcome(r) != r["baseline_outcome"]]
+    # The sensitive metric. A question with four parts that goes from one
+    # answered to three has plainly improved, and the three-way outcome calls it
+    # `partial` on both sides and reports nothing. Parts are frozen per question,
+    # so this denominator is identical on both sides by construction.
+    def parts_score(rows):
+        return (sum((r.get("grade") or {}).get("answered_parts", 0) for r in rows),
+                sum(len((r.get("grade") or {}).get("parts") or []) for r in rows))
+    b_ans, b_tot = parts_score(before)
+    a_ans, a_tot = parts_score(after)
+    C.log(f"[remeasure] question-parts answered: {b_ans}/{b_tot} -> {a_ans}/{a_tot}"
+          + ("" if b_tot == a_tot else "   ⚠ DENOMINATORS DIFFER — not comparable"))
+
+    # Recomputed from the before rows rather than read off `baseline_outcome`:
+    # that field is stamped at run time from whatever the run treated as its
+    # before side, and wave 1 stamped it from the drifting ruler.
+    was = {r["id"]: _outcome(r) for r in before}
+    flips = [r for r in after if r["id"] in was and _outcome(r) != was[r["id"]]]
     C.log(f"[remeasure] verdicts that moved: {len(flips)}/{len(after)}")
-    moved = collections.Counter(
-        f'{r["baseline_outcome"]}->{_outcome(r)}' for r in flips)
-    for k, v in moved.most_common():
+    for k, v in collections.Counter(
+            f'{was[r["id"]]}->{_outcome(r)}' for r in flips).most_common():
         C.log(f"[remeasure]   {k}: {v}")
-    (C.OUT / "remeasure_summary.json").write_text(json.dumps(
-        {"before_full": b_full, "before_n": len(blind),
+
+    # A flip on a question whose retrieval did not move is the model sampling
+    # differently on identical input, not the corpus working.
+    known = [r for r in after if r.get("baseline_sources") is not None]
+    if not known:
+        C.log("[remeasure] no control split — the before side predates "
+              "baseline_sources, so 'did retrieval move' is unknown, not 'no'")
+        ctrl = ctrl_flips = []
+    else:
+        ctrl = [r for r in known
+                if _fingerprint(r) == "|".join(r["baseline_sources"])]
+        ctrl_flips = [r for r in ctrl if r["id"] in was
+                      and _outcome(r) != was[r["id"]]]
+        C.log(f"[remeasure] retrieval unchanged for {len(ctrl)}/{len(known)} "
+              f"(controls); {len(ctrl_flips)} of them flipped anyway")
+
+    (C.OUT / f"{TAG}_summary.json").write_text(json.dumps(
+        {"tag": TAG, "before_full": b_full, "before_n": len(before),
          "after_full": a_full, "after_n": len(after),
-         "flips": len(flips)}, ensure_ascii=False, indent=1), encoding="utf-8")
+         "before_parts": [b_ans, b_tot], "after_parts": [a_ans, a_tot],
+         "flips": len(flips), "controls": len(ctrl),
+         "control_flips": len(ctrl_flips)}, ensure_ascii=False, indent=1),
+        encoding="utf-8")
 
 
 if __name__ == "__main__":

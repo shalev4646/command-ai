@@ -28,5 +28,23 @@ docs/
 *.html
 # ...except Streamlit component sources — these ARE source and must deploy
 !components/**/*.html
-night/out/
+# Measurement OUTPUTS are history, not scratch: the frozen grades are the only
+# copy of a paired before/after that money was spent on, the ledger is the
+# only record of what was spent, and question_parts.json is the yardstick every
+# comparison divides by. Losing any of them at a merge already happened once
+# (the ledger read $0 instead of $18.30). Only the bulky, regenerable sweeps
+# stay out.
+night/out/*
+!night/out/grades_*.jsonl
+!night/out/probe_*.jsonl
+!night/out/question_parts.json
+!night/out/ledger.json
+!night/out/gate*.json
+!night/out/*_summary.json
+!night/out/anchors_*.jsonl
+!night/out/curate_*.jsonl
+!night/out/adjudication.json
+!night/out/verdicts_*.json
+!night/out/rewrites.json
+!night/out/wave*_ids.txt
 REPORT_corpus.md
