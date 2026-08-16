@@ -1,6 +1,6 @@
 {
- "spent": 32.9397,
- "reserved": 0.2099,
+ "spent": 36.255,
+ "reserved": 0.2459,
  "entries": [
   {
    "id": "anchors:21.0401#20804-196",
@@ -1689,10 +1689,40 @@
    "actual": 0.0
   },
   {
+   "id": "decompose#10828-302",
+   "label": "decompose",
+   "estimate": 0.0192,
+   "actual": 0.0088
+  },
+  {
    "id": "decompose#17916-45",
    "label": "decompose",
    "estimate": 0.024,
    "actual": null
+  },
+  {
+   "id": "deepen:33.0201#19472-303",
+   "label": "deepen:33.0201",
+   "estimate": 0.0417,
+   "actual": 0.035
+  },
+  {
+   "id": "deepen:33.0351#19472-304",
+   "label": "deepen:33.0351",
+   "estimate": 0.0405,
+   "actual": 0.039
+  },
+  {
+   "id": "deepen:61.0104#19472-305",
+   "label": "deepen:61.0104",
+   "estimate": 0.0693,
+   "actual": 0.1188
+  },
+  {
+   "id": "deepen:PM-33.0302#19472-301",
+   "label": "deepen:PM-33.0302",
+   "estimate": 0.1095,
+   "actual": 0.3574
   },
   {
    "id": "grade-base30#10040-44",
@@ -1705,6 +1735,24 @@
    "label": "grade-base30",
    "estimate": 0.045,
    "actual": 0.0293
+  },
+  {
+   "id": "grade-heldout_after#18052-310",
+   "label": "grade-heldout_after",
+   "estimate": 0.036,
+   "actual": null
+  },
+  {
+   "id": "grade-heldout_after#20224-311",
+   "label": "grade-heldout_after",
+   "estimate": 0.036,
+   "actual": 0.0237
+  },
+  {
+   "id": "grade-heldout_before#10828-306",
+   "label": "grade-heldout_before",
+   "estimate": 0.036,
+   "actual": 0.0251
   },
   {
    "id": "grade-remeasure#20612-42",
@@ -1737,6 +1785,24 @@
    "actual": 0.0292
   },
   {
+   "id": "grade-remeasure6#3696-308",
+   "label": "grade-remeasure6",
+   "estimate": 0.045,
+   "actual": 0.0297
+  },
+  {
+   "id": "probe-heldout_after#18052-309",
+   "label": "probe-heldout_after",
+   "estimate": 0.672,
+   "actual": 0.7931
+  },
+  {
+   "id": "probe-heldout_before#10828-300",
+   "label": "probe-heldout_before",
+   "estimate": 0.672,
+   "actual": 0.8169
+  },
+  {
    "id": "probe-remeasure#20612-41",
    "label": "probe-remeasure",
    "estimate": 0.84,
@@ -1765,6 +1831,12 @@
    "label": "probe-remeasure5",
    "estimate": 0.84,
    "actual": 0.8883
+  },
+  {
+   "id": "probe-remeasure6#3696-307",
+   "label": "probe-remeasure6",
+   "estimate": 0.84,
+   "actual": 1.0678
   },
   {
    "id": "unscramble:21.0123#28124-145",

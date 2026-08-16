@@ -50,19 +50,52 @@ OUT = C.OUT / f"probe_{TAG}.jsonl"
 # declares which ruler produced it.
 #
 # Candidates newest first: wave 1's after-side is wave 2's before-side.
+# REMEASURE_BEFORE=<tag> names one explicitly, which is how a held-out pair
+# (heldout_before -> heldout_after) is compared without touching this list.
 BEFORE_CANDIDATES = ("grades_remeasure2.jsonl", "grades_base30.jsonl")
+
+# The frozen 30 are the sample every fix so far was diagnosed against, which
+# makes them a tuning set: a fix aimed at their failures will look good on them
+# whether or not it generalises. REMEASURE_SET=heldout switches the sample to
+# the OTHER blind questions from the same sweep — the ones no diagnosis has ever
+# looked at — so a fix can be scored on questions it was not written for.
+SAMPLE_SET = os.environ.get("REMEASURE_SET", "frozen")
+
+
+def heldout_ids() -> list[str]:
+    """The blind questions the night probed but the frozen 30 left out.
+
+    Same yellow-band selection as the frozen set (the 30 are its lowest ids),
+    so the two halves are comparable; the 419 blind questions in the sweep at
+    large are not — most were never selected for probing at all.
+    """
+    sweep = {r["id"]: r for r in C.read_jsonl(C.SWEEP)}
+    probed = {r["id"] for r in C.read_jsonl(C.OUT / "grades_baseline.jsonl")}
+    frozen = {r["id"] for r in C.read_jsonl(C.OUT / "grades_base30.jsonl")}
+    return sorted(i for i in probed - frozen
+                  if sweep.get(i, {}).get("source") == "blind")
 
 
 def load_before() -> list[dict]:
     """Newest frozen-ruler measurement, or refuse to run."""
-    for name in BEFORE_CANDIDATES:
+    names = BEFORE_CANDIDATES
+    if os.environ.get("REMEASURE_BEFORE"):
+        names = (f"grades_{os.environ['REMEASURE_BEFORE']}.jsonl",)
+    for name in names:
         if name == f"grades_{TAG}.jsonl":
             continue          # a run is never its own before side
         rows = C.read_jsonl(C.OUT / name)
-        if rows and all((r.get("grade") or {}).get("parts") for r in rows):
-            C.log(f"[remeasure] before side: {name} ({len(rows)} questions, "
-                  f"{sum(len(r['grade']['parts']) for r in rows)} parts)")
-            return rows
+        # A row the grader dropped (batch item failed) has no parts and simply
+        # is not part of the pair; a file where NO row has parts is the old
+        # ruler and is refused outright.
+        graded = [r for r in rows if (r.get("grade") or {}).get("parts")]
+        if graded:
+            if len(graded) < len(rows):
+                C.log(f"[remeasure] {name}: {len(rows) - len(graded)} ungraded "
+                      f"rows excluded from the pair")
+            C.log(f"[remeasure] before side: {name} ({len(graded)} questions, "
+                  f"{sum(len(r['grade']['parts']) for r in graded)} parts)")
+            return graded
     raise SystemExit(
         "no frozen-ruler baseline on disk — the files that exist were graded by "
         "the drifting ruler and cannot be compared against. Re-grade one first.")
@@ -82,28 +115,40 @@ def _fingerprint(row: dict) -> str:
 
 def run() -> None:
     ledger = Ledger(C.LEDGER)
-    before = load_before()
     sweep = {r["id"]: r for r in C.read_jsonl(C.SWEEP)}
 
-    # The sample is not re-chosen. Whoever the before side asked is exactly who
-    # the after side asks — that is what makes the difference attributable to the
-    # corpus rather than to a different draw of questions. The cap applies only
-    # if it is tighter than the frozen set.
-    sample = sorted(before, key=lambda r: r["id"])
+    if SAMPLE_SET == "heldout":
+        # First held-out run has no before side by definition — it IS the
+        # before side of the next one. Later runs pair against REMEASURE_BEFORE.
+        ids = heldout_ids()
+        before = load_before() if os.environ.get("REMEASURE_BEFORE") else []
+        by_id = {r["id"]: r for r in before}
+        sample = [by_id.get(i, {"id": i, "sources": None}) for i in ids]
+        C.log(f"[remeasure] held-out set: {len(sample)} blind questions "
+              f"outside the frozen 30" + (f", paired against "
+              f"{os.environ['REMEASURE_BEFORE']}" if before else ", no before side"))
+    else:
+        before = load_before()
+        # The sample is not re-chosen. Whoever the before side asked is exactly
+        # who the after side asks — that is what makes the difference
+        # attributable to the corpus rather than to a different draw of
+        # questions. The cap applies only if it is tighter than the frozen set.
+        sample = sorted(before, key=lambda r: r["id"])
     if MAX_SAMPLE and len(sample) > MAX_SAMPLE:
         C.log(f"[remeasure] CAPPED at {MAX_SAMPLE} — {len(sample) - MAX_SAMPLE} "
-              f"of the frozen set not re-asked; intervals widen accordingly.")
+              f"of the set not re-asked; intervals widen accordingly.")
         sample = sample[:MAX_SAMPLE]
 
     reqs, meta = build_requests([{**sweep[r["id"]]} for r in sample])
     for m, r in zip(meta, sample):
-        m["baseline_outcome"] = _outcome(r)
-        m["baseline_sources"] = r.get("sources") or []
+        m["baseline_outcome"] = _outcome(r) if r.get("grade") else None
+        m["baseline_sources"] = r.get("sources")
     run_batch(reqs, meta, ledger, OUT, f"probe-{TAG}")
 
     from night.grade import grade_file
     grade_file(OUT, Ledger(C.LEDGER), TAG)
-    report()
+    if before:
+        report()
 
 
 def report() -> None:

@@ -1,0 +1,18 @@
+{
+ "tag": "heldout_after",
+ "before_full": 5,
+ "before_n": 23,
+ "after_full": 4,
+ "after_n": 24,
+ "before_parts": [
+  14,
+  45
+ ],
+ "after_parts": [
+  12,
+  47
+ ],
+ "flips": 3,
+ "controls": 22,
+ "control_flips": 3
+}
