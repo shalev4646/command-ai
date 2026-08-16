@@ -43,14 +43,36 @@ def _log_to_temp(fn, **kwargs):
     return json.loads(lines[0])
 
 
-def test_device_column_is_last():
-    # Append-only. _append_to_sheet writes rows positionally against a header
-    # created on the tab's first use, so a mid-list insert would shift every
-    # future row against an existing sheet.
-    assert metrics._QUESTION_COLUMNS[-1] == "device"
-    assert metrics._FEEDBACK_COLUMNS[-1] == "device"
-    assert metrics._QUESTION_COLUMNS.count("device") == 1
-    assert metrics._FEEDBACK_COLUMNS.count("device") == 1
+def test_columns_are_append_only():
+    """The real invariant, restated.
+
+    This used to assert `_QUESTION_COLUMNS[-1] == "device"` and had been
+    failing ever since `refused` was appended AFTER device -- which is exactly
+    what the rule permits. The test was pinning a snapshot ("device is last")
+    instead of the property that makes the snapshot safe ("nothing is ever
+    inserted before an existing column"), so a correct, deliberate change read
+    as a regression and the case stopped being believed.
+
+    _append_to_sheet writes rows positionally against a header created on the
+    tab's first-ever use, so a mid-list insert shifts every future row against
+    live pilot data. Growth at the end is free; growth anywhere else is not.
+    """
+    # frozen prefixes: the column order as it existed when each tab's header
+    # was first written. Everything after these may grow, in order, forever.
+    frozen_q = ["ts", "session", "role", "question", "search_query", "doc_ids",
+                "input_tokens", "cache_read", "cache_write", "output_tokens",
+                "cost_usd", "latency_s", "answer_preview"]
+    frozen_f = ["ts", "session", "role", "verdict", "question", "comment",
+                "answer_preview", "doc_ids"]
+    assert metrics._QUESTION_COLUMNS[:len(frozen_q)] == frozen_q, (
+        "a column was inserted into the frozen prefix of the questions tab"
+    )
+    assert metrics._FEEDBACK_COLUMNS[:len(frozen_f)] == frozen_f, (
+        "a column was inserted into the frozen prefix of the feedback tab"
+    )
+    for cols in (metrics._QUESTION_COLUMNS, metrics._FEEDBACK_COLUMNS):
+        assert cols.count("device") == 1
+        assert len(set(cols)) == len(cols), "duplicate column name"
 
 
 def test_quota_still_keys_on_session_only():

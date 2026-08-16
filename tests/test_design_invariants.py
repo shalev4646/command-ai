@@ -192,7 +192,11 @@ def test_primary_controls_meet_the_thumb_floor():
     hb = APP.split(".st-key-drawer_open_btn button {{")[1][:220]
     assert "width: 44px" in hb and "height: 44px" in hb
 
-    name = APP.split('.st-key-cai_name_card [data-testid="stTextInput"] input {{')[1][:320]
+    # the whole declaration, not a fixed 320-char window: the iOS focus-zoom
+    # fix (ae353d6) inserted a four-line comment above min-height and pushed it
+    # to char ~440, so the window silently stopped covering the thing it guards
+    # and this assertion failed while the CSS was correct
+    name = APP.split('.st-key-cai_name_card [data-testid="stTextInput"] input {{')[1].split("}}")[0]
     assert "min-height: 44px" in name
 
 

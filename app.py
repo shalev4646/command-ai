@@ -2007,12 +2007,22 @@ div[data-testid="stButton"] > button:active {{
    chat message exists in the DOM, hide them by CSS instead of waiting. */
 [data-testid="stAppViewContainer"]:has([data-testid="stChatMessage"]) .cai-greet,
 [data-testid="stAppViewContainer"]:has([data-testid="stChatMessage"]) .cai-greet-sub,
+[data-testid="stAppViewContainer"]:has([data-testid="stChatMessage"]) .cai-corpus-note,
 [data-testid="stAppViewContainer"]:has([data-testid="stChatMessage"]) [class*="st-key-sug_"] {{
     display: none !important;
 }}
 .cai-greet-sub {{ font: 400 13.5px Heebo, sans-serif; color: var(--text-dim); margin-bottom: 0;
     text-align: center;
     animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .16s; }}
+/* Coverage note under the suggestion cards. Deliberately quieter than the
+   disclaimer under the composer (11.5px) and quieter still than .cai-greet-sub:
+   it is context for the answer that follows, not a warning competing with the
+   liability line. Same enterUp entrance, one step later than the cards so it
+   settles last. */
+.cai-corpus-note {{ font: 400 11.5px Heebo, sans-serif; color: var(--text-faint);
+    text-align: center; line-height: 1.6; max-width: 330px;
+    margin: 18px auto 0; direction: rtl;
+    animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .34s; }}
 
 /* ── Chat home vertical layout — 9a: the greeting+cards block is VERTICALLY
    CENTERED between header and composer, with 78px bottom padding so it sits
@@ -6031,6 +6041,37 @@ html.cai-orders-open .cai-kb-card {
 .cai-set-foot .a { font: 600 9px ui-monospace, Menlo, monospace; letter-spacing: 2px; color: rgba(236,237,230,.35); }
 .cai-set-foot .b { font: 400 10.5px Heebo; color: rgba(236,237,230,.3); margin-top: 8px; line-height: 1.5; }
 
+/* ── compliance screens (policy / accessibility / contact) ────────────────── */
+/* The caveat under the wipe button. Sits directly beneath a destructive
+   control, so it is deliberately readable (11.5px, the disclaimer floor) and
+   not the 10.5px of decorative footer text — it is the part that says what the
+   button does NOT do. */
+.cai-wipe-note { font: 400 11.5px Heebo; color: rgba(236,237,230,.55);
+    line-height: 1.6; margin: 10px 2px 0; direction: rtl; text-align: right; }
+.cai-contact-mail { color: var(--accent-bright); text-decoration: none;
+    font-weight: 600; word-break: break-all; }
+.cai-contact-mail:hover { text-decoration: underline; }
+/* The device id is a random string that has to be copied ACCURATELY into an
+   email for an access/erasure request, so it gets a monospace face and room to
+   breathe; user-select is forced on because the settings overlay disables
+   selection on its surfaces. */
+.cai-device-id { font: 500 12px ui-monospace, Menlo, monospace; direction: ltr;
+    text-align: left; color: var(--accent-bright); margin-top: 10px;
+    padding: 9px 11px; border-radius: 9px; background: rgba(236,237,230,.05);
+    border: 1px solid rgba(236,237,230,.09); word-break: break-all;
+    -webkit-user-select: text !important; user-select: text !important; }
+/* 16px, not the 14px the other dialog fields use: this textarea is NEW, and
+   anything under 16px makes iOS zoom the page on focus — the exact defect the
+   accessibility statement two screens away lists as a known limitation. Adding
+   a fresh instance of it while documenting it would be absurd. */
+.st-key-cai_report_box textarea {
+    font: 400 16px Heebo !important; direction: rtl !important;
+    background: var(--surface) !important; color: var(--text) !important;
+    border: 1px solid var(--border) !important; border-radius: 13px !important; }
+.st-key-cai_report_box textarea::placeholder { color: rgba(236,237,230,.32) !important; }
+.st-key-cai_report_box button { min-height: 44px !important; border-radius: 13px !important;
+    margin-top: 10px !important; }
+
 /* save / danger buttons — save is a form_submit_button (the form kills the
    blur-commit tap race); keyed forms get no st-key-* class in 1.58, so scope
    through the cai_pf_form wrapper and kill the layout-only stForm frame */
@@ -6212,13 +6253,121 @@ _TOS_SECTIONS = [
      "שחשיפתו מהווה עבירת ביטחון שדה. המפתח אינו נושא באחריות לכל נזק או השלכה משפטית הנובעת מהפרת "
      "סעיף זה על ידי המשתמש."),
     ("4. פרטיות ונתונים",
-     "המידע שאתה מזין לאפליקציה משמש לצורך הפעלת מודלי הבינה המלאכותית בלבד.<br><br>אנו נוקטים באמצעים "
-     "טכניים סבירים כדי לשמור על פרטיות המשתמשים. עם זאת, אין אבטחה מוחלטת ברשת, והמשתמש לוקח על עצמו "
-     "את הסיכון הכרוך בהזנת נתונים במערכת."),
+     "המידע שאתה מזין נשלח לספק בינה מלאכותית חיצוני (Anthropic) לצורך הפקת התשובה, ונרשם בלוג "
+     "שימוש שאפשר לכבות בהגדרות. הפירוט המלא — מה נאסף, למי מועבר, כמה זמן נשמר ואיך מבקשים "
+     "עיון או מחיקה — מופיע ב«מדיניות הפרטיות» שבמסך ההגדרות, והיא חלק מתנאים אלה.<br><br>"
+     "אין אבטחה מוחלטת ברשת, והמשתמש לוקח על עצמו את הסיכון הכרוך בהזנת נתונים במערכת."),
     ("5. קניין רוחני",
      "כלל התוכן, העיצוב, הקוד המקור והלוגו של האפליקציה הינם קניינו הרוחני הבלעדי של המפתח. אין להעתיק, "
      "לשכפל או להשתמש בהם ללא אישור מראש ובכתב."),
 ]
+
+# One address, three screens (policy, accessibility statement, contact) and one
+# mailto. Written literally exactly once — a support channel that is stale in
+# one of four places still looks alive, which is worse than not having one.
+_CONTACT_EMAIL = "commandai.support@gmail.com"
+
+# ── Privacy policy ───────────────────────────────────────────────────────────
+# Written against what the code DOES, clause by clause, not against what a
+# policy usually says. Each claim below is traceable:
+#   "the question goes to Anthropic"  -> backend.stream_ai_answer
+#   "the question is written to a Sheet" -> metrics.log_question/_QUESTION_COLUMNS
+#   "the opt-out actually suppresses it" -> the share_analytics guard at the
+#       two log_question call sites (question + letter); it does NOT gate the
+#       quota reserve, and saying so is the difference between a policy and a
+#       brochure.
+#   "the salary never leaves the device" -> handle_question composes `profile`
+#       from mil_* but deliberately omits mil_salary.
+_PRIVACY_SECTIONS = [
+    ("איזה מידע נאסף",
+     "<b>מה שאתה מקליד:</b> נוסח השאלה, והתשובה שהתקבלה (1500 התווים הראשונים).<br><br>"
+     "<b>מה שנגזר מהשימוש:</b> תפקיד (חייל / מילואים / קבע), מזהה מכשיר אקראי, מזהה "
+     "הפעלה, חותמת זמן, אילו פקודות אוחזרו, זמן תגובה ועלות החישוב.<br><br>"
+     "<b>מה שנשמר רק אצלך במכשיר ולא מגיע אלינו:</b> השם שהזנת, תאריכי גיוס ושחרור, "
+     "ימי מילואים, וגובה השכר שהוזן במחשבון התגמול. השכר במפורש אינו נשלח לשום מקום — "
+     "הוא משמש לחישוב מקומי בלבד.<br><br>"
+     "האפליקציה אינה מבקשת ואינה שומרת מספר אישי, מספר טלפון, כתובת או דוא\"ל."),
+    ("למה נאסף",
+     "נוסח השאלה נשלח לשירות הבינה המלאכותית כדי להפיק את התשובה — בלעדיו אין מוצר.<br><br>"
+     "הרישום אצלנו משמש למטרה אחת: לזהות שאלות שהאפליקציה ענתה עליהן רע או לא ענתה "
+     "כלל, ולתקן את המאגר. <b>אפשר לכבות אותו</b> — כיבוי «שיתוף נתוני שימוש אנונימיים» "
+     "במסך «פרטיות ואבטחה» מפסיק את הרישום הזה לחלוטין. השאלה עדיין תישלח לשירות ה-AI, "
+     "כי אחרת אין תשובה."),
+    ("למי המידע מועבר",
+     "<b>Anthropic</b> (ארה\"ב) — מפעילת מודל השפה. כל שאלה נשלחת לשרתיה כדי להפיק את "
+     "התשובה, יחד עם קטעי הפקודות הרלוונטיים ועם התפקיד שבחרת.<br><br>"
+     "<b>Google</b> (Google Sheets) — שם נשמר לוג השימוש, אם לא כיבית אותו.<br><br>"
+     "<b>Fly.io</b> — תשתית האירוח שעליה רצה האפליקציה.<br><br>"
+     "המידע אינו נמכר, אינו מושכר ואינו מועבר לצה\"ל, ליחידתך או לכל גורם צבאי."),
+    ("כמה זמן נשמר",
+     "לוג השימוש נשמר כל עוד האפליקציה בפיתוח ובפיילוט, ואינו נמחק אוטומטית. "
+     "הנתונים שבמכשיר נשארים עד שתמחק אותם בעצמך או תסיר את האפליקציה.<br><br>"
+     "בסיום הפיילוט יימחקו נוסחי השאלות מהלוג, ויישמרו רק הנתונים המצרפיים "
+     "(כמה שאלות, אילו פקודות, מה נכשל) שאינם מכילים טקסט חופשי."),
+    ("הזכויות שלך",
+     "אין באפליקציה חשבונות משתמש, ולכן אין לנו דרך לדעת אילו שורות בלוג הן שלך — "
+     "מלבד מזהה המכשיר האקראי.<br><br>"
+     "<b>עיון:</b> אפשר לפנות ואנחנו נשלח את מה שרשום תחת מזהה המכשיר שלך.<br>"
+     "<b>מחיקה:</b> אפשר לבקש מחיקה של אותן שורות.<br>"
+     "<b>הפסקת איסוף:</b> מיידית ובלי לפנות לאיש — הכיבוי במסך «פרטיות ואבטחה».<br><br>"
+     "את מזהה המכשיר אפשר לראות במסך «יצירת קשר ודיווח»."),
+    ("אין להזין מידע מסווג",
+     "האפליקציה אינה מערכת מסווגת, והמידע שתקליד בה יוצא אל מחוץ לרשת האזרחית שלך "
+     "אל שרתי ספק חיצוני בחו\"ל.<br><br>"
+     "<b>אין להזין פרטים מסווגים, שמות יחידות, מיקומים, לוחות זמנים מבצעיים או כל מידע "
+     "שחשיפתו מהווה עבירת ביטחון שדה.</b> שאל שאלות כלליות על הפקודה, לא על המקרה שלך "
+     "על כל פרטיו המזהים."),
+    ("בעל המאגר ואיך פונים",
+     "האפליקציה מופעלת בידי מפתח עצמאי, ואינה כלי רשמי של צה\"ל, של משרד הביטחון או "
+     f"של כל גוף ממלכתי.<br><br>לכל שאלה, בקשת עיון או בקשת מחיקה: {_CONTACT_EMAIL}"),
+]
+
+# ── Accessibility statement ──────────────────────────────────────────────────
+# The limitations section is not boilerplate hedging: those three numbers were
+# measured in the 2026-08-10 iOS audit and are still true. A statement that
+# claims clean conformance while a 13px field sits in the drawer is the same
+# defect class as the privacy banner this file's tests exist to prevent.
+_A11Y_SECTIONS = [
+    ("מה נגיש היום",
+     "<b>גודל טקסט:</b> שלוש מדרגות הגדלה לגוף התשובות (הגדרות ← גודל טקסט).<br>"
+     "<b>ניגודיות:</b> צבעי הטקסט נבדקו מול הרקע ועומדים בתקן AA.<br>"
+     "<b>ניווט מקלדת:</b> לכל כפתור ושדה יש סימון פוקוס נראה.<br>"
+     "<b>קורא מסך:</b> לכפתורי האייקונים יש שמות נגישים בעברית.<br>"
+     "<b>הפחתת תנועה:</b> המערכת מכבדת «צמצום תנועה» של מערכת ההפעלה.<br>"
+     "<b>שטחי מגע:</b> הכפתורים הראשיים בגודל 44 פיקסלים לפחות."),
+    ("מגבלות ידועות",
+     "אנחנו מעדיפים לומר מה לא הושלם מאשר להצהיר על התאמה מלאה:<br><br>"
+     "• <b>שדה החיפוש</b> בתפריט הצד ושדות בחלונות מסוימים קטנים מ-16 פיקסלים, "
+     "ולכן באייפון הקשה עליהם עלולה להגדיל את המסך.<br>"
+     "• לא בוצעה בדיקת נגישות חיצונית מלאה, ולא נבדקה כל האפליקציה מקצה לקצה "
+     "עם קורא מסך.<br>"
+     "• הממשק בעברית בלבד; ערבית, אנגלית ורוסית טרם נתמכות.<br>"
+     "• חלק מהפקודות מוצגות כקובצי PDF סרוקים, שנגישותם תלויה במקור ואינה בשליטתנו."),
+    ("נתקלת בבעיית נגישות?",
+     "נשמח לשמוע, ונתקן. אפשר לפנות דרך מסך «יצירת קשר ודיווח» באפליקציה, או "
+     f"ישירות בדוא\"ל {_CONTACT_EMAIL}.<br><br>"
+     "נשתדל להשיב לכל פנייה בנושא נגישות בתוך שבעה ימי עסקים."),
+]
+
+# The wipe clears session_state and rotates the analytics id (see _wipe_all).
+# It does not and cannot reach rows already appended to the Sheet, so the
+# button may not say "delete all data" without saying that too.
+_WIPE_NOTE = (
+    "מוחק מהמכשיר הזה: השם, הפרופיל, היסטוריית השיחות והנתונים שהזנת בכלים. "
+    "שורות שכבר נרשמו בלוג השימוש שלנו אינן נמחקות בפעולה הזו — "
+    "לכך יש לשלוח בקשת מחיקה ממסך «יצירת קשר ודיווח»."
+)
+
+# Coverage, stated BEFORE a question is spent. The measured reality is that
+# ~60% of questions come back "not in the supplied orders", and until now the
+# user met that only after burning one of five daily questions — which reads as
+# "this app is broken" rather than "that order is not in yet". {n} is counted at
+# call time on purpose: the corpus grows in ingest waves, and a number written
+# in here is wrong by the next one.
+_CORPUS_NOTE = (
+    "המאגר כולל {n} פקודות ונהלים — לא את כולם. אם התשובה אומרת שאין מידע, "
+    "ייתכן שהפקודה פשוט טרם נוספה."
+)
 
 
 def _clear_history():
@@ -6343,6 +6492,17 @@ def _settings_hub():
     with st.container(key="cai_sgrp_about"):
         if st.button("אודות ותנאי שימוש", key="nav_about", use_container_width=True):
             st.session_state.settings_screen = "about"
+            st.rerun()
+        if st.button("מדיניות פרטיות", key="nav_policy_about", use_container_width=True):
+            st.session_state.settings_screen = "policy"
+            st.rerun()
+        if st.button("הצהרת נגישות", key="nav_a11y", use_container_width=True):
+            st.session_state.settings_screen = "a11y"
+            st.rerun()
+        # last in the group and reachable in one tap from the hub on purpose:
+        # this is the row someone looks for while annoyed at a wrong answer
+        if st.button("יצירת קשר ודיווח", key="nav_contact", use_container_width=True):
+            st.session_state.settings_screen = "contact"
             st.rerun()
 
     # logout = sign the person out, not just switch role (no real auth). It
@@ -6556,12 +6716,27 @@ def _settings_access():
 
 
 def _settings_privacy():
-    """8d — privacy: honest בקרוב locks + a real analytics toggle + wipes."""
+    """8d — privacy: honest בקרוב locks + a real analytics toggle + wipes.
+
+    The banner here used to read "the information is stored encrypted on the
+    device and is not sent to an external server". Both halves were false —
+    every question goes to the Anthropic API, and metrics.log_question writes
+    the full question text to a Google Sheet — and the sentence sat in a
+    reassuring green card directly above the box people type into, while
+    clause 3 of the ToS forbids them from typing anything sensitive. The two
+    surfaces argued opposite sides of the same question and the comforting one
+    was the one on screen. tests/test_compliance_screens.py pins it.
+    """
     st.markdown(
         "<div class='cai-banner'><div class='bi'></div>"
-        "<div style='flex:1'><div class='bt'>הנתונים שלך מוגנים</div>"
-        "<div class='bs'>המידע נשמר מוצפן במכשיר ואינו נשלח לשרת חיצוני.</div></div></div>",
+        "<div style='flex:1'><div class='bt'>מה קורה עם מה שאתה כותב</div>"
+        "<div class='bs'>השאלה נשלחת לשירות AI חיצוני כדי להפיק תשובה. "
+        "אין להזין מידע מסווג או פרטים מזהים.</div></div></div>",
         unsafe_allow_html=True)
+    with st.container(key="cai_sgrp_policy"):
+        if st.button("מדיניות פרטיות מלאה", key="nav_policy", use_container_width=True):
+            st.session_state.settings_screen = "policy"
+            st.rerun()
 
     st.markdown("<div class='cai-set-seclabel'>גישה למכשיר</div>", unsafe_allow_html=True)
     st.markdown(
@@ -6587,9 +6762,15 @@ def _settings_privacy():
             _clear_history()
             st.rerun()
 
-    if st.button("מחיקת כל הנתונים מהמכשיר", key="danger_wipe", use_container_width=True):
+    # "מחיקת כל הנתונים" was a promise the function cannot keep: _wipe_all
+    # clears session_state and rotates the analytics id, and every row already
+    # appended to the Sheet — full question text included — survives it. The
+    # label now scopes itself to the device and _WIPE_NOTE says what is left
+    # over and where to go for it.
+    if st.button("מחיקת הנתונים מהמכשיר הזה", key="danger_wipe", use_container_width=True):
         _wipe_all()
         st.rerun()
+    st.markdown(f"<div class='cai-wipe-note'>{_WIPE_NOTE}</div>", unsafe_allow_html=True)
 
 
 def _settings_about():
@@ -6620,6 +6801,132 @@ def _settings_about():
         "<div class='b'>כלי עזר פרטי · אינו כלי רשמי של צה\"ל</div></div>", unsafe_allow_html=True)
 
 
+def _doc_sections(lead: str, sub: str, sections: list) -> None:
+    """Render a heading + a [(title, html_body)] list in the ToS page shape.
+
+    Three screens now share this shape (terms, privacy policy, accessibility
+    statement). They are the surfaces where the app makes formal statements
+    about itself, so they should look like one document family and not like
+    three people wrote them.
+    """
+    st.markdown(
+        f"<div class='cai-tos-lead'>{lead}</div><div class='cai-tos-sub'>{sub}</div>",
+        unsafe_allow_html=True)
+    for _h, _b in sections:
+        st.markdown(
+            f"<div class='cai-tos-sec'><div class='cai-tos-h'>{_h}</div>"
+            f"<div class='cai-tos-b'>{_b}</div></div>", unsafe_allow_html=True)
+
+
+def _settings_privacy_policy():
+    """The full policy — what the one-paragraph ToS clause 4 never said.
+
+    Kept separate from תנאי שימוש rather than folded into it: the app stores
+    are going to ask for a privacy-policy URL specifically, and a clause buried
+    inside a terms document does not answer that.
+    """
+    _doc_sections("מדיניות פרטיות", "Privacy Policy", _PRIVACY_SECTIONS)
+    st.markdown(
+        "<div class='cai-info'><div class='ii'></div>"
+        "<span>המדיניות עודכנה לאחרונה ב-16 באוגוסט 2026.</span></div>",
+        unsafe_allow_html=True)
+
+
+def _settings_a11y():
+    """Accessibility statement (תקנות שוויון זכויות לאנשים עם מוגבלות).
+
+    The technical work was already done — focus rings, reduced-motion, AA
+    contrast, accessible names, the 44px floor, the text-size control. What was
+    missing is the document that says so and names the gaps, which is the part
+    the regulations actually require.
+    """
+    _doc_sections("הצהרת נגישות", "Accessibility Statement", _A11Y_SECTIONS)
+    st.markdown(
+        "<div class='cai-info'><div class='ii'></div>"
+        "<span>ההצהרה עודכנה לאחרונה ב-16 באוגוסט 2026.</span></div>",
+        unsafe_allow_html=True)
+
+
+def _settings_contact():
+    """Support + "this answer was wrong" + the access/erasure route.
+
+    The report rides metrics.log_feedback with verdict="report" rather than a
+    new Sheets tab: _append_to_sheet writes rows POSITIONALLY against a header
+    created on the tab's first-ever use, so a new tab or a new column in the
+    middle is a live corruption risk on a sheet that already holds the pilot's
+    data. `comment` already exists and already carries free text.
+    """
+    st.markdown(
+        "<div class='cai-lang-note'>יש תשובה שגויה, באג, בעיית נגישות או בקשה "
+        "לעיון ומחיקה של הנתונים שלך — כאן המקום.</div>", unsafe_allow_html=True)
+
+    if st.session_state.get("report_sent"):
+        st.markdown(
+            "<div class='cai-banner'><div class='bi'></div>"
+            "<div style='flex:1'><div class='bt'>הדיווח נשלח</div>"
+            "<div class='bs'>תודה. אנחנו קוראים כל דיווח.</div></div></div>",
+            unsafe_allow_html=True)
+
+    with st.container(key="cai_report_box"):
+        _txt = st.text_area(
+            "מה קרה?", key="report_text", height=130,
+            placeholder="למשל: שאלתי על ימי חופשה בקבע וקיבלתי תשובה על שירות חובה.",
+            label_visibility="collapsed")
+        if st.button("שליחת דיווח", key="report_send", use_container_width=True,
+                     type="primary", disabled=not (_txt or "").strip()):
+            # The report is about an answer, so send the last exchange along —
+            # without it "the answer was wrong" is unactionable. Walked inline
+            # rather than through _question_for(): that helper is defined ~1500
+            # lines BELOW this one, and _render_settings runs above it, so
+            # calling it here would be a NameError on the settings screen.
+            _last_q, _last_a = "", ""
+            for _m in reversed(st.session_state.get("messages") or []):
+                if _m.get("error"):
+                    continue
+                if not _last_a and _m.get("role") == "assistant":
+                    _last_a = _m.get("content", "")
+                elif _last_a and _m.get("role") == "user":
+                    _last_q = _m.get("content", "")
+                    break
+            metrics.log_feedback(
+                session_id=st.session_state.session_id,
+                device_id=st.session_state.get("device_id", ""),
+                role=st.session_state.role or "",
+                verdict="report",
+                question=_last_q,
+                answer=_last_a,
+                sources=None,
+                comment=(_txt or "").strip()[:2000],
+            )
+            st.session_state.report_sent = True
+            # pop, never assign: a widget's key cannot be written after the
+            # widget is instantiated in the same run (StreamlitAPIException —
+            # caught by the headless smoke test). Dropping the key makes the
+            # next run instantiate the textarea empty, which is the intent.
+            st.session_state.pop("report_text", None)
+            st.rerun()
+
+    st.markdown("<div class='cai-set-seclabel'>דוא\"ל</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='cai-lang-card' style='padding:14px'>"
+        "<div class='cai-tos-b'>לפניות שדורשות תשובה, ולבקשות עיון או מחיקה:<br>"
+        f"<a class='cai-contact-mail' href='mailto:{_CONTACT_EMAIL}'>{_CONTACT_EMAIL}</a>"
+        "</div></div>", unsafe_allow_html=True)
+
+    # The id is shown because the policy promises access and erasure, and with
+    # no accounts this random per-device string is the ONLY handle that ties a
+    # person to their rows. A promise of erasure with no way to identify what
+    # to erase is not a promise.
+    st.markdown("<div class='cai-set-seclabel'>מזהה המכשיר</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='cai-lang-card' style='padding:14px'>"
+        "<div class='cai-tos-b' style='font-size:12px'>"
+        "צרף את המזהה הזה לבקשת עיון או מחיקה — הוא הדרך היחידה לאתר את "
+        "הרשומות שלך, ואינו מכיל שום פרט אישי.</div>"
+        f"<div class='cai-device-id'>{html.escape(st.session_state.get('device_id', '—'))}</div>"
+        "</div>", unsafe_allow_html=True)
+
+
 def _render_settings():
     """App-owned settings overlay (mockup 8a–8e) — a screen state machine.
     Not st.dialog: a dialog dismiss doesn't run the full script (the machine
@@ -6632,7 +6939,9 @@ def _render_settings():
     screen = st.session_state.get("settings_screen", "hub")
     titles = {"hub": "הגדרות", "personal": "פרטים אישיים", "language": "שפה",
               "access": "גודל טקסט",
-              "privacy": "פרטיות ואבטחה", "about": "תנאי שימוש"}
+              "privacy": "פרטיות ואבטחה", "about": "תנאי שימוש",
+              "policy": "מדיניות פרטיות", "a11y": "הצהרת נגישות",
+              "contact": "יצירת קשר ודיווח"}
     with st.container(key="cai_settings"):
         _cb, _ct = st.columns([1, 5])
         with _cb:
@@ -6655,6 +6964,12 @@ def _render_settings():
             _settings_privacy()
         elif screen == "about":
             _settings_about()
+        elif screen == "policy":
+            _settings_privacy_policy()
+        elif screen == "a11y":
+            _settings_a11y()
+        elif screen == "contact":
+            _settings_contact()
         else:
             _settings_hub()
 
@@ -8125,6 +8440,19 @@ if not st.session_state.messages and not st.session_state.pending_question:
         if st.button(q, key=f"sug_{i}", use_container_width=True):
             queue_question(q)
             st.rerun()
+    # counted, never hardcoded — see _CORPUS_NOTE. get_loaded_docs_info() reads
+    # the already-loaded document list, so this costs nothing and cannot go
+    # stale; it is also the one name here that predates this screen, which
+    # keeps it safe against the cached-backend drift noted in backend.py.
+    try:
+        _ndocs = len(get_loaded_docs_info())
+    except Exception:
+        _ndocs = 0
+    if _ndocs:
+        st.markdown(
+            f"<div class='cai-corpus-note'>{_CORPUS_NOTE.format(n=_ndocs)}</div>",
+            unsafe_allow_html=True,
+        )
 
 # ── Process pending question ──
 if st.session_state.pending_question:
