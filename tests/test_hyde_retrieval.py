@@ -61,6 +61,8 @@ class _FakeClient:
 def with_flags(*, hyde: bool, extra: int = 1):
     backend.RETRIEVE_HYDE = hyde
     backend.HYDE_EXTRA_CHUNKS = extra
+    backend.RETRIEVE_ROUTER_SLOTS = 0
+    backend.RETRIEVE_FULL_BLOCKS = 0
     backend._hyde_cache.clear()
     CALLS.clear()
 
@@ -118,6 +120,49 @@ def main() -> int:
         narrow = backend.retrieve_for_role(QUESTION, ROLE, route=set(), widen=False)
         check("widen=False suppresses the extension",
               len(narrow) == len(base) and CALLS == [], f"got {len(narrow)}, calls={len(CALLS)}")
+
+
+        # --- router seats and full blocks -----------------------------------
+        # both off: byte-identical to hyde1
+        with_flags(hyde=True)
+        backend.client = _FakeClient(canned)
+        backend.RETRIEVE_ROUTER_SLOTS = 0
+        backend.RETRIEVE_FULL_BLOCKS = 0
+        w0 = backend.retrieve_for_role(QUESTION, ROLE, route=set())
+
+        # router seats: appended, never reordering; needs a route to act on
+        backend.RETRIEVE_ROUTER_SLOTS = 2
+        docs = [d["document_id"] for d in backend._docs_for_role(ROLE)
+                if d.get("document_id") and backend._has_key_facts(d)]
+        # pick two orders that are NOT already in the window
+        present = {c["doc_id"] for c in w0}
+        seats = [d for d in docs if d not in present][:2]
+        w_r = backend.retrieve_for_role(QUESTION, ROLE, route=set(seats))
+        check("router seats append exactly RETRIEVE_ROUTER_SLOTS chunks",
+              len(w_r) == len(w0) + 2, f"got {len(w_r)} vs {len(w0)}")
+        check("router seats do not reorder the prefix",
+              [key(c) for c in w_r[:len(w0)]] == [key(c) for c in w0])
+        check("router seats are from the routed orders",
+              {c["doc_id"] for c in w_r[len(w0):]} <= set(seats))
+        check("router seats without a route are a no-op",
+              len(backend.retrieve_for_role(QUESTION, ROLE, route=set())) == len(w0))
+        backend.RETRIEVE_ROUTER_SLOTS = 0
+
+        # full blocks: the leading order's whole curated block is present
+        backend.RETRIEVE_FULL_BLOCKS = 1
+        w_f = backend.retrieve_for_role(QUESTION, ROLE, route=set())
+        lead = w0[0]["doc_id"]
+        lead_doc = next(d for d in backend._docs_for_role(ROLE) if d.get("document_id") == lead)
+        n_block = len(backend._full_block(lead_doc))
+        served = sum(1 for c in w_f if c["doc_id"] == lead
+                     and "key-facts" in str(c.get("section", "")))
+        check("full block: every curated clause of the lead order is served",
+              n_block > 0 and served >= n_block, f"block={n_block} served={served}")
+        check("full block does not reorder the prefix",
+              [key(c) for c in w_f[:len(w0)]] == [key(c) for c in w0])
+        check("full block deduplicates against chunks already present",
+              len({key(c) for c in w_f}) == len(w_f))
+        backend.RETRIEVE_FULL_BLOCKS = 0
 
         # more than one extra chunk, still appended
         with_flags(hyde=True, extra=3)

@@ -86,6 +86,46 @@ RETRIEVE_CURATED_ONLY = os.environ.get("RETRIEVE_CURATED_ONLY", "1") == "1"
 RETRIEVE_HYDE = os.environ.get("RETRIEVE_HYDE", "0") == "1"
 HYDE_EXTRA_CHUNKS = int(os.environ.get("HYDE_EXTRA_CHUNKS", "1"))
 
+# Hand the model the WHOLE curated block of the leading orders, not the one or
+# two clauses that happened to rank.
+#
+# Measured 2026-08-17/18 on the same 16 evidence targets. Once HyDE and the
+# router bring the answering order into the window (8 of 16), the sentence
+# that answers is still served in only 7 of 91 spans — and the reason is not
+# raw text: the CURATED block of the answering order contains the answer in
+# 12 of 16 (7 verbatim, 5 paraphrased). PM-33.0302 has 25 curated clauses in
+# 8 chunks and the window takes one or two of them, and the one that answers
+# is not among them. Ranking the clauses against the question does not fix it
+# (3-4 ranked clauses: 7-8 of 16) — the answering clause is not the one that
+# resembles the question, which is the same question/answer asymmetry that
+# motivated HyDE, at clause resolution. `vector_store.retrieve` already calls
+# this a coin flip. Serving the whole block does: 5 -> 14 of 16 questions
+# covered, at 1,160 -> 2,970 words per question (~+$0.01 at Opus prices).
+#
+# ⚠ MEASURED AND NOT RECOMMENDED. The 14/16 came from a coverage metric that
+# scored word-recall against the WHOLE context, and at 33 chunks per question
+# (3,000 words) six of every ten words in any sentence are somewhere in there —
+# the metric was measuring context size. Re-scored per chunk, the honest
+# reading of the same run is 6/16 against 5/16 for HyDE alone, at 4x the
+# context. Kept behind the flag because the mechanism is real (PM-33.0302's
+# answering clause IS in its block and IS the one the window drops), but the
+# lever has to be selective — a per-order full block where the router and HyDE
+# agree, not every leading order — and that is not built or measured yet.
+#
+# Appended after everything else, so the first eight (+HyDE +router) and their
+# order are untouched: gate 387/415 identical with the extension on or off.
+# The block is served per ORDER, deduplicated against chunks already present.
+#
+# The router slot came out of the same measurement: on the 16 the router names
+# the answering order in 7 and HyDE reaches it in 8, union 10 — four of the
+# router's hits are ones HyDE misses, and today its verdict is only a +0.05
+# bonus that cannot lift an order across a 0.15 gap. Two slots for its top
+# picks, appended: 6 -> 8 of 16 orders in the window.
+#
+# Both default OFF until the paired re-measure says the ANSWERS move.
+RETRIEVE_ROUTER_SLOTS = int(os.environ.get("RETRIEVE_ROUTER_SLOTS", "0"))
+RETRIEVE_FULL_BLOCKS = int(os.environ.get("RETRIEVE_FULL_BLOCKS", "0"))
+
 # Header that marks the retrieved-context section inside a user turn. The
 # context rides in the user message (not the system prompt) so the system
 # prompt and past turns stay byte-identical across a conversation — the
@@ -358,6 +398,28 @@ def hypothetical(question: str) -> str:
     return text
 
 
+def _chunk_key(c: dict) -> tuple:
+    return (c["doc_id"], c.get("section"), c.get("clause"))
+
+
+def _append_new(chunks: list[dict], extras, limit: int | None) -> list[dict]:
+    """Append chunks not already present, up to `limit` new ones. Never
+    reorders what is there — every extension in this file relies on that."""
+    seen = {_chunk_key(c) for c in chunks}
+    out = list(chunks)
+    added = 0
+    for c in extras:
+        k = _chunk_key(c)
+        if k in seen:
+            continue
+        seen.add(k)
+        out.append(c)
+        added += 1
+        if limit is not None and added >= limit:
+            break
+    return out
+
+
 def extend_with_hypothetical(chunks: list[dict], question: str, role: str,
                              route: set[str] | None = None) -> list[dict]:
     """Append up to HYDE_EXTRA_CHUNKS chunks the hypothetical finds and the
@@ -367,16 +429,70 @@ def extend_with_hypothetical(chunks: list[dict], question: str, role: str,
     hyp = hypothetical(question)
     if not hyp:
         return chunks
-    seen = {(c["doc_id"], c.get("section"), c.get("clause")) for c in chunks}
-    out = list(chunks)
-    for c in retrieve_for_role(hyp, role, route=route, widen=False):
-        key = (c["doc_id"], c.get("section"), c.get("clause"))
-        if key in seen:
+    return _append_new(chunks, retrieve_for_role(hyp, role, route=route, widen=False),
+                       HYDE_EXTRA_CHUNKS)
+
+
+def extend_with_router_slots(chunks: list[dict], question: str, role: str,
+                             route: set[str] | None) -> list[dict]:
+    """One appended chunk for each of the router's top RETRIEVE_ROUTER_SLOTS
+    orders — its best chunk for the question. The router already paid to name
+    these orders; today they get a bonus that cannot lift them into the
+    window, and here they get a seat."""
+    if RETRIEVE_ROUTER_SLOTS <= 0 or not route:
+        return chunks
+    picks = retrieve(question, n_results=50, doc_ids=sorted(route),
+                     boost_docs=set(), max_per_doc=1)
+    return _append_new(chunks, picks, RETRIEVE_ROUTER_SLOTS)
+
+
+def _full_block(doc: dict) -> list[dict]:
+    """Every clause of the order's curated block, as chunks shaped like the
+    index's own (same text prefix as vector_store.index_document)."""
+    out = []
+    doc_id, title = doc.get("document_id", ""), doc.get("title", "")
+    for s in doc.get("sections") or []:
+        if "key-facts" not in (s.get("id") or ""):
             continue
-        out.append(c)
-        if len(out) >= len(chunks) + HYDE_EXTRA_CHUNKS:
-            break
+        s_title = s.get("title", s.get("id", ""))
+        for cl in s.get("clauses") or []:
+            text = (cl.get("text") or "").strip()
+            if not text:
+                continue
+            out.append({"doc_id": doc_id, "title": title, "section": str(s.get("id", "")),
+                        "clause": str(cl.get("number", "")),
+                        "text": f"{title} — {s_title}\nסעיף {cl.get('number', '')}: {text}",
+                        "score": 0.0})
     return out
+
+
+def extend_with_full_blocks(chunks: list[dict], role: str) -> list[dict]:
+    """Append the whole curated block of the first RETRIEVE_FULL_BLOCKS distinct
+    orders in the window. Deduplicated against what is already there."""
+    if RETRIEVE_FULL_BLOCKS <= 0 or not chunks:
+        return chunks
+    by_id = {d["document_id"]: d for d in _docs_for_role(role) if d.get("document_id")}
+    order: list[str] = []
+    for c in chunks:
+        if c["doc_id"] not in order:
+            order.append(c["doc_id"])
+    out = chunks
+    for doc_id in order[:RETRIEVE_FULL_BLOCKS]:
+        doc = by_id.get(doc_id)
+        if doc:
+            out = _append_new(out, _full_block(doc), None)
+    return out
+
+
+def widen_context(chunks: list[dict], question: str, role: str,
+                  route: set[str] | None) -> list[dict]:
+    """The three appended extensions, in the order they were measured to
+    stack: hypothetical, router seats, full blocks. Each is a no-op when its
+    flag is off, so production with all flags off is byte-identical to the
+    pre-extension pipeline."""
+    out = extend_with_hypothetical(chunks, question, role, route)
+    out = extend_with_router_slots(out, question, role, route)
+    return extend_with_full_blocks(out, role)
 
 
 def retrieve_for_role(question: str, role: str, route: set[str] | None = None,
@@ -404,7 +520,7 @@ def retrieve_for_role(question: str, role: str, route: set[str] | None = None,
         route = _route_docs(question, role)
     chunks = retrieve(question, n_results=MAX_CONTEXT_CHUNKS, doc_ids=doc_ids,
                       boost_docs=route)
-    return extend_with_hypothetical(chunks, question, role, route) if widen else chunks
+    return widen_context(chunks, question, role, route) if widen else chunks
 
 
 def _has_key_facts(doc: dict) -> bool:
@@ -798,7 +914,7 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
             chunks = chunks[:MAX_CONTEXT_CHUNKS - keep] + extra[:keep]
     # after the union, never inside it: the union truncates to
     # MAX_CONTEXT_CHUNKS and would drop an appended chunk that was paid for
-    chunks = extend_with_hypothetical(chunks, question, role, route)
+    chunks = widen_context(chunks, question, role, route)
     context = _context_from_chunks(chunks)
     system_prompt = SYSTEM_PROMPTS.get(role, SYSTEM_PROMPT_SOLDIER)
 
