@@ -1,6 +1,6 @@
 {
- "spent": 40.9694,
- "reserved": 0.2459,
+ "spent": 43.5516,
+ "reserved": 0.2519,
  "entries": [
   {
    "id": "anchors:21.0401#20804-196",
@@ -603,6 +603,18 @@
    "actual": 0.0781
   },
   {
+   "id": "curate:21.0106#4908-373",
+   "label": "curate:21.0106",
+   "estimate": 0.0599,
+   "actual": 0.0208
+  },
+  {
+   "id": "curate:21.0120#4908-374",
+   "label": "curate:21.0120",
+   "estimate": 0.0421,
+   "actual": 0.0114
+  },
+  {
    "id": "curate:21.0123#30332-48",
    "label": "curate:21.0123",
    "estimate": 0.0401,
@@ -619,6 +631,18 @@
    "label": "curate:21.0123",
    "estimate": 0.0401,
    "actual": 0.0111
+  },
+  {
+   "id": "curate:21.0201#4908-371",
+   "label": "curate:21.0201",
+   "estimate": 0.0376,
+   "actual": 0.0081
+  },
+  {
+   "id": "curate:21.0201#4908-372",
+   "label": "curate:21.0201",
+   "estimate": 0.0376,
+   "actual": 0.0082
   },
   {
    "id": "curate:21.0211#37332-110",
@@ -711,6 +735,12 @@
    "actual": 0.0088
   },
   {
+   "id": "curate:30.0408#4908-392",
+   "label": "curate:30.0408",
+   "estimate": 0.0439,
+   "actual": 0.0126
+  },
+  {
    "id": "curate:30.0413#37332-94",
    "label": "curate:30.0413",
    "estimate": 0.0408,
@@ -759,10 +789,52 @@
    "actual": 0.1114
   },
   {
+   "id": "curate:31.0205#15472-516",
+   "label": "curate:31.0205",
+   "estimate": 0.0551,
+   "actual": 0.0199
+  },
+  {
+   "id": "curate:31.0205#15472-517",
+   "label": "curate:31.0205",
+   "estimate": 0.0551,
+   "actual": 0.0188
+  },
+  {
+   "id": "curate:31.0205#4908-444",
+   "label": "curate:31.0205",
+   "estimate": 0.0551,
+   "actual": 0.0184
+  },
+  {
+   "id": "curate:31.0205#4908-445",
+   "label": "curate:31.0205",
+   "estimate": 0.0551,
+   "actual": 0.0188
+  },
+  {
    "id": "curate:31.0206#37332-140",
    "label": "curate:31.0206",
    "estimate": 0.0535,
    "actual": 0.018
+  },
+  {
+   "id": "curate:31.0207#15472-505",
+   "label": "curate:31.0207",
+   "estimate": 0.0453,
+   "actual": 0.0175
+  },
+  {
+   "id": "curate:31.0207#4908-415",
+   "label": "curate:31.0207",
+   "estimate": 0.0453,
+   "actual": 0.0175
+  },
+  {
+   "id": "curate:31.0207#4908-416",
+   "label": "curate:31.0207",
+   "estimate": 0.0453,
+   "actual": 0.015
   },
   {
    "id": "curate:31.0214#13076-37",
@@ -775,6 +847,30 @@
    "label": "curate:31.0215",
    "estimate": 0.0507,
    "actual": 0.0178
+  },
+  {
+   "id": "curate:31.0252#15472-501",
+   "label": "curate:31.0252",
+   "estimate": 0.0471,
+   "actual": 0.0153
+  },
+  {
+   "id": "curate:31.0252#15472-502",
+   "label": "curate:31.0252",
+   "estimate": 0.0471,
+   "actual": 0.0142
+  },
+  {
+   "id": "curate:31.0252#4908-405",
+   "label": "curate:31.0252",
+   "estimate": 0.0471,
+   "actual": 0.0145
+  },
+  {
+   "id": "curate:31.0252#4908-406",
+   "label": "curate:31.0252",
+   "estimate": 0.0471,
+   "actual": 0.015
   },
   {
    "id": "curate:31.0318#36312-151",
@@ -867,6 +963,30 @@
    "actual": 0.0851
   },
   {
+   "id": "curate:31.0515#15472-510",
+   "label": "curate:31.0515",
+   "estimate": 0.0566,
+   "actual": 0.0203
+  },
+  {
+   "id": "curate:31.0515#15472-511",
+   "label": "curate:31.0515",
+   "estimate": 0.0566,
+   "actual": 0.0201
+  },
+  {
+   "id": "curate:31.0515#4908-430",
+   "label": "curate:31.0515",
+   "estimate": 0.0566,
+   "actual": 0.0218
+  },
+  {
+   "id": "curate:31.0515#4908-431",
+   "label": "curate:31.0515",
+   "estimate": 0.0566,
+   "actual": 0.0208
+  },
+  {
    "id": "curate:31.0519#5260-14",
    "label": "curate:31.0519",
    "estimate": 0.0417,
@@ -891,6 +1011,24 @@
    "actual": 0.0123
   },
   {
+   "id": "curate:31.0823#15472-509",
+   "label": "curate:31.0823",
+   "estimate": 0.0459,
+   "actual": 0.0155
+  },
+  {
+   "id": "curate:31.0823#4908-428",
+   "label": "curate:31.0823",
+   "estimate": 0.0459,
+   "actual": 0.0171
+  },
+  {
+   "id": "curate:31.0823#4908-429",
+   "label": "curate:31.0823",
+   "estimate": 0.0459,
+   "actual": 0.015
+  },
+  {
    "id": "curate:31.0830#37332-84",
    "label": "curate:31.0830",
    "estimate": 0.0384,
@@ -901,6 +1039,24 @@
    "label": "curate:31.0831",
    "estimate": 0.039,
    "actual": 0.0081
+  },
+  {
+   "id": "curate:31.1001#15472-508",
+   "label": "curate:31.1001",
+   "estimate": 0.0441,
+   "actual": 0.013
+  },
+  {
+   "id": "curate:31.1001#4908-420",
+   "label": "curate:31.1001",
+   "estimate": 0.0441,
+   "actual": 0.013
+  },
+  {
+   "id": "curate:31.1001#4908-421",
+   "label": "curate:31.1001",
+   "estimate": 0.0441,
+   "actual": 0.013
   },
   {
    "id": "curate:31.1012#37332-115",
@@ -925,6 +1081,48 @@
    "label": "curate:32.0101",
    "estimate": 0.0515,
    "actual": 0.0194
+  },
+  {
+   "id": "curate:32.0201#4908-407",
+   "label": "curate:32.0201",
+   "estimate": 0.0522,
+   "actual": 0.0181
+  },
+  {
+   "id": "curate:32.0201#4908-408",
+   "label": "curate:32.0201",
+   "estimate": 0.0522,
+   "actual": 0.0178
+  },
+  {
+   "id": "curate:32.0202#15472-503",
+   "label": "curate:32.0202",
+   "estimate": 0.072,
+   "actual": 0.0318
+  },
+  {
+   "id": "curate:32.0202#15472-504",
+   "label": "curate:32.0202",
+   "estimate": 0.072,
+   "actual": 0.0317
+  },
+  {
+   "id": "curate:32.0202#4908-409",
+   "label": "curate:32.0202",
+   "estimate": 0.072,
+   "actual": 0.0314
+  },
+  {
+   "id": "curate:32.0202#4908-410",
+   "label": "curate:32.0202",
+   "estimate": 0.072,
+   "actual": 0.0282
+  },
+  {
+   "id": "curate:32.0207#4908-379",
+   "label": "curate:32.0207",
+   "estimate": 0.0432,
+   "actual": 0.0164
   },
   {
    "id": "curate:32.0214#36312-158",
@@ -963,6 +1161,18 @@
    "actual": 0.1277
   },
   {
+   "id": "curate:32.0222#4908-369",
+   "label": "curate:32.0222",
+   "estimate": 0.0489,
+   "actual": 0.0173
+  },
+  {
+   "id": "curate:32.0222#4908-370",
+   "label": "curate:32.0222",
+   "estimate": 0.0489,
+   "actual": 0.0156
+  },
+  {
    "id": "curate:32.0223#36312-185",
    "label": "curate:32.0223",
    "estimate": 0.0388,
@@ -987,6 +1197,24 @@
    "actual": 0.0071
   },
   {
+   "id": "curate:32.0307#4908-419",
+   "label": "curate:32.0307",
+   "estimate": 0.04,
+   "actual": 0.0103
+  },
+  {
+   "id": "curate:32.0312#4908-388",
+   "label": "curate:32.0312",
+   "estimate": 0.0372,
+   "actual": 0.0032
+  },
+  {
+   "id": "curate:32.0312#4908-389",
+   "label": "curate:32.0312",
+   "estimate": 0.0372,
+   "actual": 0.0065
+  },
+  {
    "id": "curate:32.0314#13076-24",
    "label": "curate:32.0314",
    "estimate": 0.0547,
@@ -1005,6 +1233,30 @@
    "actual": 0.129
   },
   {
+   "id": "curate:32.0315#15472-532",
+   "label": "curate:32.0315",
+   "estimate": 0.0457,
+   "actual": 0.0154
+  },
+  {
+   "id": "curate:32.0315#15472-533",
+   "label": "curate:32.0315",
+   "estimate": 0.0457,
+   "actual": 0.0161
+  },
+  {
+   "id": "curate:32.0315#4908-469",
+   "label": "curate:32.0315",
+   "estimate": 0.0457,
+   "actual": 0.0157
+  },
+  {
+   "id": "curate:32.0315#4908-470",
+   "label": "curate:32.0315",
+   "estimate": 0.0457,
+   "actual": 0.015
+  },
+  {
    "id": "curate:32.0316#37332-122",
    "label": "curate:32.0316",
    "estimate": 0.0389,
@@ -1017,6 +1269,54 @@
    "actual": 0.0099
   },
   {
+   "id": "curate:32.0422#4908-377",
+   "label": "curate:32.0422",
+   "estimate": 0.0432,
+   "actual": 0.0152
+  },
+  {
+   "id": "curate:32.0422#4908-378",
+   "label": "curate:32.0422",
+   "estimate": 0.0432,
+   "actual": 0.0148
+  },
+  {
+   "id": "curate:32.0501#15472-480",
+   "label": "curate:32.0501",
+   "estimate": 0.0627,
+   "actual": 0.0239
+  },
+  {
+   "id": "curate:32.0501#4908-365",
+   "label": "curate:32.0501",
+   "estimate": 0.0627,
+   "actual": 0.024
+  },
+  {
+   "id": "curate:32.0501#4908-366",
+   "label": "curate:32.0501",
+   "estimate": 0.0627,
+   "actual": 0.0246
+  },
+  {
+   "id": "curate:32.0509#4908-364",
+   "label": "curate:32.0509",
+   "estimate": 0.0494,
+   "actual": 0.0177
+  },
+  {
+   "id": "curate:33.0114#14576-348",
+   "label": "curate:33.0114",
+   "estimate": 0.0365,
+   "actual": 0.0052
+  },
+  {
+   "id": "curate:33.0114#14576-349",
+   "label": "curate:33.0114",
+   "estimate": 0.0365,
+   "actual": 0.0052
+  },
+  {
    "id": "curate:33.0114#37332-113",
    "label": "curate:33.0114",
    "estimate": 0.0365,
@@ -1027,6 +1327,18 @@
    "label": "curate:33.0114",
    "estimate": 0.0365,
    "actual": 0.0044
+  },
+  {
+   "id": "curate:33.0114#4908-354",
+   "label": "curate:33.0114",
+   "estimate": 0.0365,
+   "actual": 0.006
+  },
+  {
+   "id": "curate:33.0114#4908-355",
+   "label": "curate:33.0114",
+   "estimate": 0.0365,
+   "actual": 0.0061
   },
   {
    "id": "curate:33.0117#5260-12",
@@ -1045,6 +1357,30 @@
    "label": "curate:33.0117",
    "estimate": 0.0372,
    "actual": 0.0
+  },
+  {
+   "id": "curate:33.0133#15472-491",
+   "label": "curate:33.0133",
+   "estimate": 0.0373,
+   "actual": 0.0075
+  },
+  {
+   "id": "curate:33.0133#15472-492",
+   "label": "curate:33.0133",
+   "estimate": 0.0373,
+   "actual": 0.0071
+  },
+  {
+   "id": "curate:33.0133#4908-386",
+   "label": "curate:33.0133",
+   "estimate": 0.0373,
+   "actual": 0.0074
+  },
+  {
+   "id": "curate:33.0133#4908-387",
+   "label": "curate:33.0133",
+   "estimate": 0.0373,
+   "actual": 0.0075
   },
   {
    "id": "curate:33.0144#13076-26",
@@ -1101,10 +1437,70 @@
    "actual": 0.1782
   },
   {
+   "id": "curate:33.0321#15472-493",
+   "label": "curate:33.0321",
+   "estimate": 0.0375,
+   "actual": 0.0079
+  },
+  {
+   "id": "curate:33.0321#4908-390",
+   "label": "curate:33.0321",
+   "estimate": 0.0375,
+   "actual": 0.0078
+  },
+  {
+   "id": "curate:33.0321#4908-391",
+   "label": "curate:33.0321",
+   "estimate": 0.0375,
+   "actual": 0.0092
+  },
+  {
+   "id": "curate:33.0325#4908-413",
+   "label": "curate:33.0325",
+   "estimate": 0.0395,
+   "actual": 0.0114
+  },
+  {
+   "id": "curate:33.0334#4908-411",
+   "label": "curate:33.0334",
+   "estimate": 0.0374,
+   "actual": 0.0079
+  },
+  {
+   "id": "curate:33.0334#4908-412",
+   "label": "curate:33.0334",
+   "estimate": 0.0374,
+   "actual": 0.0081
+  },
+  {
    "id": "curate:33.0350#37332-100",
    "label": "curate:33.0350",
    "estimate": 0.0526,
    "actual": 0.0142
+  },
+  {
+   "id": "curate:33.0807#15472-499",
+   "label": "curate:33.0807",
+   "estimate": 0.0547,
+   "actual": 0.0219
+  },
+  {
+   "id": "curate:33.0807#15472-500",
+   "label": "curate:33.0807",
+   "estimate": 0.0547,
+   "actual": 0.0209
+  },
+  {
+   "id": "curate:33.0807#4908-403",
+   "label": "curate:33.0807",
+   "estimate": 0.0547,
+   "actual": 0.017
+  },
+  {
+   "id": "curate:33.0807#4908-404",
+   "label": "curate:33.0807",
+   "estimate": 0.0547,
+   "actual": 0.0237
   },
   {
    "id": "curate:33.0808#23448-65",
@@ -1155,6 +1551,24 @@
    "actual": 0.018
   },
   {
+   "id": "curate:33.0911#15472-526",
+   "label": "curate:33.0911",
+   "estimate": 0.0398,
+   "actual": 0.0114
+  },
+  {
+   "id": "curate:33.0911#4908-459",
+   "label": "curate:33.0911",
+   "estimate": 0.0398,
+   "actual": 0.0105
+  },
+  {
+   "id": "curate:33.0911#4908-460",
+   "label": "curate:33.0911",
+   "estimate": 0.0398,
+   "actual": 0.0102
+  },
+  {
    "id": "curate:33.0913#5260-20",
    "label": "curate:33.0913",
    "estimate": 0.0427,
@@ -1203,6 +1617,24 @@
    "actual": 0.0138
   },
   {
+   "id": "curate:33.1125#4908-397",
+   "label": "curate:33.1125",
+   "estimate": 0.0502,
+   "actual": 0.0164
+  },
+  {
+   "id": "curate:35.0102#4908-360",
+   "label": "curate:35.0102",
+   "estimate": 0.043,
+   "actual": 0.013
+  },
+  {
+   "id": "curate:35.0102#4908-361",
+   "label": "curate:35.0102",
+   "estimate": 0.043,
+   "actual": 0.0138
+  },
+  {
    "id": "curate:35.0107#36312-181",
    "label": "curate:35.0107",
    "estimate": 0.0449,
@@ -1227,6 +1659,30 @@
    "actual": null
   },
   {
+   "id": "curate:35.0111#15472-477",
+   "label": "curate:35.0111",
+   "estimate": 0.0511,
+   "actual": 0.017
+  },
+  {
+   "id": "curate:35.0111#15472-478",
+   "label": "curate:35.0111",
+   "estimate": 0.0511,
+   "actual": 0.0168
+  },
+  {
+   "id": "curate:35.0111#4908-358",
+   "label": "curate:35.0111",
+   "estimate": 0.0511,
+   "actual": 0.0176
+  },
+  {
+   "id": "curate:35.0111#4908-359",
+   "label": "curate:35.0111",
+   "estimate": 0.0511,
+   "actual": 0.0161
+  },
+  {
    "id": "curate:35.0115#5260-18",
    "label": "curate:35.0115",
    "estimate": 0.0425,
@@ -1237,6 +1693,84 @@
    "label": "curate:35.0115",
    "estimate": 0.0425,
    "actual": 0.0954
+  },
+  {
+   "id": "curate:35.0123#4908-362",
+   "label": "curate:35.0123",
+   "estimate": 0.0394,
+   "actual": 0.0093
+  },
+  {
+   "id": "curate:35.0123#4908-363",
+   "label": "curate:35.0123",
+   "estimate": 0.0394,
+   "actual": 0.0103
+  },
+  {
+   "id": "curate:35.0202#4908-432",
+   "label": "curate:35.0202",
+   "estimate": 0.0374,
+   "actual": 0.0078
+  },
+  {
+   "id": "curate:35.0202#4908-433",
+   "label": "curate:35.0202",
+   "estimate": 0.0374,
+   "actual": 0.0078
+  },
+  {
+   "id": "curate:35.0203#15472-483",
+   "label": "curate:35.0203",
+   "estimate": 0.0436,
+   "actual": 0.0109
+  },
+  {
+   "id": "curate:35.0203#15472-484",
+   "label": "curate:35.0203",
+   "estimate": 0.0436,
+   "actual": 0.0067
+  },
+  {
+   "id": "curate:35.0203#4908-375",
+   "label": "curate:35.0203",
+   "estimate": 0.0436,
+   "actual": 0.01
+  },
+  {
+   "id": "curate:35.0203#4908-376",
+   "label": "curate:35.0203",
+   "estimate": 0.0436,
+   "actual": 0.0059
+  },
+  {
+   "id": "curate:35.0211#4908-467",
+   "label": "curate:35.0211",
+   "estimate": 0.0441,
+   "actual": 0.0094
+  },
+  {
+   "id": "curate:35.0211#4908-468",
+   "label": "curate:35.0211",
+   "estimate": 0.0441,
+   "actual": 0.0127
+  },
+  {
+   "id": "curate:35.0217#4908-436",
+   "label": "curate:35.0217",
+   "estimate": 0.0396,
+   "actual": 0.0118
+  },
+  {
+   "id": "curate:35.0218#4908-473",
+   "label": "curate:35.0218",
+   "estimate": 0.0422,
+   "actual": 0.014
+  },
+  {
+   "id": "curate:35.0218#4908-474",
+   "label": "curate:35.0218",
+   "estimate": 0.0422,
+   "actual": 0.0108
   },
   {
    "id": "curate:35.0219#6",
@@ -1251,6 +1785,36 @@
    "actual": 0.008
   },
   {
+   "id": "curate:35.0228#4908-472",
+   "label": "curate:35.0228",
+   "estimate": 0.0399,
+   "actual": 0.0107
+  },
+  {
+   "id": "curate:35.0232#15472-512",
+   "label": "curate:35.0232",
+   "estimate": 0.0361,
+   "actual": 0.003
+  },
+  {
+   "id": "curate:35.0232#15472-513",
+   "label": "curate:35.0232",
+   "estimate": 0.0361,
+   "actual": 0.0061
+  },
+  {
+   "id": "curate:35.0232#4908-434",
+   "label": "curate:35.0232",
+   "estimate": 0.0361,
+   "actual": 0.0029
+  },
+  {
+   "id": "curate:35.0232#4908-435",
+   "label": "curate:35.0232",
+   "estimate": 0.0361,
+   "actual": 0.0054
+  },
+  {
    "id": "curate:35.0233#36312-194",
    "label": "curate:35.0233",
    "estimate": 0.0399,
@@ -1261,6 +1825,12 @@
    "label": "curate:35.0233",
    "estimate": 0.0399,
    "actual": 0.0128
+  },
+  {
+   "id": "curate:35.0310#14576-347",
+   "label": "curate:35.0310",
+   "estimate": 0.0418,
+   "actual": 0.0077
   },
   {
    "id": "curate:35.0310#37332-101",
@@ -1275,6 +1845,24 @@
    "actual": 0.0048
   },
   {
+   "id": "curate:35.0310#4908-352",
+   "label": "curate:35.0310",
+   "estimate": 0.0418,
+   "actual": 0.0121
+  },
+  {
+   "id": "curate:35.0310#4908-353",
+   "label": "curate:35.0310",
+   "estimate": 0.0418,
+   "actual": 0.0051
+  },
+  {
+   "id": "curate:35.0313#4908-471",
+   "label": "curate:35.0313",
+   "estimate": 0.0442,
+   "actual": 0.0139
+  },
+  {
    "id": "curate:35.0314#13076-39",
    "label": "curate:35.0314",
    "estimate": 0.0437,
@@ -1287,10 +1875,112 @@
    "actual": 0.0123
   },
   {
+   "id": "curate:35.0501#4908-422",
+   "label": "curate:35.0501",
+   "estimate": 0.0371,
+   "actual": 0.0029
+  },
+  {
+   "id": "curate:35.0501#4908-423",
+   "label": "curate:35.0501",
+   "estimate": 0.0371,
+   "actual": 0.0077
+  },
+  {
+   "id": "curate:35.0502#15472-481",
+   "label": "curate:35.0502",
+   "estimate": 0.0543,
+   "actual": 0.0194
+  },
+  {
+   "id": "curate:35.0502#15472-482",
+   "label": "curate:35.0502",
+   "estimate": 0.0543,
+   "actual": 0.0191
+  },
+  {
+   "id": "curate:35.0502#4908-367",
+   "label": "curate:35.0502",
+   "estimate": 0.0543,
+   "actual": 0.022
+  },
+  {
+   "id": "curate:35.0502#4908-368",
+   "label": "curate:35.0502",
+   "estimate": 0.0543,
+   "actual": 0.0191
+  },
+  {
+   "id": "curate:35.0504#4908-424",
+   "label": "curate:35.0504",
+   "estimate": 0.0418,
+   "actual": 0.0128
+  },
+  {
+   "id": "curate:35.0504#4908-425",
+   "label": "curate:35.0504",
+   "estimate": 0.0418,
+   "actual": 0.0121
+  },
+  {
+   "id": "curate:35.0802#15472-485",
+   "label": "curate:35.0802",
+   "estimate": 0.0362,
+   "actual": 0.0055
+  },
+  {
+   "id": "curate:35.0802#15472-486",
+   "label": "curate:35.0802",
+   "estimate": 0.0362,
+   "actual": 0.0054
+  },
+  {
+   "id": "curate:35.0802#4908-380",
+   "label": "curate:35.0802",
+   "estimate": 0.0362,
+   "actual": 0.0049
+  },
+  {
+   "id": "curate:35.0802#4908-381",
+   "label": "curate:35.0802",
+   "estimate": 0.0362,
+   "actual": 0.0047
+  },
+  {
    "id": "curate:35.0804#37332-132",
    "label": "curate:35.0804",
    "estimate": 0.0374,
    "actual": 0.007
+  },
+  {
+   "id": "curate:35.0810#15472-494",
+   "label": "curate:35.0810",
+   "estimate": 0.0375,
+   "actual": 0.0091
+  },
+  {
+   "id": "curate:35.0810#15472-495",
+   "label": "curate:35.0810",
+   "estimate": 0.0375,
+   "actual": 0.0078
+  },
+  {
+   "id": "curate:35.0810#4908-393",
+   "label": "curate:35.0810",
+   "estimate": 0.0375,
+   "actual": 0.0081
+  },
+  {
+   "id": "curate:35.0810#4908-394",
+   "label": "curate:35.0810",
+   "estimate": 0.0375,
+   "actual": 0.0079
+  },
+  {
+   "id": "curate:35.0814#4908-400",
+   "label": "curate:35.0814",
+   "estimate": 0.0446,
+   "actual": 0.0133
   },
   {
    "id": "curate:35.0822#37332-103",
@@ -1299,10 +1989,94 @@
    "actual": 0.0206
   },
   {
+   "id": "curate:36.0103#4908-446",
+   "label": "curate:36.0103",
+   "estimate": 0.047,
+   "actual": 0.0174
+  },
+  {
+   "id": "curate:36.0103#4908-447",
+   "label": "curate:36.0103",
+   "estimate": 0.047,
+   "actual": 0.0159
+  },
+  {
+   "id": "curate:36.0104#15472-515",
+   "label": "curate:36.0104",
+   "estimate": 0.0469,
+   "actual": 0.0211
+  },
+  {
+   "id": "curate:36.0104#4908-442",
+   "label": "curate:36.0104",
+   "estimate": 0.0469,
+   "actual": 0.0155
+  },
+  {
+   "id": "curate:36.0104#4908-443",
+   "label": "curate:36.0104",
+   "estimate": 0.0469,
+   "actual": 0.0175
+  },
+  {
    "id": "curate:36.0105#37332-90",
    "label": "curate:36.0105",
    "estimate": 0.043,
    "actual": 0.0129
+  },
+  {
+   "id": "curate:36.0109#15472-514",
+   "label": "curate:36.0109",
+   "estimate": 0.04,
+   "actual": 0.0121
+  },
+  {
+   "id": "curate:36.0109#4908-437",
+   "label": "curate:36.0109",
+   "estimate": 0.04,
+   "actual": 0.0133
+  },
+  {
+   "id": "curate:36.0109#4908-438",
+   "label": "curate:36.0109",
+   "estimate": 0.04,
+   "actual": 0.0118
+  },
+  {
+   "id": "curate:36.0110#15472-520",
+   "label": "curate:36.0110",
+   "estimate": 0.0365,
+   "actual": 0.0072
+  },
+  {
+   "id": "curate:36.0110#15472-521",
+   "label": "curate:36.0110",
+   "estimate": 0.0365,
+   "actual": 0.0069
+  },
+  {
+   "id": "curate:36.0110#4908-450",
+   "label": "curate:36.0110",
+   "estimate": 0.0365,
+   "actual": 0.0061
+  },
+  {
+   "id": "curate:36.0110#4908-451",
+   "label": "curate:36.0110",
+   "estimate": 0.0365,
+   "actual": 0.0054
+  },
+  {
+   "id": "curate:36.0113#4908-440",
+   "label": "curate:36.0113",
+   "estimate": 0.0411,
+   "actual": 0.0129
+  },
+  {
+   "id": "curate:36.0113#4908-441",
+   "label": "curate:36.0113",
+   "estimate": 0.0411,
+   "actual": 0.0107
   },
   {
    "id": "curate:36.0204#37332-121",
@@ -1341,6 +2115,60 @@
    "actual": 0.0162
   },
   {
+   "id": "curate:36.0301#15472-528",
+   "label": "curate:36.0301",
+   "estimate": 0.0474,
+   "actual": 0.0185
+  },
+  {
+   "id": "curate:36.0301#15472-529",
+   "label": "curate:36.0301",
+   "estimate": 0.0474,
+   "actual": 0.0177
+  },
+  {
+   "id": "curate:36.0301#4908-463",
+   "label": "curate:36.0301",
+   "estimate": 0.0474,
+   "actual": 0.0117
+  },
+  {
+   "id": "curate:36.0301#4908-464",
+   "label": "curate:36.0301",
+   "estimate": 0.0474,
+   "actual": 0.0164
+  },
+  {
+   "id": "curate:36.0302#4908-454",
+   "label": "curate:36.0302",
+   "estimate": 0.0433,
+   "actual": 0.015
+  },
+  {
+   "id": "curate:36.0303#15472-518",
+   "label": "curate:36.0303",
+   "estimate": 0.041,
+   "actual": 0.0103
+  },
+  {
+   "id": "curate:36.0303#15472-519",
+   "label": "curate:36.0303",
+   "estimate": 0.041,
+   "actual": 0.011
+  },
+  {
+   "id": "curate:36.0303#4908-448",
+   "label": "curate:36.0303",
+   "estimate": 0.041,
+   "actual": 0.0115
+  },
+  {
+   "id": "curate:36.0303#4908-449",
+   "label": "curate:36.0303",
+   "estimate": 0.041,
+   "actual": 0.0116
+  },
+  {
    "id": "curate:36.0304#36312-187",
    "label": "curate:36.0304",
    "estimate": 0.0407,
@@ -1353,10 +2181,118 @@
    "actual": 0.0121
   },
   {
+   "id": "curate:36.0306#15472-525",
+   "label": "curate:36.0306",
+   "estimate": 0.0377,
+   "actual": 0.0089
+  },
+  {
+   "id": "curate:36.0306#4908-457",
+   "label": "curate:36.0306",
+   "estimate": 0.0377,
+   "actual": 0.0096
+  },
+  {
+   "id": "curate:36.0306#4908-458",
+   "label": "curate:36.0306",
+   "estimate": 0.0377,
+   "actual": 0.0078
+  },
+  {
+   "id": "curate:36.0308#4908-439",
+   "label": "curate:36.0308",
+   "estimate": 0.0392,
+   "actual": 0.0095
+  },
+  {
+   "id": "curate:36.0309#15472-522",
+   "label": "curate:36.0309",
+   "estimate": 0.0453,
+   "actual": 0.0181
+  },
+  {
+   "id": "curate:36.0309#4908-452",
+   "label": "curate:36.0309",
+   "estimate": 0.0453,
+   "actual": 0.0154
+  },
+  {
+   "id": "curate:36.0309#4908-453",
+   "label": "curate:36.0309",
+   "estimate": 0.0453,
+   "actual": 0.0152
+  },
+  {
+   "id": "curate:36.0313#15472-523",
+   "label": "curate:36.0313",
+   "estimate": 0.0365,
+   "actual": 0.0064
+  },
+  {
+   "id": "curate:36.0313#15472-524",
+   "label": "curate:36.0313",
+   "estimate": 0.0365,
+   "actual": 0.0061
+  },
+  {
+   "id": "curate:36.0313#4908-455",
+   "label": "curate:36.0313",
+   "estimate": 0.0365,
+   "actual": 0.0059
+  },
+  {
+   "id": "curate:36.0313#4908-456",
+   "label": "curate:36.0313",
+   "estimate": 0.0365,
+   "actual": 0.0057
+  },
+  {
+   "id": "curate:36.0319#15472-527",
+   "label": "curate:36.0319",
+   "estimate": 0.0464,
+   "actual": 0.0158
+  },
+  {
+   "id": "curate:36.0319#4908-461",
+   "label": "curate:36.0319",
+   "estimate": 0.0464,
+   "actual": 0.015
+  },
+  {
+   "id": "curate:36.0319#4908-462",
+   "label": "curate:36.0319",
+   "estimate": 0.0464,
+   "actual": 0.015
+  },
+  {
    "id": "curate:36.0320#37332-107",
    "label": "curate:36.0320",
    "estimate": 0.0426,
    "actual": 0.0148
+  },
+  {
+   "id": "curate:36.0322#15472-530",
+   "label": "curate:36.0322",
+   "estimate": 0.0382,
+   "actual": 0.0097
+  },
+  {
+   "id": "curate:36.0322#15472-531",
+   "label": "curate:36.0322",
+   "estimate": 0.0382,
+   "actual": 0.0093
+  },
+  {
+   "id": "curate:36.0322#4908-465",
+   "label": "curate:36.0322",
+   "estimate": 0.0382,
+   "actual": 0.0099
+  },
+  {
+   "id": "curate:36.0322#4908-466",
+   "label": "curate:36.0322",
+   "estimate": 0.0382,
+   "actual": 0.008
   },
   {
    "id": "curate:36.0412#36312-160",
@@ -1449,6 +2385,24 @@
    "actual": 0.0149
   },
   {
+   "id": "curate:38.0112#15472-496",
+   "label": "curate:38.0112",
+   "estimate": 0.0458,
+   "actual": 0.0147
+  },
+  {
+   "id": "curate:38.0112#4908-395",
+   "label": "curate:38.0112",
+   "estimate": 0.0458,
+   "actual": 0.0143
+  },
+  {
+   "id": "curate:38.0112#4908-396",
+   "label": "curate:38.0112",
+   "estimate": 0.0458,
+   "actual": 0.0163
+  },
+  {
    "id": "curate:38.0115#9108-74",
    "label": "curate:38.0115",
    "estimate": 0.047,
@@ -1489,6 +2443,18 @@
    "label": "curate:38.0118",
    "estimate": 0.0455,
    "actual": 0.0136
+  },
+  {
+   "id": "curate:38.0120#4908-426",
+   "label": "curate:38.0120",
+   "estimate": 0.0379,
+   "actual": 0.0093
+  },
+  {
+   "id": "curate:38.0120#4908-427",
+   "label": "curate:38.0120",
+   "estimate": 0.0379,
+   "actual": 0.0059
   },
   {
    "id": "curate:38.0121#37332-125",
@@ -1533,6 +2499,30 @@
    "actual": 0.0113
   },
   {
+   "id": "curate:58.0209#15472-497",
+   "label": "curate:58.0209",
+   "estimate": 0.041,
+   "actual": 0.0106
+  },
+  {
+   "id": "curate:58.0209#4908-398",
+   "label": "curate:58.0209",
+   "estimate": 0.041,
+   "actual": 0.0111
+  },
+  {
+   "id": "curate:58.0209#4908-399",
+   "label": "curate:58.0209",
+   "estimate": 0.041,
+   "actual": 0.0101
+  },
+  {
+   "id": "curate:58.0217#4908-414",
+   "label": "curate:58.0217",
+   "estimate": 0.0546,
+   "actual": 0.0206
+  },
+  {
    "id": "curate:58.0301#2",
    "label": "curate:58.0301",
    "estimate": 0.0497,
@@ -1549,6 +2539,24 @@
    "label": "curate:61.0106",
    "estimate": 0.0363,
    "actual": 0.0049
+  },
+  {
+   "id": "curate:61.0108#15472-498",
+   "label": "curate:61.0108",
+   "estimate": 0.0394,
+   "actual": 0.0112
+  },
+  {
+   "id": "curate:61.0108#4908-401",
+   "label": "curate:61.0108",
+   "estimate": 0.0394,
+   "actual": 0.0106
+  },
+  {
+   "id": "curate:61.0108#4908-402",
+   "label": "curate:61.0108",
+   "estimate": 0.0394,
+   "actual": 0.0087
   },
   {
    "id": "curate:61.0110#30332-56",
@@ -1611,6 +2619,30 @@
    "actual": 0.0124
   },
   {
+   "id": "curate:PM-33.0109#15472-489",
+   "label": "curate:PM-33.0109",
+   "estimate": 0.0364,
+   "actual": 0.0075
+  },
+  {
+   "id": "curate:PM-33.0109#15472-490",
+   "label": "curate:PM-33.0109",
+   "estimate": 0.0364,
+   "actual": 0.0069
+  },
+  {
+   "id": "curate:PM-33.0109#4908-384",
+   "label": "curate:PM-33.0109",
+   "estimate": 0.0364,
+   "actual": 0.008
+  },
+  {
+   "id": "curate:PM-33.0109#4908-385",
+   "label": "curate:PM-33.0109",
+   "estimate": 0.0364,
+   "actual": 0.0077
+  },
+  {
    "id": "curate:PM-33.0112#36312-168",
    "label": "curate:PM-33.0112",
    "estimate": 0.0463,
@@ -1627,6 +2659,30 @@
    "label": "curate:PM-33.0113",
    "estimate": 0.0653,
    "actual": 0.1784
+  },
+  {
+   "id": "curate:PM-33.0119#15472-487",
+   "label": "curate:PM-33.0119",
+   "estimate": 0.0433,
+   "actual": 0.0136
+  },
+  {
+   "id": "curate:PM-33.0119#15472-488",
+   "label": "curate:PM-33.0119",
+   "estimate": 0.0433,
+   "actual": 0.0155
+  },
+  {
+   "id": "curate:PM-33.0119#4908-382",
+   "label": "curate:PM-33.0119",
+   "estimate": 0.0433,
+   "actual": 0.0123
+  },
+  {
+   "id": "curate:PM-33.0119#4908-383",
+   "label": "curate:PM-33.0119",
+   "estimate": 0.0433,
+   "actual": 0.0134
   },
   {
    "id": "curate:PM-33.0136#13076-28",
@@ -1659,16 +2715,76 @@
    "actual": 0.0135
   },
   {
+   "id": "curate:PM-33.0342#15472-506",
+   "label": "curate:PM-33.0342",
+   "estimate": 0.037,
+   "actual": 0.01
+  },
+  {
+   "id": "curate:PM-33.0342#15472-507",
+   "label": "curate:PM-33.0342",
+   "estimate": 0.037,
+   "actual": 0.0095
+  },
+  {
+   "id": "curate:PM-33.0342#4908-417",
+   "label": "curate:PM-33.0342",
+   "estimate": 0.037,
+   "actual": 0.0059
+  },
+  {
+   "id": "curate:PM-33.0342#4908-418",
+   "label": "curate:PM-33.0342",
+   "estimate": 0.037,
+   "actual": 0.008
+  },
+  {
    "id": "curate:PM-33.0401#37332-85",
    "label": "curate:PM-33.0401",
    "estimate": 0.0487,
    "actual": 0.018
   },
   {
+   "id": "curate:PM-33.0901#14576-350",
+   "label": "curate:PM-33.0901",
+   "estimate": 0.0508,
+   "actual": 0.0206
+  },
+  {
+   "id": "curate:PM-33.0901#14576-351",
+   "label": "curate:PM-33.0901",
+   "estimate": 0.0508,
+   "actual": 0.019
+  },
+  {
+   "id": "curate:PM-33.0901#15472-475",
+   "label": "curate:PM-33.0901",
+   "estimate": 0.0508,
+   "actual": 0.016
+  },
+  {
+   "id": "curate:PM-33.0901#15472-476",
+   "label": "curate:PM-33.0901",
+   "estimate": 0.0508,
+   "actual": 0.0167
+  },
+  {
    "id": "curate:PM-33.0901#37332-135",
    "label": "curate:PM-33.0901",
    "estimate": 0.0508,
    "actual": 0.0104
+  },
+  {
+   "id": "curate:PM-33.0901#4908-356",
+   "label": "curate:PM-33.0901",
+   "estimate": 0.0508,
+   "actual": 0.0181
+  },
+  {
+   "id": "curate:PM-33.0901#4908-357",
+   "label": "curate:PM-33.0901",
+   "estimate": 0.0508,
+   "actual": 0.0171
   },
   {
    "id": "curate:PM-33.0917#37332-137",
@@ -1875,6 +2991,12 @@
    "actual": 0.0184
   },
   {
+   "id": "ingest:11-unclaimed#9288-479",
+   "label": "ingest:11-unclaimed",
+   "estimate": 0.12,
+   "actual": 0.12
+  },
+  {
    "id": "probe-base30b#3556-321",
    "label": "probe-base30b",
    "estimate": 0.84,
@@ -1947,10 +3069,52 @@
    "actual": 1.0678
   },
   {
+   "id": "unscramble:21.0123#11536-330",
+   "label": "unscramble:21.0123",
+   "estimate": 0.006,
+   "actual": 0.0039
+  },
+  {
    "id": "unscramble:21.0123#28124-145",
    "label": "unscramble:21.0123",
    "estimate": 0.006,
    "actual": 0.0029
+  },
+  {
+   "id": "unscramble:30.0401#11536-333",
+   "label": "unscramble:30.0401",
+   "estimate": 0.006,
+   "actual": 0.0039
+  },
+  {
+   "id": "unscramble:31.0308#11536-341",
+   "label": "unscramble:31.0308",
+   "estimate": 0.006,
+   "actual": 0.0061
+  },
+  {
+   "id": "unscramble:31.0504#11536-342",
+   "label": "unscramble:31.0504",
+   "estimate": 0.006,
+   "actual": 0.0038
+  },
+  {
+   "id": "unscramble:31.0603#11536-346",
+   "label": "unscramble:31.0603",
+   "estimate": 0.006,
+   "actual": null
+  },
+  {
+   "id": "unscramble:31.0608#11536-345",
+   "label": "unscramble:31.0608",
+   "estimate": 0.006,
+   "actual": 0.004
+  },
+  {
+   "id": "unscramble:31.0830#11536-343",
+   "label": "unscramble:31.0830",
+   "estimate": 0.006,
+   "actual": 0.0041
   },
   {
    "id": "unscramble:32.0314#33408-150",
@@ -1971,16 +3135,76 @@
    "actual": 0.0049
   },
   {
+   "id": "unscramble:33.0145#11536-332",
+   "label": "unscramble:33.0145",
+   "estimate": 0.006,
+   "actual": 0.0041
+  },
+  {
    "id": "unscramble:33.0145#28124-147",
    "label": "unscramble:33.0145",
    "estimate": 0.006,
    "actual": 0.0028
   },
   {
+   "id": "unscramble:33.0808#11536-331",
+   "label": "unscramble:33.0808",
+   "estimate": 0.006,
+   "actual": 0.006
+  },
+  {
    "id": "unscramble:33.0808#28124-146",
    "label": "unscramble:33.0808",
    "estimate": 0.006,
    "actual": 0.0038
+  },
+  {
+   "id": "unscramble:33.1001#11536-338",
+   "label": "unscramble:33.1001",
+   "estimate": 0.006,
+   "actual": 0.005
+  },
+  {
+   "id": "unscramble:35.0809#11536-340",
+   "label": "unscramble:35.0809",
+   "estimate": 0.006,
+   "actual": 0.0056
+  },
+  {
+   "id": "unscramble:38.0115#11536-336",
+   "label": "unscramble:38.0115",
+   "estimate": 0.006,
+   "actual": 0.0044
+  },
+  {
+   "id": "unscramble:61.0106#11536-337",
+   "label": "unscramble:61.0106",
+   "estimate": 0.006,
+   "actual": 0.0038
+  },
+  {
+   "id": "unscramble:61.0110#11536-335",
+   "label": "unscramble:61.0110",
+   "estimate": 0.006,
+   "actual": 0.0029
+  },
+  {
+   "id": "unscramble:61.0117#11536-339",
+   "label": "unscramble:61.0117",
+   "estimate": 0.006,
+   "actual": 0.0041
+  },
+  {
+   "id": "unscramble:61.0118#11536-334",
+   "label": "unscramble:61.0118",
+   "estimate": 0.006,
+   "actual": 0.0038
+  },
+  {
+   "id": "unscramble:PM-33.0401#11536-344",
+   "label": "unscramble:PM-33.0401",
+   "estimate": 0.006,
+   "actual": 0.0057
   }
  ]
 }

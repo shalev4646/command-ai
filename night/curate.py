@@ -87,6 +87,50 @@ CITE_RULE = {
            '   אם צריך להפנות, השתמש בשם הנושא כפי שהוא מופיע בפקודה.',
 }
 
+# The digit-free mode. 71 orders — a quarter of the corpus — sat outside
+# curation because their PDF text layer scrambles digit runs (61.0110 renders
+# התש"ל as 1796; 35.0203 has 6102 for 2016), and under RETRIEVE_CURATED_ONLY an
+# uncurated order is not degraded, it is absent. Recovering the digits was
+# tried first and does not work for this class: `night.unscramble` assumes a
+# fixed per-document substitution table (which is what 32.0314 has) and 14 of
+# 14 attempts here rejected with "readings do not form one table" — this is
+# reordering within a run, not substitution, and only 4 of the 71 are a clean
+# reversal. So the block is written WITHOUT numbers. What an order establishes,
+# who is authorised, what the conditions and procedure are — none of that is a
+# digit. What a soldier loses is the deadline and the amount, and the block
+# says so in words, which is strictly better than the order not existing.
+#
+# The rule is enforced structurally in check(), not just requested here: the
+# 2026-08-11 review found the model quietly repairing corrupted numbers from
+# world knowledge (a "פ"מ 33.0316" that appears in neither the source nor
+# reality), so a digit anywhere in a digit-free block is a rejection.
+NO_DIGITS_RULE = (
+    '**הספרות בטקסט הגולמי של הפקודה הזו משובשות בחילוץ — אסור לך לכתוב אף ספרה.**\n'
+    '   לא מספרי סעיפים, לא ימים, לא שעות, לא סכומים, לא תאריכים, לא דרגות במספר, לא מספרי פקודות אחרות.\n'
+    '   כתוב מה הפקודה קובעת, מי מוסמך, מה התנאים ומה ההליך — במילים בלבד.\n'
+    '   היכן שהפקודה קובעת כמות או מועד, כתוב "הפקודה קובעת תקופה/סכום — יש לבדוק בנוסח המקורי"\n'
+    '   ואל תנחש. אסור גם לכתוב מספר במילים ("שלושים יום") — זה אותו ניחוש בלבוש אחר.'
+)
+DIGIT_FREE_NOTE = "הבלוק נכתב ללא מספרים: הספרות במקור המחולץ אינן אמינות. מועדים וסכומים — לבדוק בנוסח המקורי."
+# \b is useless on Hebrew (no word boundary between a prefix letter and the
+# stem), so the number-word may carry ו/ב/ל/מ/כ/ה/ש glued on the front:
+# the pilot let "וחמישה בעלי תפקידים" through on exactly that.
+#
+# ONE and TWO are deliberately not here. The first full run rejected 30 of 69
+# orders and 34 of those 50 hits were אחד/אחת/שני/שתי — "כל אחד", "אחת מהן",
+# "משני הצדדים", "כאחד": grammar, not quantity. The hazard this gate exists
+# for is a repaired amount or deadline ("שבעה ימים", "שלושים יום"), and no
+# corrupted digit run decodes to one or two — a scrambled "30" is never "1".
+# The pattern that IS a quantity is a bare number-word followed by a unit, and
+# that form still catches one and two ("שני חודשים").
+_HEBREW_NUMBER_WORDS = re.compile(
+    r"(?<![א-ת])[ובלמכהש]{0,2}"
+    r"(?:(?:שלוש|שלושה|ארבע|ארבעה|חמש|חמישה|שש|שישה|שבע|שבעה|"
+    r"שמונה|תשע|תשעה|עשר|עשרה|עשרים|שלושים|ארבעים|חמישים|שישים|שבעים|שמונים|תשעים|מאה|מאתיים|אלף)"
+    r"(?:\s+(?:עשר|עשרה|ימים|יום|שעות|חודשים|חודש|שנים|שנה|אחוז|אחוזים|שקלים|ש\"ח))?"
+    r"|(?:אחד|אחת|שניים|שתיים|שני|שתי)\s+(?:ימים|יום|שעות|חודשים|חודש|שנים|שנה|אחוז|אחוזים|שקלים|ש\"ח))"
+    r"(?![א-ת])")
+
 # Structured outputs rather than "return JSON only": Hebrew legal text is full
 # of literal quotes (צה"ל, פ"מ, "אתה חשוד בביצוע עבירה פלונית"), and the first
 # run died on exactly that — the same hazard ingestion/pdf_to_json.py:119 calls
@@ -227,22 +271,36 @@ MAX_UNGROUNDED = 0.50
 MIN_CLAUSE_WORDS = 10
 
 
-def check(section: dict, raw: str) -> tuple[list[str], list[str]]:
+def check(section: dict, raw: str, digit_free: bool = False) -> tuple[list[str], list[str]]:
     """The faithfulness gates.
 
     Returns (problems, warnings). Problems block acceptance — they are the
     mechanically detectable forms of invention. Warnings are recorded for the
     human review that is still owed, and do not block.
+
+    `digit_free` is the gate for orders whose source digits are scrambled: any
+    digit, or any number spelled out in Hebrew, in any clause is a rejection.
+    Citation checks are moot in that mode — there is nothing to cite against.
     """
     problems: list[str] = []
     warnings: list[str] = []
     real = clause_numbers_in_raw(raw)
-    numbered = is_numbered(raw)
+    numbered = is_numbered(raw) and not digit_free
     raw_vocab = _norm(raw)
 
     for cl in section.get("clauses", []):
         txt = cl.get("text", "")
         label = str(cl.get("number", "?"))[:40]
+        if digit_free:
+            blob = f"{cl.get('number', '')} {txt}"
+            digits_found = re.findall(r"\d+", blob)
+            words_found = _HEBREW_NUMBER_WORDS.findall(blob)
+            if digits_found:
+                problems.append(f"clause {label!r}: digit-free block contains "
+                                f"{digits_found[:4]}")
+            if words_found:
+                problems.append(f"clause {label!r}: digit-free block spells out a "
+                                f"number: {words_found[:3]}")
         if has_json_debris(txt):
             problems.append(f"clause {label!r}: JSON debris in user-facing text")
         # A clause cut off at a Hebrew gershayim: the model writes צה"ל or יו"ר
@@ -299,11 +357,12 @@ RETRY_SUFFIX = """
 ואסור להזכיר נושא שהפקודה שותקת בו — עדיף לכתוב פחות סעיפים ולהיות מדויק."""
 
 
-def curate_one(doc: dict, ledger: Ledger, problems: list[str] | None = None
-               ) -> tuple[dict | None, float, list[str]]:
+def curate_one(doc: dict, ledger: Ledger, problems: list[str] | None = None,
+               digit_free: bool = False) -> tuple[dict | None, float, list[str]]:
     raw = " ".join(str(doc.get("raw_text", "")).split()[:MAX_RAW_WORDS])
     est = (len(raw.split()) * 1.6 * 5 + 1400 * 25) / 1_000_000    # generous
     rid = ledger.reserve(f"curate:{doc['document_id']}", est)
+    rule = NO_DIGITS_RULE if digit_free else CITE_RULE[is_numbered(raw)]
     try:
         r = backend.client.messages.create(
             # 8000 truncated 33.0306 mid-JSON and the $0.35 bought nothing:
@@ -322,7 +381,7 @@ def curate_one(doc: dict, ledger: Ledger, problems: list[str] | None = None
             output_config={**({"effort": "high"} if "opus" in MODEL else {}),
                            "format": {"type": "json_schema", "schema": SCHEMA}},
             messages=[{"role": "user", "content": PROMPT.format(
-                title=doc.get("title", ""), raw=raw, cite_rule=CITE_RULE[is_numbered(raw)])
+                title=doc.get("title", ""), raw=raw, cite_rule=rule)
                 + (RETRY_SUFFIX.format(problems="\n".join(f"- {p}" for p in problems))
                    if problems else "")}],
         )
@@ -345,12 +404,25 @@ def curate_one(doc: dict, ledger: Ledger, problems: list[str] | None = None
                "clauses": parsed.get("clauses") or []}
     if not section["clauses"]:
         return None, usd, ["no clauses"]
-    problems, warnings = check(section, str(doc.get("raw_text", "")))
+    problems, warnings = check(section, str(doc.get("raw_text", "")), digit_free=digit_free)
+    if digit_free:
+        # The answering model must see that numbers are deliberately absent, so
+        # it says "the order sets a deadline — check the source" rather than
+        # inventing one. The note rides in the section TITLE: index_document
+        # prefixes every chunk with `title — section_title`, so it reaches the
+        # model with each clause without repeating 20 words inside each one
+        # (the pilot did that and bloated every chunk).
+        section["id"] = "key-facts-nodigits"
+        section["digit_free"] = True
+        section["title"] = f"{section['title']} [{DIGIT_FREE_NOTE}]"
     section["_warnings"] = warnings
     return section, usd, problems
 
 
-def run(limit: int | None = None) -> None:
+def run(limit: int | None = None, digit_free: bool = False) -> None:
+    """`digit_free=True` targets the OTHER population — orders whose digits did
+    not survive extraction — and writes numberless blocks for them. The two
+    populations are disjoint by construction, so the two modes never race."""
     ledger = Ledger(C.LEDGER)
     from night.audit import _section_ids
     # Orders deliberately left without key-facts. Each has no `sections`, so it
@@ -383,10 +455,15 @@ def run(limit: int | None = None) -> None:
     all_targets = [d for d in backend.load_documents()
                    if d.get("document_id") and d["document_id"] not in NEVER
                    and not _section_ids(d)]
-    targets = [d for d in all_targets if trustworthy(d)]
-    skipped = len(all_targets) - len(targets)
-    if skipped:
-        C.log(f"[curate] skipping {skipped} orders whose digits are not verifiable")
+    if digit_free:
+        targets = [d for d in all_targets if not trustworthy(d)]
+        C.log(f"[curate] DIGIT-FREE mode: {len(targets)} orders with scrambled digits")
+    else:
+        targets = [d for d in all_targets if trustworthy(d)]
+        skipped = len(all_targets) - len(targets)
+        if skipped:
+            C.log(f"[curate] skipping {skipped} orders whose digits are not verifiable "
+                  f"(run with --digit-free to curate them without numbers)")
     if limit:
         targets = targets[:limit]
     C.log(f"[curate] {len(targets)} orders need a key-facts section "
@@ -398,14 +475,14 @@ def run(limit: int | None = None) -> None:
         doc_id = doc["document_id"]
         spent_here = 0.0
         try:
-            section, usd, problems = curate_one(doc, ledger)
+            section, usd, problems = curate_one(doc, ledger, digit_free=digit_free)
             spent_here += usd
             if problems:
                 # one retry with the gate's own complaints fed back — a rejection
                 # that is not retried is money spent to learn nothing
                 C.log(f"[curate] {i}/{len(targets)} {doc_id} retry: "
                       f"{'; '.join(problems)[:140]}")
-                section, usd, problems = curate_one(doc, ledger, problems)
+                section, usd, problems = curate_one(doc, ledger, problems, digit_free=digit_free)
                 spent_here += usd
         except BudgetExceeded as e:
             C.log(f"[curate] STOPPING — {e}")
@@ -438,4 +515,5 @@ def run(limit: int | None = None) -> None:
 
 if __name__ == "__main__":
     import sys
-    run(limit=int(sys.argv[1]) if len(sys.argv) > 1 else None)
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    run(limit=int(args[0]) if args else None, digit_free="--digit-free" in sys.argv)

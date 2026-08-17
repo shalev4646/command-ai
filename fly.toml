@@ -35,6 +35,13 @@ swap_size_mb = 768
 # use ?nosw=1 for that.
 [env]
   CAI_SW = "1"
+  # Hypothetical-answer retrieval (backend.RETRIEVE_HYDE). Off in code so a
+  # local boot never buys anything unasked; on here by the user's decision of
+  # 2026-08-17 after the paired measure: frozen 30 19/60 -> 25/60, held-out 24
+  # 11/47 -> 14/47, retrieval gate 390/415 with zero regressions. Costs one
+  # Haiku call (~$0.0012) and ~1.5s per question. Turn off with "0" and
+  # redeploy — the code needs nothing else.
+  RETRIEVE_HYDE = "1"
 
 [build]
 

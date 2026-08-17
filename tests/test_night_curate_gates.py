@@ -53,6 +53,66 @@ def test_clean_clause_still_passes():
     assert problems == [], problems
 
 
+# --- digit-free mode ---------------------------------------------------------
+# 71 orders have scrambled digits and are curated WITHOUT numbers. The gate has
+# to be structural: the model was caught repairing corrupted numbers from world
+# knowledge, so a request in the prompt is not enough — any digit, in any form,
+# in a digit-free block is a rejection.
+
+def test_digit_free_rejects_a_digit():
+    from night.curate import check
+    sec = _section("מפקד היחידה מוסמך לאשר את הבקשה בתוך 30 יום ממועד ההגשה של הטופס.")
+    problems, _ = check(sec, RAW, digit_free=True)
+    assert any("digit-free block contains" in p for p in problems), problems
+
+
+def test_digit_free_rejects_a_spelled_out_number():
+    from night.curate import check
+    sec = _section("מפקד היחידה מוסמך לאשר את הבקשה בתוך שלושים יום ממועד ההגשה של הטופס.")
+    problems, _ = check(sec, RAW, digit_free=True)
+    assert any("spells out a number" in p for p in problems), problems
+
+
+def test_digit_free_accepts_a_numberless_clause():
+    from night.curate import check
+    sec = _section("מפקד היחידה מוסמך לאשר את הבקשה בתוך התקופה שהפקודה קובעת; יש לבדוק בנוסח המקורי.")
+    problems, _ = check(sec, RAW, digit_free=True)
+    assert not [p for p in problems if "digit" in p or "spells" in p], problems
+
+
+def test_digit_free_ignores_citation_gates():
+    """No clause markers can be trusted, so a missing citation is not even a warning."""
+    from night.curate import check
+    sec = _section("מפקד היחידה מוסמך לאשר את הבקשה בתוך התקופה שהפקודה קובעת; יש לבדוק בנוסח המקורי.")
+    _, warnings = check(sec, RAW, digit_free=True)
+    assert not [w for w in warnings if "citation" in w], warnings
+
+def test_digit_free_catches_a_prefixed_number_word():
+    """The pilot let 'וחמישה בעלי תפקידים' through: no \b in Hebrew."""
+    from night.curate import check
+    sec = _section("מפקד האוגדה רשאי לאשר סמגדים, מפקדים, וחמישה בעלי תפקידים נוספים לכל היותר.")
+    problems, _ = check(sec, RAW, digit_free=True)
+    assert any("spells out a number" in p for p in problems), problems
+
+
+def test_digit_free_allows_grammatical_one_and_two():
+    """'כל אחד', 'אחת מהן', 'משני הצדדים' are grammar, not quantities. The first
+    full run rejected 30 of 69 orders on these; a scrambled digit never decodes
+    to one or two, so they carry no repaired-number risk."""
+    from night.curate import check
+    sec = _section("כל אחד מהמפקדים רשאי לפנות; אחת מהוועדות תדון בבקשה משני הצדדים כאחד.")
+    problems, _ = check(sec, RAW, digit_free=True)
+    assert not [p for p in problems if "spells out" in p], problems
+
+
+def test_digit_free_still_catches_one_or_two_with_a_unit():
+    from night.curate import check
+    sec = _section("מפקד היחידה מוסמך לאשר את הבקשה בתוך שני חודשים ממועד ההגשה של הטופס.")
+    problems, _ = check(sec, RAW, digit_free=True)
+    assert any("spells out" in p for p in problems), problems
+
+
+
 if __name__ == "__main__":
     # Plain-assert runner, matching every other suite in tests/ (see
     # test_scope_routes.py: without it the file imports, runs nothing, exits 0).
