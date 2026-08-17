@@ -230,7 +230,26 @@ def ingest(pdf_path: str) -> Path:
     # question bank (questions_curated) replaced the auto-generated one —
     # regenerating any of these would silently undo that work. To force a full
     # rebuild for one order, delete its JSON before ingesting.
+    #
+    # Matched by source filename FIRST, then by the destination path — because
+    # the destination is what actually gets overwritten, and the two can differ.
+    # A browser that downloads the same order twice writes "order (1).pdf",
+    # which no JSON claims as its source_file, so `prev` came back None and the
+    # write landed on the same title-derived slug with none of the curated work
+    # carried over. That is not hypothetical: on 2026-08-17 four such duplicates
+    # were ingested and three orders silently lost their key-facts blocks (1, 7
+    # and 8 clauses) — invisible orders, since retrieval serves curated ones
+    # only. Keying on the destination closes it for every re-ingest, whatever
+    # the source file is called.
+    out_path = out_dir / f"{slug}.json"
     prev = _existing_doc_for(out_dir, pdf.name)
+    if prev is None and out_path.exists():
+        try:
+            prev = json.loads(out_path.read_text(encoding="utf-8"))
+            safe_print(f"[ingest] {pdf.name} would overwrite {out_path.name} "
+                       f"(source {prev.get('source_file')!r}) — curated fields kept")
+        except Exception:
+            prev = None
     if prev:
         for field in ("sections", "annex_exceptions", "anchor_questions"):
             if prev.get(field):
@@ -246,7 +265,6 @@ def ingest(pdf_path: str) -> Path:
     # metadata_override.json are applied at read time (backend.load_documents),
     # so removing an override entry later reverts the document cleanly.
     meta["roles"] = analysis["roles"]
-    out_path = out_dir / f"{slug}.json"
     out_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
 
     # reuse the same chunking/indexing logic used for bulk (re)indexing, so

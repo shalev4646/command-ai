@@ -12,7 +12,18 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import scope_routes
+# Importing app.py runs _startup_ingest -> backend.ensure_pdfs_ingested, which
+# ingests every PDF in pdf-ldf_law/ that no JSON claims — through the paid API,
+# outside the night/ ledger, and writing over the destination JSON. Running this
+# file on 2026-08-17 ingested four duplicate downloads and cost three orders
+# their curated key-facts blocks. The ingest path now preserves them, but a test
+# has no business ingesting at all: stub it BEFORE the import, because app.py
+# binds the name at import time and a later patch is too late.
+import backend  # noqa: E402
+
+backend.ensure_pdfs_ingested = lambda *a, **k: []
+
+import scope_routes  # noqa: E402
 
 
 def test_markers_are_distinct_and_nonempty():
