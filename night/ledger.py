@@ -21,7 +21,7 @@ from pathlib import Path
 #   ~$2   re-measure the saved 54 questions for a paired before/after
 #   ~$7   curate wave 1 (85 orders) once the PDFs are downloaded
 #   ~$0.5 grow the gate by 3 probes per new order
-CEILING_USD = 45.00
+CEILING_USD = 55.00
 PLANNED_USD = 43.00
 # Raised 20 -> 24 when wave 1 actually landed, then 24 -> 45 for wave 2, which
 # is the first step big enough to measure: 162 orders takes coverage from 28%
@@ -33,6 +33,21 @@ PLANNED_USD = 43.00
 # single order $0.454. So 162 orders costs $20.60 at the mean and $37.60 if
 # every one behaves like the expensive tail, plus $0.29 of gate probes and
 # ~$3.80 for four checkpoint measurements. $45 covers the pessimistic case.
+#
+# Raised 45 -> 55 on 2026-08-17, approved for the retrieval round. Wave 2 spent
+# $37.09 of the $45 and returned the corpus to parity (20 of 63 question-parts,
+# identical to the 124-order baseline), so the remaining $18 buys measurement of
+# a retrieval change rather than more corpus:
+#   ~$0    the evidence instrument and the two-stage retrieval prototype —
+#          `night.evidence` and `night.gate` both bypass the router, so the
+#          inner loop is free and can run as often as it likes
+#   ~$1.2  one paired re-measure of the frozen 30, only once the free
+#          instrument has moved past its ±3-part noise floor
+#   ~$0.8  the held-out 24 — the number that says whether it generalises
+#   ~$16   headroom for a second and third iteration of that same loop
+# The lesson priced in here: five paid re-measures in one night bought noise
+# because there was no free instrument in front of them. This ceiling assumes
+# the free loop runs first and the paid one confirms.
 #
 # The user was offered $80 — enough for all 323 missing orders — and it was cut
 # in half deliberately: 161 of those sit in families (civilian employment,

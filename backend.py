@@ -53,6 +53,39 @@ MAX_CONTEXT_CHUNKS = 8
 # instruments, so on is the default. RETRIEVE_CURATED_ONLY=0 turns it off.
 RETRIEVE_CURATED_ONLY = os.environ.get("RETRIEVE_CURATED_ONLY", "1") == "1"
 
+# Add chunks retrieved with a HYPOTHETICAL ANSWER — Haiku writing what a
+# פקודת מטכ"ל would say — on top of the question's own eight.
+#
+# Measured 2026-08-17 on night/evidence, 16 questions whose answering sentence
+# an adjudicator located verbatim in raw_text:
+#
+#   query for retrieval          answering order in window   sentence served
+#   the question (production)          4/16                   3/91 spans
+#   the question, typo-free            4/16                   —
+#   the answering sentence            16/16                   —   (oracle)
+#   a hypothetical order               7/16                   7/91 spans
+#
+# The oracle row is why this exists and the typo-free row is why the query
+# cannot be repaired: a soldier's question and a clause of military prose are
+# far apart in this embedding space no matter how the question is phrased, so
+# the fix has to change what we search WITH, not how the question is written.
+# This is not `night.rewrite` (question -> better question, 345/415, rejected):
+# that transformation keeps both sides of the asymmetry in place.
+#
+# ADDITIVE, never a tenant. Three slot-taking variants were measured on the 415
+# gate cases and all cost the same 12-13 top-3 placements to rescue 5, whatever
+# they took (1 chunk or 3). The control settles why: the question's own
+# retrieval truncated to seven costs NOTHING (390/415, 0 broken), so the damage
+# was never the lost slot — it was inserting a foreign order above the expected
+# one. Appending instead leaves the first eight untouched: 390/415 top-3 with
+# zero broken, and the order reaches the model in 408 cases against 407.
+#
+# Costs a Haiku call (~$0.0012) and ~1.5s of latency per question, plus ~180
+# words of context. Default OFF until the paired re-measure says the ANSWERS
+# move — reaching the model is necessary, not sufficient.
+RETRIEVE_HYDE = os.environ.get("RETRIEVE_HYDE", "0") == "1"
+HYDE_EXTRA_CHUNKS = int(os.environ.get("HYDE_EXTRA_CHUNKS", "1"))
+
 # Header that marks the retrieved-context section inside a user turn. The
 # context rides in the user message (not the system prompt) so the system
 # prompt and past turns stay byte-identical across a conversation — the
@@ -286,7 +319,68 @@ def _route_docs(question: str, role: str) -> set[str]:
         return set()
 
 
-def retrieve_for_role(question: str, role: str, route: set[str] | None = None) -> list[dict]:
+_HYDE_PROMPT = """שאלה של חייל: {q}
+
+כתוב פסקה קצרה (עד 60 מילים) בניסוח של פקודת מטכ"ל, כפי שהיא הייתה מנוסחת בפקודה
+שעונה על השאלה. כתוב בלשון הפקודות — "חייל אשר...", "מפקד יחידה רשאי...", "יהיה זכאי".
+אל תענה לחייל ואל תוסיף הסתייגויות: רק את נוסח הפקודה המשוער. אם אינך יודע את
+הפרטים, כתוב את הנוסח הכללי עם המונחים המקצועיים הצפויים."""
+
+# Per-question, per-process. stream_ai_answer retrieves twice for one user
+# question (rewrite and raw phrasing), and the hypothetical depends only on the
+# question, so without this the same paragraph is bought twice. night.hyde
+# preloads measured questions into it so a re-measure re-uses text already paid
+# for rather than regenerating it at a different temperature draw.
+_hyde_cache: dict[str, str] = {}
+
+
+def hypothetical(question: str) -> str:
+    """What a פקודת מטכ"ל answering this question might say. "" on any failure.
+
+    Failure returns empty and retrieval proceeds on the question alone —
+    degraded, never broken, same contract as the router. That fallback is
+    correct in production and a LIE inside a measurement, which is why
+    `night.hyde` generates through its own counted path instead of calling
+    this one: a sweep whose calls all failed would otherwise report the
+    baseline as the treatment (night/rewrite.py, 387 of 415 dead, "lost 0").
+    """
+    if question in _hyde_cache:
+        return _hyde_cache[question]
+    try:
+        r = client.with_options(timeout=12.0, max_retries=1).messages.create(
+            model=REWRITE_MODEL, max_tokens=300, temperature=0,
+            messages=[{"role": "user", "content": _HYDE_PROMPT.format(q=question)}])
+        text = "".join(b.text for b in r.content if b.type == "text").strip()
+    except Exception as e:
+        safe_print(f"[backend] hypothetical failed: {e!r}")
+        text = ""
+    _hyde_cache[question] = text
+    return text
+
+
+def extend_with_hypothetical(chunks: list[dict], question: str, role: str,
+                             route: set[str] | None = None) -> list[dict]:
+    """Append up to HYDE_EXTRA_CHUNKS chunks the hypothetical finds and the
+    question did not. Appended, so the question's own ranking is untouched."""
+    if not RETRIEVE_HYDE or HYDE_EXTRA_CHUNKS <= 0:
+        return chunks
+    hyp = hypothetical(question)
+    if not hyp:
+        return chunks
+    seen = {(c["doc_id"], c.get("section"), c.get("clause")) for c in chunks}
+    out = list(chunks)
+    for c in retrieve_for_role(hyp, role, route=route, widen=False):
+        key = (c["doc_id"], c.get("section"), c.get("clause"))
+        if key in seen:
+            continue
+        out.append(c)
+        if len(out) >= len(chunks) + HYDE_EXTRA_CHUNKS:
+            break
+    return out
+
+
+def retrieve_for_role(question: str, role: str, route: set[str] | None = None,
+                      widen: bool = True) -> list[dict]:
     """Retrieve the chunks relevant to `question`, scoped to `role`'s documents.
 
     The single retrieval entry point for both production (_build_rag_context)
@@ -296,6 +390,11 @@ def retrieve_for_role(question: str, role: str, route: set[str] | None = None) -
     `route` lets a caller that retrieves twice for one user question (the
     rewrite/raw union in stream_ai_answer) pay for the router once; omitted,
     it is computed here, so eval.py exercises the router too.
+
+    `widen=False` suppresses the hypothetical-answer extension. stream_ai_answer
+    passes it for both halves of its union and extends once at the end instead:
+    the union truncates back to MAX_CONTEXT_CHUNKS, so an extension applied here
+    would be bought twice and then thrown away.
     """
     docs = _docs_for_role(role)
     if RETRIEVE_CURATED_ONLY:
@@ -303,7 +402,9 @@ def retrieve_for_role(question: str, role: str, route: set[str] | None = None) -
     doc_ids = [d["document_id"] for d in docs if d.get("document_id")]
     if route is None:
         route = _route_docs(question, role)
-    return retrieve(question, n_results=MAX_CONTEXT_CHUNKS, doc_ids=doc_ids, boost_docs=route)
+    chunks = retrieve(question, n_results=MAX_CONTEXT_CHUNKS, doc_ids=doc_ids,
+                      boost_docs=route)
+    return extend_with_hypothetical(chunks, question, role, route) if widen else chunks
 
 
 def _has_key_facts(doc: dict) -> bool:
@@ -671,7 +772,7 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
     search_query = _standalone_question(question, history)
     # one router call per user question, shared by both retrievals below
     route = _route_docs(search_query, role)
-    chunks = retrieve_for_role(search_query, role, route=route)
+    chunks = retrieve_for_role(search_query, role, route=route, widen=False)
     # The rewrite is a retrieval AID, never a gatekeeper: when it changed the
     # question, retrieve on the RAW phrasing too and merge by best score. A
     # paraphrased rewrite silently dropped the דין-משמעתי threat chunk on the
@@ -682,7 +783,7 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
     if not history and search_query.strip() != question.strip():
         seen = {(c["doc_id"], c.get("section"), c.get("clause")) for c in chunks}
         extra = [
-            c for c in retrieve_for_role(question, role, route=route)
+            c for c in retrieve_for_role(question, role, route=route, widen=False)
             if (c["doc_id"], c.get("section"), c.get("clause")) not in seen
         ]
         # RESERVED SLOTS, not a global score sort: the two retrievals' scores
@@ -695,6 +796,9 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
         if extra:
             keep = max(2, MAX_CONTEXT_CHUNKS - len(chunks))
             chunks = chunks[:MAX_CONTEXT_CHUNKS - keep] + extra[:keep]
+    # after the union, never inside it: the union truncates to
+    # MAX_CONTEXT_CHUNKS and would drop an appended chunk that was paid for
+    chunks = extend_with_hypothetical(chunks, question, role, route)
     context = _context_from_chunks(chunks)
     system_prompt = SYSTEM_PROMPTS.get(role, SYSTEM_PROMPT_SOLDIER)
 

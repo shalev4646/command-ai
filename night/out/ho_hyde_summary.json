@@ -1,0 +1,18 @@
+{
+ "tag": "ho_hyde",
+ "before_full": 3,
+ "before_n": 24,
+ "after_full": 4,
+ "after_n": 24,
+ "before_parts": [
+  11,
+  47
+ ],
+ "after_parts": [
+  14,
+  47
+ ],
+ "flips": 4,
+ "controls": 10,
+ "control_flips": 2
+}

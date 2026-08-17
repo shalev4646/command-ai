@@ -1,0 +1,18 @@
+{
+ "tag": "hyde30",
+ "before_full": 2,
+ "before_n": 29,
+ "after_full": 7,
+ "after_n": 29,
+ "before_parts": [
+  19,
+  60
+ ],
+ "after_parts": [
+  25,
+  60
+ ],
+ "flips": 7,
+ "controls": 7,
+ "control_flips": 2
+}

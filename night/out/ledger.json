@@ -1,5 +1,5 @@
 {
- "spent": 36.255,
+ "spent": 40.9694,
  "reserved": 0.2459,
  "entries": [
   {
@@ -1707,10 +1707,22 @@
    "actual": 0.035
   },
   {
+   "id": "deepen:33.0201#8936-313",
+   "label": "deepen:33.0201",
+   "estimate": 0.0417,
+   "actual": 0.0332
+  },
+  {
    "id": "deepen:33.0351#19472-304",
    "label": "deepen:33.0351",
    "estimate": 0.0405,
    "actual": 0.039
+  },
+  {
+   "id": "deepen:33.0351#8936-314",
+   "label": "deepen:33.0351",
+   "estimate": 0.0405,
+   "actual": 0.0297
   },
   {
    "id": "deepen:61.0104#19472-305",
@@ -1719,10 +1731,28 @@
    "actual": 0.1188
   },
   {
+   "id": "deepen:61.0104#8936-315",
+   "label": "deepen:61.0104",
+   "estimate": 0.0693,
+   "actual": 0.1696
+  },
+  {
    "id": "deepen:PM-33.0302#19472-301",
    "label": "deepen:PM-33.0302",
    "estimate": 0.1095,
    "actual": 0.3574
+  },
+  {
+   "id": "deepen:PM-33.0302#8936-312",
+   "label": "deepen:PM-33.0302",
+   "estimate": 0.1095,
+   "actual": 0.6007
+  },
+  {
+   "id": "evidence:route#16648-316",
+   "label": "evidence:route",
+   "estimate": 0.04,
+   "actual": 0.04
   },
   {
    "id": "grade-base30#10040-44",
@@ -1735,6 +1765,12 @@
    "label": "grade-base30",
    "estimate": 0.045,
    "actual": 0.0293
+  },
+  {
+   "id": "grade-base30b#3556-322",
+   "label": "grade-base30b",
+   "estimate": 0.045,
+   "actual": 0.0297
   },
   {
    "id": "grade-heldout_after#18052-310",
@@ -1753,6 +1789,24 @@
    "label": "grade-heldout_before",
    "estimate": 0.036,
    "actual": 0.0251
+  },
+  {
+   "id": "grade-ho_base#14344-326",
+   "label": "grade-ho_base",
+   "estimate": 0.036,
+   "actual": 0.0234
+  },
+  {
+   "id": "grade-ho_hyde#7688-329",
+   "label": "grade-ho_hyde",
+   "estimate": 0.036,
+   "actual": 0.0242
+  },
+  {
+   "id": "grade-hyde30#13984-324",
+   "label": "grade-hyde30",
+   "estimate": 0.0435,
+   "actual": 0.0291
   },
   {
    "id": "grade-remeasure#20612-42",
@@ -1791,6 +1845,42 @@
    "actual": 0.0297
   },
   {
+   "id": "hyde:generate#16096-318",
+   "label": "hyde:generate",
+   "estimate": 0.0149,
+   "actual": 0.0149
+  },
+  {
+   "id": "hyde:generate#2584-327",
+   "label": "hyde:generate",
+   "estimate": 0.0276,
+   "actual": 0.0275
+  },
+  {
+   "id": "hyde:generate#6308-320",
+   "label": "hyde:generate",
+   "estimate": 0.0195,
+   "actual": 0.0201
+  },
+  {
+   "id": "hyde:generate#8952-319",
+   "label": "hyde:generate",
+   "estimate": 0.4773,
+   "actual": 0.4757
+  },
+  {
+   "id": "hyde:probe#1244-317",
+   "label": "hyde:probe",
+   "estimate": 0.02,
+   "actual": 0.0184
+  },
+  {
+   "id": "probe-base30b#3556-321",
+   "label": "probe-base30b",
+   "estimate": 0.84,
+   "actual": 0.9494
+  },
+  {
    "id": "probe-heldout_after#18052-309",
    "label": "probe-heldout_after",
    "estimate": 0.672,
@@ -1801,6 +1891,24 @@
    "label": "probe-heldout_before",
    "estimate": 0.672,
    "actual": 0.8169
+  },
+  {
+   "id": "probe-ho_base#14344-325",
+   "label": "probe-ho_base",
+   "estimate": 0.672,
+   "actual": 0.7067
+  },
+  {
+   "id": "probe-ho_hyde#7688-328",
+   "label": "probe-ho_hyde",
+   "estimate": 0.672,
+   "actual": 0.6926
+  },
+  {
+   "id": "probe-hyde30#13984-323",
+   "label": "probe-hyde30",
+   "estimate": 0.812,
+   "actual": 0.8295
   },
   {
    "id": "probe-remeasure#20612-41",

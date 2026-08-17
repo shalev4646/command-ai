@@ -159,8 +159,24 @@ def report() -> None:
     after = C.read_jsonl(C.OUT / f"grades_{TAG}.jsonl")
     if not after:
         raise SystemExit(f"nothing graded under tag {TAG}")
-    asked = {r["id"] for r in after}
-    before = [r for r in load_before() if r["id"] in asked]
+    # Pair on the INTERSECTION of what both sides actually graded. A batch item
+    # that fails leaves a row with no `answered` flags, and keeping it on one
+    # side only moves the denominator: base30b lost one question that way and
+    # the report read "20/63 -> 19/60, DENOMINATORS DIFFER — not comparable",
+    # when the paired truth was a flat 20/60 -> 19/60. The warning was correct
+    # and useless; a pair that drops the unmatched row is correct and readable.
+    def graded(r) -> bool:
+        return bool((r.get("grade") or {}).get("answered"))
+
+    before_all = {r["id"]: r for r in load_before()}
+    both = {r["id"] for r in after if graded(r)} & {
+        i for i, r in before_all.items() if graded(r)}
+    dropped = [r["id"] for r in after if r["id"] not in both]
+    if dropped:
+        C.log(f"[remeasure] {len(dropped)} question(s) graded on one side only, "
+              f"excluded from the pair: {', '.join(map(str, dropped[:5]))}")
+    after = [r for r in after if r["id"] in both]
+    before = [before_all[i] for i in (r["id"] for r in after)]
 
     b_full = sum(1 for r in before if _outcome(r) == "full")
     a_full = sum(1 for r in after if _outcome(r) == "full")
