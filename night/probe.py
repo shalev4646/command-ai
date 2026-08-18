@@ -84,8 +84,22 @@ def run_batch(reqs, meta, ledger: Ledger, out_path, label: str) -> None:
         encoding="utf-8")
     C.log(f"[probe] batch {batch.id} submitted; polling every 60s "
           f"(claim ticket: {ticket.name})")
+    # A poll is a GET on a batch that is safe on the server; a transient
+    # network error must not kill the watcher (2026-08-18: two arms died on
+    # APITimeoutError mid-poll and had to be finished by night.collect by
+    # hand). Ten consecutive failures is a real outage and still raises.
+    failures = 0
     while True:
-        b = backend.client.messages.batches.retrieve(batch.id)
+        try:
+            b = backend.client.messages.batches.retrieve(batch.id)
+        except Exception as e:
+            failures += 1
+            C.log(f"[probe]   poll error {failures}/10: {type(e).__name__}")
+            if failures >= 10:
+                raise
+            time.sleep(60)
+            continue
+        failures = 0
         if b.processing_status == "ended":
             break
         C.log(f"[probe]   {b.processing_status} "

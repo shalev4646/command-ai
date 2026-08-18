@@ -1,0 +1,1212 @@
+[
+ {
+  "id": "q00090",
+  "verdict": "MISSING",
+  "doc_id": null,
+  "doc_title": null,
+  "quotes": [],
+  "block_covers": false,
+  "block_note": "No order in the corpus regulates a company commander briefly leaving the company under the deputy.",
+  "missing_order": {
+   "num": null,
+   "title": "No פקודת מטכ\"ל in index_entries.json covers temporary hand-over of command to a deputy during a commander's short absence (command doctrine / unit standing orders). Closest in corpus: 32.0201 which only regulates FORMAL appointment of a 'ממלא מקום זמני'."
+  },
+  "confidence": "medium",
+  "explanation": "No order permits, forbids or conditions a short absence with the deputy in charge, so the app's 'not in the orders' was correct.",
+  "_batch": "adj_batch_1.json",
+  "question": "חייל שלי זקוק לעזרה דחופה. האם אני יכול להשאיר את הפלוגה עם סגן וזה תקין?",
+  "set": "frozen30",
+  "role": "commander",
+  "verified_quotes": []
+ },
+ {
+  "id": "q00206",
+  "verdict": "ANSWERED_IN_CORPUS_NOT_IN_BLOCK",
+  "doc_id": "36.0205",
+  "doc_title": "עיקול שכר חיילים בשירות סדיר",
+  "quotes": [
+   {
+    "text": "משכורתו של חייל תעוקל אך ורק עפ\"י צווי עיקול, שהוטלו כדין, ובאופן שייוותר לזכותו סכום כסף",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 128,
+    "verified": true
+   },
+   {
+    "text": "עם קבלת הדיווח יחליט הקשל\"פ, בתיאום עם הקב\"ט המתאים, על זימונו של החייל הנ\"ל לראיון",
+    "answers_parts": [
+     1
+    ],
+    "approx_char_offset": 1432,
+    "verified": true
+   },
+   {
+    "text": "רמ\"ח פרט באכ\"א יחליט על סמך הדיווח, אם יש מקום לסייע לחייל מבחינה כספית או בכל דרך אחרת",
+    "answers_parts": [
+     1
+    ],
+    "approx_char_offset": 1909,
+    "verified": true
+   }
+  ],
+  "block_covers": false,
+  "block_note": "36.0205 has NO key-facts block at all (no 'sections' key) — the whole order is invisible to the block channel. Related: 35.0221 §8 payslip-as-notice rule not in its block; 35.0222 has a block and was quoted by the model.",
+  "missing_order": null,
+  "confidence": "medium",
+  "explanation": "36.0205 answers directly: pay may be garnished ONLY under lawfully-issued garnishment orders, a subsistence minimum must remain, מת\"ש executes or returns the order, and when a deduction drives net pay to the minimum the soldier is summoned to an interview by the קשל\"פ and רמ\"ח פרט decides on help. The app never retrieved 36.0205 and the order has no curated block.",
+  "_batch": "adj_batch_1.json",
+  "question": "הוצא לי משכנתא על הכסף שלי מהצבא בלי שביקשו אישור, שוגה זה?",
+  "set": "frozen30",
+  "role": "soldier",
+  "verified_quotes": [
+   "משכורתו של חייל תעוקל אך ורק עפ\"י צווי עיקול, שהוטלו כדין, ובאופן שייוותר לזכותו סכום כסף",
+   "עם קבלת הדיווח יחליט הקשל\"פ, בתיאום עם הקב\"ט המתאים, על זימונו של החייל הנ\"ל לראיון",
+   "רמ\"ח פרט באכ\"א יחליט על סמך הדיווח, אם יש מקום לסייע לחייל מבחינה כספית או בכל דרך אחרת"
+  ],
+  "has_block": false,
+  "block_id": null
+ },
+ {
+  "id": "q00017",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "32.0101",
+  "doc_title": "חוות דעת מפקד - קצינים ונגדים",
+  "quotes": [
+   {
+    "text": "רק לגבי מוערכים אשר שירתו בפועל תחת פיקודו שלושה חודשים ,",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 5620,
+    "verified": true
+   },
+   {
+    "text": "היה ה מוערך כפוף למפקד המעריך תקופה קצרה משלושה חודשים- לא ת ינתן",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 5779,
+    "verified": true
+   }
+  ],
+  "block_covers": true,
+  "block_note": "The key-facts block of 32.0101 has a clause 'כמה זמן צריך מפקד מעריך להכיר את המוערך לפני מילוי חוות דעת' stating the 3-month minimum.",
+  "missing_order": null,
+  "confidence": "medium",
+  "explanation": "Reading the garbled question as 'כמה זמן אני צריך לפקד על חייל לפני שאני מוציא עליו חוו\"ד' — 32.0101 §37-40 answers. The content is in the block, but 32.0101 was not retrieved. Caveat: 32.0101 covers קצינים ונגדים; the parallel order for חוגרים, 32.0104 'חוות דעת תקופתית על חוגרים (טופס 863)', is in the site index but not in the corpus.",
+  "_batch": "adj_batch_1.json",
+  "question": "אמור לי - כמה זמן אני צריך להפקיד לחייל לפני שאני מוציא עליו חובה?",
+  "set": "frozen30",
+  "role": "commander",
+  "verified_quotes": [
+   "רק לגבי מוערכים אשר שירתו בפועל תחת פיקודו שלושה חודשים ,",
+   "היה ה מוערך כפוף למפקד המעריך תקופה קצרה משלושה חודשים- לא ת ינתן"
+  ],
+  "has_block": true,
+  "block_id": "key-facts"
+ },
+ {
+  "id": "q00281",
+  "verdict": "MISSING",
+  "doc_id": null,
+  "doc_title": null,
+  "quotes": [],
+  "block_covers": false,
+  "block_note": "No corpus order states a course prerequisite for giving orders / holding a junior command role.",
+  "missing_order": {
+   "num": null,
+   "title": "Not a פקודת מטכ\"ל topic in index_entries.json: the rule that a חוגר must complete קורס פיקוד זוטר / קורס מ\"כים before appointment as מפקד sits in הוראות קבע אכ\"א on promotion and posting of חוגרים; the authority to give orders derives from חוק השיפוט הצבאי — neither is in the corpus or the mapped index."
+  },
+  "confidence": "medium",
+  "explanation": "No order conditions the authority to issue orders on a course. The app's 'not in the orders' was correct; the answering rule lives in הק\"א outside the corpus.",
+  "_batch": "adj_batch_1.json",
+  "question": "שמעתי שצריך לעשות קורס משהו לפני שאני יכול להוציא פקודות לחיילים אחרים. זה נכון או המפקד פשוט לא רוצה?",
+  "set": "frozen30",
+  "role": "commander",
+  "verified_quotes": []
+ },
+ {
+  "id": "q00249",
+  "verdict": "ANSWERED_IN_CORPUS_NOT_IN_BLOCK",
+  "doc_id": "61.0104",
+  "doc_title": "טיפול רפואי בחייל",
+  "quotes": [
+   {
+    "text": "חובה על המפקד לקבל את ההוראות הרפואיות שנתן הגורם הרפואי המטפל, אם ניתנו, לבצען וליישמן.",
+    "answers_parts": [
+     0,
+     1
+    ],
+    "approx_char_offset": 15975,
+    "verified": true
+   },
+   {
+    "text": "חוות הדעת אינה מחייבת את צה\"ל, כל עוד לא אימץ אותה רופא צבאי, לרבות רופא שמעסיקה קופת חולים המעניקה שירותי רפואה מטעם חיל הרפואה.",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 6735,
+    "verified": true
+   },
+   {
+    "text": "מפקד יפנה חייל המעוניין בכך לבדיקה רפואית, כמפורט בסעיף 12 לעיל, כאמור בסעיפים 58 עד 62 לעיל.",
+    "answers_parts": [
+     1
+    ],
+    "approx_char_offset": 16829,
+    "verified": true
+   }
+  ],
+  "block_covers": false,
+  "block_note": "הבלוק מכסה חלקית: 'רק רופא נותן ימי ב/ג, המפקד רק יום ד', ומסלול הבקשה לעיון מחדש. חסרים: חובת המפקד להפנות חייל שמבקש בדיקה (סע' 12, 68), חובת המפקד לקבל ולבצע הוראות רפואיות (סע' 64), וכלל שחוות דעת של רופא אזרחי אינה מחייבת עד שרופא צבאי אימץ אותה (סע' 22א).",
+  "missing_order": null,
+  "confidence": "high",
+  "explanation": "פ\"מ 61.0104 קובעת שההכרעה הרפואית אינה בידי המפקד: חייל שמבקש בדיקה — המפקד מפנה אותו למרפאה; הרופא קובע כשירות; הוראה רפואית שניתנה — המפקד חייב לקבלה; תעודה של רופא אזרחי אינה מחייבת עד שרופא צבאי אימץ אותה. 61.0104 אוחזרה, אך הבלוק אינו מכיל את סע' 12/22א/64.",
+  "_batch": "adj_batch_2.json",
+  "question": "אם חייל מסרב להצטרף לתרגיל כי הוא אומר שיש לו בעיית גב, אני חייב להשתכנע בתעודה או אני יכול להגיד לו לא?",
+  "set": "frozen30",
+  "role": "commander",
+  "verified_quotes": [
+   "חובה על המפקד לקבל את ההוראות הרפואיות שנתן הגורם הרפואי המטפל, אם ניתנו, לבצען וליישמן.",
+   "חוות הדעת אינה מחייבת את צה\"ל, כל עוד לא אימץ אותה רופא צבאי, לרבות רופא שמעסיקה קופת חולים המעניקה שירותי רפואה מטעם חיל הרפואה.",
+   "מפקד יפנה חייל המעוניין בכך לבדיקה רפואית, כמפורט בסעיף 12 לעיל, כאמור בסעיפים 58 עד 62 לעיל."
+  ],
+  "has_block": true,
+  "block_id": "key-facts"
+ },
+ {
+  "id": "q00282",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "PM-33.0302",
+  "doc_title": "דין משמעתי",
+  "quotes": [
+   {
+    "text": "מפקד היודע, או שיש לו יסוד סביר להניח, כי אחד מפקודיו עבר עבירה",
+    "answers_parts": [
+     0,
+     1
+    ],
+    "approx_char_offset": 14439,
+    "verified": true
+   },
+   {
+    "text": "הדין המשמעתי הוא אחד מן האמצעים הפיקודיים המשמעותיים לאכיפת המשמעת בצה\"ל. אמצעים פיקודיים נוספים",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 12621,
+    "verified": true
+   },
+   {
+    "text": "לעיל, יערוך אותה, יחתום עליה וימסור אותה לשליש יחידתו, לשם",
+    "answers_parts": [
+     1
+    ],
+    "approx_char_offset": 18391,
+    "verified": true
+   }
+  ],
+  "block_covers": true,
+  "block_note": "הבלוק של PM-33.0302 כולל 'מי מוסמך להגיש תלונה' (סע' 7א), 'מועד הגשת תלונה' (סע' 12), ואת 'חייבים ענישה או יש משהו קודם?' (סע' 2). הפקודה לא אוחזרה כלל.",
+  "missing_order": null,
+  "confidence": "medium",
+  "explanation": "'למלא דו\"ח' = להגיש תלונה בטופס 630. פ\"מ 33.0302 מגדירה את המפקד כ'מוסמך' (לא 'חייב') להגיש תלונה; הגשת התלונה היא שיקול דעת פיקודי. PM-33.0302 לא אוחזרה; 31.0513 שכן אוחזרה עוסקת בהיעדרות והמודל בצדק סייג אותה.",
+  "_batch": "adj_batch_2.json",
+  "question": "אמרו לי שאם חייל לא מופיע להתרגלות אני אחראי למלא דו\"ח על זה. אני חייב או זה אופציה?",
+  "set": "frozen30",
+  "role": "commander",
+  "verified_quotes": [
+   "מפקד היודע, או שיש לו יסוד סביר להניח, כי אחד מפקודיו עבר עבירה",
+   "הדין המשמעתי הוא אחד מן האמצעים הפיקודיים המשמעותיים לאכיפת המשמעת בצה\"ל. אמצעים פיקודיים נוספים",
+   "לעיל, יערוך אותה, יחתום עליה וימסור אותה לשליש יחידתו, לשם"
+  ],
+  "has_block": true,
+  "block_id": "key-facts-representation"
+ },
+ {
+  "id": "q00157",
+  "verdict": "NO_SUCH_RULE",
+  "doc_id": "33.0201",
+  "doc_title": "פקודת מטכ\"ל שעות פעילות במפקדות צה\"ל ובמתקניו",
+  "quotes": [
+   {
+    "text": "מפקד יחידה מוסמך לקצר את שעות הפעילות של חייל פלוני בשעה אחת",
+    "answers_parts": [
+     0,
+     1,
+     2
+    ],
+    "approx_char_offset": 2025,
+    "verified": true
+   },
+   {
+    "text": "וזאת אם קיבל המלצה של רופא או של קצינת ת ש לכך",
+    "answers_parts": [
+     1,
+     2
+    ],
+    "approx_char_offset": 2098,
+    "verified": true
+   },
+   {
+    "text": "ייבחנו מחדש כל שלושה חודשים,כאמור,הקיצור או ההקדמה.היתר לכך בפקודות הצבא",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 2178,
+    "verified": true
+   }
+  ],
+  "block_covers": true,
+  "block_note": "הבלוק של 33.0201 מכיל את הסעיף — והמודל אכן ציטט אותו. במסלול הת\"ש: 35.0807 מכיל 'תוך כמה זמן מקבלים תשובה'; 35.0807 לא אוחזרה.",
+  "missing_order": null,
+  "confidence": "medium",
+  "explanation": "הכלל היחיד לקיצור שעות לחייל בודד הוא 33.0201 סע' 6(ד): שעה אחת, על סמך המלצת רופא/קצינת ת\"ש — אין הסדר מיוחד לנשוי/גר בחוץ. המודל למעשה נתן את התשובה הזו (הכשל הוא רק בסיווג 'לא קיים').",
+  "_batch": "adj_batch_2.json",
+  "question": "כמה זמן צריך לתת לחייל על בקשת השעות המוקדשות שלו אם הוא נשוי וגרים בחוץ",
+  "set": "frozen30",
+  "role": "commander",
+  "verified_quotes": [
+   "מפקד יחידה מוסמך לקצר את שעות הפעילות של חייל פלוני בשעה אחת",
+   "וזאת אם קיבל המלצה של רופא או של קצינת ת ש לכך",
+   "ייבחנו מחדש כל שלושה חודשים,כאמור,הקיצור או ההקדמה.היתר לכך בפקודות הצבא"
+  ],
+  "has_block": true,
+  "block_id": "key-facts"
+ },
+ {
+  "id": "q00192",
+  "verdict": "MISSING",
+  "doc_id": null,
+  "doc_title": null,
+  "quotes": [],
+  "block_covers": false,
+  "block_note": "אין בקורפוס פקודה שקובעת מי מוסמך להעביר חייל בין יחידות ביוזמת גורם ממונה ואילו חובות יידוע יש כלפי היחידה המעבירה.",
+  "missing_order": {
+   "num": "31.03xx (פרק 'השמה, הצבה וסיפוח' באינדקס — הפקודה הכללית אינה ממופה)",
+   "title": "נוהל הצבה, סיפוח והעברה של חיילים בין יחידות — סמכויות מיטב, הוצאת פקודות הצבה וחובות היידוע כלפי היחידה המעבירה"
+  },
+  "confidence": "medium",
+  "explanation": "הפקודה הכללית לנוהלי הצבה והעברה (פרק 31.03) חסרה בקורפוס ובאינדקס; לכן 'לא בפקודות' היה נכון.",
+  "_batch": "adj_batch_2.json",
+  "question": "אני קצינת משאבי אנוש בגדוד. החייל שלי קיבל הודעה שמעבירים אותו ליחידה אחרת בלי שאני ידעתי מראש. זה כשר?",
+  "set": "frozen30",
+  "role": "commander",
+  "verified_quotes": []
+ },
+ {
+  "id": "q00295",
+  "verdict": "ANSWERED_IN_CORPUS_NOT_IN_BLOCK",
+  "doc_id": "35.0822",
+  "doc_title": "הטיפול בפרט ביחידה – עריכת ראיונות, טיפול בפניות, איתור בעיות ומצוקות במהלך השירות",
+  "quotes": [
+   {
+    "text": "בכל יחידה יפורסם לוח תנאי שירות, ובו זכויות חיילי החובה. הלוח יפורסם באמצעי דיגיטלי או",
+    "answers_parts": [
+     0,
+     1
+    ],
+    "approx_char_offset": 9324,
+    "verified": true
+   },
+   {
+    "text": "בפרט ביחידה: קצין\n המשא\"ן, הרופא, קצין הת\"ש\n או רכז הת\"ש, הקב\"ן, ממונה\n היוהל\"ם, נגד היחידה ומפקד\n .היחידה או סגנו",
+    "answers_parts": [
+     0,
+     1
+    ],
+    "approx_char_offset": 12678,
+    "verified": true
+   },
+   {
+    "text": "ראיון שחרור חובה וקבע\n ,מפקד החייל\n ,כהגדרתו בפקודה\n הגבוה.ממנו בדרגה\n30\n \n יום\n טרם\n השחרור\nלכל היותר",
+    "answers_parts": [
+     0,
+     1
+    ],
+    "approx_char_offset": 13501,
+    "verified": true
+   }
+  ],
+  "block_covers": false,
+  "block_note": "The key-facts block of 35.0822 covers the general channel (oral request to the direct commander, escalation after 3 days, complaints box, §25-29) and the bodies a soldier may approach directly (§35-41), but NOT the ת\"ש rights board run by סגל הת\"ש (§44-45), the roster of unit welfare roles (קצין המשא\"ן, קצין הת\"ש/רכז הת\"ש, נגד היחידה, מפקד היחידה או סגנו – annex row 6), or the mandatory discharge interview with the soldier's commander up to 30 days before release (annex row 9).",
+  "missing_order": null,
+  "confidence": "medium",
+  "explanation": "The soldier asks whom in the battalion to approach with questions about his rights before discharge. 35.0822 (not retrieved at all) is the order that fixes this: rights of conscripts are published on the unit's לוח תנאי שירות maintained by the ת\"ש staff, the unit's individual-welfare roles are named, every soldier may raise any request orally to his direct commander (§29, in block), and a discharge interview with the commander is mandatory up to 30 days before release; the list of bodies he may approach directly also includes היחידה להכוונת חיילים משוחררים (§45). 31.0103 §13 adds that the unit's responsible party for the discharge process is שליש היחידה או קצין הניהול. The app failed because 35.0822 was not retrieved and its block lacks the ת\"ש/discharge-interview clauses.",
+  "_batch": "adj_batch_3.json",
+  "question": "מי בדיוק אני צריך לפנות אליו בגדוד אם יש לי שאלה על זכויותי לפני השחרור?",
+  "set": "frozen30",
+  "role": "soldier",
+  "verified_quotes": [
+   "בכל יחידה יפורסם לוח תנאי שירות, ובו זכויות חיילי החובה. הלוח יפורסם באמצעי דיגיטלי או",
+   "בפרט ביחידה: קצין המשא\"ן, הרופא, קצין הת\"ש או רכז הת\"ש, הקב\"ן, ממונה היוהל\"ם, נגד היחידה ומפקד .היחידה או סגנו",
+   "ראיון שחרור חובה וקבע ,מפקד החייל ,כהגדרתו בפקודה הגבוה.ממנו בדרגה 30 יום טרם השחרור לכל היותר"
+  ],
+  "has_block": true,
+  "block_id": "key-facts"
+ },
+ {
+  "id": "q00105",
+  "verdict": "MISSING",
+  "doc_id": null,
+  "doc_title": null,
+  "quotes": [],
+  "block_covers": false,
+  "block_note": null,
+  "missing_order": {
+   "num": null,
+   "title": "פקודה/הק\"א בנושא הצבה, שיבוץ ותנועה של חיילי מילואים בין יחידות (סמכויות ההצבה של מיטב/בקו\"ם-ענף תו\"ש מילואים-מדור תנועה מילואים והמסגרת החוקית של העברה ביוזמת הצבא) – אינה ממופה ב-index_entries.json ואינה בקורפוס"
+  },
+  "confidence": "medium",
+  "explanation": "The reservist asks whether the army may transfer him to another unit without his consent. No order in the corpus addresses army-initiated transfer of reservists or any consent requirement. The closest, 31.0308, covers only the soldier's own request to change assignment; 33.0336 is only a complaint channel. The 'not in orders' answer was correct on the merits.",
+  "_batch": "adj_batch_3.json",
+  "question": "יכול להיות שמעבירים אותי ליחידה אחרת בלי שאיתי את הדעה, מה זה חוקי?",
+  "set": "frozen30",
+  "role": "reserve",
+  "verified_quotes": []
+ },
+ {
+  "id": "q00130",
+  "verdict": "MISSING",
+  "doc_id": null,
+  "doc_title": null,
+  "quotes": [],
+  "block_covers": false,
+  "block_note": null,
+  "missing_order": {
+   "num": null,
+   "title": "מדריך/מילון רכיבי תלוש השכר של מת\"ש (חיל הכספים) למשרתי קבע – אינו פקודת מטכ\"ל ואינו באינדקס; אף פקודה בקורפוס אינה מפרשת שורות תלוש"
+  },
+  "confidence": "medium",
+  "explanation": "The commander asks what the payslip line 'הנחה מטעם' means (truncated). No order explains payslip line items; the only payslip-related 'הנחה' is 36.0301 §16 (7% income-tax reduction for permanent-service soldiers with רמה א' supplement), unverifiable from the truncated wording. Payslip glossaries are a מת\"ש publication, not a General Staff order.",
+  "_batch": "adj_batch_3.json",
+  "question": "קיבלתי תלוש שכר ובו שורה שאני לא מבין - \"הנחה מטעם",
+  "set": "frozen30",
+  "role": "commander",
+  "verified_quotes": []
+ },
+ {
+  "id": "q00156",
+  "verdict": "MISSING",
+  "doc_id": null,
+  "doc_title": null,
+  "quotes": [],
+  "block_covers": false,
+  "block_note": null,
+  "missing_order": {
+   "num": null,
+   "title": "אין פקודת מטכ\"ל בנושא תיעוד שיבוץ לתורנויות ומסירת ההודעה לחייל – זהו עניין לפקודות הקבע של היחידה (35.0822 §12: החייל ישובץ לתורנויות 'כנהוג וכמקובל ביחידה'); לא ממופה באינדקס"
+  },
+  "confidence": "medium",
+  "explanation": "No order regulates duty-roster documentation or notification; 35.0822 §12 explicitly leaves duty assignment to the unit's standing orders. The retrieved 31.0513 only imposes a registry-and-physical check before declaring an absence. A unit-level SOP matter; the 'not in orders' answer was correct.",
+  "_batch": "adj_batch_3.json",
+  "question": "חיילת לא הופיעה לתורנות אתמול ואמרה שלא קיבלה הודעה. יש דרך לבדוק מי הוציא אותה?",
+  "set": "frozen30",
+  "role": "commander",
+  "verified_quotes": []
+ },
+ {
+  "id": "q00175",
+  "verdict": "ANSWERED_IN_CORPUS_NOT_IN_BLOCK",
+  "doc_id": "32.0402",
+  "doc_title": "שינוי כושר בריאותי - שירות סדיר ושירות מילואים - נוהל",
+  "quotes": [
+   {
+    "text": "הכושר הבריאותי, לא יאוחר מארבעים וחמישה ימים ממועד קבלת הבקשה",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 8797,
+    "verified": true
+   },
+   {
+    "text": "יפנה את החייל לוועדה רפואית, בהתאם לנהלים, המפורטים בהוראות קרפ\"ר בנושא זה, ולא\n.יאוחר משלושה חודשים ממועד הדיון בבקשה",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 8936,
+    "verified": true
+   },
+   {
+    "text": "הבירור יוודאו, שהחייל יועמד בפני ועדה רפואית בהתאם לצורך ולא יאוחר משלושה חודשים",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 9860,
+    "verified": true
+   }
+  ],
+  "block_covers": false,
+  "block_note": "הבלוק של 32.0402 מכיל 'אני מילואימניק ורוצה לשנות פרופיל - למי פונים' אך לא את לוחות הזמנים של סעיפים 27–28: קצין הקישור מתייצב אצל הרופא הממיין לא יאוחר מ-45 יום מקבלת הבקשה, והחייל מועמד בפני ועדה רפואית לא יאוחר משלושה חודשים. הבלוק של 8.0101 (שאוחזר) כן מכיל את כלל 45 הימים למענה על כל פנייה בכתב — והמודל התעלם גם ממנו.",
+  "missing_order": null,
+  "confidence": "medium",
+  "explanation": "מילואימניק שואל כמה זמן לוקח לצבא לענות על בקשה רפואית. 32.0402 (שאוחזר) קובע: הבקשה מגיעה לרופא הממיין תוך 45 יום לכל היותר, וההעמדה בפני ועדה רפואית תוך שלושה חודשים; 8.0101 מוסיף כלל כללי של מענה תוך 45 יום. הפקודה אוחזרה אך הבלוק אינו מכיל את המועדים.",
+  "_batch": "adj_batch_4.json",
+  "question": "כמה זמן לוקח עד שמטכ״ל עונה על בקשה רפואית בימים אלה?",
+  "set": "frozen30",
+  "role": "reserve",
+  "verified_quotes": [
+   "הכושר הבריאותי, לא יאוחר מארבעים וחמישה ימים ממועד קבלת הבקשה",
+   "יפנה את החייל לוועדה רפואית, בהתאם לנהלים, המפורטים בהוראות קרפ\"ר בנושא זה, ולא .יאוחר משלושה חודשים ממועד הדיון בבקשה",
+   "הבירור יוודאו, שהחייל יועמד בפני ועדה רפואית בהתאם לצורך ולא יאוחר משלושה חודשים"
+  ],
+  "has_block": true,
+  "block_id": "key-facts"
+ },
+ {
+  "id": "q00145",
+  "verdict": "ANSWERED_IN_CORPUS_NOT_IN_BLOCK",
+  "doc_id": "61.0104",
+  "doc_title": "טיפול רפואי בחייל",
+  "quotes": [
+   {
+    "text": "חייל המעוניין בטיפול רפואי, יפנה למפקדו או למי שהוסמך לכך מטעם המפקד, בהתאם לפקודות הקבע של היחידה.",
+    "answers_parts": [
+     0,
+     1,
+     2
+    ],
+    "approx_char_offset": 4556,
+    "verified": true
+   },
+   {
+    "text": "המפקד (או מי שהוסמך לכך מטעמו), יַפנה את החייל או יאשר לו לפנות לטיפול במרפאה, בשעות פעילותה ובהתאם לפקודות הקבע של היחידה.",
+    "answers_parts": [
+     0,
+     1,
+     2
+    ],
+    "approx_char_offset": 4660,
+    "verified": true
+   },
+   {
+    "text": "\"מפקד\" – מפקדו של החייל שהוא קצין בדרגת סָגָ\"ם, לפחות ונגד בדרגת רָסָ\"ם, לפחות.",
+    "answers_parts": [
+     1,
+     2
+    ],
+    "approx_char_offset": 18050,
+    "verified": true
+   }
+  ],
+  "block_covers": false,
+  "block_note": "הבלוק של 61.0104 מכיל 'סמכות מפקד — יום ד' ומי נותן ימי ב/ג, אך לא את סעיפים 11–12 (חייל המעוניין בטיפול פונה למפקדו או למי שהוסמך מטעמו, והמפקד מפנה או מאשר לו לפנות למרפאה), לא את סעיף 59 (הפניה בטופס 102 או באישור בע\"פ) ולא את הגדרת 'מפקד' לעניין יום ד.",
+  "missing_order": null,
+  "confidence": "high",
+  "explanation": "החייל שואל מי מאשר לו לצאת מהבסיס לעניין רפואי. 61.0104 (שאוחזר) קובע שהחייל פונה למפקדו או למי שהמפקד הסמיך, והמפקד מפנה אותו או מאשר לו לפנות למרפאה; יום ד מאשר רק מפקד שהוא קצין מסג\"ם או נגד מרס\"ם ומעלה. הפקודה אוחזרה אך הבלוק אינו כולל את סעיפי הפנייה/ההפניה והגדרת המפקד.",
+  "_batch": "adj_batch_4.json",
+  "question": "מי בעצם מאשר שאני אתאפשר מהבסיס למשהו רפואי? הרס\"ן? הפקיד?",
+  "set": "frozen30",
+  "role": "soldier",
+  "verified_quotes": [
+   "חייל המעוניין בטיפול רפואי, יפנה למפקדו או למי שהוסמך לכך מטעם המפקד, בהתאם לפקודות הקבע של היחידה.",
+   "המפקד (או מי שהוסמך לכך מטעמו), יַפנה את החייל או יאשר לו לפנות לטיפול במרפאה, בשעות פעילותה ובהתאם לפקודות הקבע של היחידה.",
+   "\"מפקד\" – מפקדו של החייל שהוא קצין בדרגת סָגָ\"ם, לפחות ונגד בדרגת רָסָ\"ם, לפחות."
+  ],
+  "has_block": true,
+  "block_id": "key-facts"
+ },
+ {
+  "id": "q00348",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "PM-35.0402",
+  "doc_title": "חופשות לחיילים המשרתים בשירות חובה",
+  "quotes": [
+   {
+    "text": "חופשה מיוחדת  נועדה  לענות  על צרכים  אישיים חריגים  של  החייל מבלי שתיג רע מ מכסת ימי",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 6334,
+    "verified": true
+   },
+   {
+    "text": "חופשה\n מיוחדת\n משפחתית \n הוראות כלליות \n58\n \n ימים \n מפקד בדרגת\n רס\"ן לפחות",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 21959,
+    "verified": true
+   },
+   {
+    "text": "לדעת המפקד\n בנסיבות המקרה\n (\n כגון חומרת\n הפציעה או\n המחלה) יש צורך\n ממשי בהימצאות\n החייל בקרבת\n.קרובו \n28\n \n ימים (בפעימות\n של7 \n )ימים \n מפקד בדרגת\n סא\"ל לפחות",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 25999,
+    "verified": true
+   }
+  ],
+  "block_covers": true,
+  "block_note": "הבלוק של PM-35.0402 מכיל את הסעיף על חופשה מיוחדת מטעמים רפואיים ומי מוסמך לאשרה. חסרות בו שורת 'חופשה מיוחדת אישית' (כלכלית/סוציאלית/טעמים אישיים — 30 יום, רס\"ן לפחות; 15 ימים נוספים — מפקד יחידה או סא\"ל) והוראת סעיף 7 שאין לאשר היעדרות בדיעבד.",
+  "missing_order": null,
+  "confidence": "high",
+  "explanation": "מפקד שואל איזה אישור נדרש כדי שחייל יהיה בבית בשל בעיה משפחתית דחופה. PM-35.0402 קובע 'חופשה מיוחדת': משפחתית — רס\"ן לפחות; קרוב מדרגה ראשונה נפצע/חלה/אושפז — 28 יום בפעימות של 7, סא\"ל לפחות; טעמים כלכליים/סוציאליים/אישיים — רס\"ן לפחות. התוכן קיים בבלוק אך הפקודה כלל לא אוחזרה (כשל אחזור).",
+  "_batch": "adj_batch_4.json",
+  "question": "אם חייל צריך להיות בבית בגלל בעיה משפחתית דחופה, איזה אישור הוא צריך ממני?",
+  "set": "heldout24",
+  "role": "commander",
+  "verified_quotes": [
+   "חופשה מיוחדת נועדה לענות על צרכים אישיים חריגים של החייל מבלי שתיג רע מ מכסת ימי",
+   "חופשה מיוחדת משפחתית הוראות כלליות 58 ימים מפקד בדרגת רס\"ן לפחות",
+   "לדעת המפקד בנסיבות המקרה ( כגון חומרת הפציעה או המחלה) יש צורך ממשי בהימצאות החייל בקרבת .קרובו 28 ימים (בפעימות של7 )ימים מפקד בדרגת סא\"ל לפחות"
+  ],
+  "has_block": true,
+  "block_id": "key-facts"
+ },
+ {
+  "id": "q00369",
+  "verdict": "ANSWERED_IN_CORPUS_NOT_IN_BLOCK",
+  "doc_id": "36.0406",
+  "doc_title": "פקודת מטכ\"ל - הורות ובטיפול פוריות, זכויות בהריון",
+  "quotes": [
+   {
+    "text": "על חשבון ימי,חיילת שהפסיקה הריון רשאית להיעדר מהשירות במשך שבוע מיד לאחר הפסקת ההריון.27",
+    "answers_parts": [
+     0,
+     1
+    ],
+    "approx_char_offset": 8558,
+    "verified": true
+   },
+   {
+    "text": "בכפוף לאישור,על חשבון ימי מחלה,חיילת שהפסיקה הריון רשאית להיעדר מהשירות למשך יותר משבוע.28",
+    "answers_parts": [
+     0,
+     1
+    ],
+    "approx_char_offset": 8688,
+    "verified": true
+   }
+  ],
+  "block_covers": false,
+  "block_note": "הבלוק של 36.0406 מכסה הקלות בהריון, שמירת היריון, ימי בדיקות הריון והנקה — אך לא את 'היעדרות מהשירות לאחר הפסקת הריון' (סעיפים 26–28): שבוע מיד לאחר הפסקת ההריון על חשבון ימי מחלה, ומעבר לשבוע — גם כן על חשבון ימי מחלה, בכפוף לאישור רופא.",
+  "missing_order": null,
+  "confidence": "medium",
+  "explanation": "השאלה משובשת: 'חופשה מפלה' ≈ חופשה לאחר הפלה. 36.0406 סעיפים 27–28 עונים ישירות: ההיעדרות היא על חשבון ימי המחלה. הפקודה לא אוחזרה והבלוק שלה אינו מכיל את סעיפי הפסקת ההריון.",
+  "_batch": "adj_batch_4.json",
+  "question": "מה הסדר עם תגבור שכר במהלך חופשה מפלה? זה בא על חהשבון של ימי המחלה שלי או נפרד?",
+  "set": "heldout24",
+  "role": "commander",
+  "verified_quotes": [
+   "על חשבון ימי,חיילת שהפסיקה הריון רשאית להיעדר מהשירות במשך שבוע מיד לאחר הפסקת ההריון.27",
+   "בכפוף לאישור,על חשבון ימי מחלה,חיילת שהפסיקה הריון רשאית להיעדר מהשירות למשך יותר משבוע.28"
+  ],
+  "has_block": true,
+  "block_id": "key-facts"
+ },
+ {
+  "id": "q00419",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "35.0206",
+  "doc_title": "תשלומים - שירות מילואים",
+  "quotes": [
+   {
+    "text": "טופס 3010 משמש אישור על שירות מילואים לצורך קבלת תגמולים מהמוסד לביטוח לאומי וכן רשימת תשלומים אם השירות היה בכלכלה. כן משמש הטופס לצורך דיווח למקשל\"ר-מסו\"ר על שירותו של החייל בשמ\"פ.",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 2202,
+    "verified": true
+   },
+   {
+    "text": "טופס 3010 יינתן לחייל ביום סיום השירות ביחידה, שבה ביצע החייל את שירות המילואים.",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 2389,
+    "verified": true
+   },
+   {
+    "text": "חייל מילואים, אשר בסיום שירותו לא התייצב לקבלת טופס 3010 - תמלא היחידה לגביו טופס 3010-1 (דיווח על סיום שמ\"פ ללא קבלת טופס 3010), ב3- העתקים, ותעביר שני העתקים לקצין הקישור או למפקד יחידת הרישום, שבה מוצב החייל.",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 3597,
+    "verified": true
+   }
+  ],
+  "block_covers": true,
+  "block_note": "הבלוק של 35.0206 כבר אומר שטופס 3010 הוא האישור על שירות המילואים לצורך תגמולי ביטוח לאומי ושהוא ניתן ביום סיום השירות; הבלוק של 'זכויות-עבודה-מילואים' אומר שלשכירים התגמול משולם דרך תלוש המעסיק. חסר: המקור למקשל\"ר, נוהל 3010-1 דרך קצין הקישור.",
+  "missing_order": null,
+  "confidence": "low",
+  "explanation": "השאלה משובשת, אך המשמעות הסבירה: דרך מי מדווחים על שירות המילואים לצורך התגמול. היחידה מנפיקה טופס 3010 ביום השחרור, החייל מוסר למעסיק. 35.0206 לא אוחזר כלל; המסמך האזרחי אוחזר אך המודל לא קישר.",
+  "_batch": "adj_batch_5.json",
+  "question": "יש לי בעיה עם דיווח שעות עבודה מילואים - לא ברור לי אם זה דרך קצין הרזרבה או הרכזת שלנו בפחות",
+  "set": "heldout24",
+  "role": "reserve",
+  "verified_quotes": [
+   "טופס 3010 משמש אישור על שירות מילואים לצורך קבלת תגמולים מהמוסד לביטוח לאומי וכן רשימת תשלומים אם השירות היה בכלכלה. כן משמש הטופס לצורך דיווח למקשל\"ר-מסו\"ר על שירותו של החייל בשמ\"פ.",
+   "טופס 3010 יינתן לחייל ביום סיום השירות ביחידה, שבה ביצע החייל את שירות המילואים.",
+   "חייל מילואים, אשר בסיום שירותו לא התייצב לקבלת טופס 3010 - תמלא היחידה לגביו טופס 3010-1 (דיווח על סיום שמ\"פ ללא קבלת טופס 3010), ב3- העתקים, ותעביר שני העתקים לקצין הקישור או למפקד יחידת הרישום, שבה מוצב החייל."
+  ],
+  "has_block": true,
+  "block_id": "key-facts"
+ },
+ {
+  "id": "q00426",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "31.0513",
+  "doc_title": "פקודת מטכ\"ל היעדרות משירות סדיר",
+  "quotes": [
+   {
+    "text": "תערוך היחידה בדיקה יסודית,מייד עם היוודע דבר היעדרו של חייל מן היחידה",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 1826,
+    "verified": true
+   },
+   {
+    "text": "הבדיקה נועדה לוודא כי אין מדובר במי שנפגע או נעדר מסיבה מוצדקת",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 1898,
+    "verified": true
+   },
+   {
+    "text": "ויינקטו כל הצעדים להעמידו לדין בתוך,630תוגש נגדו תלונה בטופס,מייד עם שובו של החייל ליחידה",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 2694,
+    "verified": true
+   }
+  ],
+  "block_covers": true,
+  "block_note": "הבלוק של 31.0513 מכיל 'גילוי היעדרות — פעולות ראשונות' ו'חזרת נפקד — תלונה ודין'. ב-raw יש בנוסף ס' 7–8 (ביקורי בית) וס' 36 (ניכוי שכר).",
+  "missing_order": null,
+  "confidence": "high",
+  "explanation": "31.0513 אוחזר והבלוק שלו כולל את הנוהל — המודל ציטט רק את ההגדרה והחמיץ את סעיפי הפעולות.",
+  "_batch": "adj_batch_5.json",
+  "question": "אם חייל לא מופיע לתורנות שלו בלי הודעה מה אני צריכה לעשות?",
+  "set": "heldout24",
+  "role": "soldier",
+  "verified_quotes": [
+   "תערוך היחידה בדיקה יסודית,מייד עם היוודע דבר היעדרו של חייל מן היחידה",
+   "הבדיקה נועדה לוודא כי אין מדובר במי שנפגע או נעדר מסיבה מוצדקת",
+   "ויינקטו כל הצעדים להעמידו לדין בתוך,630תוגש נגדו תלונה בטופס,מייד עם שובו של החייל ליחידה"
+  ],
+  "has_block": true,
+  "block_id": "key-facts"
+ },
+ {
+  "id": "q00374",
+  "verdict": "ANSWERED_IN_CORPUS_NOT_IN_BLOCK",
+  "doc_id": "61.0104",
+  "doc_title": "טיפול רפואי בחייל",
+  "quotes": [
+   {
+    "text": "הוראות שייתן הגורם הרפואי המטפל ביחידה לגבי חייל יימסרו למפקד החייל או לחייל אחר שהסמיך לכך המפקד, באמצעות טופס 102 או כל מסמך אחר שיערוך הגורם הרפואי המטפל המיועד למפקד",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 14523,
+    "verified": true
+   },
+   {
+    "text": "הגורם הרפואי המטפל יציין על טופס 102 את ההוראות למפקד ולחייל, לרבות מתן ימי ב, מתן ימי ג, הפניות לבדיקות נוספות",
+    "answers_parts": [
+     0,
+     1
+    ],
+    "approx_char_offset": 15370,
+    "verified": true
+   },
+   {
+    "text": "החייל יחזיר למפקד את טופס 102, או כל מסמך אחר שמסר לו הגורם המטפל המיועד למפקד. פרק ז: חובות המפקד 64. חובה על המפקד לקבל את ההוראות הרפואיות שנתן הגורם הרפואי המטפל, אם ניתנו, לבצען וליישמן.",
+    "answers_parts": [
+     0,
+     1
+    ],
+    "approx_char_offset": 15872,
+    "verified": true
+   }
+  ],
+  "block_covers": false,
+  "block_note": "הבלוק של 61.0104 לא מכסה את מנגנון הדיווח: טופס 102 (ס' 55, 58–63), החייל מחזירו למפקד, וחובת המפקד לקיים את ההוראות (ס' 64). PM-35.0402 ס' 17 (לא אוחזר; לא בבלוק): הזכאות לחופשת מחלה מותנית באישורים רפואיים ודיווח למפקד.",
+  "missing_order": null,
+  "confidence": "high",
+  "explanation": "61.0104 קובע שיש דרך: הוראות הרופא לרבות ימי ג' נמסרות למפקד באמצעות טופס 102, החייל מחזיר למפקד, והמפקד חייב ליישם. 61.0104 אוחזר אך הבלוק אינו כולל את סעיפי טופס 102.",
+  "_batch": "adj_batch_5.json",
+  "question": "אנחנו דיברנו שהחייל שלנו עשוי לצאת לחופשה רפואית. במחלקה יש דרך מסוימת איך מדווחים או זה לא חשוב כל עוד יש אישור רופ?א",
+  "set": "heldout24",
+  "role": "commander",
+  "verified_quotes": [
+   "הוראות שייתן הגורם הרפואי המטפל ביחידה לגבי חייל יימסרו למפקד החייל או לחייל אחר שהסמיך לכך המפקד, באמצעות טופס 102 או כל מסמך אחר שיערוך הגורם הרפואי המטפל המיועד למפקד",
+   "הגורם הרפואי המטפל יציין על טופס 102 את ההוראות למפקד ולחייל, לרבות מתן ימי ב, מתן ימי ג, הפניות לבדיקות נוספות",
+   "החייל יחזיר למפקד את טופס 102, או כל מסמך אחר שמסר לו הגורם המטפל המיועד למפקד. פרק ז: חובות המפקד 64. חובה על המפקד לקבל את ההוראות הרפואיות שנתן הגורם הרפואי המטפל, אם ניתנו, לבצען וליישמן."
+  ],
+  "has_block": true,
+  "block_id": "key-facts"
+ },
+ {
+  "id": "q00322",
+  "verdict": "ANSWERED_IN_CORPUS_NOT_IN_BLOCK",
+  "doc_id": "PM-35.0402",
+  "doc_title": "חופשות לחיילים המשרתים בשירות חובה",
+  "quotes": [
+   {
+    "text": "חופשה מיוחדת  נועדה  לענות  על צרכים  אישיים חריגים  של  החייל מבלי שתיג רע מ מכסת ימי",
+    "answers_parts": [
+     0,
+     1
+    ],
+    "approx_char_offset": 6334,
+    "verified": true
+   },
+   {
+    "text": ",חייל רשאי לקבל חופשה מיוחדת אף אם לא ניצל את כל ימי החופשה השנתית העומדים לרשותו",
+    "answers_parts": [
+     1
+    ],
+    "approx_char_offset": 6577,
+    "verified": true
+   },
+   {
+    "text": "מפקד בדרגת\n רס\"ן לפחות \n חופשה\n מיוחדת\nאישית \n מכסה זו חלה על חופשה מיוחדת\n כלכלית / סוציאלית / טעמים\n אישיים אחרים ועל חופשה לצורך\n .למידה למבחנים",
+    "answers_parts": [
+     0,
+     1
+    ],
+    "approx_char_offset": 19829,
+    "verified": true
+   }
+  ],
+  "block_covers": false,
+  "block_note": "הבלוק של PM-35.0402 מכסה חלקית (קרוב חולה; מכסה שנתית; ימי מפקד). חסר: העיקרון שחופשה מיוחדת נועדה לצרכים אישיים חריגים ואינה על חשבון השנתית (ס' 13), שאפשר לקבלה גם בלי למצות שנתית (ס' 15), שורות הנספח 'חופשה מיוחדת אישית' ו'חופשה מיוחדת משפחתית' (58 יום, רס\"ן+, נישואין/לידה/מצב רפואי של ילד-בן זוג-הורה/שמחה משפחתית/אבל/אזכרה), וחובת המפקד להוציא לחופשה מיוחדת שאושרה תוך 30 יום.",
+  "missing_order": null,
+  "confidence": "medium",
+  "explanation": "הפקודה עונה לפי סיבת הדחיפות: קרוב שנפצע/חלה/אושפז — חופשה מיוחדת מטעמים רפואיים; מצב רפואי של הורה/בן זוג/ילד, שמחה, אבל, אזכרה — חופשה מיוחדת משפחתית (רס\"ן+); צורך אישי אחר — חופשה מיוחדת אישית (רס\"ן+). PM-35.0402 לא אוחזר כלל, והבלוק מכסה רק את מקרה הקרוב החולה.",
+  "_batch": "adj_batch_5.json",
+  "question": "יש לי חייל שמבקש ללכת לביקור משפחה דחוף, מה הדרך הנכונה?",
+  "set": "heldout24",
+  "role": "commander",
+  "verified_quotes": [
+   "חופשה מיוחדת נועדה לענות על צרכים אישיים חריגים של החייל מבלי שתיג רע מ מכסת ימי",
+   ",חייל רשאי לקבל חופשה מיוחדת אף אם לא ניצל את כל ימי החופשה השנתית העומדים לרשותו",
+   "מפקד בדרגת רס\"ן לפחות חופשה מיוחדת אישית מכסה זו חלה על חופשה מיוחדת כלכלית / סוציאלית / טעמים אישיים אחרים ועל חופשה לצורך .למידה למבחנים"
+  ],
+  "has_block": true,
+  "block_id": "key-facts"
+ },
+ {
+  "id": "q00346",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "35.0314",
+  "doc_title": "תשלומים בדיעבד לחיילים ופיצוי בגין פיגור בתשלום",
+  "quotes": [
+   {
+    "text": "חייל, אשר לא קיבל במועד תשלום ה ,מגיע לו עפ\"י פקודות הצבא, זכאי לקבל תשלום זה, בדיעבד",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 1688,
+    "verified": true
+   },
+   {
+    "text": "חייל, המבקש פיצוי בגין תשלום ששולם בפיגור יפנה, באמצעות מפקדו, ע\"ג טופס, שדוגמתו מופיעה",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 2409,
+    "verified": true
+   },
+   {
+    "text": "מפקד, שהגיעה לידו בקשה כאמור, יעבירה למת\"ש; אם נסיבות העיכוב ידועות למפקד, יציין המפקד",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 2648,
+    "verified": true
+   }
+  ],
+  "block_covers": true,
+  "block_note": "The key-facts block of 35.0314 has a clause 'איך מגישים בקשה לפיצוי ולמי': the soldier applies via his commander to מת\"ש; the commander forwards with recommendation; רמ\"ח פרט may order compensation without a request; back-pay up to 7 years.",
+  "missing_order": null,
+  "confidence": "high",
+  "explanation": "35.0314 answers directly; the app failed because 35.0314 was not retrieved at all; the answering content is already in its key-facts block.",
+  "_batch": "adj_batch_6.json",
+  "question": "יש לי חייל שלא קיבל משכורת כשנה. למי אני מדווח על זה?",
+  "set": "heldout24",
+  "role": "commander",
+  "verified_quotes": [
+   "חייל, אשר לא קיבל במועד תשלום ה ,מגיע לו עפ\"י פקודות הצבא, זכאי לקבל תשלום זה, בדיעבד",
+   "חייל, המבקש פיצוי בגין תשלום ששולם בפיגור יפנה, באמצעות מפקדו, ע\"ג טופס, שדוגמתו מופיעה",
+   "מפקד, שהגיעה לידו בקשה כאמור, יעבירה למת\"ש; אם נסיבות העיכוב ידועות למפקד, יציין המפקד"
+  ],
+  "has_block": true,
+  "block_id": "key-facts"
+ },
+ {
+  "id": "q00326",
+  "verdict": "ANSWERED_IN_CORPUS_NOT_IN_BLOCK",
+  "doc_id": "PM-35.0402",
+  "doc_title": "חופשות לחיילים המשרתים בשירות חובה",
+  "quotes": [
+   {
+    "text": "חופשה מיוחדת  נועדה  לענות  על צרכים  אישיים חריגים  של  החייל מבלי שתיג רע מ מכסת ימי",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 6334,
+    "verified": true
+   },
+   {
+    "text": "מפקד בדרגת\n רס\"ן לפחות \n חופשה\n מיוחדת\nאישית \n מכסה זו חלה על חופשה מיוחדת\n כלכלית / סוציאלית / טעמים\n אישיים אחרים ועל חופשה לצורך",
+    "answers_parts": [
+     0,
+     1,
+     2
+    ],
+    "approx_char_offset": 19829,
+    "verified": true
+   },
+   {
+    "text": "במקרים חריגים רשאי ראש\nאכ\"א \n או מי שהוסמך לכך מטעמו \n לאשר חופשה של חייל (לרבות צבירת",
+    "answers_parts": [
+     1,
+     2
+    ],
+    "approx_char_offset": 14918,
+    "verified": true
+   }
+  ],
+  "block_covers": false,
+  "block_note": "The PM-35.0402 block does NOT contain the 'חופשה מיוחדת אישית' row (30 days for economic/social/other personal reasons, approver רס\"ן+; 15 more days by unit commander/סא\"ל), nor sec. 6 (any authorized absence counts as leave) nor sec. 41 (ראש אכ\"א for exceptions).",
+  "missing_order": null,
+  "confidence": "medium",
+  "explanation": "PM-35.0402 treats such an authorized absence as leave: 'חופשה מיוחדת אישית' approved by רס\"ן+ (30 days) with 15 more days by unit commander/סא\"ל; only exceptions go to ראש אכ\"א — nowhere is מטכ\"ל approval required. Not retrieved and the personal-special-leave approver is not in the block.",
+  "_batch": "adj_batch_6.json",
+  "question": "אם אחד החיילים שלי צריך להשתמט מפעילות מסוימת בגלל סיבה אישית, צריך אישור מהמטכ\"ל או יש מי אחר?",
+  "set": "heldout24",
+  "role": "commander",
+  "verified_quotes": [
+   "חופשה מיוחדת נועדה לענות על צרכים אישיים חריגים של החייל מבלי שתיג רע מ מכסת ימי",
+   "מפקד בדרגת רס\"ן לפחות חופשה מיוחדת אישית מכסה זו חלה על חופשה מיוחדת כלכלית / סוציאלית / טעמים אישיים אחרים ועל חופשה לצורך",
+   "במקרים חריגים רשאי ראש אכ\"א או מי שהוסמך לכך מטעמו לאשר חופשה של חייל (לרבות צבירת"
+  ],
+  "has_block": true,
+  "block_id": "key-facts"
+ },
+ {
+  "id": "q00371",
+  "verdict": "ANSWERED_IN_CORPUS_NOT_IN_BLOCK",
+  "doc_id": "61.0104",
+  "doc_title": "טיפול רפואי בחייל",
+  "quotes": [
+   {
+    "text": "חייל המעוניין בטיפול רפואי, יפנה למפקדו או למי שהוסמך לכך מטעם המפקד, בהתאם לפקודות הקבע של היחידה.",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 4556,
+    "verified": true
+   },
+   {
+    "text": "ביקש החייל להיבדק על ידי רופא, לא ידחה הגורם המטפל את הטיפול למועד העולה על 24 שעות מהמועד שבו פנה החייל, אלא באישור הרופא.",
+    "answers_parts": [
+     1
+    ],
+    "approx_char_offset": 5193,
+    "verified": true
+   },
+   {
+    "text": "יודיע על כך למפקדו, לשליש היחידה או לקצין העיר בהקדם, וימסור מידע על מקום שהותו בזמן היעדרו ועל הדרכים ליצירת קשר עימו בזמן זה.",
+    "answers_parts": [
+     0,
+     1
+    ],
+    "approx_char_offset": 20402,
+    "verified": true
+   }
+  ],
+  "block_covers": false,
+  "block_note": "The 61.0104 block (retrieved) does NOT contain sec. 11-13 (a soldier wanting medical care turns to his commander, who refers him; a requested exam is not deferred beyond 24 hours), sec. 58-59 (referral via טופס 102), or sec. 88 (civilian ER — notify commander/שליש/קצין העיר).",
+  "missing_order": null,
+  "confidence": "medium",
+  "explanation": "61.0104 answers: the route to medical care runs through the commander; the commander cannot demand medical details (in block); exam within 24 hours; emergency care unconditional; after civilian ER inform commander. Retrieved but block lacks secs. 11-13 and 88.",
+  "_batch": "adj_batch_6.json",
+  "question": "אני כרגע במצב רפואי כלשהו ובחור שלי ממש לא בטוח אם הוא יכול להגיד לקצין שלו או חייב? כמה זה דחוף?",
+  "set": "heldout24",
+  "role": "commander",
+  "verified_quotes": [
+   "חייל המעוניין בטיפול רפואי, יפנה למפקדו או למי שהוסמך לכך מטעם המפקד, בהתאם לפקודות הקבע של היחידה.",
+   "ביקש החייל להיבדק על ידי רופא, לא ידחה הגורם המטפל את הטיפול למועד העולה על 24 שעות מהמועד שבו פנה החייל, אלא באישור הרופא.",
+   "יודיע על כך למפקדו, לשליש היחידה או לקצין העיר בהקדם, וימסור מידע על מקום שהותו בזמן היעדרו ועל הדרכים ליצירת קשר עימו בזמן זה."
+  ],
+  "has_block": true,
+  "block_id": "key-facts"
+ },
+ {
+  "id": "q00345",
+  "verdict": "NO_SUCH_RULE",
+  "doc_id": "PM-35.0402",
+  "doc_title": "חופשות לחיילים המשרתים בשירות חובה",
+  "quotes": [
+   {
+    "text": "חייל זכאי לחופשות מחלה בהתאם לקביעת רופא צבאי כמפורט\nב פ\"מ61.0104",
+    "answers_parts": [
+     0,
+     1
+    ],
+    "approx_char_offset": 7137,
+    "verified": true
+   },
+   {
+    "text": "מפקדו של חייל רשאי לאשר לו להיעדר מהשירות או\nל הקלה אחרת בשירות עקב בעיה שהחייל\nהגדירּה",
+    "answers_parts": [
+     0,
+     1
+    ],
+    "approx_char_offset": 7304,
+    "verified": true
+   }
+  ],
+  "block_covers": false,
+  "block_note": "PM-35.0402's block does not include sec. 17-18 (sick leave per the military doctor under 61.0104; the commander may only grant a 'יום ד').",
+  "missing_order": null,
+  "confidence": "medium",
+  "explanation": "No order sets a leave-day quota for an injured soldier: sick leave is whatever the military doctor determines (sec. 17), the commander can only grant a יום ד. The honest answer is that no such directive exists — which the app essentially said, without citing PM-35.0402 sec. 17-18.",
+  "_batch": "adj_batch_6.json",
+  "question": "כמה ימי חופש אני צריך לתת לחייל שנפצע בתרגיל ונשלח לשיקום? יש לי הנחיה כזו?",
+  "set": "heldout24",
+  "role": "commander",
+  "verified_quotes": [
+   "חייל זכאי לחופשות מחלה בהתאם לקביעת רופא צבאי כמפורט ב פ\"מ61.0104",
+   "מפקדו של חייל רשאי לאשר לו להיעדר מהשירות או ל הקלה אחרת בשירות עקב בעיה שהחייל הגדירּה"
+  ],
+  "has_block": true,
+  "block_id": "key-facts"
+ },
+ {
+  "id": "q00323",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "35.0822",
+  "doc_title": "הטיפול בפרט ביחידה – עריכת ראיונות, טיפול בפניות, איתור בעיות ומצוקות במהלך השירות",
+  "quotes": [
+   {
+    "text": "נתגלה סימן מצוקה, חובה על הגורם שאיתר את המצוקה לדווח למפקד היחידה או למפקד הממונה",
+    "answers_parts": [
+     0,
+     1
+    ],
+    "approx_char_offset": 5136,
+    "verified": true
+   },
+   {
+    "text": "שדרגתו לפי תקן סרן, לפחות, וזה יפנה את החייל לגורמים אשר יכולים לסייע לו במצוקתו",
+    "answers_parts": [
+     1,
+     2
+    ],
+    "approx_char_offset": 5221,
+    "verified": true
+   },
+   {
+    "text": "מפקד שכפופים לו חיילים, אחראי ליזום פעולות לאיתור בעיות הפרט ומצוקותיו, לטפל בהן",
+    "answers_parts": [
+     2
+    ],
+    "approx_char_offset": 1726,
+    "verified": true
+   }
+  ],
+  "block_covers": true,
+  "block_note": "The 35.0822 key-facts block already has the core protocol (definition of מצוקה, duty to report to unit commander/Seren-rank commander who refers to helping bodies, the soldier's own channel). Not in block: sec 4 (commander must initiate detection, treat urgently, ועדת רווחה), sec 21 (home visit), sec 28 (documentation), sec 31 (personal interview within 3 work days), sec 45 (external bodies).",
+  "missing_order": null,
+  "confidence": "high",
+  "explanation": "35.0822 answers it; neither 35.0822 nor 35.0807 was among the retrieved docs — a pure retrieval failure; the block content would have answered.",
+  "_batch": "adj_batch_7.json",
+  "question": "מה הפרוטוקול אם חייל מדווח שיש לו בעיה בבית וצריך עזרה?",
+  "set": "heldout24",
+  "role": "commander",
+  "verified_quotes": [
+   "נתגלה סימן מצוקה, חובה על הגורם שאיתר את המצוקה לדווח למפקד היחידה או למפקד הממונה",
+   "שדרגתו לפי תקן סרן, לפחות, וזה יפנה את החייל לגורמים אשר יכולים לסייע לו במצוקתו",
+   "מפקד שכפופים לו חיילים, אחראי ליזום פעולות לאיתור בעיות הפרט ומצוקותיו, לטפל בהן"
+  ],
+  "has_block": true,
+  "block_id": "key-facts"
+ },
+ {
+  "id": "q00327",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "33.0201",
+  "doc_title": "פקודת מטכ\"ל שעות פעילות במפקדות צה\"ל ובמתקניו",
+  "quotes": [
+   {
+    "text": "מפקד יחידה מוסמך לקצר את שעות הפעילות של חייל פלוני בשעה אחת",
+    "answers_parts": [
+     0,
+     1
+    ],
+    "approx_char_offset": 2025,
+    "verified": true
+   },
+   {
+    "text": "וזאת אם קיבל המלצה של רופא או של קצינת ת ש לכך",
+    "answers_parts": [
+     0,
+     1
+    ],
+    "approx_char_offset": 2098,
+    "verified": true
+   }
+  ],
+  "block_covers": true,
+  "block_note": "The 33.0201 block clause 'מתי ניתן לקצר לחייל בודד את שעות הפעילות' states the rule verbatim. PM-33.0202 block says morning formation is mandatory except those released per unit standing orders. Not in block: sec 8 caveat that 33.0201 does not apply to combat units.",
+  "missing_order": null,
+  "confidence": "medium",
+  "explanation": "33.0201 sec 6(ד): unit commander may shorten a soldier's hours only with a doctor's or ת\"ש officer's recommendation. Neither order was retrieved — a retrieval failure. Vague question; 33.0201 does not cover combat units.",
+  "_batch": "adj_batch_7.json",
+  "question": "חייל בקבוצה שלי אמר שהוא לא יכול להשכים בבוקר בגלל בעיה כלשהי - צריך אישור? ואם כן, מי?",
+  "set": "heldout24",
+  "role": "commander",
+  "verified_quotes": [
+   "מפקד יחידה מוסמך לקצר את שעות הפעילות של חייל פלוני בשעה אחת",
+   "וזאת אם קיבל המלצה של רופא או של קצינת ת ש לכך"
+  ],
+  "has_block": true,
+  "block_id": "key-facts"
+ },
+ {
+  "id": "q00409",
+  "verdict": "NO_SUCH_RULE",
+  "doc_id": "3.0502",
+  "doc_title": "מענק שחרורין משירות קבע",
+  "quotes": [
+   {
+    "text": "רמ\"ח פרט באכ\"א אישר את זכאותו של החייל למענק שחרורין, לאחר ששוכנע, בעקבות פניית",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 3302,
+    "verified": true
+   },
+   {
+    "text": "שווה לשניים ושליש אחוז ממשכורתו החודשית הקובעת האחרונה כפול מספר חודשי השירות התקין ששירת",
+    "answers_parts": [
+     1
+    ],
+    "approx_char_offset": 6356,
+    "verified": true
+   }
+  ],
+  "block_covers": false,
+  "block_note": "No order mentions a 'מענק שיתוף פנסיוני'. Closest is מענק שחרורין משירות קבע (3.0502) which has NO key-facts block at all (digits broken). 36.0106 sec 9 defers grant/pension eligibility to חוק שירות הקבע.",
+  "missing_order": null,
+  "confidence": "low",
+  "explanation": "No such grant exists in the 289 orders — likely a garble of מענק שחרורין or a fabricated benefit. The app's answer (pointing to 36.0106 and the law) was essentially correct; 3.0502 was not retrieved and has no block.",
+  "_batch": "adj_batch_7.json",
+  "question": "חייל שלי אמר שלו יש זכאות למענק השיתוף פנסיוני, איך אני בודק אם הוא כשיר?",
+  "set": "heldout24",
+  "role": "commander",
+  "verified_quotes": [
+   "רמ\"ח פרט באכ\"א אישר את זכאותו של החייל למענק שחרורין, לאחר ששוכנע, בעקבות פניית",
+   "שווה לשניים ושליש אחוז ממשכורתו החודשית הקובעת האחרונה כפול מספר חודשי השירות התקין ששירת"
+  ],
+  "has_block": false,
+  "block_id": null
+ },
+ {
+  "id": "q00324",
+  "verdict": "ANSWERED_IN_CORPUS_NOT_IN_BLOCK",
+  "doc_id": "33.0219",
+  "doc_title": "פקודת מטכ\"ל טיפול בחייל הנמצא במצוקה נפשית",
+  "quotes": [
+   {
+    "text": "על אף שלא גילה סימנים המעידים על מצוקה נפשית כמפורט,חייל הסבור שהוא זקוק לבדיקת גורם ברה ן",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 1465,
+    "verified": true
+   },
+   {
+    "text": "ההפניה לגורם ברה ן.טיפול רפואי בחייל61.0104לעיל יופנה לטיפול רפואי בהתאם לפ מ2בסעיף",
+    "answers_parts": [
+     0,
+     1
+    ],
+    "approx_char_offset": 1558,
+    "verified": true
+   },
+   {
+    "text": "סבר קצין הרפואה.למרפאה המרחבית או לגורם ברה ן,המפקד יפנה את החייל לקצין הרפואה היחידתי",
+    "answers_parts": [
+     0,
+     1
+    ],
+    "approx_char_offset": 3247,
+    "verified": true
+   }
+  ],
+  "block_covers": false,
+  "block_note": "The 33.0219 block has only 3 clauses (weapon return, guards' weapons, refusal to be examined) — lacks sec 3 (a soldier who thinks he needs a ברה\"ן examination is referred via 61.0104 medical care; referral per הוראת קרפ\"ר 401.005) and sec 6(ג) (commander refers to unit medical officer / regional clinic / ברה\"ן). The 61.0104 block also lacks secs 11-12. raw_text of 33.0219 is line-scrambled (RTL reversal).",
+  "missing_order": null,
+  "confidence": "high",
+  "explanation": "33.0219 sec 3 answers directly. Both 33.0219 and 61.0104 were retrieved, but neither block contains these clauses — a block-coverage failure, not retrieval.",
+  "_batch": "adj_batch_7.json",
+  "question": "חייל שלי צריך אישור להתחיל טיפול או איזה דבר רפואי קשור לנפש, למי הוא פונה?",
+  "set": "heldout24",
+  "role": "commander",
+  "verified_quotes": [
+   "על אף שלא גילה סימנים המעידים על מצוקה נפשית כמפורט,חייל הסבור שהוא זקוק לבדיקת גורם ברה ן",
+   "ההפניה לגורם ברה ן.טיפול רפואי בחייל61.0104לעיל יופנה לטיפול רפואי בהתאם לפ מ2בסעיף",
+   "סבר קצין הרפואה.למרפאה המרחבית או לגורם ברה ן,המפקד יפנה את החייל לקצין הרפואה היחידתי"
+  ],
+  "has_block": true,
+  "block_id": "key-facts"
+ },
+ {
+  "id": "q00446",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "PM-35.0402",
+  "doc_title": "חופשות לחיילים המשרתים בשירות חובה",
+  "quotes": [
+   {
+    "text": " נפצע, חלה או\n אושפז קרובו\n מדרגה ראשונה\n ;של החייל \nב.\n \n לדעת המפקד\n בנסיבות המקרה\n (\n כגון חומרת\n הפציעה או\n המחלה) יש צורך\n ממשי בהימצאות\n החייל בקרבת\n.קרובו ",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 25940,
+    "verified": true
+   },
+   {
+    "text": " מפקד בדרגת\n סא\"ל לפחות\n או מפקד\n שהוסמך\n .מטעמו \n במערך הלוחם\n מפקד בדרגת\n סרן לפחות, או\n בתקן סרן\n .לפחות ",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 26137,
+    "verified": true
+   },
+   {
+    "text": " מפקד בדרגת\n רס\"ן לפחות \n חופשה\n מיוחדת\n משפחתית \n מכסה זו חלה על חופשה מיוחדת\n ,לרגל נישואין, היריון של בת זוג\n ,לידה של בת זוג\nאימוץ \n ,ילד\n טיפולי פוריות, מצב רפואי של\n ילד/ בן זוג/הורה, שמחה\n.משפחתית, אבל, אזכרה ",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 22011,
+    "verified": true
+   }
+  ],
+  "block_covers": true,
+  "block_note": "The key-facts block of PM-35.0402 already contains the special-leave-for-medical-family-reasons clause with approving ranks — the address is the commander, not the doctor or the security officer. Complementary content NOT in any block: PM-34.0101 §94 (bereavement — notify your commander), 36.0401 §10 (career — leave only with the commander's approval).",
+  "missing_order": null,
+  "confidence": "medium",
+  "explanation": "The orders treat such a departure as special leave whose only addressee is the commander/approving authority. No order requires notifying the doctor or the security officer. The app failed because retrieval brought absence/facility-entry/medical-care orders and no leave order at all. Vague question; PM-35.0402 governs conscripts while the persona is career (36.0401 gives the same answer but its block lacks it).",
+  "_batch": "adj_batch_8.json",
+  "question": "מי בדיוק אני צריך להודיע ברגע שאני צריך לצאת? הרופא, קצין הבטחון, מי?",
+  "set": "heldout24",
+  "role": "commander",
+  "verified_quotes": [
+   "נפצע, חלה או אושפז קרובו מדרגה ראשונה ;של החייל ב. לדעת המפקד בנסיבות המקרה ( כגון חומרת הפציעה או המחלה) יש צורך ממשי בהימצאות החייל בקרבת .קרובו",
+   "מפקד בדרגת סא\"ל לפחות או מפקד שהוסמך .מטעמו במערך הלוחם מפקד בדרגת סרן לפחות, או בתקן סרן .לפחות",
+   "מפקד בדרגת רס\"ן לפחות חופשה מיוחדת משפחתית מכסה זו חלה על חופשה מיוחדת ,לרגל נישואין, היריון של בת זוג ,לידה של בת זוג אימוץ ,ילד טיפולי פוריות, מצב רפואי של ילד/ בן זוג/הורה, שמחה .משפחתית, אבל, אזכרה"
+  ],
+  "has_block": true,
+  "block_id": "key-facts"
+ }
+]

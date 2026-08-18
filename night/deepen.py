@@ -37,6 +37,14 @@ re-measure on the frozen 30 is a tuning-set score. The held-out 24
 
     python -m night.deepen            # dry run: targets, windows, cost
     python -m night.deepen --apply    # paid run through the ledger
+    python -m night.deepen --targets night/out/deepen_targets.json [--apply]
+                                      # targets from an adjudication file:
+                                      # {doc_id: [[question, [verbatim quotes]], ...]}
+
+Digit-free orders (`night.curate --digit-free`, section id `key-facts-nodigits`)
+are deepened under the same no-digits rule and gate as their curation, so the
+added clauses say what/who/how without a single number. An order whose digits
+are broken and that has NO digit-free block is still skipped.
 """
 from __future__ import annotations
 
@@ -50,7 +58,7 @@ if hasattr(sys.stdout, "reconfigure"):
 import backend
 from night import config as C
 from night import digits
-from night.curate import CITE_RULE, SCHEMA, check, is_numbered
+from night.curate import CITE_RULE, NO_DIGITS_RULE, SCHEMA, check, is_numbered
 from night.ledger import BudgetExceeded, Ledger, cost_usd
 from night.rehearse import doc_path
 
@@ -59,6 +67,7 @@ WINDOW_WORDS = 1200        # each side of a located quote
 MAX_WINDOW_WORDS = 9000    # total per order, matches curation's truncation
 ACCEPTED = C.OUT / "deepen_accepted.jsonl"
 REJECTED = C.OUT / "deepen_rejected.jsonl"
+DEFAULT_TARGETS_FILE = C.OUT / "deepen_targets.json"
 
 # --- targets -----------------------------------------------------------------
 # doc_id -> list of (question, [verbatim quotes from the adjudication evidence]).
@@ -186,24 +195,40 @@ def _kf_section(doc: dict) -> dict | None:
     return None
 
 
-def run(apply: bool = False) -> None:
+def _is_digit_free(sec: dict) -> bool:
+    return bool(sec.get("digit_free")) or (sec.get("id") or "") == "key-facts-nodigits"
+
+
+def load_targets(path) -> dict[str, list[tuple[str, list[str]]]]:
+    """Targets from an adjudication file: {doc_id: [[question, [quotes]], ...]}.
+    Same shape as TARGETS; a quote list may be empty for a short order."""
+    data = json.loads(open(path, encoding="utf-8").read())
+    out: dict[str, list[tuple[str, list[str]]]] = {}
+    for doc_id, items in data.items():
+        out[doc_id] = [(str(q), [str(x) for x in (qs or [])]) for q, qs in items]
+    return out
+
+
+def run(apply: bool = False, targets: dict | None = None) -> None:
+    targets = TARGETS if targets is None else targets
     ledger = Ledger(C.LEDGER)
     docs = {d["document_id"]: d for d in backend.load_documents() if d.get("document_id")}
     from storage.vector_store import index_document
 
     plan = []
-    for doc_id, items in TARGETS.items():
+    for doc_id, items in targets.items():
         doc = docs.get(doc_id)
         if not doc:
             C.log(f"[deepen] {doc_id}: not in corpus — skipped")
             continue
-        if not digits.trustworthy(doc):
-            C.log(f"[deepen] {doc_id}: digits did not survive extraction — skipped, "
-                  f"same rule as curation")
-            continue
         sec = _kf_section(doc)
         if sec is None:
             C.log(f"[deepen] {doc_id}: no key-facts block to deepen — skipped")
+            continue
+        digit_free = _is_digit_free(sec)
+        if not digits.trustworthy(doc) and not digit_free:
+            C.log(f"[deepen] {doc_id}: digits did not survive extraction and no "
+                  f"digit-free block — skipped, same rule as curation")
             continue
         raw = str(doc.get("raw_text", ""))
         quotes = [q for _, qs in items for q in qs]
@@ -214,23 +239,24 @@ def run(apply: bool = False) -> None:
             C.log(f"[deepen] {doc_id}: no window — skipped")
             continue
         est = (len(text.split()) * 1.6 * 5 + 1500 * 25) / 1_000_000
-        plan.append((doc_id, doc, sec, items, text, est))
+        plan.append((doc_id, doc, sec, items, text, est, digit_free))
         C.log(f"[deepen] {doc_id}: {len(items)} questions, window {len(text.split())} words "
-              f"of {len(raw.split())}, ~${est:.3f}")
+              f"of {len(raw.split())}, ~${est:.3f}" + ("  [digit-free]" if digit_free else ""))
     C.log(f"[deepen] {len(plan)} orders, ~${sum(p[5] for p in plan):.2f} total")
     if not apply:
         C.log("[deepen] dry run — nothing spent. Use --apply to execute.")
         return
 
     done = 0
-    for doc_id, doc, sec, items, text, est in plan:
+    for doc_id, doc, sec, items, text, est, digit_free in plan:
         existing = "\n".join(f"- {c.get('number','')}: {c.get('text','')}"
                              for c in sec.get("clauses", []))
         raw = str(doc.get("raw_text", ""))
         prompt = PROMPT.format(
             title=doc.get("title", ""), existing=existing,
             questions="\n".join(f"- {q}" for q, _ in items), raw=text,
-            cite_rule=CITE_RULE[is_numbered(raw)], max_new=len(items) + 1)
+            cite_rule=NO_DIGITS_RULE if digit_free else CITE_RULE[is_numbered(raw)],
+            max_new=len(items) + 1)
         try:
             rid = ledger.reserve(f"deepen:{doc_id}", est)
         except BudgetExceeded as e:
@@ -259,7 +285,7 @@ def run(apply: bool = False) -> None:
         if not new:
             C.log(f"[deepen] {doc_id}: model added nothing ${usd:.3f}")
             continue
-        problems, warnings = check({"clauses": new}, raw)
+        problems, warnings = check({"clauses": new}, raw, digit_free=digit_free)
         if problems:
             C.log(f"[deepen] {doc_id} REJECTED: {problems[0][:120]} ${usd:.3f}")
             C.append_jsonl(REJECTED, {"doc_id": doc_id, "problems": problems,
@@ -278,9 +304,18 @@ def run(apply: bool = False) -> None:
             C.log(f"[deepen]    • {cl.get('number','')[:60]}")
         C.append_jsonl(ACCEPTED, {"doc_id": doc_id, "added": new,
                                   "questions": [q for q, _ in items],
-                                  "warnings": warnings, "usd": usd})
+                                  "warnings": warnings, "usd": usd,
+                                  "digit_free": digit_free})
     C.log(f"[deepen] done: {done}/{len(plan)} orders deepened")
 
 
 if __name__ == "__main__":
-    run(apply="--apply" in sys.argv)
+    targets = None
+    if "--targets" in sys.argv:
+        i = sys.argv.index("--targets")
+        path = sys.argv[i + 1] if i + 1 < len(sys.argv) and not sys.argv[i + 1].startswith("--") \
+            else DEFAULT_TARGETS_FILE
+        targets = load_targets(path)
+        C.log(f"[deepen] {sum(len(v) for v in targets.values())} questions over "
+              f"{len(targets)} orders from {path}")
+    run(apply="--apply" in sys.argv, targets=targets)

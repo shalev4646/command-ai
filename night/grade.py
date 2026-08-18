@@ -109,8 +109,18 @@ def _batch(reqs, label: str, ledger: Ledger, per_req: float) -> dict[int, dict]:
     batch = backend.client.messages.batches.create(requests=reqs)
     C.log(f"[grade] {label}: batch {batch.id}, {len(reqs)} requests "
           f"(~${len(reqs) * per_req:.2f})")
+    failures = 0
     while True:
-        b = backend.client.messages.batches.retrieve(batch.id)
+        try:
+            b = backend.client.messages.batches.retrieve(batch.id)
+        except Exception as e:      # transient poll error; the batch is safe server-side
+            failures += 1
+            C.log(f"[grade]   poll error {failures}/10: {type(e).__name__}")
+            if failures >= 10:
+                raise
+            time.sleep(30)
+            continue
+        failures = 0
         if b.processing_status == "ended":
             break
         time.sleep(30)

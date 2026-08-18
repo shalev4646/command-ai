@@ -1,6 +1,6 @@
 {
- "spent": 43.5516,
- "reserved": 0.2519,
+ "spent": 46.8798,
+ "reserved": 2.4411,
  "entries": [
   {
    "id": "anchors:21.0401#20804-196",
@@ -2811,10 +2811,22 @@
    "actual": 0.0088
   },
   {
+   "id": "decompose#11260-546",
+   "label": "decompose",
+   "estimate": 0.0192,
+   "actual": null
+  },
+  {
    "id": "decompose#17916-45",
    "label": "decompose",
    "estimate": 0.024,
    "actual": null
+  },
+  {
+   "id": "decompose#8160-549",
+   "label": "decompose",
+   "estimate": 0.0192,
+   "actual": 0.0084
   },
   {
    "id": "deepen:33.0201#19472-303",
@@ -2829,6 +2841,12 @@
    "actual": 0.0332
   },
   {
+   "id": "deepen:33.0219#1444-543",
+   "label": "deepen:33.0219",
+   "estimate": 0.0512,
+   "actual": 0.0595
+  },
+  {
    "id": "deepen:33.0351#19472-304",
    "label": "deepen:33.0351",
    "estimate": 0.0405,
@@ -2839,6 +2857,30 @@
    "label": "deepen:33.0351",
    "estimate": 0.0405,
    "actual": 0.0297
+  },
+  {
+   "id": "deepen:35.0822#1444-540",
+   "label": "deepen:35.0822",
+   "estimate": 0.0617,
+   "actual": 0.0945
+  },
+  {
+   "id": "deepen:36.0205#1444-538",
+   "label": "deepen:36.0205",
+   "estimate": 0.0405,
+   "actual": 0.0567
+  },
+  {
+   "id": "deepen:36.0406#1444-541",
+   "label": "deepen:36.0406",
+   "estimate": 0.108,
+   "actual": 0.2423
+  },
+  {
+   "id": "deepen:61.0104#1444-539",
+   "label": "deepen:61.0104",
+   "estimate": 0.0693,
+   "actual": 0.176
   },
   {
    "id": "deepen:61.0104#19472-305",
@@ -2865,6 +2907,12 @@
    "actual": 0.6007
   },
   {
+   "id": "deepen:PM-35.0402#1444-542",
+   "label": "deepen:PM-35.0402",
+   "estimate": 0.0778,
+   "actual": 0.1954
+  },
+  {
    "id": "evidence:route#16648-316",
    "label": "evidence:route",
    "estimate": 0.04,
@@ -2887,6 +2935,24 @@
    "label": "grade-base30b",
    "estimate": 0.045,
    "actual": 0.0297
+  },
+  {
+   "id": "grade-base_v94#10708-548",
+   "label": "grade-base_v94",
+   "estimate": 0.042,
+   "actual": 0.0282
+  },
+  {
+   "id": "grade-base_v94#11788-547",
+   "label": "grade-base_v94",
+   "estimate": 0.042,
+   "actual": null
+  },
+  {
+   "id": "grade-fresh_base#8160-550",
+   "label": "grade-fresh_base",
+   "estimate": 0.036,
+   "actual": 0.0223
   },
   {
    "id": "grade-heldout_after#18052-310",
@@ -2917,6 +2983,12 @@
    "label": "grade-ho_hyde",
    "estimate": 0.036,
    "actual": 0.0242
+  },
+  {
+   "id": "grade-ho_v94#9752-544",
+   "label": "grade-ho_v94",
+   "estimate": 0.036,
+   "actual": 0.0245
   },
   {
    "id": "grade-hyde30#13984-324",
@@ -2973,6 +3045,12 @@
    "actual": 0.0275
   },
   {
+   "id": "hyde:generate#5832-534",
+   "label": "hyde:generate",
+   "estimate": 0.0276,
+   "actual": 0.028
+  },
+  {
    "id": "hyde:generate#6308-320",
    "label": "hyde:generate",
    "estimate": 0.0195,
@@ -2997,10 +3075,28 @@
    "actual": 0.12
   },
   {
+   "id": "probe-after_v95#17028-552",
+   "label": "probe-after_v95",
+   "estimate": 0.784,
+   "actual": null
+  },
+  {
    "id": "probe-base30b#3556-321",
    "label": "probe-base30b",
    "estimate": 0.84,
    "actual": 0.9494
+  },
+  {
+   "id": "probe-base_v94#3088-536",
+   "label": "probe-base_v94",
+   "estimate": 0.812,
+   "actual": 0.9011
+  },
+  {
+   "id": "probe-fresh_base#9724-535",
+   "label": "probe-fresh_base",
+   "estimate": 0.672,
+   "actual": 0.675
   },
   {
    "id": "probe-heldout_after#18052-309",
@@ -3025,6 +3121,24 @@
    "label": "probe-ho_hyde",
    "estimate": 0.672,
    "actual": 0.6926
+  },
+  {
+   "id": "probe-ho_v94#17444-537",
+   "label": "probe-ho_v94",
+   "estimate": 0.672,
+   "actual": 0.8163
+  },
+  {
+   "id": "probe-ho_v95#18992-545",
+   "label": "probe-ho_v95",
+   "estimate": 0.672,
+   "actual": 0.0
+  },
+  {
+   "id": "probe-ho_v95b#9068-551",
+   "label": "probe-ho_v95b",
+   "estimate": 0.672,
+   "actual": null
   },
   {
    "id": "probe-hyde30#13984-323",
@@ -3205,6 +3319,12 @@
    "label": "unscramble:PM-33.0401",
    "estimate": 0.006,
    "actual": 0.0057
+  },
+  {
+   "id": "probe-fresh_v95#7284-553",
+   "label": "probe-fresh_v95",
+   "estimate": 0.672,
+   "actual": null
   }
  ]
 }

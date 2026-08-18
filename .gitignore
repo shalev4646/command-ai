@@ -44,6 +44,13 @@ night/out/*
 !night/out/anchors_*.jsonl
 !night/out/curate_*.jsonl
 !night/out/adjudication.json
+!night/out/adjudication*.json
+!night/out/deepen_*.jsonl
+!night/out/deepen_targets*.json
+!night/out/review_fixes.jsonl
+!night/out/evidence_*.json
+!night/out/hyde_cache.json
+!night/out/route_cache.json
 !night/out/verdicts_*.json
 !night/out/rewrites.json
 !night/out/wave*_ids.txt

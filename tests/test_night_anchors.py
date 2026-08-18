@@ -11,11 +11,15 @@ from night.anchors import (MIN_KEEP, NEVER, _flat_questions, check,
 KF = [{"id": "key-facts", "title": "עיקרי", "clauses": [
     {"number": "כמה חופשה מגיע", "text": "חייל זכאי לימי חופשה שנתית."}]}]
 
+# Three plausible years at the end: since 2867f7a targets() also asks
+# night.digits.trustworthy, which vouches for a document only on a plausible
+# year share or intact clause numbering — a synthetic order with neither is
+# (correctly) treated as broken and skipped, which is not what this file tests.
 RAW = ("חייל בשירות סדיר זכאי לימי חופשה שנתית. את היציאה לחופשה מאשר מפקד "
        "היחידה. חופשה שאושרה ובוטלה תוחזר למכסה. אפשר לצבור ימי חופשה "
        "משנה לשנה באישור. בזמן תרגיל חופשות מוקפאות. בקשה לחופשה מיוחדת "
        "מוגשת למפקד. יציאה לחוץ לארץ בחופשה טעונה אישור. חופשת שחרור "
-       "ניתנת לקראת תום השירות.")
+       "ניתנת לקראת תום השירות. עודכן 2019, 2021, 2023.")
 
 GOOD = [
     "כמה ימי חופשה מגיעים לי בשנה",

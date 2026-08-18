@@ -76,6 +76,35 @@ def heldout_ids() -> list[str]:
                   if sweep.get(i, {}).get("source") == "blind")
 
 
+# 2026-08-18: the held-out 24 were read question-by-question to build the
+# deepening targets, which makes them a tuning set from here on, exactly as the
+# frozen 30 became one on 08-16. This is the next honest yardstick: blind
+# questions the night never probed. All 54 yellow-band blind questions are
+# already spent (30 frozen + 24 held-out), so this draws from the RED band —
+# which is 393 of the 449 blind questions, i.e. what most real questions look
+# like to the retriever, and never measured for answer quality until now. Not
+# comparable to the yellow sets; comparable to itself, before and after.
+FRESH_N = int(os.environ.get("REMEASURE_FRESH_N", "24"))
+
+
+def fresh_ids() -> list[str]:
+    """Deterministic: lowest ids per role, roles in the pool's proportion, so a
+    re-run measures the same subset."""
+    sweep = C.read_jsonl(C.SWEEP)
+    probed = {r["id"] for r in C.read_jsonl(C.OUT / "grades_baseline.jsonl")}
+    pool = [r for r in sweep if r.get("source") == "blind" and r["id"] not in probed
+            and r.get("band") == "red"]
+    by_role: dict[str, list[str]] = {}
+    for r in sorted(pool, key=lambda r: r["id"]):
+        by_role.setdefault(r.get("role") or "?", []).append(r["id"])
+    total = sum(len(v) for v in by_role.values()) or 1
+    quota = {role: round(FRESH_N * len(ids) / total) for role, ids in by_role.items()}
+    # rounding can leave FRESH_N±1; trim/top-up from the largest role
+    largest = max(by_role, key=lambda k: len(by_role[k]))
+    quota[largest] += FRESH_N - sum(quota.values())
+    return sorted(i for role, ids in by_role.items() for i in ids[:quota[role]])
+
+
 def load_before() -> list[dict]:
     """Newest frozen-ruler measurement, or refuse to run."""
     names = BEFORE_CANDIDATES
@@ -117,15 +146,17 @@ def run() -> None:
     ledger = Ledger(C.LEDGER)
     sweep = {r["id"]: r for r in C.read_jsonl(C.SWEEP)}
 
-    if SAMPLE_SET == "heldout":
-        # First held-out run has no before side by definition — it IS the
+    if SAMPLE_SET in ("heldout", "fresh"):
+        # First held-out/fresh run has no before side by definition — it IS the
         # before side of the next one. Later runs pair against REMEASURE_BEFORE.
-        ids = heldout_ids()
+        ids = heldout_ids() if SAMPLE_SET == "heldout" else fresh_ids()
         before = load_before() if os.environ.get("REMEASURE_BEFORE") else []
         by_id = {r["id"]: r for r in before}
         sample = [by_id.get(i, {"id": i, "sources": None}) for i in ids]
-        C.log(f"[remeasure] held-out set: {len(sample)} blind questions "
-              f"outside the frozen 30" + (f", paired against "
+        label = ("held-out set: blind questions outside the frozen 30"
+                 if SAMPLE_SET == "heldout" else
+                 "fresh set: red-band blind questions never probed")
+        C.log(f"[remeasure] {label} ({len(sample)})" + (f", paired against "
               f"{os.environ['REMEASURE_BEFORE']}" if before else ", no before side"))
     else:
         before = load_before()

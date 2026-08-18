@@ -10,6 +10,7 @@ import scope_routes
 from common import ROLES, safe_print
 from metadata_overrides import apply_overrides
 from storage.vector_store import retrieve
+from storage import glossary as _glossary
 
 load_dotenv(Path(__file__).parent / ".env")
 
@@ -285,12 +286,27 @@ def load_documents() -> list[dict]:
         return docs
 
 
+# A commander asks on behalf of subordinates, so every order that applies to a
+# soldier or a reservist applies to the commander's question too. The per-order
+# `roles` tag answers "whom does this order govern", which is the right scope
+# for the soldier and reserve personas and the wrong one for commanders: on
+# 2026-08-18 the adjudication of the 24 held-out questions found five commander
+# questions about a soldier's urgent family leave — "חייל צריך להיות בבית,
+# איזה אישור?" — whose answering order, פ"מ 35.0402 (חופשות בשירות חובה),
+# is tagged ['soldier'] and therefore never entered a commander's candidate
+# list, router title block included. 14 curated orders were soldier-only that
+# way (lone soldiers, subsistence pay, family payments, pregnancy discharge…),
+# 11 reserve-only. Off (=0) restores the tag-only scope for measurement.
+COMMANDER_SCOPE_ALL = os.environ.get("COMMANDER_SCOPE_ALL", "1") == "1"
+
+
 def _docs_for_role(role: str | None) -> list[dict]:
     """Documents applicable to a role. Docs without a `roles` tag (shouldn't
     happen post-ingestion, but defensive for older data) are treated as
-    relevant to everyone rather than silently hidden."""
+    relevant to everyone rather than silently hidden. The commander persona
+    sees the whole corpus (see COMMANDER_SCOPE_ALL)."""
     docs = load_documents()
-    if role is None:
+    if role is None or (role == "commander" and COMMANDER_SCOPE_ALL):
         return docs
     return [d for d in docs if role in (d.get("roles") or ALL_ROLES)]
 
@@ -429,7 +445,8 @@ def extend_with_hypothetical(chunks: list[dict], question: str, role: str,
     hyp = hypothetical(question)
     if not hyp:
         return chunks
-    return _append_new(chunks, retrieve_for_role(hyp, role, route=route, widen=False),
+    return _append_new(chunks, retrieve_for_role(hyp, role, route=route, widen=False,
+                                                 expand_terms=False),
                        HYDE_EXTRA_CHUNKS)
 
 
@@ -496,8 +513,12 @@ def widen_context(chunks: list[dict], question: str, role: str,
 
 
 def retrieve_for_role(question: str, role: str, route: set[str] | None = None,
-                      widen: bool = True) -> list[dict]:
+                      widen: bool = True, expand_terms: bool = True) -> list[dict]:
     """Retrieve the chunks relevant to `question`, scoped to `role`'s documents.
+
+    `expand_terms=False` skips the soldier→order glossary: the hypothetical
+    is already written in order language, and production's two question
+    retrievals (rewrite + raw) both want it on.
 
     The single retrieval entry point for both production (_build_rag_context)
     and eval.py — so the sanity check always exercises the same pipeline the
@@ -518,7 +539,12 @@ def retrieve_for_role(question: str, role: str, route: set[str] | None = None,
     doc_ids = [d["document_id"] for d in docs if d.get("document_id")]
     if route is None:
         route = _route_docs(question, role)
-    chunks = retrieve(question, n_results=MAX_CONTEXT_CHUNKS, doc_ids=doc_ids,
+    # Soldier vocabulary → order vocabulary (storage/glossary.py), appended to
+    # the search text only. The ORIGINAL question keeps flowing to the
+    # extensions: the hypothetical is cached by question, and the router has
+    # already seen it.
+    search = _glossary.expand(question) if _glossary.RETRIEVE_GLOSSARY and expand_terms else question
+    chunks = retrieve(search, n_results=MAX_CONTEXT_CHUNKS, doc_ids=doc_ids,
                       boost_docs=route)
     return widen_context(chunks, question, role, route) if widen else chunks
 

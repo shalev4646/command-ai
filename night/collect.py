@@ -45,10 +45,13 @@ def run(label: str) -> None:
     collect_batch(t["batch_id"], t["meta"], t.get("rid"), t["out_path"], label, ledger)
 
     # Any remeasure tag, not just the first one there ever was: runs are tagged
-    # (probe-remeasure3, ...) so they stop overwriting each other's history, and
-    # a hardcoded label here would silently skip the grading that makes the paid
-    # answers mean anything.
-    if label.startswith("probe-remeasure"):
+    # (probe-remeasure3, probe-hyde30, probe-ho_v94, ...) so they stop
+    # overwriting each other's history, and a hardcoded prefix here silently
+    # skipped the grading that makes the paid answers mean anything — on
+    # 2026-08-18 three arms (fresh_base, base_v94, ho_v94) outlived their
+    # process and matched none of "probe-remeasure*". Everything a remeasure
+    # submits is "probe-<tag>"; only the wave-1 baseline is not a remeasure.
+    if label.startswith("probe-") and label != "probe-baseline":
         tag = label[len("probe-"):]
         import os
         os.environ["REMEASURE_TAG"] = tag
@@ -57,7 +60,14 @@ def run(label: str) -> None:
         import importlib
         import night.remeasure as rm
         importlib.reload(rm)          # TAG is read at import time
-        rm.report()
+        # A first held-out/fresh arm has no before side by definition, and
+        # report() pairs on the intersection with load_before() — an empty
+        # pair is not a report. Pair only when the caller named the before side.
+        if os.environ.get("REMEASURE_BEFORE") or rm.SAMPLE_SET == "frozen":
+            rm.report()
+        else:
+            C.log(f"[collect] {tag}: graded; no REMEASURE_BEFORE — it is the "
+                  f"before side of the next run")
 
 
 if __name__ == "__main__":

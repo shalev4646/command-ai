@@ -42,6 +42,12 @@ swap_size_mb = 768
   # Haiku call (~$0.0012) and ~1.5s per question. Turn off with "0" and
   # redeploy — the code needs nothing else.
   RETRIEVE_HYDE = "1"
+  # Soldier→order glossary appended to the retrieval query (storage/glossary.py).
+  # Off in code; on here after the free 415-case gate read 385→386 with zero
+  # regressions and the live failure that found it — „תור לקב"ן" retrieving
+  # farewell ceremonies — now retrieves the mental-distress order first.
+  # Costs nothing per question. Turn off with "0" and redeploy.
+  RETRIEVE_GLOSSARY = "1"
 
 [build]
 

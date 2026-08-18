@@ -1,0 +1,655 @@
+[
+ {
+  "id": "q00083",
+  "verdict": "ANSWERED_IN_CORPUS_NOT_IN_BLOCK",
+  "doc_id": "PM-33.0302",
+  "doc_title": "דין משמעתי",
+  "quotes": [
+   {
+    "text": "\"היעדר מן השירות שלא ברשות \"\n– \n עבירה לפי סעיף94\n \n לחוק, לרבות איחור ליחידה, אשר לא נעשה כדי\n.להשתמט מפעולה צבאית מסוימת",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 8618,
+    "verified": true
+   },
+   {
+    "text": "חייל שנעדר משירותו בצבא, או\n מהמקום  שהוא  חייב  כדין\n להימצא בו אותה שעה, אלא אם\n הוכח כי היה לו היתר או הצדק\n .סביר לכך",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 132293,
+    "verified": true
+   },
+   {
+    "text": "לעיל, קצין שיפוט שהרשיע נידון בעבירה של העדר מן השירות שלא ברשות או בעבירה\n של איבוד קשר עם היחידה, רשאי להטיל על הנידון בגין עבירה זו, במקום או בנוסף על כל עונש אחר, גם עונש של\nקנס",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 56003,
+    "verified": true
+   }
+  ],
+  "block_covers": false,
+  "block_note": "The PM-33.0302 blocks do not say that lateness to the unit IS the offence of absence without leave (sec. 94), that it applies unless the soldier proves a permit or reasonable justification, or that a fine may be imposed for it.",
+  "missing_order": null,
+  "confidence": "high",
+  "explanation": "A reservist arrived late because his car broke down. PM-33.0302 defines absence without leave 'including lateness to the unit', conditioned on not proving 'a permit or reasonable justification'; sec. 131 allows a fine. The app never retrieved PM-33.0302, whose block lacks these clauses anyway.",
+  "_batch": "fadj_batch_1.json",
+  "question": "הגעתי מאחר לשירות כי המכונית שלי התקלקלה. הם יכולים לחייב אותי על זה?",
+  "set": "fresh24",
+  "role": "reserve",
+  "verified_quotes": [
+   "\"היעדר מן השירות שלא ברשות \" – עבירה לפי סעיף94 לחוק, לרבות איחור ליחידה, אשר לא נעשה כדי .להשתמט מפעולה צבאית מסוימת",
+   "חייל שנעדר משירותו בצבא, או מהמקום שהוא חייב כדין להימצא בו אותה שעה, אלא אם הוכח כי היה לו היתר או הצדק .סביר לכך",
+   "לעיל, קצין שיפוט שהרשיע נידון בעבירה של העדר מן השירות שלא ברשות או בעבירה של איבוד קשר עם היחידה, רשאי להטיל על הנידון בגין עבירה זו, במקום או בנוסף על כל עונש אחר, גם עונש של קנס"
+  ],
+  "has_block": true,
+  "block_id": "key-facts-representation"
+ },
+ {
+  "id": "q00080",
+  "verdict": "ANSWERED_IN_CORPUS_NOT_IN_BLOCK",
+  "doc_id": "PM-33.0302",
+  "doc_title": "דין משמעתי",
+  "quotes": [
+   {
+    "text": "איש מילואים שנמסר לו רכוש צבאי על ידי הצבא חייב לנהוג בו\n בהתאם לפקודה  בלבד,  להימנע  מעשיית  שינויים  בו  שלא  הותרו\n ,בפקודה, לאפשר את בקרתו במקום, בזמן ובאופן שנקבע בפקודה\n להודיע  בהקדם  האפשרי  ובהתאם  לפקודה  על  אבדנו  או  על  נזק\nשנגרם לו",
+    "answers_parts": [
+     0,
+     1
+    ],
+    "approx_char_offset": 152831,
+    "verified": true
+   },
+   {
+    "text": "חייל שלא נקט במועד הנכון בכל\n האמצעים  הסבירים  כדי  לשמור\n מנזק,  מקלקול  או  מאובדן  כל\n רכוש  צבאי  שהגיע  לרשותו  או\n שהוא אחראי לו בדרך אחרת, בין\n אם ניזוק הרכוש, נתקלקל או אבד\n .ובין אם לאו",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 129407,
+    "verified": true
+   },
+   {
+    "text": "דין משמעתי בגין חוסר או נזק לאפסניה, יהיה כמפורט בפ\"מ52.0301\n– \n .\"\"טיפול בחוסר באפסניה או בנזקיה",
+    "answers_parts": [
+     1
+    ],
+    "approx_char_offset": 156951,
+    "verified": true
+   }
+  ],
+  "block_covers": false,
+  "block_note": "The PM-33.0302 blocks say nothing about military property: the reservist's statutory duty to notify as soon as possible of loss/damage, offence 80, Annex D §5 pointing to פ\"מ 52.0301.",
+  "missing_order": null,
+  "confidence": "medium",
+  "explanation": "The duty to report rests on the reservist himself, regardless of fault. The app never retrieved PM-33.0302 and its block lacks this content. The detailed procedure (פ\"מ 52.0301) is not in the corpus or index.",
+  "_batch": "fadj_batch_1.json",
+  "question": "אם פגעתי בציוד של היחידה בטעות, צריך שאני מדווח על זה בעצמי או שמישהו אחר יגיד?",
+  "set": "fresh24",
+  "role": "reserve",
+  "verified_quotes": [
+   "איש מילואים שנמסר לו רכוש צבאי על ידי הצבא חייב לנהוג בו בהתאם לפקודה בלבד, להימנע מעשיית שינויים בו שלא הותרו ,בפקודה, לאפשר את בקרתו במקום, בזמן ובאופן שנקבע בפקודה להודיע בהקדם האפשרי ובהתאם לפקודה על אבדנו או על נזק שנגרם לו",
+   "חייל שלא נקט במועד הנכון בכל האמצעים הסבירים כדי לשמור מנזק, מקלקול או מאובדן כל רכוש צבאי שהגיע לרשותו או שהוא אחראי לו בדרך אחרת, בין אם ניזוק הרכוש, נתקלקל או אבד .ובין אם לאו",
+   "דין משמעתי בגין חוסר או נזק לאפסניה, יהיה כמפורט בפ\"מ52.0301 – .\"\"טיפול בחוסר באפסניה או בנזקיה"
+  ],
+  "has_block": true,
+  "block_id": "key-facts-representation"
+ },
+ {
+  "id": "q00008",
+  "verdict": "ANSWERED_IN_CORPUS_NOT_IN_BLOCK",
+  "doc_id": "31.0103",
+  "doc_title": "שחרור ופיטור חיילים משירות סדיר- פעולות היחידה",
+  "quotes": [
+   {
+    "text": ":הגורם האחראי יוודא, יום לפני מועד השחרור או הפיטור, כי ברשות החייל נמצאים המסמכים האלה \nא.\n צו הצבה ל\nמיטב - \n.חתום בידי הגורם האחראי \nב.\n \n.מעטפת מסמכים אישיים ומסמכים נלווים \nג.\n \n תעודת חוגר, תעודת נגד או תעודת קצין, לפי העניין.",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 4245,
+    "verified": true
+   },
+   {
+    "text": "טופס1004\n - \n חתום בידי קצין התחזוקה של היחידה, כמפורט בפ\"מ55.0202",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 4673,
+    "verified": true
+   },
+   {
+    "text": "ספח ג- צו הצבה לחייל להתייצבות ב\nמיטב-\n מדור שחרורים- \n יימסר לחייל עם מעטפת\n המסמכים האישיים שלו, כמפורט בסעיף20\n \n.להלן \nד.\n \n ספח ד- \n אישור על רכישת מקצוע- \n.יימסר לחייל",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 3669,
+    "verified": true
+   }
+  ],
+  "block_covers": false,
+  "block_note": "The 31.0103 block (4 clauses) lacks sec. 20's checklist of documents before discharge, sec. 17's annexes, and sec. 25 on the discharge expense refund.",
+  "missing_order": null,
+  "confidence": "high",
+  "explanation": "31.0103 lists what the soldier must hold the day before discharge (posting order to Meitav, personal-documents envelope, ID card, form 1004). The app did not retrieve 31.0103 and its block lacks the checklist.",
+  "_batch": "fadj_batch_1.json",
+  "question": "אני משתחרר בעוד חודש, מה אני צריך לבקש מהמחלקה האדמיניסטרטיבית לפני שאני יוצא?",
+  "set": "fresh24",
+  "role": "soldier",
+  "verified_quotes": [
+   ":הגורם האחראי יוודא, יום לפני מועד השחרור או הפיטור, כי ברשות החייל נמצאים המסמכים האלה א. צו הצבה ל מיטב - .חתום בידי הגורם האחראי ב. .מעטפת מסמכים אישיים ומסמכים נלווים ג. תעודת חוגר, תעודת נגד או תעודת קצין, לפי העניין.",
+   "טופס1004 - חתום בידי קצין התחזוקה של היחידה, כמפורט בפ\"מ55.0202",
+   "ספח ג- צו הצבה לחייל להתייצבות ב מיטב- מדור שחרורים- יימסר לחייל עם מעטפת המסמכים האישיים שלו, כמפורט בסעיף20 .להלן ד. ספח ד- אישור על רכישת מקצוע- .יימסר לחייל"
+  ],
+  "has_block": true,
+  "block_id": "key-facts"
+ },
+ {
+  "id": "q00024",
+  "verdict": "MISSING",
+  "doc_id": null,
+  "doc_title": null,
+  "quotes": [],
+  "block_covers": false,
+  "block_note": "No order addresses pulling a trainee out of a course early for unit needs.",
+  "missing_order": {
+   "num": "הק\"א 37-01-14 / 37-01-15 (ניהול הכשרות; מוזכרות ב-31.1001 §4)",
+   "title": "Course management / early release of a trainee for unit needs — not a פ\"מ, not in index_entries"
+  },
+  "confidence": "medium",
+  "explanation": "No rule on early release of a trainee for unit needs; the app's answer was correct.",
+  "_batch": "fadj_batch_1.json",
+  "question": "אני מסיימת את הקורס בגדנית בעוד שבועיים אבל יחידתי החדשה צריכה אותי עכשיו, מה קורה?",
+  "set": "fresh24",
+  "role": "commander",
+  "verified_quotes": []
+ },
+ {
+  "id": "q00081",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "PM-33.0302",
+  "doc_title": "דין משמעתי",
+  "quotes": [
+   {
+    "text": "חייל  שבמזיד  לא  קיים  פקודה\n שניתנה לו מאת מפקד תוך מילוי\n תפקידו  או  שסירב  לקיימה  בין\n .בדיבור ובין בהתנהגות",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 140925,
+    "verified": true
+   },
+   {
+    "text": "כל עבירה אחרת\n שקצין השיפוט\n מוסמך לדון בה \n לא מוסמך עד חמישה ימים עד עשרה ימים \n עד20\n \n יום \n עד30\n \n יום",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 163292,
+    "verified": true
+   },
+   {
+    "text": "סמכויות קצין השיפוט בהתאם לדרגתו, לסוג העבירה ולנסיבות ביצועה, מסויגות בזה כמפורט בטבלת סמכויות",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 57030,
+    "verified": true
+   }
+  ],
+  "block_covers": true,
+  "block_note": "ה-key-facts של PM-33.0302 מכיל את תקרת המחבוש (אל\"ם ומעלה עד 30 יום) וסמכויות קצין שיפוט; annex-vav-1 טבלת סמכויות. הבלוק אינו מציין שאי-קיום פקודה היא עבירה 123. תקרת המאסר בבית דין צבאי אינה בקורפוס.",
+  "missing_order": null,
+  "confidence": "medium",
+  "explanation": "הפקודה אוחזרה, אך למודל הוגש רק סעיף 4 של הנספח (נזיפה חמורה) ולא סעיף 12 או סעיף הבלוק על תקרת המחבוש — כשל חלון ולא היעדר.",
+  "_batch": "fadj_batch_2.json",
+  "question": "מה הענישה המקסימלית שיכולה להיות על אי ציות לפקודה?",
+  "set": "fresh24",
+  "role": "reserve",
+  "verified_quotes": [
+   "חייל שבמזיד לא קיים פקודה שניתנה לו מאת מפקד תוך מילוי תפקידו או שסירב לקיימה בין .בדיבור ובין בהתנהגות",
+   "כל עבירה אחרת שקצין השיפוט מוסמך לדון בה לא מוסמך עד חמישה ימים עד עשרה ימים עד20 יום עד30 יום",
+   "סמכויות קצין השיפוט בהתאם לדרגתו, לסוג העבירה ולנסיבות ביצועה, מסויגות בזה כמפורט בטבלת סמכויות"
+  ],
+  "has_block": true,
+  "block_id": "key-facts-representation"
+ },
+ {
+  "id": "q00026",
+  "verdict": "NO_SUCH_RULE",
+  "doc_id": "35.0502",
+  "doc_title": "לימודים על תיכוניים תוך כדי מילוי תפקיד- שירות סדיר",
+  "quotes": [
+   {
+    "text": "דרישות השירות יהיו בכל מקרה קודמות לכל שיקול אחר, גם אם כתוצאה מכך יופרעו לימודיו של",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 1334,
+    "verified": true
+   },
+   {
+    "text": "או מפקד המפקדה הממונה לצמצם את מספר שעות השחרור מתפקיד שניתנות בהתאם לסעיפים",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 7625,
+    "verified": true
+   },
+   {
+    "text": "ידוע לי, שאין במתן האישור ללימודים  התחייבות כלשהי מטעם",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 11325,
+    "verified": true
+   }
+  ],
+  "block_covers": false,
+  "block_note": "לפקודה 35.0502 אין sections כלל — לא נאצרה, ולכן האחזור (curated-only) לא יכול היה להגיש אותה. מסדירה שחרור של עד 8 שעות לימוד בשבוע לאיש קבע.",
+  "missing_order": null,
+  "confidence": "medium",
+  "explanation": "אין זכות להשלמה או להחזר: דרישות השירות קודמות, המפקד רשאי לצמצם, האישור אינו התחייבות. 'בגדנית' משובש. הפקודה לא אוחזרה כי אין לה בלוק.",
+  "_batch": "fadj_batch_2.json",
+  "question": "יש לי חוק שעתות לימוד בשבוע בגדנית, אם הוצאו אותי למטלה במהלך זה הם חייבים להחזיר לי?",
+  "set": "fresh24",
+  "role": "commander",
+  "verified_quotes": [
+   "דרישות השירות יהיו בכל מקרה קודמות לכל שיקול אחר, גם אם כתוצאה מכך יופרעו לימודיו של",
+   "או מפקד המפקדה הממונה לצמצם את מספר שעות השחרור מתפקיד שניתנות בהתאם לסעיפים",
+   "ידוע לי, שאין במתן האישור ללימודים התחייבות כלשהי מטעם"
+  ],
+  "has_block": false,
+  "block_id": null
+ },
+ {
+  "id": "q00085",
+  "verdict": "MISSING",
+  "doc_id": null,
+  "doc_title": null,
+  "quotes": [],
+  "block_covers": false,
+  "block_note": "אף בלוק אינו עוסק בחובת הציות או בפקודה בלתי חוקית בעליל.",
+  "missing_order": {
+   "num": null,
+   "title": "חובת הציות לפקודות וגבולותיה — 'פקודה בלתי חוקית בעליל' (חוק השיפוט הצבאי סעיפים 122–125). אין פקודת מטכ\"ל במפתח האתר בנושא; המקור הוא החוק ו'רוח צה\"ל'."
+  },
+  "confidence": "high",
+  "explanation": "אין סעיף על גבולות חובת הציות ב-289 הפקודות. תשובת האפליקציה 'לא בפקודות' נכונה.",
+  "_batch": "fadj_batch_2.json",
+  "question": "קיבלתי משימה שלא בטוח שאני יכול לעשות אותה בחוקי. צריך לביצע או אני יכול להסכים?",
+  "set": "fresh24",
+  "role": "reserve",
+  "verified_quotes": []
+ },
+ {
+  "id": "q00025",
+  "verdict": "MISSING",
+  "doc_id": null,
+  "doc_title": null,
+  "quotes": [],
+  "block_covers": false,
+  "block_note": "אין פקודה על מינוי/קליטה/משך תפקיד של מפקדי כיתות בשירות חובה.",
+  "missing_order": {
+   "num": null,
+   "title": "לא קיימת במפתח פקודת מטכ\"ל על מינוי/משך תפקיד/קליטה של מפקדי כיתות (הק\"א/הוראות זרועיות). סביר שמיתוס — 'שנת התאקלמות' למ\"כים אינה מופיעה באף פקודה."
+  },
+  "confidence": "high",
+  "explanation": "אין הוראה כזו; תשובת האפליקציה נכונה בפועל.",
+  "_batch": "fadj_batch_2.json",
+  "question": "זה נכון שמפקדי כיתה חדשים מקבלים שנת התאקלמות או זה בדיוני?",
+  "set": "fresh24",
+  "role": "commander",
+  "verified_quotes": []
+ },
+ {
+  "id": "q00005",
+  "verdict": "MISSING",
+  "doc_id": null,
+  "doc_title": null,
+  "quotes": [],
+  "block_covers": false,
+  "block_note": "אין בקורפוס שום פקודה שמזכירה 'סל מזון'.",
+  "missing_order": {
+   "num": null,
+   "title": "הוראות אכ\"א/הק\"א בנושא סיוע ת\"ש בעין לחיילים במצוקה כלכלית (סלי מזון / תווי קנייה) — לא באינדקס; פ\"מ 35.0812 'האגודה למען החייל' מסומנת כמבוטלת"
+  },
+  "confidence": "high",
+  "explanation": "סלי מזון הם סיוע ת\"ש בעין המוסדר בהוראות אכ\"א/גורמים חיצוניים ואינו בקורפוס — האפליקציה צדקה.",
+  "_batch": "fadj_batch_3.json",
+  "question": "אשכול שלי אמר שיש לי זכות לסל מזון, איפה אני מוציא את זה?",
+  "set": "fresh24",
+  "role": "soldier",
+  "verified_quotes": []
+ },
+ {
+  "id": "q00023",
+  "verdict": "MISSING",
+  "doc_id": null,
+  "doc_title": null,
+  "quotes": [],
+  "block_covers": false,
+  "block_note": "אין פקודה שקובעת מתי הנחיה שנשלחה באפליקציית מסרים נחשבת שנמסרה.",
+  "missing_order": {
+   "num": null,
+   "title": "אין פ\"מ שמסדירה מסירת הנחיות בערוצי מסרים מיידיים והוכחת קבלתן; חוק השיפוט הצבאי + הנחיות אכ\"א/פרקליטות. הקרובות: 33.0161 (Telegram — מגבלות בט\"מ), 21.0113 סע' 6, 33.0302 סע' 67 (הזמנה למסדר דין נמסרת אישית)."
+  },
+  "confidence": "medium",
+  "explanation": "המידע חסר בקורפוס.",
+  "_batch": "fadj_batch_3.json",
+  "question": "שלחתי לחייל הנחיה טלוגרם - אם הוא אומר שהוא לא ראה אותה, אני בבעיה?",
+  "set": "fresh24",
+  "role": "commander",
+  "verified_quotes": []
+ },
+ {
+  "id": "q00011",
+  "verdict": "NO_SUCH_RULE",
+  "doc_id": "PM-35.0402",
+  "doc_title": "חופשות לחיילים המשרתים בשירות חובה",
+  "quotes": [
+   {
+    "text": "ככלל אפשר לנצל את\nימי החופשה השנתית במהלך שנת הפעילות \n ללא מעבר בין שנים, למעט ימי\nחופשה הניתנים לצבירה בהתאם ל פרק ג",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 7654,
+    "verified": true
+   },
+   {
+    "text": "החייל רשאי לנצל את יתרת ימי\n החופשה השנתית שלו לפני\n .שחרורו כחופשת שחרור",
+    "answers_parts": [
+     0,
+     1
+    ],
+    "approx_char_offset": 29633,
+    "verified": true
+   },
+   {
+    "text": "ש  סיים את שירות החובה  שלו\nונותרו לו ימי חופשה שנתית,  \n יוכל לצבור את ימי החופשה\n לשירות הקבע",
+    "answers_parts": [
+     1
+    ],
+    "approx_char_offset": 14439,
+    "verified": true
+   }
+  ],
+  "block_covers": false,
+  "block_note": "בלוק PM-35.0402 מכיל את סדר הניצול בשחרור אך לא סע' 20 (ניצול בתוך שנת הפעילות) ולא סע' 40 (צבירה לקבע). בלוק 36.0401 (קבע) לא מכיל את הסדר הפדיון המצומצם (סע' 22–24) ולא סע' 27.",
+  "missing_order": null,
+  "confidence": "medium",
+  "explanation": "לחייל חובה אין הסדר פדיון כספי; היתרה מנוצלת לפני השחרור או נצברת לקבע. האפליקציה זיהתה נכון אך לא בביטחון כי המידע המשלים אינו בבלוקים.",
+  "_batch": "fadj_batch_3.json",
+  "question": "מה עם החופשה שלא נטלתי בשנה הזו? האם אני יכול להמיר אותה לכסף כשאני משתחרר?",
+  "set": "fresh24",
+  "role": "soldier",
+  "verified_quotes": [
+   "ככלל אפשר לנצל את ימי החופשה השנתית במהלך שנת הפעילות ללא מעבר בין שנים, למעט ימי חופשה הניתנים לצבירה בהתאם ל פרק ג",
+   "החייל רשאי לנצל את יתרת ימי החופשה השנתית שלו לפני .שחרורו כחופשת שחרור",
+   "ש סיים את שירות החובה שלו ונותרו לו ימי חופשה שנתית, יוכל לצבור את ימי החופשה לשירות הקבע"
+  ],
+  "has_block": true,
+  "block_id": "key-facts"
+ },
+ {
+  "id": "q00007",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "35.0814",
+  "doc_title": "סעד משפטי כללי",
+  "quotes": [
+   {
+    "text": "ייעוץ משפטי- \n יינתן ללא צורך בקבלת אישור קצין\nה\nת\"ש הפיקודי, החילי או הגיסי, לחי יל בשירות סדיר\n- \n ללא הגבלה",
+    "answers_parts": [
+     1
+    ],
+    "approx_char_offset": 3015,
+    "verified": true
+   },
+   {
+    "text": "חייל, המבקש לקבל סעד משפטי, יפנה למפקד יחידתו, שיפנה את החייל כלהלן:",
+    "answers_parts": [
+     0,
+     1
+    ],
+    "approx_char_offset": 5207,
+    "verified": true
+   },
+   {
+    "text": "ביקש החייל ייעוץ משפטי בלבד- \n יופנה8במישרין לקצין הסעד המשפטי שליד קצין העיר המתאים",
+    "answers_parts": [
+     0,
+     1
+    ],
+    "approx_char_offset": 5409,
+    "verified": true
+   }
+  ],
+  "block_covers": true,
+  "block_note": "בלוק 35.0814 מכסה ייעוץ משפטי חינם ללא אישור קצין ת\"ש, דרך מפקד היחידה או ישירות לקצין הסעד המשפטי; בלוק 35.0822 משלים.",
+  "missing_order": null,
+  "confidence": "medium",
+  "explanation": "התוכן בבלוקים של שתי הפקודות אך אף אחת לא אוחזרה — כשל אחזור.",
+  "_batch": "fadj_batch_3.json",
+  "question": "התקבלתי לשירות שלי וחתמתי על מסמכים שלא הבנתי - איפה אני יכול לשאול מה בדיוק חתמתי?",
+  "set": "fresh24",
+  "role": "soldier",
+  "verified_quotes": [
+   "ייעוץ משפטי- יינתן ללא צורך בקבלת אישור קצין ה ת\"ש הפיקודי, החילי או הגיסי, לחי יל בשירות סדיר - ללא הגבלה",
+   "חייל, המבקש לקבל סעד משפטי, יפנה למפקד יחידתו, שיפנה את החייל כלהלן:",
+   "ביקש החייל ייעוץ משפטי בלבד- יופנה8במישרין לקצין הסעד המשפטי שליד קצין העיר המתאים"
+  ],
+  "has_block": true,
+  "block_id": "key-facts-nodigits"
+ },
+ {
+  "id": "q00006",
+  "verdict": "NO_SUCH_RULE",
+  "doc_id": "33.0201",
+  "doc_title": "פקודת מטכ\"ל שעות פעילות במפקדות צה\"ל ובמתקניו",
+  "quotes": [
+   {
+    "text": ",בהתאם לצורך,או להטיל תפקידים על פקודיו,מפקד מוסמך להפעיל את יחידתו בהרכב מלא או חלקי.א",
+    "answers_parts": [
+     1
+    ],
+    "approx_char_offset": 1317,
+    "verified": true
+   },
+   {
+    "text": "סמכות זו כוללת אף הטלת תפקידים חד פעמיים על חיילים.בשעות שלאחר שעות הפעילות הרגילות",
+    "answers_parts": [
+     1
+    ],
+    "approx_char_offset": 1405,
+    "verified": true
+   },
+   {
+    "text": ".35.0402לפי פ מ,שלא על חשבון רגילה,לאשר לו יום פנוי ביום ו,אם צורכי המערכת מאפשרים זאת,רשאי",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 3105,
+    "verified": true
+   }
+  ],
+  "block_covers": true,
+  "block_note": "בלוק 33.0201 כולל את סמכות המפקד להטיל תפקידים לאחר שעות הפעילות ואת יום ו' פנוי; אין באף פקודה כלל המזכה בתשלום בעד שעות עודפות.",
+  "missing_order": null,
+  "confidence": "medium",
+  "explanation": "מפקד מוסמך להטיל תפקידים לאחר שעות הפעילות; אין תמורה. 33.0201 אוחזרה והבלוק מכיל את הסעיף — המודל בחר 'לא במאגר' במקום 'אין כלל כזה'.",
+  "_batch": "fadj_batch_4.json",
+  "question": "אני עבדתי על משימה של קצין שלי בשעות העודף, צריך שיתנו לי עבור זה?",
+  "set": "fresh24",
+  "role": "soldier",
+  "verified_quotes": [
+   ",בהתאם לצורך,או להטיל תפקידים על פקודיו,מפקד מוסמך להפעיל את יחידתו בהרכב מלא או חלקי.א",
+   "סמכות זו כוללת אף הטלת תפקידים חד פעמיים על חיילים.בשעות שלאחר שעות הפעילות הרגילות",
+   ".35.0402לפי פ מ,שלא על חשבון רגילה,לאשר לו יום פנוי ביום ו,אם צורכי המערכת מאפשרים זאת,רשאי"
+  ],
+  "has_block": true,
+  "block_id": "key-facts"
+ },
+ {
+  "id": "q00004",
+  "verdict": "ANSWERED_IN_CORPUS_NOT_IN_BLOCK",
+  "doc_id": "PM-35.0402",
+  "doc_title": "חופשות לחיילים המשרתים בשירות חובה",
+  "quotes": [
+   {
+    "text": "באישור מפקד בדרגת אל\"ם לפחות, ובשל צרכים מבצעיים המצדיקים זאת. עם תום הנסיבות\nש בגינן בוטלה חופשתו של החייל, זכאי החייל לנצל את החופשה באישור מפקדו",
+    "answers_parts": [
+     0,
+     1
+    ],
+    "approx_char_offset": 9237,
+    "verified": true
+   },
+   {
+    "text": "על המפקדים לוודא כי\nמכסת ימי החופשות השנתיות של פקודיהם \n מנוצלת במלואה",
+    "answers_parts": [
+     1
+    ],
+    "approx_char_offset": 7862,
+    "verified": true
+   },
+   {
+    "text": "חייל המשרת ברמת פעילות א' ומעלה זכאי לצבור5 ימי חופשה לכל היותר בשנת פעילות .",
+    "answers_parts": [
+     1
+    ],
+    "approx_char_offset": 11793,
+    "verified": true
+   }
+  ],
+  "block_covers": false,
+  "block_note": "הבלוק מכיל את רישא סעיף 28 (ביטול חופשה רק באישור אל\"ם) אבל לא את הסיפא (עם תום הנסיבות החייל זכאי לנצל את החופשה שבוטלה), לא סעיף 21 (המפקדים חייבים לוודא ניצול מלא) ולא כללי הצבירה (סעיף 35).",
+  "missing_order": null,
+  "confidence": "medium",
+  "explanation": "הימים אינם 'אובדים' אלא נדחים. הפקודה לא אוחזרה; גם אילו אוחזרה, הבלוק חסר את סעיף הזכאות לניצול לאחר הביטול.",
+  "_batch": "fadj_batch_4.json",
+  "question": "אנחנו בתרגיל עד סוף השבוע, כל ימי החירות שלי אבדו - אני קצוב על זה אחרי?",
+  "set": "fresh24",
+  "role": "soldier",
+  "verified_quotes": [
+   "באישור מפקד בדרגת אל\"ם לפחות, ובשל צרכים מבצעיים המצדיקים זאת. עם תום הנסיבות ש בגינן בוטלה חופשתו של החייל, זכאי החייל לנצל את החופשה באישור מפקדו",
+   "על המפקדים לוודא כי מכסת ימי החופשות השנתיות של פקודיהם מנוצלת במלואה",
+   "חייל המשרת ברמת פעילות א' ומעלה זכאי לצבור5 ימי חופשה לכל היותר בשנת פעילות ."
+  ],
+  "has_block": true,
+  "block_id": "key-facts"
+ },
+ {
+  "id": "q00020",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "35.0115",
+  "doc_title": "כספים- קרן יחידה והוצאות מותרות, ניהול, החזקה וביטול",
+  "quotes": [
+   {
+    "text": "רכישת מתנה או השתתפות בקניית מתנה לחייל משתחרר, לחייל פורש מתפקידו או לרגל אירוע\n במשפחתו של החייל, בהתאם לפ\"מ33.0112\n . ערך המתנה בשיעור של עד30\n \n.אחוזים משכר טוראי",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 2724,
+    "verified": true
+   },
+   {
+    "text": "כל הוצאה מן הקרן וכל הכנסה לקרן טעונות איש ור מראש של מפקד היחת\"ש. מסמכי ההוצאה ומסמכי",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 3996,
+    "verified": true
+   },
+   {
+    "text": "רכישת פריטים שמחירם\n.גבוה מעשר משכורות של  טוראי טעונה אישור של מת\"ש",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 1885,
+    "verified": true
+   }
+  ],
+  "block_covers": true,
+  "block_note": "בלוק 35.0115 מכיל את התקרות (15%/30%/50% משכר טוראי; מעל עשר משכורות טוראי — אישור מת\"ש). חסר סעיף 7 (אישור מראש של מפקד היחת\"ש).",
+  "missing_order": null,
+  "confidence": "low",
+  "explanation": "הקריאה הסבירה: הוצאה כספית על חייל (מתנה/שי). אף פקודה לא אוחזרה — כשל אחזור. השאלה עמומה — יכולה להתפרש גם כסמכות ענישה.",
+  "_batch": "fadj_batch_4.json",
+  "question": "מה המקסימום שאני יכול להוציא על חייל בדרגתו בלי שאצטרך להעלות לדעת מישהו מעלי?",
+  "set": "fresh24",
+  "role": "commander",
+  "verified_quotes": [
+   "רכישת מתנה או השתתפות בקניית מתנה לחייל משתחרר, לחייל פורש מתפקידו או לרגל אירוע במשפחתו של החייל, בהתאם לפ\"מ33.0112 . ערך המתנה בשיעור של עד30 .אחוזים משכר טוראי",
+   "כל הוצאה מן הקרן וכל הכנסה לקרן טעונות איש ור מראש של מפקד היחת\"ש. מסמכי ההוצאה ומסמכי",
+   "רכישת פריטים שמחירם .גבוה מעשר משכורות של טוראי טעונה אישור של מת\"ש"
+  ],
+  "has_block": true,
+  "block_id": "key-facts"
+ },
+ {
+  "id": "q00009",
+  "verdict": "ANSWERED_IN_CORPUS_NOT_IN_BLOCK",
+  "doc_id": "35.0233",
+  "doc_title": "תשלומים בשעת חירום לחיילים בשירות סדיר ובשירות מילואים מיוחד",
+  "quotes": [
+   {
+    "text": "חיילים בשירות חובה, שהוחלט, כי שירותם הצבאי יימשך, ייקראו לשירות מילואים עפ\"י צ ו מיוחד של",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 1310,
+    "verified": true
+   },
+   {
+    "text": "בתקופה זו יזוכה חייל כנ\"ל בתשלום בגובה של35\n \n אחוזים מהשכר הממוצע במשק, שהוא מינימום\n.התגמול המשולם למשרתים במילואים, לפי חוק הביטוח הלאומי",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 1458,
+    "verified": true
+   },
+   {
+    "text": "בתום החודש, שבו סיים החייל את שירות החובה, יעביר מ ת\"ש לחשבון הבנק של החייל את מענק\n.השחרור ואת מענק השס\"ן (שירות סדיר נוסף), שהחייל זכאי להם",
+    "answers_parts": [
+     0
+    ],
+    "approx_char_offset": 1604,
+    "verified": true
+   }
+  ],
+  "block_covers": false,
+  "block_note": "ל-35.0233 אין בלוק key-facts כלל — קיימת רק כ-raw_text. הווריאנט של הארכה בהתנדבות מכוסה חלקית ב-35.0205 (אוחזרה) וב-35.0211.",
+  "missing_order": null,
+  "confidence": "medium",
+  "explanation": "עיכוב שחרור: החייל נקרא למילואים בצו מיוחד, מזוכה ב-35% מהשכר הממוצע, והמענקים משולמים בתום החודש — לא נפגעים. 35.0233 ו-35.0211 לא אוחזרו; 35.0205 אוחזרה אך המודל פסל אותה.",
+  "_batch": "fadj_batch_4.json",
+  "question": "אם אני צריך להישאר בצה\"ל שבוע אחרי התאריך של השחרור שלי בגלל משימה, האם זה משפיע על הכסף שמגיע לי?",
+  "set": "fresh24",
+  "role": "soldier",
+  "verified_quotes": [
+   "חיילים בשירות חובה, שהוחלט, כי שירותם הצבאי יימשך, ייקראו לשירות מילואים עפ\"י צ ו מיוחד של",
+   "בתקופה זו יזוכה חייל כנ\"ל בתשלום בגובה של35 אחוזים מהשכר הממוצע במשק, שהוא מינימום .התגמול המשולם למשרתים במילואים, לפי חוק הביטוח הלאומי",
+   "בתום החודש, שבו סיים החייל את שירות החובה, יעביר מ ת\"ש לחשבון הבנק של החייל את מענק .השחרור ואת מענק השס\"ן (שירות סדיר נוסף), שהחייל זכאי להם"
+  ],
+  "has_block": false,
+  "block_id": null
+ },
+ {
+  "id": "q00027",
+  "verdict": "MISSING",
+  "doc_id": null,
+  "doc_title": null,
+  "quotes": [],
+  "block_covers": false,
+  "block_note": "No key-facts block covers how a soldier is notified of / registered for an assignment.",
+  "missing_order": {
+   "num": "הוראת קשל\"ר 21.03.14 / 21.03.16 (לא באינדקס האתר)",
+   "title": "נוהלי הצבה – שירות סדיר / נוהלי סיפוח, סמיכות, שהייה; לשיבוץ במשמרות: הק\"א 33-02-06 (33.0201 §9). פקודת מפקד אינה חייבת להיות בכתב — חוק השיפוט הצבאי."
+  },
+  "confidence": "medium",
+  "explanation": "No order in the corpus regulates how a soldier must be notified of an assignment or whether an oral instruction suffices; the app's answer was correct in substance.",
+  "_batch": "fadj_batch_5.json",
+  "question": "לא רשום לי כלום בחומה הלוח הכחול, פשוט הציבור אמרו בהפסקה שאני מתחילה באגף מחר, זה חוקי?",
+  "set": "fresh24",
+  "role": "commander",
+  "verified_quotes": []
+ }
+]
