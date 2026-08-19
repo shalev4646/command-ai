@@ -1,6 +1,6 @@
 {
- "spent": 46.8798,
- "reserved": 2.4411,
+ "spent": 49.330400000000004,
+ "reserved": 0.3131,
  "entries": [
   {
    "id": "anchors:21.0401#20804-196",
@@ -2919,6 +2919,18 @@
    "actual": 0.04
   },
   {
+   "id": "grade-after_v95#14640-556",
+   "label": "grade-after_v95",
+   "estimate": 0.042,
+   "actual": 0.029
+  },
+  {
+   "id": "grade-after_v95#21948-557",
+   "label": "grade-after_v95",
+   "estimate": 0.042,
+   "actual": 0.0292
+  },
+  {
    "id": "grade-base30#10040-44",
    "label": "grade-base30",
    "estimate": 0.0,
@@ -2955,6 +2967,18 @@
    "actual": 0.0223
   },
   {
+   "id": "grade-fresh_v95#10888-558",
+   "label": "grade-fresh_v95",
+   "estimate": 0.036,
+   "actual": 0.0225
+  },
+  {
+   "id": "grade-fresh_v95#5904-559",
+   "label": "grade-fresh_v95",
+   "estimate": 0.036,
+   "actual": 0.0226
+  },
+  {
    "id": "grade-heldout_after#18052-310",
    "label": "grade-heldout_after",
    "estimate": 0.036,
@@ -2989,6 +3013,18 @@
    "label": "grade-ho_v94",
    "estimate": 0.036,
    "actual": 0.0245
+  },
+  {
+   "id": "grade-ho_v95b#19780-555",
+   "label": "grade-ho_v95b",
+   "estimate": 0.036,
+   "actual": 0.0251
+  },
+  {
+   "id": "grade-ho_v95b#23752-554",
+   "label": "grade-ho_v95b",
+   "estimate": 0.036,
+   "actual": 0.0249
   },
   {
    "id": "grade-hyde30#13984-324",
@@ -3078,7 +3114,7 @@
    "id": "probe-after_v95#17028-552",
    "label": "probe-after_v95",
    "estimate": 0.784,
-   "actual": null
+   "actual": 0.841
   },
   {
    "id": "probe-base30b#3556-321",
@@ -3097,6 +3133,12 @@
    "label": "probe-fresh_base",
    "estimate": 0.672,
    "actual": 0.675
+  },
+  {
+   "id": "probe-fresh_v95#7284-553",
+   "label": "probe-fresh_v95",
+   "estimate": 0.672,
+   "actual": 0.649
   },
   {
    "id": "probe-heldout_after#18052-309",
@@ -3138,7 +3180,7 @@
    "id": "probe-ho_v95b#9068-551",
    "label": "probe-ho_v95b",
    "estimate": 0.672,
-   "actual": null
+   "actual": 0.8073
   },
   {
    "id": "probe-hyde30#13984-323",
@@ -3319,12 +3361,6 @@
    "label": "unscramble:PM-33.0401",
    "estimate": 0.006,
    "actual": 0.0057
-  },
-  {
-   "id": "probe-fresh_v95#7284-553",
-   "label": "probe-fresh_v95",
-   "estimate": 0.672,
-   "actual": null
   }
  ]
 }

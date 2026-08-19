@@ -1,0 +1,18 @@
+{
+ "tag": "ho_v95b",
+ "before_full": 2,
+ "before_n": 24,
+ "after_full": 11,
+ "after_n": 24,
+ "before_parts": [
+  15,
+  47
+ ],
+ "after_parts": [
+  28,
+  47
+ ],
+ "flips": 14,
+ "controls": 11,
+ "control_flips": 6
+}
