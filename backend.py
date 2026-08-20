@@ -1,6 +1,7 @@
 import json
 import os
 import threading
+from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 
 from anthropic import Anthropic
@@ -388,6 +389,52 @@ _HYDE_PROMPT = """שאלה של חייל: {q}
 # preloads measured questions into it so a re-measure re-uses text already paid
 # for rather than regenerating it at a different temperature draw.
 _hyde_cache: dict[str, str] = {}
+# In-flight prefetches, keyed by question. A caller that arrives while one is
+# running JOINS it rather than issuing its own: _hyde_cache is only filled when
+# the call returns, so a fire-and-forget thread would leave a window in which
+# `question in _hyde_cache` is still False and the same paragraph is bought
+# twice — real money, and a second temperature draw the night measurements
+# assume does not happen.
+_hyde_inflight: dict[str, "Future[str]"] = {}
+_hyde_lock = threading.Lock()
+# Four workers, not one: a single soldier only ever has one hypothetical in
+# flight, but concurrent sessions must not queue behind each other — a queued
+# prefetch would finish AFTER the retrieval that wanted it and buy nothing but
+# a thread. The pool is small on purpose; the joiner waits on the future either
+# way, so an over-subscribed pool degrades to today's serial behaviour.
+_hyde_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="hyde")
+
+
+def _hyde_call(question: str) -> str:
+    """The API round-trip, without the cache — the only place it is bought."""
+    try:
+        r = client.with_options(timeout=12.0, max_retries=1).messages.create(
+            model=REWRITE_MODEL, max_tokens=300, temperature=0,
+            messages=[{"role": "user", "content": _HYDE_PROMPT.format(q=question)}])
+        return "".join(b.text for b in r.content if b.type == "text").strip()
+    except Exception as e:
+        safe_print(f"[backend] hypothetical failed: {e!r}")
+        return ""
+
+
+def prefetch_hypothetical(question: str) -> None:
+    """Start the hypothetical now, off the critical path. Never raises.
+
+    The pre-answer phase is serial — rewrite → router → retrieval → hypothetical
+    — and only the last of those depends on nothing but the raw question. Kicking
+    it off first overlaps its ~1.5s with the rest, which is the one part of the
+    ~15s the soldier waits before the first token that costs nothing to remove.
+    A no-op when HyDE is off, already cached, or already in flight.
+    """
+    if not RETRIEVE_HYDE or HYDE_EXTRA_CHUNKS <= 0:
+        return
+    with _hyde_lock:
+        if question in _hyde_cache or question in _hyde_inflight:
+            return
+        try:
+            _hyde_inflight[question] = _hyde_pool.submit(_hyde_call, question)
+        except RuntimeError as e:  # pool shut down (interpreter teardown)
+            safe_print(f"[backend] hypothetical prefetch skipped: {e!r}")
 
 
 def hypothetical(question: str) -> str:
@@ -399,18 +446,32 @@ def hypothetical(question: str) -> str:
     `night.hyde` generates through its own counted path instead of calling
     this one: a sweep whose calls all failed would otherwise report the
     baseline as the treatment (night/rewrite.py, 387 of 415 dead, "lost 0").
+
+    `night.hyde.preload_backend` writes straight into _hyde_cache, so the cache
+    check stays FIRST: a preloaded question must never reach the API.
     """
     if question in _hyde_cache:
         return _hyde_cache[question]
-    try:
-        r = client.with_options(timeout=12.0, max_retries=1).messages.create(
-            model=REWRITE_MODEL, max_tokens=300, temperature=0,
-            messages=[{"role": "user", "content": _HYDE_PROMPT.format(q=question)}])
-        text = "".join(b.text for b in r.content if b.type == "text").strip()
-    except Exception as e:
-        safe_print(f"[backend] hypothetical failed: {e!r}")
-        text = ""
+    with _hyde_lock:
+        fut = _hyde_inflight.get(question)
+    if fut is not None:
+        try:
+            text = fut.result()
+        except Exception as e:  # the worker swallows its own errors; belt and braces
+            safe_print(f"[backend] hypothetical prefetch failed: {e!r}")
+            text = ""
+    else:
+        text = _hyde_call(question)
     _hyde_cache[question] = text
+    # The JOINER clears the entry, never a done-callback on the future: a
+    # callback that popped it on completion could fire between this function's
+    # cache miss and its inflight lookup, and the caller would buy the
+    # paragraph a second time — the exact failure the map exists to prevent.
+    # The cost is that a prefetch nobody joins (the stream raised before
+    # widen_context) leaves one finished future behind, bounded by the distinct
+    # questions this process has seen, like _hyde_cache above it.
+    with _hyde_lock:
+        _hyde_inflight.pop(question, None)
     return text
 
 
@@ -908,6 +969,13 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
     token (its deltas are not yielded), so the stream starts after a short
     reasoning pause.
     """
+    # The hypothetical depends on nothing but the raw question, while the three
+    # steps below it in the chain (rewrite → router → retrieval) each wait on
+    # the one before. Start it here and it is already in hand by the time
+    # widen_context asks for it, instead of adding its ~1.5s to a pre-token
+    # wait the soldier spends staring at a spinner. Free: same one call, joined
+    # rather than re-bought (see prefetch_hypothetical).
+    prefetch_hypothetical(question)
     # follow-ups ("ומה לגבי מילואים?") are unsearchable on their own, and
     # first questions often carry typos that sink retrieval — search with the
     # Haiku rewrite/normalization, but answer the original question
