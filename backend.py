@@ -384,8 +384,21 @@ def _route_docs(question: str, role: str) -> set[str]:
 # _standalone_question returns instantly and the router already runs alongside
 # the hypothetical prefetch, so there is nothing there to win. That is a real
 # but unproven trade, and an always-on version would tax every changed rewrite
-# invisibly, so it ships OFF like RETRIEVE_FULL_BLOCKS: flip it on for a paired
-# measurement, not on a hunch.
+# invisibly, so it ships OFF like RETRIEVE_FULL_BLOCKS.
+#
+# MEASURED 2026-08-20, paired, both arms on the same 10 rewrite-path questions,
+# pre-answer phase only (the Opus call lives in the generator, so building the
+# answer without consuming it stops right before it), 70 API calls, 0 failures:
+#   bet won (rewrite came back verbatim) ... 3/10 = 30%
+#   latency delta off-minus-on ........... median +0.37s (wins +0.72s, losses -0.21s)
+#   extra router calls ................... 7, i.e. $0.00175 per rewrite-path question
+# Expected value = 0.3 x (+0.72) + 0.7 x (-0.21) = +0.07s on the 36% of questions
+# that reach this path, i.e. ~0.03s averaged over all traffic — for ~1.3% more
+# money. A losing bet is slightly SLOWER, not neutral: the wasted call competes
+# with the hypothetical for the pool and the network while the real router still
+# runs serially behind the rewrite.
+# ⇒ STAYS OFF. The lever is built and tested; the number says it is not worth
+# buying. Re-measure only if the rewrite's verbatim rate rises well above 30%.
 RETRIEVE_SPECULATIVE_ROUTE = os.environ.get("RETRIEVE_SPECULATIVE_ROUTE", "0") == "1"
 _route_inflight: dict[tuple[str, str], "Future[set[str]]"] = {}
 _route_lock = threading.Lock()
