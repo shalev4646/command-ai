@@ -376,6 +376,60 @@ def _route_docs(question: str, role: str) -> set[str]:
         return set()
 
 
+# Speculative routing. The router needs the REWRITTEN query, so starting it on
+# the raw question is a bet: it wins the router's ~1.4s when the rewrite returns
+# the question unchanged, and buys one extra ~$0.0025 call when it does not.
+# Measured free on the 33 logged questions: the rewrite call runs on 36% of them
+# (18% follow-ups + 18% tripping the vocabulary gate) — on the other 64%
+# _standalone_question returns instantly and the router already runs alongside
+# the hypothetical prefetch, so there is nothing there to win. That is a real
+# but unproven trade, and an always-on version would tax every changed rewrite
+# invisibly, so it ships OFF like RETRIEVE_FULL_BLOCKS: flip it on for a paired
+# measurement, not on a hunch.
+RETRIEVE_SPECULATIVE_ROUTE = os.environ.get("RETRIEVE_SPECULATIVE_ROUTE", "0") == "1"
+_route_inflight: dict[tuple[str, str], "Future[set[str]]"] = {}
+_route_lock = threading.Lock()
+
+
+def prefetch_route(question: str, role: str) -> None:
+    """Start the router on the raw question, off the critical path. Never raises."""
+    if not RETRIEVE_SPECULATIVE_ROUTE:
+        return
+    key = (question, role)
+    with _route_lock:
+        if key in _route_inflight:
+            return
+        try:
+            _route_inflight[key] = _prefetch_pool.submit(_route_docs, question, role)
+        except RuntimeError as e:  # pool shut down (interpreter teardown)
+            safe_print(f"[backend] route prefetch skipped: {e!r}")
+
+
+def route_for(search_query: str, role: str, raw_question: str | None = None) -> set[str]:
+    """The route for `search_query`, joining a speculation only when it matches.
+
+    The speculation was started on `raw_question`; if the rewrite changed the
+    text the two differ and the bet is simply lost — this routes the rewritten
+    query properly and drops the stale future, because a route computed from
+    "ומה לגבי מילואים?" is exactly the unsearchable phrasing the rewrite exists
+    to repair. Correctness never depends on the guess.
+    """
+    key = (search_query, role)
+    with _route_lock:
+        fut = _route_inflight.pop(key, None)
+        if raw_question is not None:
+            # a losing bet still has a thread in the air; drop the handle so the
+            # map cannot grow one entry per changed rewrite
+            _route_inflight.pop((raw_question, role), None)
+    if fut is None:
+        return _route_docs(search_query, role)
+    try:
+        return fut.result()
+    except Exception as e:  # _route_docs swallows its own; belt and braces
+        safe_print(f"[backend] route prefetch failed: {e!r}")
+        return set()
+
+
 _HYDE_PROMPT = """שאלה של חייל: {q}
 
 כתוב פסקה קצרה (עד 60 מילים) בניסוח של פקודת מטכ"ל, כפי שהיא הייתה מנוסחת בפקודה
@@ -401,8 +455,9 @@ _hyde_lock = threading.Lock()
 # flight, but concurrent sessions must not queue behind each other — a queued
 # prefetch would finish AFTER the retrieval that wanted it and buy nothing but
 # a thread. The pool is small on purpose; the joiner waits on the future either
-# way, so an over-subscribed pool degrades to today's serial behaviour.
-_hyde_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="hyde")
+# way, so an over-subscribed pool degrades to today's serial behaviour. Shared
+# with the speculative router below.
+_prefetch_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="prefetch")
 
 
 def _hyde_call(question: str) -> str:
@@ -432,7 +487,7 @@ def prefetch_hypothetical(question: str) -> None:
         if question in _hyde_cache or question in _hyde_inflight:
             return
         try:
-            _hyde_inflight[question] = _hyde_pool.submit(_hyde_call, question)
+            _hyde_inflight[question] = _prefetch_pool.submit(_hyde_call, question)
         except RuntimeError as e:  # pool shut down (interpreter teardown)
             safe_print(f"[backend] hypothetical prefetch skipped: {e!r}")
 
@@ -976,12 +1031,15 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
     # wait the soldier spends staring at a spinner. Free: same one call, joined
     # rather than re-bought (see prefetch_hypothetical).
     prefetch_hypothetical(question)
+    # ...and, when RETRIEVE_SPECULATIVE_ROUTE is on, the router too — joined
+    # below only if the rewrite hands back the same text it was given
+    prefetch_route(question, role)
     # follow-ups ("ומה לגבי מילואים?") are unsearchable on their own, and
     # first questions often carry typos that sink retrieval — search with the
     # Haiku rewrite/normalization, but answer the original question
     search_query = _standalone_question(question, history)
     # one router call per user question, shared by both retrievals below
-    route = _route_docs(search_query, role)
+    route = route_for(search_query, role, raw_question=question)
     chunks = retrieve_for_role(search_query, role, route=route, widen=False)
     # The rewrite is a retrieval AID, never a gatekeeper: when it changed the
     # question, retrieve on the RAW phrasing too and merge by best score. A
