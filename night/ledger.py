@@ -21,8 +21,15 @@ from pathlib import Path
 #   ~$2   re-measure the saved 54 questions for a paired before/after
 #   ~$7   curate wave 1 (85 orders) once the PDFs are downloaded
 #   ~$0.5 grow the gate by 3 probes per new order
-CEILING_USD = 55.00
+CEILING_USD = 70.00
 PLANNED_USD = 43.00
+# Raised 55 -> 70 on 2026-08-19, approved for the full-digest round: $49.3 was
+# spent by the end of the retrieval round (v95 measured and deployed), and the
+# user approved a full digest of the 30 hub orders (~$5 at Haiku prices) plus a
+# SYNCHRONOUS three-set measurement (~$5 — twice the batch price, minutes
+# instead of the 28 hours the last batch round sat in the provider's queue).
+# The account's monthly cap was raised to $100 the same day; this ceiling
+# stays below it on purpose so production keeps answering.
 # Raised 20 -> 24 when wave 1 actually landed, then 24 -> 45 for wave 2, which
 # is the first step big enough to measure: 162 orders takes coverage from 28%
 # to 64%, where wave 1's 26 orders moved it 22% -> 28% and produced no

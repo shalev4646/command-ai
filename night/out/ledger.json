@@ -1,6 +1,6 @@
 {
- "spent": 49.330400000000004,
- "reserved": 0.3131,
+ "spent": 60.6253,
+ "reserved": 0.3706,
  "entries": [
   {
    "id": "anchors:21.0401#20804-196",
@@ -2913,6 +2913,354 @@
    "actual": 0.1954
   },
   {
+   "id": "digest:31.0116#1#22972-602",
+   "label": "digest:31.0116#1",
+   "estimate": 0.0476,
+   "actual": 0.0911
+  },
+  {
+   "id": "digest:31.0513#1#22972-577",
+   "label": "digest:31.0513#1",
+   "estimate": 0.0519,
+   "actual": 0.1883
+  },
+  {
+   "id": "digest:31.0521#1#22972-582",
+   "label": "digest:31.0521#1",
+   "estimate": 0.0498,
+   "actual": 0.1321
+  },
+  {
+   "id": "digest:31.0606#1#22972-609",
+   "label": "digest:31.0606#1",
+   "estimate": 0.0431,
+   "actual": 0.0651
+  },
+  {
+   "id": "digest:32.0401#1#22972-583",
+   "label": "digest:32.0401#1",
+   "estimate": 0.0444,
+   "actual": 0.0598
+  },
+  {
+   "id": "digest:32.0402#1#22972-601",
+   "label": "digest:32.0402#1",
+   "estimate": 0.0568,
+   "actual": 0.1621
+  },
+  {
+   "id": "digest:33.0160#1#22972-578",
+   "label": "digest:33.0160#1",
+   "estimate": 0.044,
+   "actual": 0.0597
+  },
+  {
+   "id": "digest:33.0160#1r#22972-579",
+   "label": "digest:33.0160#1r",
+   "estimate": 0.044,
+   "actual": 0.0639
+  },
+  {
+   "id": "digest:33.0201#1#22972-585",
+   "label": "digest:33.0201#1",
+   "estimate": 0.0417,
+   "actual": 0.0808
+  },
+  {
+   "id": "digest:33.0219#1#22972-586",
+   "label": "digest:33.0219#1",
+   "estimate": 0.0512,
+   "actual": 0.1227
+  },
+  {
+   "id": "digest:33.0304#1#22972-596",
+   "label": "digest:33.0304#1",
+   "estimate": 0.0575,
+   "actual": 0.1641
+  },
+  {
+   "id": "digest:33.0304#2#22972-597",
+   "label": "digest:33.0304#2",
+   "estimate": 0.0575,
+   "actual": 0.168
+  },
+  {
+   "id": "digest:33.0304#2r#22972-598",
+   "label": "digest:33.0304#2r",
+   "estimate": 0.0575,
+   "actual": 0.1497
+  },
+  {
+   "id": "digest:33.0304#3#22972-599",
+   "label": "digest:33.0304#3",
+   "estimate": 0.0458,
+   "actual": 0.0903
+  },
+  {
+   "id": "digest:33.0336#1#19448-616",
+   "label": "digest:33.0336#1",
+   "estimate": 0.0512,
+   "actual": 0.1621
+  },
+  {
+   "id": "digest:33.0336#1#22972-588",
+   "label": "digest:33.0336#1",
+   "estimate": 0.0512,
+   "actual": 0.0
+  },
+  {
+   "id": "digest:33.0336#1r#19448-617",
+   "label": "digest:33.0336#1r",
+   "estimate": 0.0512,
+   "actual": 0.0843
+  },
+  {
+   "id": "digest:33.0351#1#22972-594",
+   "label": "digest:33.0351#1",
+   "estimate": 0.0405,
+   "actual": 0.0437
+  },
+  {
+   "id": "digest:35.0201#1#22972-604",
+   "label": "digest:35.0201#1",
+   "estimate": 0.044,
+   "actual": 0.0862
+  },
+  {
+   "id": "digest:35.0201#1r#22972-605",
+   "label": "digest:35.0201#1r",
+   "estimate": 0.044,
+   "actual": 0.086
+  },
+  {
+   "id": "digest:35.0206#1#22972-591",
+   "label": "digest:35.0206#1",
+   "estimate": 0.0575,
+   "actual": 0.1305
+  },
+  {
+   "id": "digest:35.0206#2#22972-592",
+   "label": "digest:35.0206#2",
+   "estimate": 0.0404,
+   "actual": 0.0584
+  },
+  {
+   "id": "digest:35.0221#1#22972-581",
+   "label": "digest:35.0221#1",
+   "estimate": 0.0565,
+   "actual": 0.1326
+  },
+  {
+   "id": "digest:35.0234#1#22972-595",
+   "label": "digest:35.0234#1",
+   "estimate": 0.0475,
+   "actual": 0.1062
+  },
+  {
+   "id": "digest:35.0306#1#22972-593",
+   "label": "digest:35.0306#1",
+   "estimate": 0.0561,
+   "actual": 0.143
+  },
+  {
+   "id": "digest:35.0307#1#22972-600",
+   "label": "digest:35.0307#1",
+   "estimate": 0.0496,
+   "actual": 0.1058
+  },
+  {
+   "id": "digest:35.0807#1#22972-587",
+   "label": "digest:35.0807#1",
+   "estimate": 0.0443,
+   "actual": 0.062
+  },
+  {
+   "id": "digest:38.0102#1#22972-589",
+   "label": "digest:38.0102#1",
+   "estimate": 0.0575,
+   "actual": 0.1385
+  },
+  {
+   "id": "digest:38.0102#2#22972-590",
+   "label": "digest:38.0102#2",
+   "estimate": 0.0538,
+   "actual": 0.1897
+  },
+  {
+   "id": "digest:61.0104#1#21732-560",
+   "label": "digest:61.0104#1",
+   "estimate": 0.0575,
+   "actual": null
+  },
+  {
+   "id": "digest:61.0104#1#22972-561",
+   "label": "digest:61.0104#1",
+   "estimate": 0.0575,
+   "actual": 0.1366
+  },
+  {
+   "id": "digest:61.0104#2#22972-562",
+   "label": "digest:61.0104#2",
+   "estimate": 0.0513,
+   "actual": 0.1548
+  },
+  {
+   "id": "digest:61.0113#1#22972-603",
+   "label": "digest:61.0113#1",
+   "estimate": 0.0433,
+   "actual": 0.0419
+  },
+  {
+   "id": "digest:PM-33.0202#1#22972-607",
+   "label": "digest:PM-33.0202#1",
+   "estimate": 0.041,
+   "actual": 0.0715
+  },
+  {
+   "id": "digest:PM-33.0213#1#22972-608",
+   "label": "digest:PM-33.0213#1",
+   "estimate": 0.0528,
+   "actual": 0.1069
+  },
+  {
+   "id": "digest:PM-33.0302#1#22972-563",
+   "label": "digest:PM-33.0302#1",
+   "estimate": 0.0575,
+   "actual": 0.1099
+  },
+  {
+   "id": "digest:PM-33.0302#10#22972-572",
+   "label": "digest:PM-33.0302#10",
+   "estimate": 0.0575,
+   "actual": 0.1395
+  },
+  {
+   "id": "digest:PM-33.0302#11#22972-573",
+   "label": "digest:PM-33.0302#11",
+   "estimate": 0.0575,
+   "actual": 0.1551
+  },
+  {
+   "id": "digest:PM-33.0302#12#22972-574",
+   "label": "digest:PM-33.0302#12",
+   "estimate": 0.0575,
+   "actual": 0.1317
+  },
+  {
+   "id": "digest:PM-33.0302#13#22972-575",
+   "label": "digest:PM-33.0302#13",
+   "estimate": 0.0429,
+   "actual": 0.0898
+  },
+  {
+   "id": "digest:PM-33.0302#2#22972-564",
+   "label": "digest:PM-33.0302#2",
+   "estimate": 0.0575,
+   "actual": 0.0913
+  },
+  {
+   "id": "digest:PM-33.0302#3#22972-565",
+   "label": "digest:PM-33.0302#3",
+   "estimate": 0.0575,
+   "actual": 0.1057
+  },
+  {
+   "id": "digest:PM-33.0302#4#22972-566",
+   "label": "digest:PM-33.0302#4",
+   "estimate": 0.0575,
+   "actual": 0.1446
+  },
+  {
+   "id": "digest:PM-33.0302#5#22972-567",
+   "label": "digest:PM-33.0302#5",
+   "estimate": 0.0575,
+   "actual": 0.1535
+  },
+  {
+   "id": "digest:PM-33.0302#6#22972-568",
+   "label": "digest:PM-33.0302#6",
+   "estimate": 0.0575,
+   "actual": 0.148
+  },
+  {
+   "id": "digest:PM-33.0302#7#22972-569",
+   "label": "digest:PM-33.0302#7",
+   "estimate": 0.0575,
+   "actual": 0.1762
+  },
+  {
+   "id": "digest:PM-33.0302#8#22972-570",
+   "label": "digest:PM-33.0302#8",
+   "estimate": 0.0575,
+   "actual": 0.1779
+  },
+  {
+   "id": "digest:PM-33.0302#9#22972-571",
+   "label": "digest:PM-33.0302#9",
+   "estimate": 0.0575,
+   "actual": 0.1626
+  },
+  {
+   "id": "digest:PM-33.0333#1#22972-576",
+   "label": "digest:PM-33.0333#1",
+   "estimate": 0.0506,
+   "actual": 0.0964
+  },
+  {
+   "id": "digest:PM-33.0352#1#22972-580",
+   "label": "digest:PM-33.0352#1",
+   "estimate": 0.0473,
+   "actual": 0.1055
+  },
+  {
+   "id": "digest:PM-34.0101#1#22972-610",
+   "label": "digest:PM-34.0101#1",
+   "estimate": 0.0575,
+   "actual": 0.3559
+  },
+  {
+   "id": "digest:PM-34.0101#2#22972-611",
+   "label": "digest:PM-34.0101#2",
+   "estimate": 0.0575,
+   "actual": 0.3048
+  },
+  {
+   "id": "digest:PM-34.0101#3#22972-612",
+   "label": "digest:PM-34.0101#3",
+   "estimate": 0.0575,
+   "actual": 0.3203
+  },
+  {
+   "id": "digest:PM-34.0101#3r#22972-613",
+   "label": "digest:PM-34.0101#3r",
+   "estimate": 0.0575,
+   "actual": 0.217
+  },
+  {
+   "id": "digest:PM-34.0101#4#22972-614",
+   "label": "digest:PM-34.0101#4",
+   "estimate": 0.0575,
+   "actual": 0.1594
+  },
+  {
+   "id": "digest:PM-34.0101#5#22972-615",
+   "label": "digest:PM-34.0101#5",
+   "estimate": 0.0494,
+   "actual": 0.1558
+  },
+  {
+   "id": "digest:PM-34.0205#1#22972-584",
+   "label": "digest:PM-34.0205#1",
+   "estimate": 0.0381,
+   "actual": 0.0179
+  },
+  {
+   "id": "digest:זכויות-עבודה-מילואים#1#22972-606",
+   "label": "digest:זכויות-עבודה-מילואים#1",
+   "estimate": 0.0412,
+   "actual": 0.0934
+  },
+  {
    "id": "evidence:route#16648-316",
    "label": "evidence:route",
    "estimate": 0.04,
@@ -2929,6 +3277,12 @@
    "label": "grade-after_v95",
    "estimate": 0.042,
    "actual": 0.0292
+  },
+  {
+   "id": "grade-after_v96#8264-621",
+   "label": "grade-after_v96",
+   "estimate": 0.042,
+   "actual": 0.0282
   },
   {
    "id": "grade-base30#10040-44",
@@ -2979,6 +3333,12 @@
    "actual": 0.0226
   },
   {
+   "id": "grade-fresh_v96#13336-623",
+   "label": "grade-fresh_v96",
+   "estimate": 0.036,
+   "actual": 0.0221
+  },
+  {
    "id": "grade-heldout_after#18052-310",
    "label": "grade-heldout_after",
    "estimate": 0.036,
@@ -3025,6 +3385,12 @@
    "label": "grade-ho_v95b",
    "estimate": 0.036,
    "actual": 0.0249
+  },
+  {
+   "id": "grade-ho_v96#24156-619",
+   "label": "grade-ho_v96",
+   "estimate": 0.036,
+   "actual": 0.0246
   },
   {
    "id": "grade-hyde30#13984-324",
@@ -3117,6 +3483,12 @@
    "actual": 0.841
   },
   {
+   "id": "probe-after_v96#8264-620",
+   "label": "probe-after_v96",
+   "estimate": 1.568,
+   "actual": 1.3618
+  },
+  {
    "id": "probe-base30b#3556-321",
    "label": "probe-base30b",
    "estimate": 0.84,
@@ -3139,6 +3511,12 @@
    "label": "probe-fresh_v95",
    "estimate": 0.672,
    "actual": 0.649
+  },
+  {
+   "id": "probe-fresh_v96#13336-622",
+   "label": "probe-fresh_v96",
+   "estimate": 1.344,
+   "actual": 1.2099
   },
   {
    "id": "probe-heldout_after#18052-309",
@@ -3181,6 +3559,12 @@
    "label": "probe-ho_v95b",
    "estimate": 0.672,
    "actual": 0.8073
+  },
+  {
+   "id": "probe-ho_v96#24156-618",
+   "label": "probe-ho_v96",
+   "estimate": 1.344,
+   "actual": 1.3977
   },
   {
    "id": "probe-hyde30#13984-323",

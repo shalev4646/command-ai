@@ -1,0 +1,18 @@
+{
+ "tag": "ho_v96",
+ "before_full": 11,
+ "before_n": 24,
+ "after_full": 12,
+ "after_n": 24,
+ "before_parts": [
+  28,
+  47
+ ],
+ "after_parts": [
+  27,
+  47
+ ],
+ "flips": 5,
+ "controls": 18,
+ "control_flips": 2
+}

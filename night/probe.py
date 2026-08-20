@@ -63,7 +63,62 @@ def build_requests(rows: list[dict]) -> tuple[list, list[dict]]:
     return reqs, meta
 
 
+def run_sync(reqs, meta, ledger: Ledger, out_path, label: str, workers: int = 4) -> None:
+    """The same requests, sent directly instead of through the Batch API.
+
+    Twice the price and minutes instead of hours: the 2026-08-18 round sat
+    28 hours in the provider's batch queue while the decision it fed waited.
+    When the measurement is on the critical path, that trade is wrong.
+    REMEASURE_SYNC=1 routes run_batch here.
+    """
+    import concurrent.futures as cf
+    est = len(reqs) * 0.056          # ~2x the batch estimate
+    rid = ledger.reserve(label, est)
+    C.log(f"[probe] {label}: sending {len(reqs)} requests synchronously, {workers} at a time "
+          f"(~${est:.2f}, ${ledger.remaining():.2f} left after)")
+
+    def one(i_req):
+        i, req = i_req
+        params = dict(req["params"])
+        try:
+            m = backend.client.with_options(timeout=240.0, max_retries=2).messages.create(**params)
+        except Exception as e:
+            return i, None, 0.0, f"{type(e).__name__}: {str(e)[:80]}"
+        text = "".join(bl.text for bl in m.content if bl.type == "text")
+        usd = cost_usd(backend.MODEL, input_tokens=m.usage.input_tokens,
+                       output_tokens=m.usage.output_tokens,
+                       cache_write_tokens=getattr(m.usage, "cache_creation_input_tokens", 0) or 0,
+                       cache_read_tokens=getattr(m.usage, "cache_read_input_tokens", 0) or 0,
+                       batch=False)
+        return i, {"answer": text, "truncated": m.stop_reason == "max_tokens",
+                   "refused_flag": _is_refusal(text)}, usd, ""
+
+    rows: list[dict | None] = [None] * len(reqs)
+    actual, failed = 0.0, 0
+    with cf.ThreadPoolExecutor(max_workers=workers) as ex:
+        for i, res, usd, err in ex.map(one, list(enumerate(reqs))):
+            actual += usd
+            if res is None:
+                failed += 1
+                rows[i] = {**meta[i], "answer": None, "error": err}
+            else:
+                rows[i] = {**meta[i], **res}
+            done = sum(1 for r in rows if r is not None)
+            if done % 10 == 0:
+                C.log(f"[probe]   {done}/{len(reqs)} answered (${actual:.2f})")
+    ledger.settle(rid, actual)
+    C.write_jsonl(out_path, rows)
+    C.log(f"[probe] {label}: {len(reqs) - failed}/{len(reqs)} answered, ${actual:.2f} "
+          f"(ledger total ${ledger.spent:.2f})" + (f"  ⚠ {failed} failed" if failed else ""))
+    if failed > len(reqs) // 4:
+        raise SystemExit(f"{failed}/{len(reqs)} requests failed — the arm would be measuring "
+                         f"a sample, not the set")
+
+
 def run_batch(reqs, meta, ledger: Ledger, out_path, label: str) -> None:
+    import os
+    if os.environ.get("REMEASURE_SYNC") == "1":
+        return run_sync(reqs, meta, ledger, out_path, label)
     est = len(reqs) * 0.028          # measured ~$0.05 unbatched on this corpus
     rid = ledger.reserve(label, est)
     C.log(f"[probe] {label}: submitting {len(reqs)} requests (~${est:.2f}, "
