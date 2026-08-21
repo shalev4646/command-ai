@@ -50,6 +50,12 @@ swap_size_mb = 768
   # per question. Turn off with "0" and redeploy. ASCII only in this file:
   # flyctl's config parser rejected the Hebrew quote marks as control characters.
   RETRIEVE_GLOSSARY = "1"
+  # Serve the LEAD order's whole curated block (now digest-enriched) alongside
+  # the ranked chunks. Off in code; on here after the 2026-08-21 synchronous
+  # round measured the bundle (targeted anchors + this) up on ALL three sets —
+  # typical 8->13/40 with zero control flips, held-out 27->31/47, frozen
+  # 22->26/58 — at about +2,100 words (~+$0.02) per question. Turn off with "0".
+  RETRIEVE_FULL_BLOCKS = "1"
 
 [build]
 

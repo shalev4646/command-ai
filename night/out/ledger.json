@@ -1,7 +1,181 @@
 {
- "spent": 60.6253,
+ "spent": 68.7228,
  "reserved": 0.3706,
  "entries": [
+  {
+   "id": "anchors2:31.0116#20840-644",
+   "label": "anchors2:31.0116",
+   "estimate": 0.0524,
+   "actual": 0.027
+  },
+  {
+   "id": "anchors2:31.0513#20840-631",
+   "label": "anchors2:31.0513",
+   "estimate": 0.0547,
+   "actual": 0.0351
+  },
+  {
+   "id": "anchors2:31.0521#20840-634",
+   "label": "anchors2:31.0521",
+   "estimate": 0.0548,
+   "actual": 0.0334
+  },
+  {
+   "id": "anchors2:31.0606#20840-648",
+   "label": "anchors2:31.0606",
+   "estimate": 0.0503,
+   "actual": 0.0226
+  },
+  {
+   "id": "anchors2:32.0401#20840-647",
+   "label": "anchors2:32.0401",
+   "estimate": 0.0506,
+   "actual": 0.0229
+  },
+  {
+   "id": "anchors2:32.0402#20840-639",
+   "label": "anchors2:32.0402",
+   "estimate": 0.055,
+   "actual": 0.0273
+  },
+  {
+   "id": "anchors2:33.0201#20840-645",
+   "label": "anchors2:33.0201",
+   "estimate": 0.0504,
+   "actual": 0.0282
+  },
+  {
+   "id": "anchors2:33.0219#20840-635",
+   "label": "anchors2:33.0219",
+   "estimate": 0.0532,
+   "actual": 0.0312
+  },
+  {
+   "id": "anchors2:33.0304#20840-626",
+   "label": "anchors2:33.0304",
+   "estimate": 0.0654,
+   "actual": 0.0745
+  },
+  {
+   "id": "anchors2:33.0336#20840-649",
+   "label": "anchors2:33.0336",
+   "estimate": 0.0497,
+   "actual": 0.0241
+  },
+  {
+   "id": "anchors2:33.0351#20840-651",
+   "label": "anchors2:33.0351",
+   "estimate": 0.0492,
+   "actual": 0.0186
+  },
+  {
+   "id": "anchors2:35.0201#20840-640",
+   "label": "anchors2:35.0201",
+   "estimate": 0.0516,
+   "actual": 0.0223
+  },
+  {
+   "id": "anchors2:35.0206#20840-629",
+   "label": "anchors2:35.0206",
+   "estimate": 0.0573,
+   "actual": 0.0351
+  },
+  {
+   "id": "anchors2:35.0221#20840-633",
+   "label": "anchors2:35.0221",
+   "estimate": 0.054,
+   "actual": 0.0264
+  },
+  {
+   "id": "anchors2:35.0234#20840-637",
+   "label": "anchors2:35.0234",
+   "estimate": 0.0539,
+   "actual": 0.0301
+  },
+  {
+   "id": "anchors2:35.0306#20840-630",
+   "label": "anchors2:35.0306",
+   "estimate": 0.0541,
+   "actual": 0.0325
+  },
+  {
+   "id": "anchors2:35.0307#20840-638",
+   "label": "anchors2:35.0307",
+   "estimate": 0.0521,
+   "actual": 0.024
+  },
+  {
+   "id": "anchors2:35.0807#20840-636",
+   "label": "anchors2:35.0807",
+   "estimate": 0.0512,
+   "actual": 0.0236
+  },
+  {
+   "id": "anchors2:38.0102#20840-628",
+   "label": "anchors2:38.0102",
+   "estimate": 0.0588,
+   "actual": 0.0426
+  },
+  {
+   "id": "anchors2:61.0104#20840-627",
+   "label": "anchors2:61.0104",
+   "estimate": 0.0595,
+   "actual": 0.053
+  },
+  {
+   "id": "anchors2:61.0113#20840-652",
+   "label": "anchors2:61.0113",
+   "estimate": 0.0488,
+   "actual": 0.0169
+  },
+  {
+   "id": "anchors2:PM-33.0202#20840-646",
+   "label": "anchors2:PM-33.0202",
+   "estimate": 0.0503,
+   "actual": 0.0219
+  },
+  {
+   "id": "anchors2:PM-33.0213#20840-642",
+   "label": "anchors2:PM-33.0213",
+   "estimate": 0.0515,
+   "actual": 0.0555
+  },
+  {
+   "id": "anchors2:PM-33.0302#20840-624",
+   "label": "anchors2:PM-33.0302",
+   "estimate": 0.1149,
+   "actual": 0.2058
+  },
+  {
+   "id": "anchors2:PM-33.0333#20840-643",
+   "label": "anchors2:PM-33.0333",
+   "estimate": 0.0515,
+   "actual": 0.0878
+  },
+  {
+   "id": "anchors2:PM-33.0352#20840-632",
+   "label": "anchors2:PM-33.0352",
+   "estimate": 0.0535,
+   "actual": 0.054
+  },
+  {
+   "id": "anchors2:PM-34.0101#20840-625",
+   "label": "anchors2:PM-34.0101",
+   "estimate": 0.0822,
+   "actual": 0.0877
+  },
+  {
+   "id": "anchors2:PM-34.0205#20840-650",
+   "label": "anchors2:PM-34.0205",
+   "estimate": 0.0487,
+   "actual": 0.019
+  },
+  {
+   "id": "anchors2:זכויות-עבודה-מילואים#20840-641",
+   "label": "anchors2:זכויות-עבודה-מילואים",
+   "estimate": 0.0527,
+   "actual": 0.0386
+  },
   {
    "id": "anchors:21.0401#20804-196",
    "label": "anchors:21.0401",
@@ -1815,6 +1989,18 @@
    "actual": 0.0054
   },
   {
+   "id": "curate:35.0233#23128-655",
+   "label": "curate:35.0233",
+   "estimate": 0.0399,
+   "actual": 0.0679
+  },
+  {
+   "id": "curate:35.0233#23128-656",
+   "label": "curate:35.0233",
+   "estimate": 0.0399,
+   "actual": 0.1165
+  },
+  {
    "id": "curate:35.0233#36312-194",
    "label": "curate:35.0233",
    "estimate": 0.0399,
@@ -1885,6 +2071,18 @@
    "label": "curate:35.0501",
    "estimate": 0.0371,
    "actual": 0.0077
+  },
+  {
+   "id": "curate:35.0502#12172-653",
+   "label": "curate:35.0502",
+   "estimate": 0.0543,
+   "actual": 0.1236
+  },
+  {
+   "id": "curate:35.0502#12172-654",
+   "label": "curate:35.0502",
+   "estimate": 0.0543,
+   "actual": 0.1874
   },
   {
    "id": "curate:35.0502#15472-481",
@@ -3285,6 +3483,12 @@
    "actual": 0.0282
   },
   {
+   "id": "grade-after_v97#6460-662",
+   "label": "grade-after_v97",
+   "estimate": 0.042,
+   "actual": 0.0289
+  },
+  {
    "id": "grade-base30#10040-44",
    "label": "grade-base30",
    "estimate": 0.0,
@@ -3339,6 +3543,12 @@
    "actual": 0.0221
   },
   {
+   "id": "grade-fresh_v97#22964-658",
+   "label": "grade-fresh_v97",
+   "estimate": 0.036,
+   "actual": 0.0228
+  },
+  {
    "id": "grade-heldout_after#18052-310",
    "label": "grade-heldout_after",
    "estimate": 0.036,
@@ -3391,6 +3601,12 @@
    "label": "grade-ho_v96",
    "estimate": 0.036,
    "actual": 0.0246
+  },
+  {
+   "id": "grade-ho_v97#8900-660",
+   "label": "grade-ho_v97",
+   "estimate": 0.036,
+   "actual": 0.0254
   },
   {
    "id": "grade-hyde30#13984-324",
@@ -3489,6 +3705,12 @@
    "actual": 1.3618
   },
   {
+   "id": "probe-after_v97#6460-661",
+   "label": "probe-after_v97",
+   "estimate": 1.568,
+   "actual": 2.5167
+  },
+  {
    "id": "probe-base30b#3556-321",
    "label": "probe-base30b",
    "estimate": 0.84,
@@ -3517,6 +3739,12 @@
    "label": "probe-fresh_v96",
    "estimate": 1.344,
    "actual": 1.2099
+  },
+  {
+   "id": "probe-fresh_v97#22964-657",
+   "label": "probe-fresh_v97",
+   "estimate": 1.344,
+   "actual": 1.7702
   },
   {
    "id": "probe-heldout_after#18052-309",
@@ -3565,6 +3793,12 @@
    "label": "probe-ho_v96",
    "estimate": 1.344,
    "actual": 1.3977
+  },
+  {
+   "id": "probe-ho_v97#8900-659",
+   "label": "probe-ho_v97",
+   "estimate": 1.344,
+   "actual": 2.0164
   },
   {
    "id": "probe-hyde30#13984-323",

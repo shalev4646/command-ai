@@ -1,0 +1,18 @@
+{
+ "tag": "ho_v97",
+ "before_full": 12,
+ "before_n": 24,
+ "after_full": 11,
+ "after_n": 24,
+ "before_parts": [
+  27,
+  47
+ ],
+ "after_parts": [
+  31,
+  47
+ ],
+ "flips": 3,
+ "controls": 14,
+ "control_flips": 1
+}

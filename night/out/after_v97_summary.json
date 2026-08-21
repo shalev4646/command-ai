@@ -1,0 +1,18 @@
+{
+ "tag": "after_v97",
+ "before_full": 8,
+ "before_n": 28,
+ "after_full": 8,
+ "after_n": 28,
+ "before_parts": [
+  22,
+  58
+ ],
+ "after_parts": [
+  26,
+  58
+ ],
+ "flips": 5,
+ "controls": 16,
+ "control_flips": 4
+}
