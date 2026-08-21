@@ -1,5 +1,6 @@
 import base64
 import datetime as _dt
+import hmac
 import html
 import inspect
 from pathlib import Path
@@ -1084,10 +1085,19 @@ def _render_admin():
         return
     if not st.session_state.get("admin_ok"):
         entered = st.text_input("סיסמת מנהל", type="password")
-        if entered and entered == pw:
-            st.session_state.admin_ok = True
-            st.rerun()
-        elif entered:
+        if entered:
+            # compare_digest, not ==: a plain comparison returns on the first
+            # wrong byte and leaks the prefix through timing. And the wrong
+            # guesses are counted PROCESS-wide (metrics), so opening a new tab
+            # does not hand the attacker a fresh budget — ?admin=1 is public
+            # and the dashboard holds every question the pilot ever asked.
+            ok = hmac.compare_digest(entered, pw)
+            if not ok:
+                time.sleep(metrics.admin_backoff())
+            metrics.note_admin_attempt(ok)
+            if ok:
+                st.session_state.admin_ok = True
+                st.rerun()
             st.error("סיסמה שגויה")
         return
 
@@ -3845,8 +3855,17 @@ if "suggested" not in st.session_state:
 suggested_questions = st.session_state.get("suggested") or _FALLBACK_QUESTIONS.get(st.session_state.role, _FALLBACK_QUESTIONS["soldier"])
 
 
+# A question is a few lines; the longest suggested one is ~90 characters. The
+# cap exists because nothing else bounds what reaches the API: every question
+# is sent to three Haiku calls and one Opus call, so a pasted novel is billed
+# as one question against a 5-a-day quota. Clamped HERE, where the chat box,
+# the suggestion chips and the escalation strip all converge — max_chars on the
+# widget is a courtesy to the typist, not a guarantee about the wire.
+_MAX_QUESTION_CHARS = 1200
+
+
 def queue_question(q: str):
-    st.session_state.pending_question = q
+    st.session_state.pending_question = (q or "")[:_MAX_QUESTION_CHARS]
 
 def archive_current_conversation():
     """Save the active conversation into history before it's cleared."""
@@ -3918,7 +3937,8 @@ def _letters_dialog():
     for i, field in enumerate(LETTER_TYPES[kind]["fields"]):
         label, placeholder = field[0], field[1]
         details[label] = st.text_input(
-            label, placeholder=placeholder or None, key=f"letter_{kind}_{i}"
+            label, placeholder=placeholder or None, key=f"letter_{kind}_{i}",
+            max_chars=300,  # a form field, and every character is billed
         )
     # label has no ✍️ emoji — the colorful glyph clashed with the mock's clean
     # look; the pen is drawn by CSS (st-key-letter_go p::after mask) in accent
@@ -5069,7 +5089,7 @@ def _miluim_guide_dialog():
     for i, field in enumerate(lt["fields"]):
         label, placeholder = field[0], field[1]
         details[label] = st.text_input(label, placeholder=placeholder or None,
-                                       key=f"mil_letter_f{i}")
+                                       key=f"mil_letter_f{i}", max_chars=300)
     if st.button("נסח לי את מכתב הבקשה", key="mil_letter_go", use_container_width=True):
         quota = metrics.reserve(st.session_state.session_id)
         if quota != "ok":
@@ -6910,15 +6930,20 @@ def _settings_contact():
         "לעיון ומחיקה של הנתונים שלך — כאן המקום.</div>", unsafe_allow_html=True)
 
     if st.session_state.get("report_sent"):
+        _bt, _bs = "הדיווח נשלח", "תודה. אנחנו קוראים כל דיווח."
+        if st.session_state.get("report_capped"):
+            _bt = "הדיווח לא נשלח"
+            _bs = ("נשלחו היום הרבה דיווחים מהמכשיר הזה. אפשר לנסות שוב מחר, "
+                   f"או לכתוב ישירות ל-{_CONTACT_EMAIL}.")
         st.markdown(
             "<div class='cai-banner'><div class='bi'></div>"
-            "<div style='flex:1'><div class='bt'>הדיווח נשלח</div>"
-            "<div class='bs'>תודה. אנחנו קוראים כל דיווח.</div></div></div>",
+            f"<div style='flex:1'><div class='bt'>{html.escape(_bt)}</div>"
+            f"<div class='bs'>{html.escape(_bs)}</div></div></div>",
             unsafe_allow_html=True)
 
     with st.container(key="cai_report_box"):
         _txt = st.text_area(
-            "מה קרה?", key="report_text", height=130,
+            "מה קרה?", key="report_text", height=130, max_chars=2000,
             placeholder="למשל: שאלתי על ימי חופשה בקבע וקיבלתי תשובה על שירות חובה.",
             label_visibility="collapsed")
         if st.button("שליחת דיווח", key="report_send", use_container_width=True,
@@ -6937,7 +6962,9 @@ def _settings_contact():
                 elif _last_a and _m.get("role") == "user":
                     _last_q = _m.get("content", "")
                     break
-            metrics.log_feedback(
+            # the flood cap can refuse this row; "הדיווח נשלח" would then be
+            # the same class of lie this screen exists to prevent
+            _sent = metrics.log_feedback(
                 session_id=st.session_state.session_id,
                 device_id=st.session_state.get("device_id", ""),
                 role=st.session_state.role or "",
@@ -6948,6 +6975,7 @@ def _settings_contact():
                 comment=(_txt or "").strip()[:2000],
             )
             st.session_state.report_sent = True
+            st.session_state.report_capped = not _sent
             # pop, never assign: a widget's key cannot be written after the
             # widget is instantiated in the same run (StreamlitAPIException —
             # caught by the headless smoke test). Dropping the key makes the
@@ -8498,7 +8526,7 @@ for msg_i, msg in enumerate(st.session_state.messages):
                 fb_col, send_col = st.columns([4, 1])
                 fb_comment = fb_col.text_input(
                     "מה היה חסר או שגוי?", key=f"fbc_{mid}",
-                    label_visibility="collapsed",
+                    label_visibility="collapsed", max_chars=500,
                     placeholder="מה היה חסר או שגוי? (לא חובה)",
                 )
                 if send_col.button("שלח", key=f"fbs_{mid}") and fb_comment.strip():
@@ -8538,7 +8566,7 @@ for msg_i, msg in enumerate(st.session_state.messages):
 #    below clears on this run instead of lingering above the first streaming
 #    answer (2026-07-21 phone video: title + all suggested cards stayed
 #    pinned above the conversation for the whole ~18s of the first answer). ──
-if prompt := st.chat_input("שאל על פקודה..."):
+if prompt := st.chat_input("שאל על פקודה...", max_chars=_MAX_QUESTION_CHARS):
     queue_question(prompt)
     st.rerun()
 

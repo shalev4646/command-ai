@@ -31,6 +31,18 @@ USER_DAILY_LIMIT = 5     # שאלות ליום לכל session (טאב דפדפן
 # של יום מלא ≈ $8 (Opus 4.8) — עדיין רצפת-ביטחון, לא שימוש צפוי.
 GLOBAL_DAILY_LIMIT = 80
 
+# Feedback rides no quota — it costs no API call — but it does write a row to a
+# Sheet, and nothing stopped a script (or a bored thumb) from writing forever.
+# The cap is per session per day and sits far above real use: a pilot tester
+# rating every one of their 5 answers, changing their mind, and filing a report
+# lands around 12. Passing it is a flood, not a user.
+FEEDBACK_DAILY_LIMIT = 20
+
+# Wrong admin passwords, process-wide. Per-SESSION would reset with every new
+# tab, which is one keystroke for an attacker; the dashboard holds every
+# question and report the pilot ever wrote, and ?admin=1 is public.
+_ADMIN_FAIL_CAP = 8
+
 # Opus 4.8 pricing, $/MTok — for the per-question cost estimate in the log
 _PRICE_IN, _PRICE_OUT = 5.0, 25.0
 _PRICE_CACHE_READ, _PRICE_CACHE_WRITE = 0.5, 6.25
@@ -67,6 +79,8 @@ def _store() -> dict:
         "day": date.today().isoformat(),
         "global_count": 0,
         "session_counts": {},
+        "feedback_counts": {},
+        "admin_fails": 0,
         "questions": deque(maxlen=200),
         "feedback": deque(maxlen=200),
         "sheets_status": "not_configured",  # not_configured | ok | error
@@ -80,6 +94,7 @@ def _reset_if_new_day(s: dict) -> None:
         s["day"] = today
         s["global_count"] = 0
         s["session_counts"] = {}
+        s["feedback_counts"] = {}
 
 
 def reserve(session_id: str) -> str:
@@ -109,6 +124,37 @@ def refund(session_id: str) -> None:
         s["global_count"] = max(0, s["global_count"] - 1)
         if session_id in s["session_counts"]:
             s["session_counts"][session_id] = max(0, s["session_counts"][session_id] - 1)
+
+
+def feedback_allowed(session_id: str) -> bool:
+    """Claim one feedback row for this session today. False once past the cap.
+
+    Deliberately NOT reserve(): feedback must never consume a question the
+    soldier paid for, and a thumb must never be refused because the answers
+    ran out.
+    """
+    s = _store()
+    with s["lock"]:
+        _reset_if_new_day(s)
+        counts = s.setdefault("feedback_counts", {})
+        n = counts.get(session_id, 0)
+        if n >= FEEDBACK_DAILY_LIMIT:
+            return False
+        counts[session_id] = n + 1
+        return True
+
+
+def admin_backoff() -> float:
+    """Seconds to stall the next admin attempt, doubling per wrong password."""
+    s = _store()
+    with s["lock"]:
+        return float(min(2 ** s.get("admin_fails", 0), _ADMIN_FAIL_CAP))
+
+
+def note_admin_attempt(ok: bool) -> None:
+    s = _store()
+    with s["lock"]:
+        s["admin_fails"] = 0 if ok else s.get("admin_fails", 0) + 1
 
 
 def estimate_cost(usage: dict | None) -> float:
@@ -238,7 +284,14 @@ def log_question(session_id: str, role: str, question: str, answer: str,
 
 def log_feedback(session_id: str, role: str, verdict: str, question: str,
                  answer: str, sources: list[dict] | None, comment: str = "",
-                 device_id: str = "") -> None:
+                 device_id: str = "") -> bool:
+    """Record one thumb / comment / report. False if the session hit the cap.
+
+    The gate lives HERE rather than at the four call sites: a fifth one added
+    later would silently reopen the flood.
+    """
+    if not feedback_allowed(session_id):
+        return False
     record = {
         "ts": datetime.now().isoformat(timespec="seconds"),
         "session": session_id,
@@ -255,6 +308,7 @@ def log_feedback(session_id: str, role: str, verdict: str, question: str,
     }
     _store()["feedback"].appendleft(record)
     _persist("feedback", _FEEDBACK_COLUMNS, record)
+    return True
 
 
 def dashboard_data() -> dict:
