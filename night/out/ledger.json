@@ -1,5 +1,5 @@
 {
- "spent": 68.7228,
+ "spent": 69.4723,
  "reserved": 0.3706,
  "entries": [
   {
@@ -3027,6 +3027,12 @@
    "actual": 0.0084
   },
   {
+   "id": "deepen:31.0103#13716-670",
+   "label": "deepen:31.0103",
+   "estimate": 0.053,
+   "actual": 0.0733
+  },
+  {
    "id": "deepen:33.0201#19472-303",
    "label": "deepen:33.0201",
    "estimate": 0.0417,
@@ -3055,6 +3061,12 @@
    "label": "deepen:33.0351",
    "estimate": 0.0405,
    "actual": 0.0297
+  },
+  {
+   "id": "deepen:35.0233#13716-672",
+   "label": "deepen:35.0233",
+   "estimate": 0.0424,
+   "actual": 0.0962
   },
   {
    "id": "deepen:35.0822#1444-540",
@@ -3093,6 +3105,12 @@
    "actual": 0.1696
   },
   {
+   "id": "deepen:PM-33.0302#13716-669",
+   "label": "deepen:PM-33.0302",
+   "estimate": 0.1095,
+   "actual": 0.2443
+  },
+  {
    "id": "deepen:PM-33.0302#19472-301",
    "label": "deepen:PM-33.0302",
    "estimate": 0.1095,
@@ -3103,6 +3121,12 @@
    "label": "deepen:PM-33.0302",
    "estimate": 0.1095,
    "actual": 0.6007
+  },
+  {
+   "id": "deepen:PM-35.0402#13716-671",
+   "label": "deepen:PM-35.0402",
+   "estimate": 0.0778,
+   "actual": 0.1583
   },
   {
    "id": "deepen:PM-35.0402#1444-542",
@@ -3489,6 +3513,12 @@
    "actual": 0.0289
   },
   {
+   "id": "grade-after_v97hn#7984-665",
+   "label": "grade-after_v97hn",
+   "estimate": 0.042,
+   "actual": 0.0335
+  },
+  {
    "id": "grade-base30#10040-44",
    "label": "grade-base30",
    "estimate": 0.0,
@@ -3519,10 +3549,22 @@
    "actual": null
   },
   {
+   "id": "grade-base_v94hn#7984-668",
+   "label": "grade-base_v94hn",
+   "estimate": 0.042,
+   "actual": 0.0328
+  },
+  {
    "id": "grade-fresh_base#8160-550",
    "label": "grade-fresh_base",
    "estimate": 0.036,
    "actual": 0.0223
+  },
+  {
+   "id": "grade-fresh_basehn#7984-666",
+   "label": "grade-fresh_basehn",
+   "estimate": 0.036,
+   "actual": 0.0264
   },
   {
    "id": "grade-fresh_v95#10888-558",
@@ -3547,6 +3589,12 @@
    "label": "grade-fresh_v97",
    "estimate": 0.036,
    "actual": 0.0228
+  },
+  {
+   "id": "grade-fresh_v97hn#7984-663",
+   "label": "grade-fresh_v97hn",
+   "estimate": 0.036,
+   "actual": 0.027
   },
   {
    "id": "grade-heldout_after#18052-310",
@@ -3585,6 +3633,12 @@
    "actual": 0.0245
   },
   {
+   "id": "grade-ho_v94hn#7984-667",
+   "label": "grade-ho_v94hn",
+   "estimate": 0.036,
+   "actual": 0.0283
+  },
+  {
    "id": "grade-ho_v95b#19780-555",
    "label": "grade-ho_v95b",
    "estimate": 0.036,
@@ -3607,6 +3661,12 @@
    "label": "grade-ho_v97",
    "estimate": 0.036,
    "actual": 0.0254
+  },
+  {
+   "id": "grade-ho_v97hn#7984-664",
+   "label": "grade-ho_v97hn",
+   "estimate": 0.036,
+   "actual": 0.0294
   },
   {
    "id": "grade-hyde30#13984-324",
