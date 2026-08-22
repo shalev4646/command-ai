@@ -439,13 +439,22 @@ def _append_new(chunks: list[dict], extras, limit: int | None) -> list[dict]:
 def extend_with_hypothetical(chunks: list[dict], question: str, role: str,
                              route: set[str] | None = None) -> list[dict]:
     """Append up to HYDE_EXTRA_CHUNKS chunks the hypothetical finds and the
-    question did not. Appended, so the question's own ranking is untouched."""
+    question did not. Appended, so the question's own ranking is untouched.
+
+    The hypothetical retrieval is deliberately UNBOOSTED: the seat exists to
+    add HyDE's independent opinion, and the router already had its say in the
+    question retrieval. Boosted, a mis-routed order sitting within the +0.05
+    bonus of HyDE's true pick steals the seat — measured live 2026-08-23 on
+    the late-arrival question, where PM-33.0119 (routed, wrong) displaced
+    PM-33.0302 (HyDE's #1, answering) and kept the answering order out of the
+    window. The empty boost must be set(), never None — None re-buys the
+    router inside retrieve_for_role."""
     if not RETRIEVE_HYDE or HYDE_EXTRA_CHUNKS <= 0:
         return chunks
     hyp = hypothetical(question)
     if not hyp:
         return chunks
-    return _append_new(chunks, retrieve_for_role(hyp, role, route=route, widen=False,
+    return _append_new(chunks, retrieve_for_role(hyp, role, route=set(), widen=False,
                                                  expand_terms=False),
                        HYDE_EXTRA_CHUNKS)
 

@@ -121,6 +121,37 @@ def main() -> int:
         check("widen=False suppresses the extension",
               len(narrow) == len(base) and CALLS == [], f"got {len(narrow)}, calls={len(CALLS)}")
 
+        # the hypothetical retrieval must carry NO router boost: the ninth seat
+        # exists to add HyDE's independent opinion, and the router already had
+        # its say in the question retrieval. Boosted, a mis-routed order within
+        # the +0.05 bonus of HyDE's true pick steals the seat (measured live
+        # 2026-08-23: PM-33.0119 displaced PM-33.0302 on the late-arrival
+        # question, keeping the answering order out of the window). The empty
+        # boost must arrive as set(), never None — None buys a second router
+        # call per question, which the CALLS count below would show.
+        with_flags(hyde=True)
+        backend.client = _FakeClient(canned)
+        seen: list[tuple[str, set]] = []
+        real_retrieve = backend.retrieve
+
+        def recording_retrieve(query, *a, **kw):
+            seen.append((query, set(kw.get("boost_docs") or set())))
+            return real_retrieve(query, *a, **kw)
+
+        backend.retrieve = recording_retrieve
+        try:
+            routed = backend.retrieve_for_role(QUESTION, ROLE, route={"31.0102"})
+        finally:
+            backend.retrieve = real_retrieve
+        hyp_boosts = [b for q, b in seen if q == canned]
+        check("the hypothetical retrieval carries no router boost",
+              bool(hyp_boosts) and all(b == set() for b in hyp_boosts),
+              f"boosts={hyp_boosts}")
+        check("no second router purchase inside the extension",
+              len(CALLS) == 1, f"calls={len(CALLS)}")
+        check("the extension still appends with a route present",
+              len(routed) == backend.MAX_CONTEXT_CHUNKS + 1, f"got {len(routed)}")
+
 
         # --- router seats and full blocks -----------------------------------
         # both off: byte-identical to hyde1
