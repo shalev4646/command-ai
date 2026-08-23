@@ -286,7 +286,7 @@ def _index_document_locked(doc: dict, save_cache: bool) -> int:
     _corpus = None  # upserts invalidate the in-memory corpus cache
     _vocab = None   # ...and the typo-gate vocabulary derived from it
     _folded_corpus_cache = None  # ...and the folded copy df counting reads
-    _df_counts.clear()           # ...and the corpus term frequencies
+    _term_hits.clear()           # ...and the per-term corpus hit masks
     col = _get_collection()
     doc_id = doc.get("document_id", "unknown")
     title = doc.get("title", "")
@@ -499,10 +499,15 @@ def retrieve(
     if doc_ids is not None and not doc_ids:
         return []
 
-    corpus = _get_corpus()
+    full = _get_corpus()
     if doc_ids is not None:
         allowed = set(doc_ids)
-        corpus = [c for c in corpus if c["doc_id"] in allowed]
+        picked = [i for i, c in enumerate(full) if c["doc_id"] in allowed]
+    else:
+        picked = list(range(len(full)))
+    # positions into the FULL corpus ride alongside the candidates: the lexical
+    # rerank's per-term hit masks are indexed by them (see _term_hit_mask)
+    corpus = [full[i] for i in picked]
     if not corpus:
         return []
 
@@ -528,7 +533,7 @@ def retrieve(
         for c in corpus
     ]
 
-    _lexical_rerank(query, candidates)
+    _lexical_rerank(query, candidates, picked)
 
     # Router bonus — real chunks only, never anchors. Boosting anchors too
     # cost 12 of the 382 gated questions: an anchor's score becomes its
@@ -707,7 +712,18 @@ _vocab: set[str] | None = None
 # 43% of the index — but it measures worse: 273/282 on the adversarial set
 # against 278/282 with them in.
 _folded_corpus_cache: list[str] | None = None
-_df_counts: dict[tuple[str, ...], int] = {}
+# variant-set -> bool mask over the folded corpus. Replaces the old df-count
+# cache: the count is the mask's sum, and the mask is also this query's match
+# row, so one scan per term serves both and every later query with that term
+# pays an array lookup. One byte per chunk per term; the cap is memory, not
+# correctness (query vocabulary is unbounded).
+_term_hits: dict[tuple[str, ...], np.ndarray] = {}
+# One pass over the 424 gate questions interns 1,967 distinct terms — about
+# 4.6 new ones per question, since askers share a vocabulary. At one byte per
+# chunk a mask is ~10KB, so this ceiling is ~50MB and a full flush costs a few
+# cold questions roughly every thousand. Even the question that pays a cold
+# scan pays what EVERY question paid before the cache existed.
+_MAX_TERM_MASKS = 5000
 
 # A term appearing in 5% of the index weighs exactly 1.0. Both the term's idf
 # and this reference are functions of df/N, so neither carries an N that grows:
@@ -791,6 +807,34 @@ def _folded_corpus() -> list[str]:
     return _folded_corpus_cache
 
 
+def _term_hit_mask(variants: set[str]) -> np.ndarray:
+    """Which corpus chunks contain any of `variants` — one scan per term, ever.
+
+    The same corpus scan used to run twice per term PER QUERY: once here for
+    the df count, once in _lexical_rerank to build that query's match row.
+    They are the same predicate, so one cached mask serves both and every
+    later appearance of the term — in this query, the next one, another
+    session — costs an array lookup instead of a scan over every chunk.
+
+    This is the app's concurrency ceiling, not a per-user cost: Streamlit
+    serves every session from one process, and the scan holds the GIL. It was
+    88% of a question's local CPU when measured on 2026-08-23, where the whole
+    machine flat-lined at 0.63 questions/second no matter how many askers.
+
+    Cleared with the other corpus caches on upsert (_index_document_locked).
+    """
+    key = tuple(sorted(variants))
+    mask = _term_hits.get(key)
+    if mask is None:
+        folded = _folded_corpus()
+        mask = np.fromiter((any(v in t for v in variants) for t in folded),
+                           dtype=bool, count=len(folded))
+        if len(_term_hits) > _MAX_TERM_MASKS:
+            _term_hits.clear()
+        _term_hits[key] = mask
+    return mask
+
+
 def _term_weight(variants: set[str]) -> float:
     """Rarity weight for one query term. Three properties, each load-bearing
     for keeping the ranking still while the corpus grows:
@@ -810,18 +854,13 @@ def _term_weight(variants: set[str]) -> float:
     Capped at 1.5 so a term nothing else contains cannot outbid the vector
     score outright. The cap is a plateau: 1.4, 1.5 and 1.6 measure identically.
     """
-    key = tuple(sorted(variants))
-    df = _df_counts.get(key)
-    if df is None:
-        df = sum(1 for t in _folded_corpus() if any(v in t for v in variants))
-        if len(_df_counts) > 20000:
-            _df_counts.clear()   # query vocabulary is unbounded; this is a cache
-        _df_counts[key] = df
+    df = int(_term_hit_mask(variants).sum())
     w = math.log(1.0 + len(_folded_corpus()) / (1.0 + df)) / _IDF_REFERENCE
     return round(min(w, _IDF_CAP) / _IDF_STEP) * _IDF_STEP
 
 
-def _lexical_rerank(query: str, candidates: list[dict]) -> None:
+def _lexical_rerank(query: str, candidates: list[dict],
+                    positions: list[int]) -> None:
     """Blend a lexical-overlap bonus into each candidate's vector score.
 
     Pure vector retrieval dilutes rare, decisive terms (e.g. "ריתוק משקי")
@@ -836,14 +875,17 @@ def _lexical_rerank(query: str, candidates: list[dict]) -> None:
         return
 
     weights = [_term_weight(v) for v in terms]
-    texts = [c["text"].translate(_FINALS) for c in candidates]
-    matches = [
-        [any(v in text for v in variants) for text in texts]
-        for variants in terms
-    ]
-    for i, c in enumerate(candidates):
-        overlap = sum(w for w, m in zip(weights, matches) if m[i])
-        c["score"] = round(c["score"] + _LEXICAL_WEIGHT * overlap / len(terms), 3)
+    pos = np.asarray(positions, dtype=np.int64)
+    # Accumulated in term order, exactly as the per-candidate sum() was. A
+    # non-matching term contributes an exact 0.0, which no float addition can
+    # perturb, so the running total hits the same bits in the same order —
+    # verified over the 415 gate cases, byte-identical rankings and scores.
+    overlap = np.zeros(len(candidates), dtype=np.float64)
+    for w, variants in zip(weights, terms):
+        if w:
+            overlap += w * _term_hit_mask(variants)[pos]
+    for c, o in zip(candidates, overlap):
+        c["score"] = round(c["score"] + _LEXICAL_WEIGHT * float(o) / len(terms), 3)
 
 
 def _expand_neighbors(chunks: list[dict], corpus: list[dict], top_k: int = 2) -> list[dict]:
