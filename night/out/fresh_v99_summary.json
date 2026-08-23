@@ -1,0 +1,18 @@
+{
+ "tag": "fresh_v99",
+ "before_full": 5,
+ "before_n": 24,
+ "after_full": 5,
+ "after_n": 24,
+ "before_parts": [
+  13,
+  40
+ ],
+ "after_parts": [
+  12,
+  40
+ ],
+ "flips": 6,
+ "controls": 17,
+ "control_flips": 4
+}

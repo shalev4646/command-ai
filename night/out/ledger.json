@@ -1,5 +1,5 @@
 {
- "spent": 69.4723,
+ "spent": 73.4218,
  "reserved": 0.3706,
  "entries": [
   {
@@ -3519,6 +3519,12 @@
    "actual": 0.0335
   },
   {
+   "id": "grade-after_v99#13800-678",
+   "label": "grade-after_v99",
+   "estimate": 0.042,
+   "actual": 0.0299
+  },
+  {
    "id": "grade-base30#10040-44",
    "label": "grade-base30",
    "estimate": 0.0,
@@ -3597,6 +3603,12 @@
    "actual": 0.027
   },
   {
+   "id": "grade-fresh_v99#15208-674",
+   "label": "grade-fresh_v99",
+   "estimate": 0.036,
+   "actual": 0.0245
+  },
+  {
    "id": "grade-heldout_after#18052-310",
    "label": "grade-heldout_after",
    "estimate": 0.036,
@@ -3667,6 +3679,12 @@
    "label": "grade-ho_v97hn",
    "estimate": 0.036,
    "actual": 0.0294
+  },
+  {
+   "id": "grade-ho_v99#14220-676",
+   "label": "grade-ho_v99",
+   "estimate": 0.036,
+   "actual": 0.0263
   },
   {
    "id": "grade-hyde30#13984-324",
@@ -3771,6 +3789,12 @@
    "actual": 2.5167
   },
   {
+   "id": "probe-after_v99#13800-677",
+   "label": "probe-after_v99",
+   "estimate": 1.568,
+   "actual": 1.3451
+  },
+  {
    "id": "probe-base30b#3556-321",
    "label": "probe-base30b",
    "estimate": 0.84,
@@ -3805,6 +3829,12 @@
    "label": "probe-fresh_v97",
    "estimate": 1.344,
    "actual": 1.7702
+  },
+  {
+   "id": "probe-fresh_v99#15208-673",
+   "label": "probe-fresh_v99",
+   "estimate": 1.344,
+   "actual": 1.2542
   },
   {
    "id": "probe-heldout_after#18052-309",
@@ -3859,6 +3889,12 @@
    "label": "probe-ho_v97",
    "estimate": 1.344,
    "actual": 2.0164
+  },
+  {
+   "id": "probe-ho_v99#14220-675",
+   "label": "probe-ho_v99",
+   "estimate": 1.344,
+   "actual": 1.2695
   },
   {
    "id": "probe-hyde30#13984-323",
