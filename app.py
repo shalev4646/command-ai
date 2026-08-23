@@ -8429,15 +8429,21 @@ def _clause_dialog(primary: dict, page: int | None, full_href: str | None) -> No
     # them "פ״מ" (the doc_id there is a slug, not an order number). Show
     # "מקור אזרחי · {kind}"; kind comes from the doc's civil_label and
     # defaults to "חוק" (the pre-existing single civil doc).
+    # PRECEDENCE: what a document says about itself beats anything derived
+    # from its id. A label is written by hand for a document that the id
+    # describes wrongly, so letting the id win defeats the exact case the
+    # label exists for — 58.0301 parses as a perfectly good order number and
+    # is a REVOKED order, and with the id first its "⚠ פקודה מבוטלת" label
+    # rendered as a plain "פ״מ 58.0301" (caught 2026-08-24, before deploy).
     if primary.get("civil_source"):
         kind = (primary.get("civil_label") or "חוק").strip() or "חוק"
         sub_parts.append(f"מקור אזרחי · {html.escape(kind)}")
+    elif primary.get("civil_label"):
+        # a military source the id describes wrongly or not at all: הוראת קבע
+        # אכ״א, an איגרת summarising one, a revoked order. Show what it says.
+        sub_parts.append(html.escape((primary.get("civil_label") or "").strip()))
     elif order and _ORDER_NUMBER.match(order):
         sub_parts.append(f"פ״מ {html.escape(order)}")
-    elif primary.get("civil_label"):
-        # a named military source that is not a פ״מ — e.g. הוראת קבע אכ״א,
-        # whose doc_id is a slug. Show the name the document gives itself.
-        sub_parts.append(html.escape((primary.get("civil_label") or "").strip()))
     # else: no line at all. The doc_id is a slug, and printing "פ״מ <slug>"
     # told the soldier the source was a General Staff order when it was not —
     # true of HKA-31-08-01 and 33-05-01, both הוראות קבע אכ״א (2026-08-24).

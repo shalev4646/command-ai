@@ -134,6 +134,42 @@ def test_no_document_is_announced_as_an_order_it_is_not():
         f"classification line; give them civil_label: {bare}")
 
 
+def test_an_explicit_label_beats_the_id_derived_one():
+    """A hand-written label exists BECAUSE the id describes the document wrongly.
+
+    58.0301 is the case that proves it: a revoked order whose id parses as a
+    perfectly ordinary order number. It was tagged
+    "פ״מ 58.0301 — ⚠ פקודה מבוטלת", and while the id-derived branch ran first
+    the card rendered a plain "פ״מ 58.0301" — the warning was written, stored,
+    and silently dropped at the last step, in front of a commander.
+
+    So: civil_source first, then the document's own label, and only then the
+    number derived from the id.
+    """
+    import re
+    order_number = re.compile(r"^\d{1,2}\.\d{3,4}$")
+
+    def card_line(src):
+        did = (src.get("doc_id") or "").strip()
+        ident = did[3:] if did.upper().startswith("PM-") else did
+        if src.get("civil_source"):
+            return "מקור אזרחי · " + ((src.get("civil_label") or "חוק").strip() or "חוק")
+        if src.get("civil_label"):
+            return (src.get("civil_label") or "").strip()
+        if ident and order_number.match(ident):
+            return f"פ״מ {ident}"
+        return ""
+
+    for doc_id, d in _docs().items():
+        label = (d.get("civil_label") or "").strip()
+        if not label or d.get("civil_source"):
+            continue
+        src = {"doc_id": doc_id, "civil_source": False, "civil_label": label}
+        assert card_line(src) == label, (
+            f"{doc_id} carries an explicit label that the card does not show — "
+            f"got {card_line(src)!r}, expected {label!r}")
+
+
 def test_real_order_numbers_are_still_recognised():
     import re
     order_number = re.compile(r"^\d{1,2}\.\d{3,4}$")
