@@ -85,6 +85,10 @@ except Exception:
     # same fail-closed degradation: with no markers to match, a refusal falls
     # back to the original neutral "לא נמצא במאגר" chip
     _MARK_OOS = _MARK_MISS = "\x00"
+try:
+    import out_of_scope as _oos
+except Exception:
+    _oos = None
 # Deterministic, order-cited lookup tools (no LLM, no quota). Defensive
 # imports like the sibling modules above: a stale cached cloud build pairing
 # a new app.py with an older tree just hides the tool's button.
@@ -2545,6 +2549,13 @@ html:not(.cai-standalone) [data-testid="stBottom"] {{
 .cai-escal-note {{
     font: 400 11px Heebo, sans-serif; color: var(--text-faint);
     margin-top: 5px; line-height: 1.5;
+}}
+/* the out-of-scope referral's reading link (kol-zchut). Underlined so it is
+   obviously a link and not another chip — it leaves the app, and the chips
+   above it never do. */
+.cai-escal-link {{
+    color: rgba(236,237,230,.72); text-decoration: underline;
+    text-underline-offset: 2px; white-space: nowrap;
 }}
 
 /* ── "הצג סעיף מקור" button — native (opens the in-app clause dialog, so
@@ -8295,6 +8306,50 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
     )
 
 
+def _out_of_scope_destination(content: str, question: str) -> dict | None:
+    """The verified door for an answer that said no order governs the question.
+
+    Two gates, both cheap: the ANSWER must carry one of the two routing markers
+    the prompt dictates (`scope_routes.MARK_MISSING` / `MARK_OUT_OF_SCOPE`), and
+    the QUESTION must fall in a family `out_of_scope` has a verified
+    destination for. Either gate closed → None, and the ordinary escalation
+    chain renders as before.
+
+    getattr/None-guard like the sibling deterministic tools: a stale cached
+    cloud build pairing a new app.py with an older tree just hides the strip.
+    """
+    if _oos is None or not content:
+        return None
+    if _MARK_MISS not in content and _MARK_OOS not in content:
+        return None
+    fn = getattr(_oos, "destination_for", None)
+    return fn(question) if fn else None
+
+
+def _out_of_scope_strip(dest: dict) -> None:
+    """"לאן כן פונים" — the one row that turns an honest "no such rule" into a
+    next step. Measured on 2026-08-23: of the 17 answers the arbitration
+    confirmed were RIGHT to answer nothing, zero told the soldier where to go.
+    """
+    link = ""
+    if dest.get("link"):
+        text, url = dest["link"]
+        link = (f" <a class='cai-escal-link' href='{html.escape(url)}' "
+                f"target='_blank' rel='noopener noreferrer'>"
+                f"{html.escape(text)}</a>")
+    st.markdown(
+        f"<div class='cai-escal'>"
+        f"<div class='cai-escal-row'>"
+        f"<span class='cai-escal-title'>{_isvg(_I_COMPASS, size=12)} לאן כן פונים</span>"
+        f"<span class='cai-escal-step'>{html.escape(dest['label'])}</span>"
+        f"</div>"
+        f"<div class='cai-escal-note'>{html.escape(dest['where'])}<br>"
+        f"{html.escape(dest['why'])}{link}</div>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+
+
 def _escalation_strip(sources: list[dict] | None, question: str = "") -> None:
     """"למי פונים" — the primary (top-ranked) source's referral chain as one
     quiet inline row between the answer body and the action pills, plus its
@@ -8495,7 +8550,16 @@ for msg_i, msg in enumerate(st.session_state.messages):
             # into it immediately — so hooking here keeps everything
             # identical for live answers and history replays. Order: strip
             # (answer content) → source button + share pills (chrome).
-            _escalation_strip(msg.get("sources"), _question_for(msg_i))
+            # A verified out-of-scope door REPLACES the generic chain rather
+            # than stacking on it: when the answer already said no order
+            # governs the question, the lead source is an order the answer
+            # itself dismissed, and two conflicting "where to turn" rows are
+            # worse than one right one.
+            _oos_dest = _out_of_scope_destination(content, _question_for(msg_i))
+            if _oos_dest:
+                _out_of_scope_strip(_oos_dest)
+            else:
+                _escalation_strip(msg.get("sources"), _question_for(msg_i))
             if primary and primary.get("source_file"):
                 if st.button("הצג סעיף מקור", key=f"src_{msg_i}"):
                     _clause_dialog(primary, page, full_href)
