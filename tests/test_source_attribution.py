@@ -103,6 +103,47 @@ def test_every_loaded_document_can_be_cited():
     assert not uncitable, f"documents that answer but cannot be cited: {uncitable}"
 
 
+def test_no_document_is_announced_as_an_order_it_is_not():
+    """The source card prints "פ״מ {doc_id}" — but only for real order numbers.
+
+    HKA-31-08-01 and 33-05-01 are הוראות קבע אכ״א, not פקודות מטכ״ל, and both
+    used to render as "פ״מ <slug>": a factual claim about the source, shown to
+    a soldier, that was simply untrue. app.py now prints that line only when
+    doc_id parses as an order number (1-2 digit chapter, 3-4 digit clause —
+    3.0110 and 33.0209 are both real), falls back to the document's own label,
+    and prints nothing rather than a false claim.
+
+    This pins the DATA side of that contract: any non-order document must
+    identify itself, or it renders with no classification line at all.
+    """
+    import re
+    order_number = re.compile(r"^\d{1,2}\.\d{3,4}$")
+    # known and accepted: military standing orders whose id is a slug and which
+    # carry no label yet — they render without the line, never as a false פ״מ
+    UNLABELLED = {"HKA-31-08-01", "33-05-01"}
+
+    bare = []
+    for doc_id, d in _docs().items():
+        ident = doc_id[3:] if doc_id.upper().startswith("PM-") else doc_id
+        if order_number.match(ident) or d.get("civil_source") or d.get("civil_label"):
+            continue
+        if doc_id not in UNLABELLED:
+            bare.append(doc_id)
+    assert not bare, (
+        "documents with a slug id and no label — they would render with no "
+        f"classification line; give them civil_label: {bare}")
+
+
+def test_real_order_numbers_are_still_recognised():
+    import re
+    order_number = re.compile(r"^\d{1,2}\.\d{3,4}$")
+    for ident in ("33.0209", "3.0110", "35.0402", "2.0101", "8.0101"):
+        assert order_number.match(ident), ident
+    for slug in ("HKA-31-08-01", "33-05-01", "CHOK-SHIPUT-1955",
+                 "זכויות-עבודה-מילואים"):
+        assert not order_number.match(slug), slug
+
+
 if __name__ == "__main__":
     failed = []
     for name, fn in list(globals().items()):

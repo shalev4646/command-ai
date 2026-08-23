@@ -1187,6 +1187,11 @@ if _is_admin:
     st.stop()
 
 # ── Design tokens (from design_handoff_commandai) ──
+# A פקודת מטכ״ל number: 1-2 digit chapter, 3-4 digit clause (3.0110 and
+# 33.0209 are both real). Anything else in doc_id is a slug — a הוראת קבע
+# אכ״א or a civil source — and must NOT be announced as an order number.
+_ORDER_NUMBER = re.compile(r"^\d{1,2}\.\d{3,4}$")
+
 # ONE accent for every role (user decision 2026-08-03): the olive brand color.
 # The per-role palettes (commander tan #B29A72, reserve blue #8A9BC0) are
 # retired — roles still differ in content (tools, suggestions, greeting),
@@ -8416,6 +8421,7 @@ def _clause_dialog(primary: dict, page: int | None, full_href: str | None) -> No
     # classification sub-label: "פ״מ {order} · עמוד {n} · בלמ״ס" (dynamic,
     # unlike the fixed sub on the side dialogs). doc_id is our own id ("35.0402"
     # / "PM-35.0402") — drop the "PM-" prefix so it reads as a plain order number.
+    # Chapter is 1-2 digits (3.0110 and 33.0209 are both real), clause 3-4.
     did = (primary.get("doc_id") or "").strip()
     order = did[3:] if did.upper().startswith("PM-") else did
     sub_parts = []
@@ -8426,8 +8432,16 @@ def _clause_dialog(primary: dict, page: int | None, full_href: str | None) -> No
     if primary.get("civil_source"):
         kind = (primary.get("civil_label") or "חוק").strip() or "חוק"
         sub_parts.append(f"מקור אזרחי · {html.escape(kind)}")
-    elif order:
+    elif order and _ORDER_NUMBER.match(order):
         sub_parts.append(f"פ״מ {html.escape(order)}")
+    elif primary.get("civil_label"):
+        # a named military source that is not a פ״מ — e.g. הוראת קבע אכ״א,
+        # whose doc_id is a slug. Show the name the document gives itself.
+        sub_parts.append(html.escape((primary.get("civil_label") or "").strip()))
+    # else: no line at all. The doc_id is a slug, and printing "פ״מ <slug>"
+    # told the soldier the source was a General Staff order when it was not —
+    # true of HKA-31-08-01 and 33-05-01, both הוראות קבע אכ״א (2026-08-24).
+    # Saying nothing is the honest fallback; the title above already names it.
     if page:
         sub_parts.append(f"עמוד {page}")
     sub_parts.append("בלמ״ס")
