@@ -1,3 +1,13 @@
+# Streamlit's own frontend telemetry, which defaults to ON: the browser caches
+# a Fivetran webhook URL under stMetricsConfig in localStorage and reports
+# anonymous usage from every visitor's device. It carries no question text, but
+# it is a third-party beacon this app never disclosed, sitting behind a privacy
+# policy and a name prompt that tells the soldier "נשמר במכשיר בלבד" — and the
+# app already has its own metrics path, with an opt-out, for what it actually
+# wants to know. Found 2026-08-23 in a fresh-visitor pass.
+[browser]
+gatherUsageStats = false
+
 # Serve the source-order PDFs at /app/static/<file>.pdf so the "open PDF"
 # action under each answer can link straight to the browser's PDF viewer.
 [server]
