@@ -271,6 +271,25 @@ MAX_UNGROUNDED = 0.50
 MIN_CLAUSE_WORDS = 10
 
 
+# The orders site marks a withdrawn order only in the NAME of the PDF it
+# serves — "…-פקודה-מבוטלת.pdf". The order's own text says nothing, so every
+# gate downstream reads it as live, and on 2026-08-24 one of them (58.0301,
+# הובלת מטען חורג) turned out to have been curated and served to commanders
+# as current for a week. Labelling it after the fact took three sessions and
+# three separate fixes; refusing to curate it costs one line.
+#
+# Deliberately checked on source_file and title rather than on raw_text: the
+# marker lives outside the document, which is exactly why nothing inside it
+# could catch this.
+_WITHDRAWN = re.compile(r"פקודה[-\s]*מבוטלת|הוראה[-\s]*מבוטלת")
+
+
+def withdrawn(doc: dict) -> bool:
+    """True when the source marked this order as no longer in force."""
+    return bool(_WITHDRAWN.search(" ".join(
+        str(doc.get(k) or "") for k in ("source_file", "title", "civil_label"))))
+
+
 def check(section: dict, raw: str, digit_free: bool = False) -> tuple[list[str], list[str]]:
     """The faithfulness gates.
 
@@ -452,9 +471,15 @@ def run(limit: int | None = None, digit_free: bool = False) -> None:
     # the order. A soldier acting on an invented deadline is worse off than one
     # told nothing, and unlike silence it cannot be walked back.
     from night.digits import trustworthy
-    all_targets = [d for d in backend.load_documents()
-                   if d.get("document_id") and d["document_id"] not in NEVER
-                   and not _section_ids(d)]
+    pool = [d for d in backend.load_documents()
+            if d.get("document_id") and d["document_id"] not in NEVER
+            and not _section_ids(d)]
+    all_targets = [d for d in pool if not withdrawn(d)]
+    if len(all_targets) < len(pool):
+        for d in pool:
+            if withdrawn(d):
+                C.log(f"[curate] REFUSING {d['document_id']} — the source marks it "
+                      f"a withdrawn order; curating it would serve it as current")
     if digit_free:
         targets = [d for d in all_targets if not trustworthy(d)]
         C.log(f"[curate] DIGIT-FREE mode: {len(targets)} orders with scrambled digits")
