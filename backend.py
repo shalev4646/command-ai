@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import threading
 from pathlib import Path
 
@@ -126,6 +127,46 @@ HYDE_EXTRA_CHUNKS = int(os.environ.get("HYDE_EXTRA_CHUNKS", "1"))
 # Both default OFF until the paired re-measure says the ANSWERS move.
 RETRIEVE_ROUTER_SLOTS = int(os.environ.get("RETRIEVE_ROUTER_SLOTS", "0"))
 RETRIEVE_FULL_BLOCKS = int(os.environ.get("RETRIEVE_FULL_BLOCKS", "0"))
+
+# The ceiling clause, for questions that ask for a ceiling.
+#
+# Measured free on 2026-08-23 against the three zeros the arbitration called
+# "the block answers and retrieval did not bring it". In two of the three the
+# ANSWERING ORDER WAS ALREADY IN THE WINDOW and the answering clause was not:
+#   q00020 "מה המקסימום שאני יכול להוציא על חייל"  — 35.0115 sits at rank 4
+#     with one chunk; its ceilings clause (15/30/50 אחוזים משכר טוראי, ten
+#     private's salaries) never entered the window at all.
+#   q00081 "מה הענישה המקסימלית על אי ציות לפקודה" — PM-33.0302 holds seats
+#     2, 3 and 5; the מחבוש ceiling is in none of them.
+# RETRIEVE_FULL_BLOCKS does not rescue either, and the same run showed why:
+# it serves the block of the order owning the FIRST chunk, and in both cases
+# that order is irrelevant (31.0117 "שחרור שלא בפניו" holds 8 of q00020's 11
+# seats; 8.0101 "פניות גורמים אזרחיים" leads q00081). Embedding similarity
+# ranks a clause by how much it sounds like the question, and a table of
+# numbers sounds like nothing.
+#
+# So: when the question asks HOW MUCH, append the clauses that carry amounts
+# from the orders already in the window. Deterministic, no model call, ~100-200
+# words, and it cannot move a ranking — it only appends, so the retrieval gate
+# is untouched by construction.
+RETRIEVE_QUANTITY_CLAUSES = int(os.environ.get("RETRIEVE_QUANTITY_CLAUSES", "0"))
+
+# "How much / how many / what is the maximum" — the demand, not the topic.
+# Deliberately narrow: "כמה" alone would fire on "כמה שיותר מהר" and on any
+# question that merely contains the word.
+_QUANTITY_DEMAND = re.compile(
+    r"מקסימו[םמ]|מקסימלי|מרבי|תקרה|תקרת|לכל\s+היותר|עד\s+כמה|"
+    r"\bכמה\s+(?:ימים|זמן|כסף|שעות|חודשים|אחוז|עולה|מגיע|יכול|מותר|צריך|אפשר)|"
+    r"מה\s+ה(?:סכום|גובה|שיעור|מקסימום|תקרה)")
+
+# A clause "carries an amount" when a number sits next to a unit. A bare digit
+# is not enough — clause numbers, order numbers and dates are digits too, and
+# the curated blocks of scrambled-digit orders are written without numerals at
+# all (they are skipped here, correctly: they have no ceiling to serve).
+_AMOUNT = re.compile(
+    r"\d[\d,.]*\s*(?:ימים|יום|שעות|שעה|חודשים|חודש|שנים|שנה|אחוז|%|"
+    r"ש\"?ח|שקלים|משכורות|משכורת|מ\"?ר)|"
+    r"(?:עד|לכל\s+היותר|לא\s+יעלה\s+על|לא\s+יותר\s+מ)\s*\S{0,12}\d")
 
 # Header that marks the retrieved-context section inside a user turn. The
 # context rides in the user message (not the system prompt) so the system
@@ -510,15 +551,44 @@ def extend_with_full_blocks(chunks: list[dict], role: str) -> list[dict]:
     return out
 
 
+def extend_with_quantity_clauses(chunks: list[dict], question: str,
+                                 role: str) -> list[dict]:
+    """For a how-much question, the amount-bearing clauses of the orders already
+    in the window — appended, never reordered.
+
+    Only orders that already earned a seat are read: this buys the clause the
+    ranking missed, not a new order the ranking rejected. RETRIEVE_QUANTITY_CLAUSES
+    is the cap on appended clauses, not on orders — one order may hold every
+    ceiling worth serving (35.0115) and another none at all.
+    """
+    if RETRIEVE_QUANTITY_CLAUSES <= 0 or not chunks:
+        return chunks
+    if not _QUANTITY_DEMAND.search(question or ""):
+        return chunks
+    by_id = {d["document_id"]: d for d in _docs_for_role(role) if d.get("document_id")}
+    seats: list[str] = []
+    for c in chunks:
+        if c["doc_id"] not in seats:
+            seats.append(c["doc_id"])
+    picks: list[dict] = []
+    for doc_id in seats:
+        doc = by_id.get(doc_id)
+        if not doc:
+            continue
+        picks.extend(cl for cl in _full_block(doc) if _AMOUNT.search(cl["text"]))
+    return _append_new(chunks, picks, RETRIEVE_QUANTITY_CLAUSES)
+
+
 def widen_context(chunks: list[dict], question: str, role: str,
                   route: set[str] | None) -> list[dict]:
-    """The three appended extensions, in the order they were measured to
-    stack: hypothetical, router seats, full blocks. Each is a no-op when its
-    flag is off, so production with all flags off is byte-identical to the
-    pre-extension pipeline."""
+    """The four appended extensions, in the order they were measured to
+    stack: hypothetical, router seats, full blocks, amount-bearing clauses.
+    Each is a no-op when its flag is off, so production with all flags off is
+    byte-identical to the pre-extension pipeline."""
     out = extend_with_hypothetical(chunks, question, role, route)
     out = extend_with_router_slots(out, question, role, route)
-    return extend_with_full_blocks(out, role)
+    out = extend_with_full_blocks(out, role)
+    return extend_with_quantity_clauses(out, question, role)
 
 
 def retrieve_for_role(question: str, role: str, route: set[str] | None = None,
