@@ -897,12 +897,54 @@ def clause_key(section: str | None, clause: str | None) -> str | None:
     return f"{section}:{clause}"
 
 
+# Source documents do NOT all live in pdf-ldf_law/: the reserve-call handbook
+# sits in pdf-hka/ and civil legislation in pdf-law/. Only pdf-ldf_law/ is the
+# ingest scan root (see ensure_pdfs_ingested) and it must stay that way —
+# adding these there would ingest them through the PAID API on every boot.
+_PDF_DIRS = ("pdf-ldf_law", "pdf-hka", "pdf-law")
+
+
+def resolve_pdf(source_file: str | None) -> Path | None:
+    """The document's PDF on disk, in whichever source directory holds it.
+
+    None means "this document has no local PDF", which is a legitimate state,
+    not a fault: חוק השיפוט הצבאי was extracted from an HTML original and its
+    source_file names that page, not a file. Such a document must still be
+    reported as a source — the answer quotes it — it simply has no deep link.
+
+    _duplicates/ is deliberately NOT searched: it is quarantine for repeated
+    downloads (2026-08-17), and pointing production at a quarantined copy is
+    how the wrong file becomes the cited one.
+    """
+    if not source_file:
+        return None
+    root = Path(__file__).parent
+    for d in _PDF_DIRS:
+        p = root / d / source_file
+        if p.exists():
+            return p
+    return None
+
+
 def _sources_from_chunks(chunks: list[dict]) -> list[dict]:
     """The distinct orders behind an answer, in retrieval-rank order.
 
-    Only orders whose original PDF is actually on disk are returned — the
-    UI links each source straight to its PDF, and a dead link is worse
-    than no link. "clause" is the clause_key of the order's highest-ranked
+    Every document the answer drew on is returned, INCLUDING one whose PDF is
+    not on disk. The old gate here dropped those silently, and the failure it
+    produced was the one thing this app promises never to do: on 2026-08-24 a
+    measurement caught two documents entering the context and answering, with
+    the UI showing no source at all. It is silent by construction — no error,
+    no gate, health 200 — and it hit three documents: HKA-31-08-01 (PDF in
+    pdf-hka/, which this file used not to look in), CHOK-SHIPUT-1955 (no PDF
+    at all, HTML original), and 33.0209, whose source_file still names the
+    "(1)" duplicate that was quarantined in _duplicates/.
+
+    "a dead link is worse than no link" still holds, and is still enforced —
+    but by `source_file`, not by dropping the source: it is set only when a
+    PDF actually resolved, and the render path keys the whole PDF block off
+    it (app.py: `if primary and primary.get("source_file")`), so a document
+    without one shows its citation and no link. "clause" is the clause_key of
+    the order's highest-ranked
     chunk WITH a known page, so the UI can deep-link the PDF to the cited
     passage via page_for_clause: key-facts chunks are hand-written summaries
     with no PDF location, and when one outranks the raw windows (they were
@@ -911,7 +953,6 @@ def _sources_from_chunks(chunks: list[dict]) -> list[dict]:
     key is recorded anyway — the page lookup returns None, the link stays
     page-less, and the metrics log still says which clause led.
     """
-    pdf_dir = Path(__file__).parent / "pdf-ldf_law"
     by_id = {d["document_id"]: d for d in load_documents() if d.get("document_id")}
     sources, seen = [], set()
     for c in chunks:
@@ -920,15 +961,21 @@ def _sources_from_chunks(chunks: list[dict]) -> list[dict]:
             continue
         seen.add(doc_id)
         doc = by_id.get(doc_id)
-        source_file = (doc or {}).get("source_file")
-        if source_file and (pdf_dir / source_file).exists():
-            clause = clause_key(c.get("section"), c.get("clause"))
-            # `highlight` is the text of the chunk we deep-link to, so the UI
-            # can mark that exact passage on the rendered page. It rides the
-            # SAME chunk that resolved to a page (a raw-text window whose
-            # text is extracted from the PDF, so page.search_for can find
-            # it) — not a key-facts summary, which has no PDF text to match.
-            highlight = c.get("text", "")
+        if doc is None:
+            # a chunk whose document is not loaded has no citation to offer —
+            # the same case the old gate dropped via `(doc or {})`
+            continue
+        pdf = resolve_pdf(doc.get("source_file"))
+        clause = clause_key(c.get("section"), c.get("clause"))
+        # `highlight` is the text of the chunk we deep-link to, so the UI
+        # can mark that exact passage on the rendered page. It rides the
+        # SAME chunk that resolved to a page (a raw-text window whose
+        # text is extracted from the PDF, so page.search_for can find
+        # it) — not a key-facts summary, which has no PDF text to match.
+        highlight = c.get("text", "")
+        if pdf is not None:
+            # only meaningful with a PDF to deep-link into; without one there
+            # is no page to find, and the top chunk's clause is the answer
             for cc in chunks:
                 if cc["doc_id"] != doc_id:
                     continue
@@ -937,18 +984,20 @@ def _sources_from_chunks(chunks: list[dict]) -> list[dict]:
                     clause = key
                     highlight = cc.get("text", "")
                     break
-            sources.append({
-                # civil-law sources (חוק, not a פ"מ) must not be labelled as an
-                # order in the UI — the source dialog drops the "פ״מ" prefix for
-                # these and shows "מקור אזרחי" instead.
-                "civil_source": bool((doc or {}).get("civil_source")),
-                "civil_label": (doc or {}).get("civil_label") or "",
-                "doc_id": doc_id,
-                "title": doc.get("title", c.get("title", "")),
-                "source_file": source_file,
-                "clause": clause,
-                "highlight": highlight[:160],
-            })
+        sources.append({
+            # civil-law sources (חוק, not a פ"מ) must not be labelled as an
+            # order in the UI — the source dialog drops the "פ״מ" prefix for
+            # these and shows "מקור אזרחי" instead.
+            "civil_source": bool(doc.get("civil_source")),
+            "civil_label": doc.get("civil_label") or "",
+            "doc_id": doc_id,
+            "title": doc.get("title", c.get("title", "")),
+            # "" when no PDF resolved — this is the dead-link guard: every
+            # render path keys its PDF block off a non-empty source_file
+            "source_file": doc.get("source_file", "") if pdf is not None else "",
+            "clause": clause,
+            "highlight": highlight[:160],
+        })
     return sources
 
 
@@ -968,8 +1017,8 @@ def render_clause_image(source_file: str, page: int, highlight: str = "") -> byt
     try:
         import fitz  # already a dependency (ingestion/pdf_to_json.py)
 
-        pdf_path = Path(__file__).parent / "pdf-ldf_law" / source_file
-        if not pdf_path.exists():
+        pdf_path = resolve_pdf(source_file)
+        if pdf_path is None:
             return None
         doc = fitz.open(str(pdf_path))
         try:
@@ -1250,8 +1299,8 @@ def get_ai_response(question: str, history: list[dict] | None = None, role: str 
 
 def get_pdf_bytes(source_file: str) -> bytes | None:
     """Read the original PDF for a loaded document, if it's still on disk."""
-    pdf_path = Path(__file__).parent / "pdf-ldf_law" / source_file
-    if not pdf_path.exists():
+    pdf_path = resolve_pdf(source_file)
+    if pdf_path is None:
         return None
     return pdf_path.read_bytes()
 
