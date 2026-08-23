@@ -33,6 +33,11 @@ RETRIEVE_GLOSSARY = os.environ.get("RETRIEVE_GLOSSARY", "0") == "1"
 
 # soldier form (as typed; quotes normalised, finals as written) -> expansion
 GLOSSARY: dict[str, str] = {
+    # Two conditions, both required. The soldier form must be rare or absent in
+    # the orders' own text, AND the expansion must be a phrase that points at
+    # the answering document rather than at the whole subject area — a target
+    # that appears in hundreds of chunks moves the query toward the average of
+    # them and away from the one that answers (see מילואימניק below).
     # Only terms whose soldier form is rare or absent in the orders' own text
     # (checked against the index on 2026-08-18: קב"ן 14 chunks, גימלים 1,
     # סופ"ש 0, מילואימניק 3, סמ"פ 1, קפ"ץ 4). Abbreviations the orders use
@@ -60,8 +65,18 @@ GLOSSARY: dict[str, str] = {
     # reserve
     'צו 8': 'צו קריאה שירות מילואים בשעת חירום',
     'צו שמונה': 'צו קריאה שירות מילואים בשעת חירום',
-    'מילואימניק': 'חייל מילואים',
-    'מילואימניקים': 'חיילי מילואים',
+    # מילואימניק/מילואימניקים are NOT here, and the reason is the second half
+    # of the rule above, which the first version of this file left implicit:
+    # the soldier form must be rare AND the expansion must DISCRIMINATE.
+    # "מילואימניק" is rare enough (5 occurrences), but "חייל מילואים" appears
+    # 471 times — appending it does not bridge to the answering document, it
+    # dilutes the query toward every reserve document at once. Measured on the
+    # 30 blind reserve questions of 2026-08-24: the glossary touched 8, changed
+    # the served window in 8 of 8, and pushed the raw question's top-ranked
+    # document OUT of the window in 3 — including "אני מילואימניק וסטודנט,
+    # למה לא קיבלתי את דמי הלימודים", where זכויות-סטודנטים-מילואים was ranked
+    # first and the router had already picked it. Contrast the entry that
+    # works: קב"ן → "גורם ברה"ן", whose target appears 37 times.
     'תגמולים': 'תגמול ביטוח לאומי',
     # people / roles — the UNQUOTED slang spellings only; the quoted forms
     # are the orders' own
