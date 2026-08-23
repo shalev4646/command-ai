@@ -118,7 +118,12 @@ def compose_letter(letter_key: str, details: dict[str, str], role: str = "soldie
         f"קטעים רלוונטיים מהפקודות:\n{context}"
     )
 
-    msg = client.messages.create(
+    # Bounded like backend's pre-retrieval calls: the SDK default is 10 minutes
+    # x 3 attempts, and this one runs under a MODAL spinner ("מנסח טיוטה...")
+    # with no way out, so a hung connection holds the soldier for half an hour
+    # before the refund and the error message ever appear. 60s x 2 attempts is
+    # far above the ~15s a draft actually takes.
+    msg = client.with_options(timeout=60.0, max_retries=1).messages.create(
         model=MODEL,
         max_tokens=_LETTER_MAX_TOKENS,
         system=_SYSTEM,

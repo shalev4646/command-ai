@@ -218,6 +218,113 @@ def test_footers_carry_the_honest_line():
     )
 
 
+# ── P2: drifts found in the 2026-08-20 audit ─────────────────────────────────
+# Each of these pairs a sentence the policy states with the code path that
+# either keeps or breaks it. All three were BROKEN when written: the policy had
+# stayed still while the features moved.
+
+LETTERS = (ROOT / "letters.py").read_text(encoding="utf-8")
+
+
+def test_miluim_days_are_not_claimed_to_stay_on_the_device():
+    """handle_question puts ימי מילואים into `profile`, which backend folds
+    into the user turn — so it goes to Anthropic. The policy listed it under
+    "stays on your device and does not reach us"."""
+    onserver = APP.split("מה שנשמר רק אצלך במכשיר ולא מגיע אלינו")[1][:400]
+    assert "ימי מילואים" not in onserver, (
+        "policy still lists miluim days as device-only while profile sends them"
+    )
+    sent = APP.split("מה שנשלח יחד עם השאלה")[1][:600]
+    assert "ימי המילואים" in sent and "התעסוקה" in sent, (
+        "the policy must say miluim days and employment are sent with the question"
+    )
+
+
+def test_profile_extras_are_actually_sent_when_the_policy_says_so():
+    """The claim above is only honest while the code still does it — if the
+    profile stops carrying them, the policy has to lose the sentence too."""
+    assert 'f"ימי מילואים: {int(_dy)} השנה' in APP, (
+        "profile no longer sends miluim days; the policy sentence is now wrong"
+    )
+
+
+def test_salary_is_still_the_one_thing_that_never_leaves():
+    """The single strongest promise in the policy. It was true; keep it true."""
+    # the comment above the block NAMES mil_salary to explain its absence, so
+    # search for a line that would actually put it on the wire
+    sends = [ln for ln in APP.splitlines()
+             if "mil_salary" in ln and "_injected" in ln]
+    assert not sends, f"mil_salary reaches the profile sent to the API: {sends}"
+
+
+def test_letter_draft_is_not_written_to_the_sheet():
+    """The draft weaves in the soldier's full name and rank, and log_question
+    stores answer[:1500] in the Sheet — under a policy that says the name never
+    reaches us."""
+    assert 'answer=draft["text"]' not in APP, (
+        "a letter draft is logged verbatim; the name reaches the Sheet"
+    )
+    assert APP.count("[טיוטה — ") >= 2, (
+        "both letter log sites must log a redacted placeholder"
+    )
+
+
+def test_silent_thumb_honours_the_analytics_opt_out():
+    """A thumb says nothing on screen about being sent, so it belongs to the
+    log the toggle governs; a typed comment has its own send button and does
+    not. The policy names the difference, so the code must keep it."""
+    thumb = APP.split('fb = st.feedback("thumbs"')[1][:900]
+    assert "share_analytics" in thumb, (
+        "the thumb logs feedback regardless of the analytics opt-out"
+    )
+    assert "מה שהכיבוי אינו מכסה" in APP, (
+        "the policy must disclose that explicit reports are always sent"
+    )
+
+
+# ── P3: messages that misstate what happened ─────────────────────────────────
+
+def test_usage_limit_notice_does_not_promise_tomorrow():
+    """The console spend limit resets on the 1st. On 2026-08-18 it fired and
+    the app was down for 13 days while telling users to try again tomorrow."""
+    assert "נסה שוב מחר" not in APP, (
+        "the cap message still promises tomorrow for a monthly limit"
+    )
+    assert "_usage_limit_notice" in APP and "regain access on" in APP, (
+        "the real reset date in the 400 body must be read, not guessed"
+    )
+
+
+def test_paid_partial_answer_is_not_discarded_on_a_dropped_stream():
+    """Tokens already streamed are already billed. Only the RerunException
+    branch used to salvage them; a dropped phone connection threw them away
+    and charged the soldier's quota for the retry too."""
+    # the connection handler exists in the letter flows too, and theirs has
+    # nothing to salvage - scope to the chat handler before splitting
+    handler = APP.split("def handle_question(question: str):")[1]
+    for branch in ("except (APIConnectionError, APITimeoutError):",
+                   'safe_print(f"[chat] answer failed: {e!r}")'):
+        after = handler.split(branch)[1][:300]
+        assert "_keep_partial" in after, (
+            f"partial answer discarded after: {branch[:40]}"
+        )
+
+
+def test_interrupted_answer_is_not_blamed_on_length():
+    """"The answer was cut off because it was too long - ask something
+    narrower" is wrong advice for a stream a thumb-click killed."""
+    assert '"interrupted": True' in APP, "the interrupted flag is gone"
+    assert "התשובה נקטעה באמצע" in APP, "no distinct notice for an interrupted answer"
+
+
+def test_letter_call_is_bounded():
+    """It runs under a modal spinner with no escape; the SDK default is
+    10 minutes x 3 attempts."""
+    assert "with_options(timeout=" in LETTERS, (
+        "compose_letter can hang for half an hour under a modal spinner"
+    )
+
+
 if __name__ == "__main__":
     failures = 0
     for name, fn in sorted(globals().items()):

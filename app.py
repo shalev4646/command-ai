@@ -1,5 +1,6 @@
 import base64
 import datetime as _dt
+import hmac
 import html
 import inspect
 from pathlib import Path
@@ -1084,10 +1085,19 @@ def _render_admin():
         return
     if not st.session_state.get("admin_ok"):
         entered = st.text_input("סיסמת מנהל", type="password")
-        if entered and entered == pw:
-            st.session_state.admin_ok = True
-            st.rerun()
-        elif entered:
+        if entered:
+            # compare_digest, not ==: a plain comparison returns on the first
+            # wrong byte and leaks the prefix through timing. And the wrong
+            # guesses are counted PROCESS-wide (metrics), so opening a new tab
+            # does not hand the attacker a fresh budget — ?admin=1 is public
+            # and the dashboard holds every question the pilot ever asked.
+            ok = hmac.compare_digest(entered, pw)
+            if not ok:
+                time.sleep(metrics.admin_backoff())
+            metrics.note_admin_attempt(ok)
+            if ok:
+                st.session_state.admin_ok = True
+                st.rerun()
             st.error("סיסמה שגויה")
         return
 
@@ -3845,8 +3855,17 @@ if "suggested" not in st.session_state:
 suggested_questions = st.session_state.get("suggested") or _FALLBACK_QUESTIONS.get(st.session_state.role, _FALLBACK_QUESTIONS["soldier"])
 
 
+# A question is a few lines; the longest suggested one is ~90 characters. The
+# cap exists because nothing else bounds what reaches the API: every question
+# is sent to three Haiku calls and one Opus call, so a pasted novel is billed
+# as one question against a 5-a-day quota. Clamped HERE, where the chat box,
+# the suggestion chips and the escalation strip all converge — max_chars on the
+# widget is a courtesy to the typist, not a guarantee about the wire.
+_MAX_QUESTION_CHARS = 1200
+
+
 def queue_question(q: str):
-    st.session_state.pending_question = q
+    st.session_state.pending_question = (q or "")[:_MAX_QUESTION_CHARS]
 
 def archive_current_conversation():
     """Save the active conversation into history before it's cleared."""
@@ -3918,7 +3937,8 @@ def _letters_dialog():
     for i, field in enumerate(LETTER_TYPES[kind]["fields"]):
         label, placeholder = field[0], field[1]
         details[label] = st.text_input(
-            label, placeholder=placeholder or None, key=f"letter_{kind}_{i}"
+            label, placeholder=placeholder or None, key=f"letter_{kind}_{i}",
+            max_chars=300,  # a form field, and every character is billed
         )
     # label has no ✍️ emoji — the colorful glyph clashed with the mock's clean
     # look; the pen is drawn by CSS (st-key-letter_go p::after mask) in accent
@@ -3943,7 +3963,12 @@ def _letters_dialog():
                         device_id=st.session_state.device_id,
                         role=st.session_state.role or "",
                         question=f"[מכתב] {LETTER_TYPES[kind]['title']}",
-                        answer=draft["text"],
+                        # NOT the draft: the soldier's full name and rank are
+                        # woven through it, and answer_preview would carry
+                        # them into the Sheet under a policy that says the
+                        # name never reaches us. Cost, sources and latency —
+                        # everything the pilot's usage picture needs — stay.
+                        answer=f"[טיוטה — {len(draft['text'])} תווים]",
                         sources=draft.get("sources"),
                         usage=draft.get("usage"),
                         latency_s=time.time() - t0,
@@ -3954,7 +3979,7 @@ def _letters_dialog():
             except BadRequestError as e:
                 metrics.refund(st.session_state.session_id)
                 # same monthly-spend-limit 400 as in handle_question
-                st.error("⏸️ המערכת בהשהיה זמנית עקב מגבלת שימוש — נסה שוב מחר."
+                st.error("⏸️ המערכת בהשהיה זמנית עקב מגבלת שימוש. " + _usage_limit_notice(e)
                          if "usage limits" in str(e)
                          else "אירעה שגיאה זמנית בניסוח. נסה לשלוח שוב.")
             except Exception as e:
@@ -5064,7 +5089,7 @@ def _miluim_guide_dialog():
     for i, field in enumerate(lt["fields"]):
         label, placeholder = field[0], field[1]
         details[label] = st.text_input(label, placeholder=placeholder or None,
-                                       key=f"mil_letter_f{i}")
+                                       key=f"mil_letter_f{i}", max_chars=300)
     if st.button("נסח לי את מכתב הבקשה", key="mil_letter_go", use_container_width=True):
         quota = metrics.reserve(st.session_state.session_id)
         if quota != "ok":
@@ -5083,7 +5108,7 @@ def _miluim_guide_dialog():
                         device_id=st.session_state.device_id,
                         role=st.session_state.role or "",
                         question=f"[מכתב] {lt['title']}",
-                        answer=draft["text"],
+                        answer=f"[טיוטה — {len(draft['text'])} תווים]",  # see the note at the other letter log
                         sources=draft.get("sources"),
                         usage=draft.get("usage"),
                         latency_s=time.time() - t0,
@@ -5093,7 +5118,7 @@ def _miluim_guide_dialog():
                 st.error("אין כרגע חיבור לשירות. בדוק את החיבור ונסה שוב בעוד רגע.")
             except BadRequestError as e:
                 metrics.refund(st.session_state.session_id)
-                st.error("⏸️ המערכת בהשהיה זמנית עקב מגבלת שימוש — נסה שוב מחר."
+                st.error("⏸️ המערכת בהשהיה זמנית עקב מגבלת שימוש. " + _usage_limit_notice(e)
                          if "usage limits" in str(e)
                          else "אירעה שגיאה זמנית בניסוח. נסה לשלוח שוב.")
             except Exception as e:
@@ -6319,19 +6344,27 @@ _PRIVACY_SECTIONS = [
      "<b>מה שאתה מקליד:</b> נוסח השאלה, והתשובה שהתקבלה (1500 התווים הראשונים).<br><br>"
      "<b>מה שנגזר מהשימוש:</b> תפקיד (חייל / מילואים / קבע), מזהה מכשיר אקראי, מזהה "
      "הפעלה, חותמת זמן, אילו פקודות אוחזרו, זמן תגובה ועלות החישוב.<br><br>"
-     "<b>מה שנשמר רק אצלך במכשיר ולא מגיע אלינו:</b> השם שהזנת, תאריכי גיוס ושחרור, "
-     "ימי מילואים, וגובה השכר שהוזן במחשבון התגמול. השכר במפורש אינו נשלח לשום מקום — "
-     "הוא משמש לחישוב מקומי בלבד.<br><br>"
+     "<b>מה שנשלח יחד עם השאלה:</b> התפקיד שבחרת, וכשסימנת אותם גם סטטוסים אישיים "
+     "(למשל «חייל בודד»), סוג השירות ומסלולו. במסלול מילואים נשלחים גם ימי המילואים "
+     "שהזנת ומצב התעסוקה — הם משנים את התשובה. במחולל המכתבים נשלחים הפרטים שמילאת "
+     "בטופס, ובהם השם והדרגה; נוסח הטיוטה עצמו אינו נרשם אצלנו.<br><br>"
+     "<b>מה שנשמר רק אצלך במכשיר ולא מגיע אלינו:</b> שם הפרופיל, תאריכי גיוס ושחרור, "
+     "וגובה השכר שהוזן במחשבון התגמול. השכר במפורש אינו נשלח לשום מקום — הוא משמש "
+     "לחישוב מקומי בלבד.<br><br>"
      "האפליקציה אינה מבקשת ואינה שומרת מספר אישי, מספר טלפון, כתובת או דוא\"ל."),
     ("למה נאסף",
      "נוסח השאלה נשלח לשירות הבינה המלאכותית כדי להפיק את התשובה — בלעדיו אין מוצר.<br><br>"
      "הרישום אצלנו משמש למטרה אחת: לזהות שאלות שהאפליקציה ענתה עליהן רע או לא ענתה "
      "כלל, ולתקן את המאגר. <b>אפשר לכבות אותו</b> — כיבוי «שיתוף נתוני שימוש אנונימיים» "
      "במסך «פרטיות ואבטחה» מפסיק את הרישום הזה לחלוטין. השאלה עדיין תישלח לשירות ה-AI, "
-     "כי אחרת אין תשובה."),
+     "כי אחרת אין תשובה.<br><br>"
+     "<b>מה שהכיבוי אינו מכסה:</b> משוב שאתה שולח ביוזמתך — הערה על תשובה או טופס "
+     "«יצירת קשר» — נשלח אלינו תמיד, יחד עם השאלה והתשובה שעליהן דיווחת. "
+     "בלעדיהן אי אפשר לברר מה השתבש. סימון 👍/👎 בלבד אינו נשלח כשהכיבוי פעיל."),
     ("למי המידע מועבר",
      "<b>Anthropic</b> (ארה\"ב) — מפעילת מודל השפה. כל שאלה נשלחת לשרתיה כדי להפיק את "
-     "התשובה, יחד עם קטעי הפקודות הרלוונטיים ועם התפקיד שבחרת.<br><br>"
+     "התשובה, יחד עם קטעי הפקודות הרלוונטיים, התפקיד שבחרת והפרטים המנויים למעלה "
+     "תחת «מה שנשלח יחד עם השאלה».<br><br>"
      "<b>Google</b> (Google Sheets) — שם נשמר לוג השימוש, אם לא כיבית אותו.<br><br>"
      "<b>Fly.io</b> — תשתית האירוח שעליה רצה האפליקציה.<br><br>"
      "המידע אינו נמכר, אינו מושכר ואינו מועבר לצה\"ל, ליחידתך או לכל גורם צבאי."),
@@ -6897,15 +6930,20 @@ def _settings_contact():
         "לעיון ומחיקה של הנתונים שלך — כאן המקום.</div>", unsafe_allow_html=True)
 
     if st.session_state.get("report_sent"):
+        _bt, _bs = "הדיווח נשלח", "תודה. אנחנו קוראים כל דיווח."
+        if st.session_state.get("report_capped"):
+            _bt = "הדיווח לא נשלח"
+            _bs = ("נשלחו היום הרבה דיווחים מהמכשיר הזה. אפשר לנסות שוב מחר, "
+                   f"או לכתוב ישירות ל-{_CONTACT_EMAIL}.")
         st.markdown(
             "<div class='cai-banner'><div class='bi'></div>"
-            "<div style='flex:1'><div class='bt'>הדיווח נשלח</div>"
-            "<div class='bs'>תודה. אנחנו קוראים כל דיווח.</div></div></div>",
+            f"<div style='flex:1'><div class='bt'>{html.escape(_bt)}</div>"
+            f"<div class='bs'>{html.escape(_bs)}</div></div></div>",
             unsafe_allow_html=True)
 
     with st.container(key="cai_report_box"):
         _txt = st.text_area(
-            "מה קרה?", key="report_text", height=130,
+            "מה קרה?", key="report_text", height=130, max_chars=2000,
             placeholder="למשל: שאלתי על ימי חופשה בקבע וקיבלתי תשובה על שירות חובה.",
             label_visibility="collapsed")
         if st.button("שליחת דיווח", key="report_send", use_container_width=True,
@@ -6924,7 +6962,9 @@ def _settings_contact():
                 elif _last_a and _m.get("role") == "user":
                     _last_q = _m.get("content", "")
                     break
-            metrics.log_feedback(
+            # the flood cap can refuse this row; "הדיווח נשלח" would then be
+            # the same class of lie this screen exists to prevent
+            _sent = metrics.log_feedback(
                 session_id=st.session_state.session_id,
                 device_id=st.session_state.get("device_id", ""),
                 role=st.session_state.role or "",
@@ -6935,6 +6975,7 @@ def _settings_contact():
                 comment=(_txt or "").strip()[:2000],
             )
             st.session_state.report_sent = True
+            st.session_state.report_capped = not _sent
             # pop, never assign: a widget's key cannot be written after the
             # widget is instantiated in the same run (StreamlitAPIException —
             # caught by the headless smoke test). Dropping the key makes the
@@ -7008,6 +7049,43 @@ def _render_settings():
             _settings_contact()
         else:
             _settings_hub()
+
+
+# The monthly console spend limit resets on the 1st of the month, not
+# overnight: on 2026-08-18 it fired at 15:55 and the app could not answer for
+# 13 days, while this message told every returning soldier to "try tomorrow".
+# The 400 body carries the real date ("You will regain access on 2026-09-01"),
+# so read it instead of guessing, and never promise a day we cannot keep.
+_REGAIN_RE = re.compile(r"regain access on (\d{4})-(\d{2})-(\d{2})")
+
+
+def _usage_limit_notice(err) -> str:
+    m = _REGAIN_RE.search(str(err))
+    if m:
+        _y, mo, d = (int(x) for x in m.groups())
+        return f"זו לא תקלה אצלך, ואין טעם לשלוח שוב — השירות יחזור ב-{d}.{mo:02d}."
+    return ("זו לא תקלה אצלך, ואין טעם לשלוח שוב עכשיו — "
+            "המגבלה מתאפסת בתחילת החודש.")
+
+
+def _keep_partial(acc: list[str], sources: list) -> bool:
+    """Salvage an answer the user already paid for. True if one was kept.
+
+    Every byte in `acc` is a token that was generated and billed. The stream
+    can die on a dropped connection two thirds of the way through an answer —
+    on a phone, the common case — and throwing that text away charges the
+    soldier's quota twice for one answer. Quota is NOT refunded here: the
+    answer exists, it is on screen, and the render marks it as cut off.
+    """
+    if not acc:
+        return False
+    st.session_state.messages.append({
+        "role": "assistant",
+        "content": "".join(acc),
+        "sources": sources,
+        "interrupted": True,
+    })
+    return True
 
 
 def handle_question(question: str):
@@ -7106,6 +7184,8 @@ def handle_question(question: str):
                            unsafe_allow_html=True)
             text = _stream_answer(text_gen, acc, think=stage)
     except (APIConnectionError, APITimeoutError):
+        if _keep_partial(acc, sources):
+            return
         user_msg["error"] = True
         metrics.refund(st.session_state.session_id)  # failures don't burn quota
         st.session_state.messages.append({
@@ -7123,7 +7203,7 @@ def handle_question(question: str):
         metrics.refund(st.session_state.session_id)
         if "usage limits" in str(e):
             msg = ("⏸️ **המערכת בהשהיה זמנית עקב מגבלת שימוש.**\n\n"
-                   "זו לא תקלה אצלך ואין טעם לשלוח שוב עכשיו — נסה שוב מחר.")
+                   + _usage_limit_notice(e))
         else:
             msg = "**אירעה שגיאה זמנית בעיבוד השאלה.**\n\nנסה לשלוח אותה שוב."
         st.session_state.messages.append({"role": "assistant", "content": msg, "error": True})
@@ -7132,6 +7212,8 @@ def handle_question(question: str):
         # last-resort catch: the refund + generic message already cover the
         # user, but without a log a real production fault leaves no trace
         safe_print(f"[chat] answer failed: {e!r}")
+        if _keep_partial(acc, sources):
+            return
         user_msg["error"] = True
         metrics.refund(st.session_state.session_id)
         st.session_state.messages.append({
@@ -7152,7 +7234,10 @@ def handle_question(question: str):
                 "role": "assistant",
                 "content": "".join(acc),
                 "sources": sources,
-                "truncated": True,
+                # cut off by the rerun, NOT by the token cap: "ask about a
+                # narrower part" is useless advice for a thumb-click that
+                # killed the stream
+                "interrupted": True,
             })
         else:
             user_msg["error"] = True
@@ -8381,6 +8466,8 @@ for msg_i, msg in enumerate(st.session_state.messages):
             _render_body(body, chip)
             if msg.get("truncated"):
                 st.warning("התשובה נקטעה בגלל אורך. אפשר לשאול על חלק ממוקד יותר לתשובה שלמה.")
+            elif msg.get("interrupted"):
+                st.warning("התשובה נקטעה באמצע. שלח את השאלה שוב כדי לקבל אותה במלואה.")
         else:
             st.markdown(content)
         if msg["role"] == "assistant" and not msg.get("error"):
@@ -8420,20 +8507,26 @@ for msg_i, msg in enumerate(st.session_state.messages):
             fb = st.feedback("thumbs", key=f"fb_{mid}")
             if fb is not None and msg.get("fb_value") != fb:
                 msg["fb_value"] = fb
-                metrics.log_feedback(
-                    session_id=st.session_state.session_id,
-                    device_id=st.session_state.device_id,
-                    role=st.session_state.role or "",
-                    verdict="up" if fb == 1 else "down",
-                    question=_question_for(msg_i),
-                    answer=content,
-                    sources=msg.get("sources"),
-                )
+                # a thumb is a SILENT signal — nothing on screen says it was
+                # sent anywhere — so it belongs to the usage log the privacy
+                # toggle governs. A typed comment or a report below is an
+                # explicit send with its own button, and keeps working: the
+                # policy now says exactly that.
+                if st.session_state.get("share_analytics", True):
+                    metrics.log_feedback(
+                        session_id=st.session_state.session_id,
+                        device_id=st.session_state.device_id,
+                        role=st.session_state.role or "",
+                        verdict="up" if fb == 1 else "down",
+                        question=_question_for(msg_i),
+                        answer=content,
+                        sources=msg.get("sources"),
+                    )
             if msg.get("fb_value") == 0 and not msg.get("fb_comment_sent"):
                 fb_col, send_col = st.columns([4, 1])
                 fb_comment = fb_col.text_input(
                     "מה היה חסר או שגוי?", key=f"fbc_{mid}",
-                    label_visibility="collapsed",
+                    label_visibility="collapsed", max_chars=500,
                     placeholder="מה היה חסר או שגוי? (לא חובה)",
                 )
                 if send_col.button("שלח", key=f"fbs_{mid}") and fb_comment.strip():
@@ -8473,7 +8566,7 @@ for msg_i, msg in enumerate(st.session_state.messages):
 #    below clears on this run instead of lingering above the first streaming
 #    answer (2026-07-21 phone video: title + all suggested cards stayed
 #    pinned above the conversation for the whole ~18s of the first answer). ──
-if prompt := st.chat_input("שאל על פקודה..."):
+if prompt := st.chat_input("שאל על פקודה...", max_chars=_MAX_QUESTION_CHARS):
     queue_question(prompt)
     st.rerun()
 
