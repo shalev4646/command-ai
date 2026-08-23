@@ -2,6 +2,7 @@ import json
 import os
 import re
 import threading
+from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 
 from anthropic import Anthropic
@@ -416,6 +417,73 @@ def _route_docs(question: str, role: str) -> set[str]:
         return set()
 
 
+# Speculative routing. The router needs the REWRITTEN query, so starting it on
+# the raw question is a bet: it wins the router's ~1.4s when the rewrite returns
+# the question unchanged, and buys one extra ~$0.0025 call when it does not.
+# Measured free on the 33 logged questions: the rewrite call runs on 36% of them
+# (18% follow-ups + 18% tripping the vocabulary gate) — on the other 64%
+# _standalone_question returns instantly and the router already runs alongside
+# the hypothetical prefetch, so there is nothing there to win. That is a real
+# but unproven trade, and an always-on version would tax every changed rewrite
+# invisibly, so it ships OFF like RETRIEVE_FULL_BLOCKS.
+#
+# MEASURED 2026-08-20, paired, both arms on the same 10 rewrite-path questions,
+# pre-answer phase only (the Opus call lives in the generator, so building the
+# answer without consuming it stops right before it), 70 API calls, 0 failures:
+#   bet won (rewrite came back verbatim) ... 3/10 = 30%
+#   latency delta off-minus-on ........... median +0.37s (wins +0.72s, losses -0.21s)
+#   extra router calls ................... 7, i.e. $0.00175 per rewrite-path question
+# Expected value = 0.3 x (+0.72) + 0.7 x (-0.21) = +0.07s on the 36% of questions
+# that reach this path, i.e. ~0.03s averaged over all traffic — for ~1.3% more
+# money. A losing bet is slightly SLOWER, not neutral: the wasted call competes
+# with the hypothetical for the pool and the network while the real router still
+# runs serially behind the rewrite.
+# ⇒ STAYS OFF. The lever is built and tested; the number says it is not worth
+# buying. Re-measure only if the rewrite's verbatim rate rises well above 30%.
+RETRIEVE_SPECULATIVE_ROUTE = os.environ.get("RETRIEVE_SPECULATIVE_ROUTE", "0") == "1"
+_route_inflight: dict[tuple[str, str], "Future[set[str]]"] = {}
+_route_lock = threading.Lock()
+
+
+def prefetch_route(question: str, role: str) -> None:
+    """Start the router on the raw question, off the critical path. Never raises."""
+    if not RETRIEVE_SPECULATIVE_ROUTE:
+        return
+    key = (question, role)
+    with _route_lock:
+        if key in _route_inflight:
+            return
+        try:
+            _route_inflight[key] = _prefetch_pool.submit(_route_docs, question, role)
+        except RuntimeError as e:  # pool shut down (interpreter teardown)
+            safe_print(f"[backend] route prefetch skipped: {e!r}")
+
+
+def route_for(search_query: str, role: str, raw_question: str | None = None) -> set[str]:
+    """The route for `search_query`, joining a speculation only when it matches.
+
+    The speculation was started on `raw_question`; if the rewrite changed the
+    text the two differ and the bet is simply lost — this routes the rewritten
+    query properly and drops the stale future, because a route computed from
+    "ומה לגבי מילואים?" is exactly the unsearchable phrasing the rewrite exists
+    to repair. Correctness never depends on the guess.
+    """
+    key = (search_query, role)
+    with _route_lock:
+        fut = _route_inflight.pop(key, None)
+        if raw_question is not None:
+            # a losing bet still has a thread in the air; drop the handle so the
+            # map cannot grow one entry per changed rewrite
+            _route_inflight.pop((raw_question, role), None)
+    if fut is None:
+        return _route_docs(search_query, role)
+    try:
+        return fut.result()
+    except Exception as e:  # _route_docs swallows its own; belt and braces
+        safe_print(f"[backend] route prefetch failed: {e!r}")
+        return set()
+
+
 _HYDE_PROMPT = """שאלה של חייל: {q}
 
 כתוב פסקה קצרה (עד 60 מילים) בניסוח של פקודת מטכ"ל, כפי שהיא הייתה מנוסחת בפקודה
@@ -429,6 +497,53 @@ _HYDE_PROMPT = """שאלה של חייל: {q}
 # preloads measured questions into it so a re-measure re-uses text already paid
 # for rather than regenerating it at a different temperature draw.
 _hyde_cache: dict[str, str] = {}
+# In-flight prefetches, keyed by question. A caller that arrives while one is
+# running JOINS it rather than issuing its own: _hyde_cache is only filled when
+# the call returns, so a fire-and-forget thread would leave a window in which
+# `question in _hyde_cache` is still False and the same paragraph is bought
+# twice — real money, and a second temperature draw the night measurements
+# assume does not happen.
+_hyde_inflight: dict[str, "Future[str]"] = {}
+_hyde_lock = threading.Lock()
+# Four workers, not one: a single soldier only ever has one hypothetical in
+# flight, but concurrent sessions must not queue behind each other — a queued
+# prefetch would finish AFTER the retrieval that wanted it and buy nothing but
+# a thread. The pool is small on purpose; the joiner waits on the future either
+# way, so an over-subscribed pool degrades to today's serial behaviour. Shared
+# with the speculative router below.
+_prefetch_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="prefetch")
+
+
+def _hyde_call(question: str) -> str:
+    """The API round-trip, without the cache — the only place it is bought."""
+    try:
+        r = client.with_options(timeout=12.0, max_retries=1).messages.create(
+            model=REWRITE_MODEL, max_tokens=300, temperature=0,
+            messages=[{"role": "user", "content": _HYDE_PROMPT.format(q=question)}])
+        return "".join(b.text for b in r.content if b.type == "text").strip()
+    except Exception as e:
+        safe_print(f"[backend] hypothetical failed: {e!r}")
+        return ""
+
+
+def prefetch_hypothetical(question: str) -> None:
+    """Start the hypothetical now, off the critical path. Never raises.
+
+    The pre-answer phase is serial — rewrite → router → retrieval → hypothetical
+    — and only the last of those depends on nothing but the raw question. Kicking
+    it off first overlaps its ~1.5s with the rest, which is the one part of the
+    ~15s the soldier waits before the first token that costs nothing to remove.
+    A no-op when HyDE is off, already cached, or already in flight.
+    """
+    if not RETRIEVE_HYDE or HYDE_EXTRA_CHUNKS <= 0:
+        return
+    with _hyde_lock:
+        if question in _hyde_cache or question in _hyde_inflight:
+            return
+        try:
+            _hyde_inflight[question] = _prefetch_pool.submit(_hyde_call, question)
+        except RuntimeError as e:  # pool shut down (interpreter teardown)
+            safe_print(f"[backend] hypothetical prefetch skipped: {e!r}")
 
 
 def hypothetical(question: str) -> str:
@@ -440,18 +555,32 @@ def hypothetical(question: str) -> str:
     `night.hyde` generates through its own counted path instead of calling
     this one: a sweep whose calls all failed would otherwise report the
     baseline as the treatment (night/rewrite.py, 387 of 415 dead, "lost 0").
+
+    `night.hyde.preload_backend` writes straight into _hyde_cache, so the cache
+    check stays FIRST: a preloaded question must never reach the API.
     """
     if question in _hyde_cache:
         return _hyde_cache[question]
-    try:
-        r = client.with_options(timeout=12.0, max_retries=1).messages.create(
-            model=REWRITE_MODEL, max_tokens=300, temperature=0,
-            messages=[{"role": "user", "content": _HYDE_PROMPT.format(q=question)}])
-        text = "".join(b.text for b in r.content if b.type == "text").strip()
-    except Exception as e:
-        safe_print(f"[backend] hypothetical failed: {e!r}")
-        text = ""
+    with _hyde_lock:
+        fut = _hyde_inflight.get(question)
+    if fut is not None:
+        try:
+            text = fut.result()
+        except Exception as e:  # the worker swallows its own errors; belt and braces
+            safe_print(f"[backend] hypothetical prefetch failed: {e!r}")
+            text = ""
+    else:
+        text = _hyde_call(question)
     _hyde_cache[question] = text
+    # The JOINER clears the entry, never a done-callback on the future: a
+    # callback that popped it on completion could fire between this function's
+    # cache miss and its inflight lookup, and the caller would buy the
+    # paragraph a second time — the exact failure the map exists to prevent.
+    # The cost is that a prefetch nobody joins (the stream raised before
+    # widen_context) leaves one finished future behind, bounded by the distinct
+    # questions this process has seen, like _hyde_cache above it.
+    with _hyde_lock:
+        _hyde_inflight.pop(question, None)
     return text
 
 
@@ -987,12 +1116,22 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
     token (its deltas are not yielded), so the stream starts after a short
     reasoning pause.
     """
+    # The hypothetical depends on nothing but the raw question, while the three
+    # steps below it in the chain (rewrite → router → retrieval) each wait on
+    # the one before. Start it here and it is already in hand by the time
+    # widen_context asks for it, instead of adding its ~1.5s to a pre-token
+    # wait the soldier spends staring at a spinner. Free: same one call, joined
+    # rather than re-bought (see prefetch_hypothetical).
+    prefetch_hypothetical(question)
+    # ...and, when RETRIEVE_SPECULATIVE_ROUTE is on, the router too — joined
+    # below only if the rewrite hands back the same text it was given
+    prefetch_route(question, role)
     # follow-ups ("ומה לגבי מילואים?") are unsearchable on their own, and
     # first questions often carry typos that sink retrieval — search with the
     # Haiku rewrite/normalization, but answer the original question
     search_query = _standalone_question(question, history)
     # one router call per user question, shared by both retrievals below
-    route = _route_docs(search_query, role)
+    route = route_for(search_query, role, raw_question=question)
     chunks = retrieve_for_role(search_query, role, route=route, widen=False)
     # The rewrite is a retrieval AID, never a gatekeeper: when it changed the
     # question, retrieve on the RAW phrasing too and merge by best score. A
