@@ -146,7 +146,22 @@ def run() -> None:
     ledger = Ledger(C.LEDGER)
     sweep = {r["id"]: r for r in C.read_jsonl(C.SWEEP)}
 
-    if SAMPLE_SET in ("heldout", "fresh"):
+    if SAMPLE_SET == "custom":
+        # An explicit id list, for measuring a change the standing sets cannot
+        # see. The fresh/held-out/frozen samples were drawn before the corpus
+        # held anything outside GHQ orders, so a reserves compendium or a
+        # statute lands in them a question or two at a time and reads as noise.
+        # The ids still come from the SAME blind sweep — questions a generator
+        # that never saw the new sources already wrote — so this selects the
+        # audience, never the wording. REMEASURE_IDS names the file.
+        ids = json.loads((C.ROOT / os.environ["REMEASURE_IDS"]).read_text(encoding="utf-8"))
+        before = load_before() if os.environ.get("REMEASURE_BEFORE") else []
+        by_id = {r["id"]: r for r in before}
+        sample = [by_id.get(i, {"id": i, "sources": None}) for i in ids]
+        C.log(f"[remeasure] custom set from {os.environ['REMEASURE_IDS']} "
+              f"({len(sample)})" + (f", paired against {os.environ['REMEASURE_BEFORE']}"
+                                    if before else ", no before side"))
+    elif SAMPLE_SET in ("heldout", "fresh"):
         # First held-out/fresh run has no before side by definition — it IS the
         # before side of the next one. Later runs pair against REMEASURE_BEFORE.
         ids = heldout_ids() if SAMPLE_SET == "heldout" else fresh_ids()

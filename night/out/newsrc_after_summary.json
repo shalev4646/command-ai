@@ -1,0 +1,18 @@
+{
+ "tag": "newsrc_after",
+ "before_full": 7,
+ "before_n": 30,
+ "after_full": 6,
+ "after_n": 30,
+ "before_parts": [
+  16,
+  55
+ ],
+ "after_parts": [
+  14,
+  55
+ ],
+ "flips": 5,
+ "controls": 27,
+ "control_flips": 4
+}

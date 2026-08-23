@@ -21,8 +21,15 @@ from pathlib import Path
 #   ~$2   re-measure the saved 54 questions for a paired before/after
 #   ~$7   curate wave 1 (85 orders) once the PDFs are downloaded
 #   ~$0.5 grow the gate by 3 probes per new order
-CEILING_USD = 85.00
+CEILING_USD = 120.00
 PLANNED_USD = 43.00
+# Raised 85 -> 120 on 2026-08-23, approved by the user after two outside
+# sources went live unmeasured (HKA 31-08-01, the Military Justice Law) and
+# a third lever landed committed-but-off (RETRIEVE_QUANTITY_CLAUSES). The $35
+# buys the thing this project keeps proving it cannot skip: a blind set that
+# can actually SEE those changes (~$0.5 to generate, ~$2 to probe and grade)
+# and a paired on/off measure of the quantity lever (~$1), with headroom for
+# the round those results point at. The account cap was raised to $200.
 # Raised 70 -> 85 on 2026-08-21, approved after v97 measured up on all three
 # sets ($68.72 spent). The $16 buys: the content review's fix-round if it finds
 # anything paid to fix (~$1), the honest-negative grader re-baseline (~$3 — a
