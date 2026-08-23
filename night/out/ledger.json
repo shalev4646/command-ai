@@ -1,5 +1,5 @@
 {
- "spent": 74.6825,
+ "spent": 77.4327,
  "reserved": 0.3706,
  "entries": [
   {
@@ -2883,6 +2883,18 @@
    "actual": 0.0119
   },
   {
+   "id": "curate:CHOK-SHIPUT-1955#5776-709",
+   "label": "curate:CHOK-SHIPUT-1955",
+   "estimate": 0.107,
+   "actual": 0.2426
+  },
+  {
+   "id": "curate:HKA-31-08-01#21188-695",
+   "label": "curate:HKA-31-08-01",
+   "estimate": 0.107,
+   "actual": 0.265
+  },
+  {
    "id": "curate:PM-31.0213#37332-119",
    "label": "curate:PM-31.0213",
    "estimate": 0.0418,
@@ -3417,6 +3429,96 @@
    "actual": 0.0419
   },
   {
+   "id": "digest:CHOK-SHIPUT-1955#1#5776-710",
+   "label": "digest:CHOK-SHIPUT-1955#1",
+   "estimate": 0.0575,
+   "actual": 0.1415
+  },
+  {
+   "id": "digest:CHOK-SHIPUT-1955#2#5776-711",
+   "label": "digest:CHOK-SHIPUT-1955#2",
+   "estimate": 0.0575,
+   "actual": 0.1524
+  },
+  {
+   "id": "digest:CHOK-SHIPUT-1955#3#5776-712",
+   "label": "digest:CHOK-SHIPUT-1955#3",
+   "estimate": 0.0412,
+   "actual": 0.0492
+  },
+  {
+   "id": "digest:CHOK-SHIPUT-1955#3r#5776-713",
+   "label": "digest:CHOK-SHIPUT-1955#3r",
+   "estimate": 0.0412,
+   "actual": 0.0592
+  },
+  {
+   "id": "digest:HKA-31-08-01#1#21160-696",
+   "label": "digest:HKA-31-08-01#1",
+   "estimate": 0.0575,
+   "actual": 0.1431
+  },
+  {
+   "id": "digest:HKA-31-08-01#10#21160-706",
+   "label": "digest:HKA-31-08-01#10",
+   "estimate": 0.0491,
+   "actual": 0.1114
+  },
+  {
+   "id": "digest:HKA-31-08-01#2#21160-697",
+   "label": "digest:HKA-31-08-01#2",
+   "estimate": 0.0575,
+   "actual": 0.1694
+  },
+  {
+   "id": "digest:HKA-31-08-01#3#21160-698",
+   "label": "digest:HKA-31-08-01#3",
+   "estimate": 0.0575,
+   "actual": 0.1892
+  },
+  {
+   "id": "digest:HKA-31-08-01#4#21160-699",
+   "label": "digest:HKA-31-08-01#4",
+   "estimate": 0.0575,
+   "actual": 0.1961
+  },
+  {
+   "id": "digest:HKA-31-08-01#5#21160-700",
+   "label": "digest:HKA-31-08-01#5",
+   "estimate": 0.0575,
+   "actual": 0.2286
+  },
+  {
+   "id": "digest:HKA-31-08-01#5r#21160-701",
+   "label": "digest:HKA-31-08-01#5r",
+   "estimate": 0.0575,
+   "actual": 0.1768
+  },
+  {
+   "id": "digest:HKA-31-08-01#6#21160-702",
+   "label": "digest:HKA-31-08-01#6",
+   "estimate": 0.0575,
+   "actual": 0.1437
+  },
+  {
+   "id": "digest:HKA-31-08-01#7#21160-703",
+   "label": "digest:HKA-31-08-01#7",
+   "estimate": 0.0575,
+   "actual": 0.1433
+  },
+  {
+   "id": "digest:HKA-31-08-01#8#21160-704",
+   "label": "digest:HKA-31-08-01#8",
+   "estimate": 0.0575,
+   "actual": 0.1605
+  },
+  {
+   "id": "digest:HKA-31-08-01#9#21160-705",
+   "label": "digest:HKA-31-08-01#9",
+   "estimate": 0.0575,
+   "actual": 0.1727
+  },
+  {
    "id": "digest:PM-33.0202#1#22972-607",
    "label": "digest:PM-33.0202#1",
    "estimate": 0.041,
@@ -3571,6 +3673,12 @@
    "label": "evidence:route",
    "estimate": 0.04,
    "actual": 0.04
+  },
+  {
+   "id": "gate-probes#13636-707",
+   "label": "gate-probes",
+   "estimate": 0.0018,
+   "actual": 0.002
   },
   {
    "id": "gate-probes#3452-689",
@@ -3823,6 +3931,12 @@
    "label": "hyde:generate",
    "estimate": 0.0149,
    "actual": 0.0149
+  },
+  {
+   "id": "hyde:generate#19720-708",
+   "label": "hyde:generate",
+   "estimate": 0.0034,
+   "actual": 0.0035
   },
   {
    "id": "hyde:generate#2584-327",
