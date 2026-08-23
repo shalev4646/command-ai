@@ -8522,6 +8522,42 @@ def _clause_dialog(primary: dict, page: int | None, full_href: str | None) -> No
         )
 
 
+def _superseded_notice(sources: list | None) -> None:
+    """Say it in the answer when the answer rests on a revoked order.
+
+    A revoked order keeps answering — it is often the last published text on
+    its subject, and deleting it costs coverage — so the corpus keeps it and
+    marks it `superseded`. What must change is that the reader is told.
+
+    Two other places already carry the warning, and neither reaches the person
+    who only reads: the source card shows it behind a "הצג סעיף מקור" click,
+    and the block header shows it to the MODEL. The header makes the model
+    LIKELY to mention it; verified live on 2026-08-24, a commander asking
+    about oversized-cargo transport got the full procedure from a revoked
+    order with no hint of it anywhere in the answer. This strip is rendered
+    from the data, not written by the model, so it cannot be omitted.
+    """
+    revoked = [s for s in (sources or []) if s.get("superseded")]
+    if not revoked:
+        return
+    names = []
+    for s in revoked:
+        did = (s.get("doc_id") or "").strip()
+        order = did[3:] if did.upper().startswith("PM-") else did
+        title = (s.get("title") or "").strip()
+        label = f"פ״מ {order}" if _ORDER_NUMBER.match(order) else (title or order)
+        names.append(f"{label} ({title})" if title and label != title else label)
+    note = next((s.get("superseded_note") for s in revoked if s.get("superseded_note")), "")
+    plural = len(revoked) > 1
+    st.warning(
+        ("**הפקודות שעליהן מבוססת התשובה בוטלו** — " if plural
+         else "**הפקודה שעליה מבוססת התשובה בוטלה** — ")
+        + "; ".join(names) + ".\n\n"
+        + (note or "הכללים שלמעלה הם הנוסח האחרון שפורסם ואינם בתוקף. "
+                   "ודא מול היחידה מה מסדיר את הנושא כיום.")
+    )
+
+
 def _question_for(msg_i: int) -> str:
     """The user question that produced the answer at index msg_i."""
     for m in reversed(st.session_state.messages[:msg_i]):
@@ -8539,6 +8575,7 @@ for msg_i, msg in enumerate(st.session_state.messages):
             if chip:
                 st.markdown(chip, unsafe_allow_html=True)
             _render_body(body, chip)
+            _superseded_notice(msg.get("sources"))
             if msg.get("truncated"):
                 st.warning("התשובה נקטעה בגלל אורך. אפשר לשאול על חלק ממוקד יותר לתשובה שלמה.")
             elif msg.get("interrupted"):

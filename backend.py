@@ -990,6 +990,14 @@ def _sources_from_chunks(chunks: list[dict]) -> list[dict]:
             # these and shows "מקור אזרחי" instead.
             "civil_source": bool(doc.get("civil_source")),
             "civil_label": doc.get("civil_label") or "",
+            # VALIDITY, not type — a separate field on purpose. An order can be
+            # revoked and still be the best (or only) text on its subject, so it
+            # keeps answering; what changes is that the answer must say so. The
+            # UI renders a deterministic strip from this, because the block
+            # header that warns the MODEL only makes it likely to mention the
+            # revocation, and "likely" is the wrong guarantee for this.
+            "superseded": bool(doc.get("superseded")),
+            "superseded_note": (doc.get("superseded_note") or "").strip(),
             "doc_id": doc_id,
             "title": doc.get("title", c.get("title", "")),
             # "" when no PDF resolved — this is the dead-link guard: every

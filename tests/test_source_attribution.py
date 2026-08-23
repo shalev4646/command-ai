@@ -134,6 +134,37 @@ def test_no_document_is_announced_as_an_order_it_is_not():
         f"classification line; give them civil_label: {bare}")
 
 
+def test_a_revoked_order_reaches_the_answer_as_data():
+    """The strip in the answer body is rendered from `superseded`, not written
+    by the model — so the field has to survive the trip to `sources`.
+
+    Live on 2026-08-24 a commander asked about oversized-cargo transport and
+    got the full procedure out of a REVOKED order, with the only warning
+    sitting behind a "הצג סעיף מקור" click. The block header now shows the
+    revocation to the model too, but that makes it LIKELY to say so, and for
+    "this rule is not in force" likely is the wrong guarantee. Hence a strip
+    driven by data, and hence this test.
+    """
+    revoked = [doc_id for doc_id, d in _docs().items() if d.get("superseded")]
+    assert revoked, "no document is marked superseded — has the field been dropped?"
+    for doc_id in revoked:
+        got = backend._sources_from_chunks([_chunk(doc_id)])
+        assert got, f"{doc_id} is revoked and could not even be cited"
+        assert got[0]["superseded"] is True, \
+            f"{doc_id} is superseded in the store but not in its source entry"
+
+
+def test_every_source_carries_the_validity_flag():
+    # the render reads s["superseded"]; a missing key would silently mean
+    # "still in force" for every answer
+    for doc_id in list(_docs())[:5]:
+        src = backend._sources_from_chunks([_chunk(doc_id)])
+        if src:
+            assert "superseded" in src[0], doc_id
+            assert isinstance(src[0]["superseded"], bool), doc_id
+            assert "superseded_note" in src[0], doc_id
+
+
 def test_an_explicit_label_beats_the_id_derived_one():
     """A hand-written label exists BECAUSE the id describes the document wrongly.
 
