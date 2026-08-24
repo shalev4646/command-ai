@@ -93,7 +93,10 @@ def test_no_door_is_better_than_a_wrong_door():
     """Silence is the default. A question with no family keyword must not be
     handed the nearest-looking destination."""
     for q in ("מותר להכניס נרגילה לבסיס?",
+              # ⚠ נתפס ב-24.08 כדלת שגויה: „תורנות" לבדו שלח שאלת-תוצאה
+              # משמעתית אל השלישות. זו שאלה על עונש, לא על מי מנהל את הסידור.
               "מה קורה אם איחרתי לתורנות במטבח?",
+              "כמה זמן נמשך מסדר בוקר?",
               ""):
         assert OS.destination_for(q) is None, q
 
