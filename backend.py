@@ -2,6 +2,7 @@ import json
 import os
 import re
 import threading
+import time
 from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 
@@ -306,14 +307,40 @@ ALL_ROLES = ROLES
 # recreating the exact churn this removes.
 _docs_cache: tuple[float, list[dict]] | None = None
 _docs_lock = threading.Lock()
+_docs_scanned_at = 0.0
+
+# How long a freshness scan stays trusted. The cache above removed the JSON
+# re-parse but kept paying for the KEY: `glob` + `stat` on all 294 files on
+# every call, and load_documents runs several times per question (both
+# retrievals + the sources footer) — profiled 2026-08-24 at ~1,470 `nt.stat`
+# calls and 0.13s per question on a local SSD. Fly's volume is network-backed
+# and a stat is a round-trip there, so the cost is plausibly higher; that has
+# NOT been measured and must not be reported as if it had.
+#
+# 0 (the default in code) keeps the original behaviour byte-for-byte: scan
+# every call. That is what the night pipeline needs — it writes into
+# json_store while the same process reads it. In production json_store only
+# changes on deploy, which starts a fresh process, so a few seconds of
+# staleness cannot be observed there.
+#
+# ⚠ A TTL and not just the directory's own mtime: a directory's mtime moves
+# when a file is created or deleted and NOT when an existing file is edited
+# in place, so a curation edit would go unseen for as long as the process
+# lives. The TTL bounds that to itself.
+DOC_SCAN_TTL_SEC = float(os.environ.get("DOC_SCAN_TTL_SEC", "0"))
 
 
 def load_documents() -> list[dict]:
-    global _docs_cache
+    global _docs_cache, _docs_scanned_at
+    if DOC_SCAN_TTL_SEC > 0:
+        cached = _docs_cache
+        if cached and (time.monotonic() - _docs_scanned_at) < DOC_SCAN_TTL_SEC:
+            return cached[1]
     json_dir = Path(__file__).parent / "storage" / "json_store"
     files = sorted(json_dir.glob("*.json"))
     stamp = max((f.stat().st_mtime for f in files), default=0.0)
     with _docs_lock:
+        _docs_scanned_at = time.monotonic()
         if _docs_cache and _docs_cache[0] == stamp:
             return _docs_cache[1]
         docs = []
