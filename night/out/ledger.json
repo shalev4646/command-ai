@@ -1,5 +1,5 @@
 {
- "spent": 89.7911,
+ "spent": 89.9161,
  "reserved": 0.3706,
  "entries": [
   {
@@ -4231,6 +4231,12 @@
    "label": "probe-remeasure6",
    "estimate": 0.84,
    "actual": 1.0678
+  },
+  {
+   "id": "route-probe-pilot150#6556-728",
+   "label": "route-probe-pilot150",
+   "estimate": 0.13,
+   "actual": 0.125
   },
   {
    "id": "unscramble:21.0123#11536-330",
