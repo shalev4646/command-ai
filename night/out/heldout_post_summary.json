@@ -1,0 +1,18 @@
+{
+ "tag": "heldout_post",
+ "before_full": 19,
+ "before_n": 96,
+ "after_full": 23,
+ "after_n": 96,
+ "before_parts": [
+  51,
+  172
+ ],
+ "after_parts": [
+  59,
+  172
+ ],
+ "flips": 23,
+ "controls": 2,
+ "control_flips": 1
+}

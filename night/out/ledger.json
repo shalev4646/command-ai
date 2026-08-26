@@ -1,5 +1,5 @@
 {
- "spent": 104.5147,
+ "spent": 104.6195,
  "reserved": 0.9511,
  "entries": [
   {
@@ -3855,10 +3855,22 @@
    "actual": null
   },
   {
+   "id": "grade-heldout_post#1396-739",
+   "label": "grade-heldout_post",
+   "estimate": 0.144,
+   "actual": null
+  },
+  {
    "id": "grade-heldout_post#22148-737",
    "label": "grade-heldout_post",
    "estimate": 0.144,
    "actual": null
+  },
+  {
+   "id": "grade-heldout_post#2708-740",
+   "label": "grade-heldout_post",
+   "estimate": 0.144,
+   "actual": 0.1048
   },
   {
    "id": "grade-heldout_post#9596-736",
@@ -4435,12 +4447,6 @@
    "label": "unscramble:PM-33.0401",
    "estimate": 0.006,
    "actual": 0.0057
-  },
-  {
-   "id": "grade-heldout_post#1396-739",
-   "label": "grade-heldout_post",
-   "estimate": 0.144,
-   "actual": null
   }
  ]
 }
