@@ -664,7 +664,22 @@ def extend_with_router_slots(chunks: list[dict], question: str, role: str,
     window, and here they get a seat."""
     if RETRIEVE_ROUTER_SLOTS <= 0 or not route:
         return chunks
-    picks = retrieve(question, n_results=50, doc_ids=sorted(route),
+    # The curated-only policy lives in retrieve_for_role, one level up, and
+    # `retrieve` with explicit doc_ids honours no filter at all. Without this
+    # line a seat re-admits the eleven orders RETRIEVE_CURATED_ONLY keeps out
+    # of the search space (tests/test_corpus_reachable.py) — the same document
+    # invisible to ranking and visible through a seat. 36.0301 really is the
+    # order that answers q00177, but the answer to that is to CURATE it, not to
+    # serve raw uncurated text through a side door: the curated block is the
+    # quality instrument the whole ingest pipeline exists to produce.
+    scoped = route
+    if RETRIEVE_CURATED_ONLY:
+        curated = {d["document_id"] for d in _docs_for_role(role)
+                   if d.get("document_id") and _has_key_facts(d)}
+        scoped = {d for d in route if d in curated}
+        if not scoped:
+            return chunks
+    picks = retrieve(question, n_results=50, doc_ids=sorted(scoped),
                      boost_docs=set(), max_per_doc=1)
     return _append_new(chunks, picks, RETRIEVE_ROUTER_SLOTS)
 

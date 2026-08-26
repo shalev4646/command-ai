@@ -113,6 +113,43 @@ def test_production_deploys_the_seats():
     )
 
 
+
+
+# ── added 2026-08-26, after the seats shipped ────────────────────────────────
+# `extend_with_router_slots` calls `retrieve` with explicit `doc_ids`, and that
+# path applies no curated-only filter — the filter lives one level up, in
+# `retrieve_for_role`. So the seats quietly re-admitted the eleven orders that
+# `RETRIEVE_CURATED_ONLY` deliberately keeps out of the search space
+# (tests/test_corpus_reachable.py), and the same document became invisible to
+# ranking but visible through a seat.
+#
+# The tempting reading is that this is a bonus: 36.0301 is genuinely the order
+# that answers q00177, and a seat is the only way it ever reaches a soldier.
+# But that is an argument for CURATING it, not for serving raw uncurated text
+# through a side door — the curated block is the quality instrument the whole
+# ingest pipeline exists to produce. Whether uncurated orders should be served
+# is a real question and deserves a deliberate answer; it must not arrive as a
+# side effect of a retrieval fix.
+UNCURATED_PROBE = "תוספת פעילות ברמה 3 — מי זכאי וכמה זה?"
+
+
+def test_a_seat_does_not_smuggle_in_an_uncurated_order():
+    if not backend.RETRIEVE_CURATED_ONLY:
+        return  # the policy is off; nothing to enforce
+    backend.RETRIEVE_ROUTER_SLOTS = max(2, _configured_slots())
+    uncurated = {d["document_id"] for d in backend.load_documents()
+                 if d.get("document_id") and not backend._has_key_facts(d)}
+    assert uncurated, "corpus has no uncurated order to test against"
+    route = set(sorted(uncurated)[:2])
+    served = {c["doc_id"] for c in backend.retrieve_for_role(
+        UNCURATED_PROBE, "soldier", route=route, widen=True)}
+    leaked = served & uncurated
+    assert not leaked, (
+        f"router seats served uncurated orders {sorted(leaked)} that "
+        f"RETRIEVE_CURATED_ONLY keeps out of retrieval everywhere else"
+    )
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_") and callable(fn):

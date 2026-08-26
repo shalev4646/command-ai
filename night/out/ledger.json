@@ -1,6 +1,6 @@
 {
- "spent": 95.8454,
- "reserved": 0.3706,
+ "spent": 104.5147,
+ "reserved": 0.9511,
  "entries": [
   {
    "id": "anchors2:31.0116#20840-644",
@@ -3849,6 +3849,24 @@
    "actual": 0.0251
   },
   {
+   "id": "grade-heldout_post#12024-738",
+   "label": "grade-heldout_post",
+   "estimate": 0.144,
+   "actual": null
+  },
+  {
+   "id": "grade-heldout_post#22148-737",
+   "label": "grade-heldout_post",
+   "estimate": 0.144,
+   "actual": null
+  },
+  {
+   "id": "grade-heldout_post#9596-736",
+   "label": "grade-heldout_post",
+   "estimate": 0.1485,
+   "actual": null
+  },
+  {
    "id": "grade-heldout_pre#14244-733",
    "label": "grade-heldout_pre",
    "estimate": 0.15,
@@ -4137,6 +4155,18 @@
    "actual": 0.8169
   },
   {
+   "id": "probe-heldout_post#22148-735",
+   "label": "probe-heldout_post",
+   "estimate": 2.8,
+   "actual": 4.2666
+  },
+  {
+   "id": "probe-heldout_post#9596-734",
+   "label": "probe-heldout_post",
+   "estimate": 2.8,
+   "actual": 4.4027
+  },
+  {
    "id": "probe-heldout_pre#7728-731",
    "label": "probe-heldout_pre",
    "estimate": 2.8,
@@ -4405,6 +4435,12 @@
    "label": "unscramble:PM-33.0401",
    "estimate": 0.006,
    "actual": 0.0057
+  },
+  {
+   "id": "grade-heldout_post#1396-739",
+   "label": "grade-heldout_post",
+   "estimate": 0.144,
+   "actual": null
   }
  ]
 }
