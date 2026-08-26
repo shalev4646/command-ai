@@ -56,6 +56,23 @@ swap_size_mb = 768
   # typical 8->13/40 with zero control flips, held-out 27->31/47, frozen
   # 22->26/58 — at about +2,100 words (~+$0.02) per question. Turn off with "0".
   RETRIEVE_FULL_BLOCKS = "1"
+  # A seat in the context for each of the document router's top picks
+  # (backend.extend_with_router_slots). Off in code; on here after the
+  # mini-pilot 150 adjudication of 2026-08-25 measured why the router was
+  # paying for a shortlist it could not deliver. On the 25 questions of the two
+  # largest failure clusters, with router decisions frozen so the sweep was
+  # free: the answering order reached the context 10/25 with no seats, 15/25
+  # with one, 16/25 with two - and where the router named the answering order
+  # at all, 5/11 became 11/11. The orders retrieval finds unaided stayed at 5,
+  # because seats are APPENDED and cannot evict. Cost is about one extra chunk
+  # (median context 15 -> 16) and no extra API call: the router is already
+  # paid for. The alternative repair - raising _ROUTE_BOOST to 0.15 - was
+  # measured on all 431 gate cases with the router live and rejected: it broke
+  # six and rescued three, and the breaks are not anchorable (35.0205 already
+  # carries an anchor near-identical to the question it loses, and a bigger
+  # bonus lifts its competitor by exactly as much). Turn off with "0".
+  # ASCII only in this file: flyctl rejects Hebrew quote marks.
+  RETRIEVE_ROUTER_SLOTS = "2"
   # How long backend.load_documents trusts its last freshness scan. Off in
   # code (0 = scan every call), which is what the night pipeline needs since
   # it writes into json_store while the same process reads it. Here it is on:

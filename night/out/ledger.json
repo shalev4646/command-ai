@@ -1,5 +1,5 @@
 {
- "spent": 89.9161,
+ "spent": 90.9941,
  "reserved": 0.3706,
  "entries": [
   {
@@ -4231,6 +4231,12 @@
    "label": "probe-remeasure6",
    "estimate": 0.84,
    "actual": 1.0678
+  },
+  {
+   "id": "route-cache-gate#15248-729",
+   "label": "route-cache-gate",
+   "estimate": 1.1,
+   "actual": 1.078
   },
   {
    "id": "route-probe-pilot150#6556-728",
