@@ -77,28 +77,53 @@ MEASURED_NEWSRC = {
 }
 
 
+# ⚠ 26.08: `None` in the tables above used to mean "family_of returns None".
+# The last-resort family (`unit_level_default`, added by the user's decision —
+# see tests/test_out_of_scope_default.py) means every question now lands
+# somewhere, so `None` was re-read as what it always actually guarded: **no
+# SPECIFIC family claims this question**. Inventing a specific address is the
+# failure mode this file exists to catch; falling through to a procedure is not.
+# The assertion below is therefore stricter than a relaxed `!=`: it names the
+# exact family that is allowed to catch an unclaimed question.
+LAST_RESORT = "unit_level_default"
+
+
 def test_every_measured_question_lands_where_the_table_says():
     for qid, (question, expected) in {**MEASURED, **MEASURED_NEWSRC}.items():
-        assert OS.family_of(question) == expected, (
-            f"{qid}: got {OS.family_of(question)!r}, expected {expected!r}")
+        got = OS.family_of(question)
+        want = LAST_RESORT if expected is None else expected
+        assert got == want, f"{qid}: got {got!r}, expected {want!r}"
 
 
 def test_a_family_returns_a_door_and_a_reason():
     d = OS.destination_for(MEASURED["q00005"][0])
     assert d and d["label"] and d["where"] and d["why"], d
-    assert OS.destination_for(MEASURED["q00023"][0]) is None
+    # q00023 has no specific family and now reaches the last resort, which
+    # points at a procedure and names no office — asserted in full in
+    # tests/test_out_of_scope_default.py.
+    fallback = OS.destination_for(MEASURED["q00023"][0])
+    assert fallback and OS.family_of(MEASURED["q00023"][0]) == LAST_RESORT
 
 
-def test_no_door_is_better_than_a_wrong_door():
-    """Silence is the default. A question with no family keyword must not be
-    handed the nearest-looking destination."""
+def test_no_specific_door_is_better_than_a_wrong_one():
+    """A question with no family keyword must not be handed the nearest-looking
+    SPECIFIC destination. Since 26.08 it reaches the last resort instead, which
+    names a procedure and no office — the distinction this test always guarded.
+    Every one of these is in fact regulated somewhere, so in production the
+    strip never fires on them at all: it is gated on the ANSWER having admitted
+    no rule, and `destination_for` alone is only half that gate."""
     for q in ("מותר להכניס נרגילה לבסיס?",
               # ⚠ נתפס ב-24.08 כדלת שגויה: „תורנות" לבדו שלח שאלת-תוצאה
               # משמעתית אל השלישות. זו שאלה על עונש, לא על מי מנהל את הסידור.
               "מה קורה אם איחרתי לתורנות במטבח?",
-              "כמה זמן נמשך מסדר בוקר?",
-              ""):
-        assert OS.destination_for(q) is None, q
+              "כמה זמן נמשך מסדר בוקר?"):
+        assert OS.family_of(q) == LAST_RESORT, f"{q} -> {OS.family_of(q)}"
+
+
+def test_an_empty_question_gets_nothing_at_all():
+    """The last resort matches any character; no character means no door."""
+    assert OS.destination_for("") is None
+    assert OS.destination_for("   ") is None
 
 
 def test_the_table_refers_and_never_rules():
@@ -127,20 +152,30 @@ def test_kol_zchut_is_an_information_link_and_never_the_authority():
 
 
 def test_evidence_and_families_stay_in_step():
-    """Every family cites the measured questions it came from, and no family
-    exists that nothing was ever observed for."""
+    """Every TOPIC family cites the measured questions it came from, and no
+    topic family exists that nothing was ever observed for.
+
+    The last resort is exempt, and only it: it is not derived from a family of
+    questions at all — it applies to whatever no family recognised, and its
+    evidence is the order that defines the route (פ"מ 35.0822), not a sample.
+    Keeping it in EVIDENCE with an empty list is deliberate, so the two
+    structures still have to agree on the set of families."""
     families = {name for name, _, _ in OS._FAMILIES}
     assert families == set(OS.EVIDENCE), (families ^ set(OS.EVIDENCE))
     for name, ids in OS.EVIDENCE.items():
+        if name == LAST_RESORT:
+            assert not ids, "the last resort is not derived from a sample"
+            continue
         assert ids, name
         for qid in ids:
             assert qid not in OS._UNMATCHED, f"{qid} is claimed by {name} and unmatched"
 
 
-def test_unmatched_ids_really_are_unmatched():
+def test_unmatched_ids_reach_no_specific_family():
+    """The guard that matters: no topic family may claim them by accident."""
     for qid in OS._UNMATCHED:
         if qid in MEASURED:
-            assert OS.family_of(MEASURED[qid][0]) is None, qid
+            assert OS.family_of(MEASURED[qid][0]) == LAST_RESORT, qid
 
 
 if __name__ == "__main__":
