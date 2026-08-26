@@ -1,5 +1,5 @@
 {
- "spent": 83.64620000000001,
+ "spent": 89.7911,
  "reserved": 0.3706,
  "entries": [
   {
@@ -3123,6 +3123,12 @@
    "actual": null
   },
   {
+   "id": "decompose#20072-726",
+   "label": "decompose",
+   "estimate": 0.12,
+   "actual": 0.0558
+  },
+  {
    "id": "decompose#8160-549",
    "label": "decompose",
    "estimate": 0.0192,
@@ -3915,6 +3921,12 @@
    "actual": 0.0323
   },
   {
+   "id": "grade-pilot150#20072-727",
+   "label": "grade-pilot150",
+   "estimate": 0.222,
+   "actual": 0.1576
+  },
+  {
    "id": "grade-remeasure#20612-42",
    "label": "grade-remeasure",
    "estimate": 0.045,
@@ -3931,6 +3943,12 @@
    "label": "grade-remeasure3",
    "estimate": 0.045,
    "actual": 0.0291
+  },
+  {
+   "id": "grade-remeasure3#2424-725",
+   "label": "grade-remeasure3",
+   "estimate": 0.045,
+   "actual": 0.0317
   },
   {
    "id": "grade-remeasure4#14500-261",
@@ -3985,6 +4003,12 @@
    "label": "hyde:generate",
    "estimate": 0.0103,
    "actual": 0.01
+  },
+  {
+   "id": "hyde:generate#5208-723",
+   "label": "hyde:generate",
+   "estimate": 0.1725,
+   "actual": 0.178
   },
   {
    "id": "hyde:generate#5832-534",
@@ -4165,6 +4189,12 @@
    "label": "probe-newsrc_before",
    "estimate": 1.68,
    "actual": 2.2
+  },
+  {
+   "id": "probe-pilot150#2704-724",
+   "label": "probe-pilot150",
+   "estimate": 4.2,
+   "actual": 5.7218
   },
   {
    "id": "probe-remeasure#20612-41",
