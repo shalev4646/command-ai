@@ -31,9 +31,16 @@ import backend
 
 # Known-uncurated as of 2026-08-26. Shrinking this list is progress; a document
 # outside it means something was ingested without a curated block.
+# 2026-08-27: a digit-free curation pass took this from eleven to seven.
+# Four were accepted (35.0203, 35.0810, 31.0515, 35.0232) and five were
+# REJECTED by the faithfulness gates, which is the system working: 36.0301 —
+# the order the adjudication named as answering q00177 — was refused for
+# raising "ועדה רפואית", a topic the order never mentions. All eleven were
+# quarantined in the first place because their extracted digits are not
+# trustworthy, so this list is not an oversight; it is a safety rule holding.
 KNOWN_UNCURATED = {
-    "3.0502", "31.0252", "31.0515", "33.1010", "35.0203", "35.0232",
-    "35.0810", "36.0301", "36.0313", "PM-33.0109", "PM-33.0342",
+    "3.0502", "31.0252", "33.1010",
+    "36.0301", "36.0313", "PM-33.0109", "PM-33.0342",
 }
 
 
