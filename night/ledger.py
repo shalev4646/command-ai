@@ -21,7 +21,18 @@ from pathlib import Path
 #   ~$2   re-measure the saved 54 questions for a paired before/after
 #   ~$7   curate wave 1 (85 orders) once the PDFs are downloaded
 #   ~$0.5 grow the gate by 3 probes per new order
-CEILING_USD = 120.00
+CEILING_USD = 135.00
+# Raised 120 -> 135 on 2026-08-27, approved by the user in chat, to buy the one
+# answer-side hypothesis still standing: RETRIEVE_FULL_BLOCKS 1 -> 2. The
+# mechanism is measured, not guessed — on the 13 questions that got the right
+# order and still answered "המידע לא קיים", the answering order contributes a
+# MEDIAN OF ONE CHUNK while the lead order contributes thirteen, and setting
+# the flag to 2 takes the answering order to thirteen as well. What it does to
+# the ANSWERS is the open question, and a paired arm over the 96 held-out
+# questions costs ~$4.3. Everything cheaper was already measured and rejected:
+# raising _ROUTE_BOOST, k=5 routing, enriched router titles, Sonnet as router,
+# preserving the router's own ranking, and trimming the prompt's refusal rule
+# (which made refusals WORSE, 6/13 -> 8/13).
 PLANNED_USD = 43.00
 # Raised 85 -> 120 on 2026-08-23, approved by the user after two outside
 # sources went live unmeasured (HKA 31-08-01, the Military Justice Law) and
