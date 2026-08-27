@@ -1,5 +1,5 @@
 {
- "spent": 117.51650000000001,
+ "spent": 117.8403,
  "reserved": 4.3655,
  "entries": [
   {
@@ -3553,6 +3553,18 @@
    "label": "deepen:31.0103",
    "estimate": 0.053,
    "actual": 0.0733
+  },
+  {
+   "id": "deepen:33-05-01#1096-821",
+   "label": "deepen:33-05-01",
+   "estimate": 0.0835,
+   "actual": 0.1651
+  },
+  {
+   "id": "deepen:33-05-01#11152-822",
+   "label": "deepen:33-05-01",
+   "estimate": 0.0835,
+   "actual": 0.1587
   },
   {
    "id": "deepen:33.0201#19472-303",

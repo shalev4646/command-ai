@@ -159,8 +159,26 @@ SCHEMA = {
 
 
 def clause_numbers_in_raw(raw: str) -> set[int]:
-    """Clause markers as they appear in the source: `43 . חשוד שנעצר`."""
-    return {int(m.group(1)) for m in re.finditer(r"(?<!\d)(\d{1,3})\s*\.\s", raw)}
+    """Clause markers as they appear in the source: `43 . חשוד שנעצר`.
+
+    The tail accepts whitespace OR a Hebrew letter, because the RTL extraction
+    sometimes glues the period to the word after it. In הק"א 33-05-01 the same
+    order yields "96
+. 
+:חייל" and "107
+.  
+ חיי" — both matched — beside
+    "106
+  .חייל", which was not, so a correct citation of clause 106 was
+    reported as invention and the deepening was rejected at full price. That is
+    the failure `is_numbered` exists to prevent, surviving one level below it.
+
+    Widening cannot turn a measurement into a clause: "שקוטרה3 מ"מ" has no
+    period at all, and the `(?<!\d)` guard still keeps "1.5" from reading as
+    clause 5.
+    """
+    return {int(m.group(1))
+            for m in re.finditer(r"(?<!\d)(\d{1,3})\s*\.\s*(?=[\sא-ת])", raw)}
 
 
 def cited_numbers(text: str) -> set[int]:
