@@ -1,5 +1,5 @@
 {
- "spent": 115.1708,
+ "spent": 117.51650000000001,
  "reserved": 4.3655,
  "entries": [
   {
@@ -3483,6 +3483,12 @@
    "actual": null
   },
   {
+   "id": "decompose#5580-819",
+   "label": "decompose",
+   "estimate": 0.0576,
+   "actual": 0.022
+  },
+  {
    "id": "decompose#6340-802",
    "label": "decompose",
    "estimate": 0.0128,
@@ -4389,6 +4395,12 @@
    "actual": 0.0172
   },
   {
+   "id": "grade-realstyle#5580-820",
+   "label": "grade-realstyle",
+   "estimate": 0.108,
+   "actual": 0.0718
+  },
+  {
    "id": "grade-remeasure#20612-42",
    "label": "grade-remeasure",
    "estimate": 0.045,
@@ -4693,6 +4705,12 @@
    "label": "probe-real24",
    "estimate": 0.672,
    "actual": 0.6226
+  },
+  {
+   "id": "probe-realstyle#5580-818",
+   "label": "probe-realstyle",
+   "estimate": 2.016,
+   "actual": 2.2519
   },
   {
    "id": "probe-remeasure#20612-41",
