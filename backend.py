@@ -57,6 +57,23 @@ MAX_CONTEXT_CHUNKS = 8
 # instruments, so on is the default. RETRIEVE_CURATED_ONLY=0 turns it off.
 RETRIEVE_CURATED_ONLY = os.environ.get("RETRIEVE_CURATED_ONLY", "1") == "1"
 
+
+class RetrievalDegraded(RuntimeError):
+    """A retrieval helper failed while RETRIEVE_STRICT was on."""
+
+
+# Production degrades quietly when a helper call dies — `_route_docs` says so in
+# its own docstring, and that is right: a soldier gets a slightly worse answer
+# instead of none. A MEASUREMENT must do the opposite. On 2026-08-27 an arm was
+# composed 100/100 while the credit balance was exhausted, with the hypothetical
+# and the router failing on every single question; had the batch submitted, the
+# whole difference against its paired arm would have been attributed to the flag
+# under test. Only the submit failing on credit stopped it.
+#
+# So: off by default, and the night harness turns it on. A run on a broken
+# pipeline then dies at the first question instead of composing a plausible lie.
+RETRIEVE_STRICT = os.environ.get("RETRIEVE_STRICT", "0") == "1"
+
 # Add chunks retrieved with a HYPOTHETICAL ANSWER — Haiku writing what a
 # פקודת מטכ"ל would say — on top of the question's own eight.
 #
@@ -440,6 +457,8 @@ def _route_docs(question: str, role: str) -> set[str]:
         allowed = {d["document_id"] for d in _docs_for_role(role) if d.get("document_id")}
         return picked & allowed
     except Exception as e:
+        if RETRIEVE_STRICT:
+            raise RetrievalDegraded(f"document router failed: {e!r}") from e
         safe_print(f"[backend] document router failed: {e!r}")
         return set()
 
@@ -549,6 +568,8 @@ def _hyde_call(question: str) -> str:
             messages=[{"role": "user", "content": _HYDE_PROMPT.format(q=question)}])
         return "".join(b.text for b in r.content if b.type == "text").strip()
     except Exception as e:
+        if RETRIEVE_STRICT:
+            raise RetrievalDegraded(f"hypothetical failed: {e!r}") from e
         safe_print(f"[backend] hypothetical failed: {e!r}")
         return ""
 

@@ -33,9 +33,34 @@ rng = random.Random(20260811)
 
 
 def build_requests(rows: list[dict]) -> tuple[list, list[dict]]:
-    """Compose each question through the real pipeline, then wrap for Batch."""
+    """Compose each question through the real pipeline, then wrap for Batch.
+
+    Strict retrieval is forced on for the duration. Production is allowed to
+    degrade when the hypothetical or the router dies — a soldier gets a slightly
+    worse answer instead of none — but a measurement composed on a degraded
+    pipeline is a lie with a receipt. On 2026-08-27 an arm reached
+    "composed 100/100" while every hypothetical and every router call failed on
+    an exhausted credit balance; only the batch submit failing on the same
+    balance kept it from being compared against an arm that HAD both.
+    """
     from anthropic.types.message_create_params import MessageCreateParamsNonStreaming
     from anthropic.types.messages.batch_create_params import Request
+
+    was_strict = backend.RETRIEVE_STRICT
+    backend.RETRIEVE_STRICT = True
+    try:
+        return _build_requests(rows, MessageCreateParamsNonStreaming, Request)
+    except backend.RetrievalDegraded as e:
+        raise SystemExit(
+            f"[probe] ABORTING — retrieval is degraded ({e}). Composing anyway "
+            f"would produce an arm that silently lacks the hypothetical or the "
+            f"router, and any comparison against it would be attributed to the "
+            f"wrong cause. Fix the pipeline and re-run.") from e
+    finally:
+        backend.RETRIEVE_STRICT = was_strict
+
+
+def _build_requests(rows, MessageCreateParamsNonStreaming, Request):
 
     reqs, meta = [], []
     for i, r in enumerate(rows):
