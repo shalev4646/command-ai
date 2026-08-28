@@ -36,8 +36,14 @@
     0.120      55      85.5%   63.5%
     0.100      75      78.7%   79.7%
 
+⚠ **ומה ש-`COVERED` אינו אומר.** הכיול היה מול „לא NO_SUCH_RULE", וצד זה כולל
+גם 12 שאלות שהבוררות סימנה `NOT_IN_CORPUS` — הכלל קיים במסמך שאינו שלנו,
+והקורפוס רק מזכיר את הנושא. הראשונה בתור של פיילוט-150 היא בדיוק כזו (ביטוח
+לאומי, 0.279). ⇒ **`COVERED` = „הפקודות אינן פשוט שותקות כאן, שווה להסתכל",
+ולא „התשובה נמצאת ב-36.0401".**
+
 ⛔ **והאות חד-כיווני — זו המגבלה החשובה ביותר כאן.** ציון גבוה אומר בדיוק
-95% שיש חומר בקורפוס. ציון נמוך **אינו** אומר „אין כלל":
+95% שהפקודות אינן שותקות. ציון נמוך **אינו** אומר „אין כלל":
 
     ציון < 0.10:  32 שאלות, 53% באמת NO_SUCH_RULE  (שיעור-בסיס 31%)
 
@@ -211,8 +217,8 @@ def main(tags: list[str]) -> int:
         covered = [d for d in t if d["verdict"] == "COVERED"]
         shown = [d for d in covered if d["in_window"]]
         safe_print(f"\n[why] {tag}: {len(t)} answers declared a lack")
-        safe_print(f"       COVERED (corpus carries it, ~95% precise): {len(covered)}"
-                   f"   UNCLEAR: {len(t) - len(covered)}")
+        safe_print(f"       COVERED — the orders are not simply silent here, ~95% "
+                   f"precise: {len(covered)}   UNCLEAR: {len(t) - len(covered)}")
         safe_print(f"       of the COVERED, {len(shown)} had that very document in the "
                    f"window already — block depth, not retrieval\n")
         for d in covered[:15]:
