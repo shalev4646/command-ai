@@ -13,8 +13,17 @@ the strict ruler scores that a zero. So: two numbers, never one.
 
     strict   answered_parts / parts — the ruler every arm so far was measured
              on, unchanged, so the campaign's history stays comparable
-    goal     strict + the questions an arbitration pass verified as ones the
-             orders do not govern, where the answer said so instead of inventing
+    served   strict + an honest negative that reached a VERIFIED family door.
+             The user's goal is "every question gets a full and correct
+             answer", and an answer that reports silence and stops is not one:
+             the soldier arrived with a problem and leaves with the same
+             problem. This is the number to read against the goal.
+    goal     served + an honest negative that reached the catch-all door. That
+             door names no address -- it says what the orders do not govern is
+             set by the unit, and quotes the escalation route the orders
+             define. Procedure, not an answer, so it sits in its own tier.
+             The served->goal gap is the count `out_of_scope` asked to be
+             watched: on 2026-08-28 it was 40 of 42 on a fresh set.
 
 A question is credited to `goal` only when all of these hold:
 
@@ -46,6 +55,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import out_of_scope
+import scope_routes
 from common import safe_print
 from night import config as C
 
@@ -62,10 +73,34 @@ UNANSWERABLE = ("NO_SUCH_RULE", "MISSING", "NOT_IN_CORPUS")
 # outside this set on a zero-scoring question is a fabrication or a silence.
 HONEST_LEVELS = ("full", "led_known", "refused")
 
-# "The answer sent the reader somewhere." Directive phrasing only: an order's
-# own text names "מפקד היחידה" constantly, so mentioning a body is not enough —
-# the sentence has to tell the soldier to go there.
-_REFERRAL = re.compile(r"(?:יש|ניתן|מומלץ|כדאי|באפשרות[ךכ])\s+לפנות|לפנות\s+ל|פנ[היו]\s+ל")
+# Whether the soldier was sent anywhere is NOT a question about the answer's
+# prose. The referral strip is rendered by app.py AFTER the model is done, from
+# `out_of_scope.destination_for`, and `night/probe.py` measures
+# `backend.stream_ai_answer` -- which never sees it. A regex over the answer
+# text therefore reports on a surface the app does not use: it said 6 of 45 on
+# pilot-150 where the real gate fires on 107 of 107.
+#
+# So the instrument replays the app's own two gates instead of guessing: the
+# ANSWER carries a routing marker, and the QUESTION matches a family. Both
+# modules are pure strings -- no Streamlit, no network, no API call.
+_MARKERS = tuple(m for m in (getattr(scope_routes, "MARK_MISSING", ""),
+                             getattr(scope_routes, "MARK_OUT_OF_SCOPE", "")) if m)
+
+# The catch-all family added on 2026-08-26 so no soldier ends up with nothing.
+# It names no address: it says what the orders do not govern is set by the
+# unit, and quotes the escalation route the orders themselves define.
+# Procedure, not an answer -- so it is counted apart from a verified door.
+# `out_of_scope` asked for exactly this number to be watched: "how many
+# questions reach here. A number that grows means the specific families are
+# lagging behind reality."
+DEFAULT_FAMILY = "unit_level_default"
+
+
+def door(answer: str, question: str) -> str | None:
+    """The app's gate, replayed. Family name, or None when nothing fires."""
+    if not answer or not any(m in answer for m in _MARKERS):
+        return None
+    return out_of_scope.family_of(question)
 
 
 def verdicts() -> dict[str, str]:
@@ -89,11 +124,23 @@ def verdicts() -> dict[str, str]:
 
 def tally(rows: list[dict], verds: dict[str, str], tag: str = "") -> dict:
     """The whole rule, over graded rows. Pure — no disk, so the credit rule is
-    testable on rows written by hand instead of on a $4 measurement."""
-    strict = total = credited_parts = referred = referred_parts = 0
+    testable on rows written by hand instead of on a $4 measurement.
+
+    Three tiers, because two hid the thing worth seeing:
+
+      strict    the orders answered it
+      served    strict + an honest negative that reached a VERIFIED family door
+      goal      served + an honest negative that reached the catch-all door
+
+    The gap between `served` and `goal` is the count `out_of_scope` asked to be
+    watched: every question in it is one the specific families did not know.
+    """
+    strict = total = credited_parts = 0
+    served_parts = default_parts = 0
     credited: list[str] = []
     uncredited: list[str] = []
     stranded: list[str] = []
+    defaulted: list[str] = []
 
     for r in rows:
         g = r.get("grade") or {}
@@ -107,19 +154,24 @@ def tally(rows: list[dict], verds: dict[str, str], tag: str = "") -> dict:
         if verdict in UNANSWERABLE and g.get("level") in HONEST_LEVELS:
             credited.append(r["id"])
             credited_parts += len(parts)
-            if _REFERRAL.search(r.get("answer") or ""):
-                referred += 1
-                referred_parts += len(parts)
-            else:
+            fam = door(r.get("answer") or "", r.get("clean_q") or r.get("q") or "")
+            if fam is None:
                 stranded.append(r["id"])
+            elif fam == DEFAULT_FAMILY:
+                defaulted.append(r["id"])
+                default_parts += len(parts)
+            else:
+                served_parts += len(parts)
         else:
             uncredited.append(r["id"])
 
     return {"tag": tag, "strict": strict, "total": total,
-            "goal": strict + credited_parts, "credited_parts": credited_parts,
-            "credited": credited, "referred": referred, "uncredited": uncredited,
-            "served": strict + referred_parts, "referred_parts": referred_parts,
-            "stranded": stranded}
+            "goal": strict + served_parts + default_parts,
+            "served": strict + served_parts,
+            "credited_parts": credited_parts, "credited": credited,
+            "referred": len(credited) - len(stranded) - len(defaulted),
+            "uncredited": uncredited, "stranded": stranded,
+            "defaulted": defaulted, "default_parts": default_parts}
 
 
 def report(tag: str, verds: dict[str, str] | None = None) -> dict:
@@ -142,17 +194,17 @@ def main(tags: list[str]) -> int:
     for tag in tags:
         d = report(tag, verds)
         safe_print(f"[goal] {d['tag']}")
-        safe_print(f"         strict  {_pct(d['strict'], d['total'])}"
-                   f"   ->   served  {_pct(d['served'], d['total'])}"
-                   f"      (goal, referral not required: {_pct(d['goal'], d['total'])})")
+        safe_print(f"         strict {_pct(d['strict'], d['total'])}"
+                   f"   ->  served {_pct(d['served'], d['total'])}"
+                   f"   ->  goal {_pct(d['goal'], d['total'])}")
         safe_print(f"         credited: {len(d['credited'])} questions "
                    f"({d['credited_parts']} parts) verified as not governed by the orders")
-        safe_print(f"         of those, {d['referred']} told the soldier where to turn; "
-                   f"{len(d['stranded'])} end nowhere"
-                   + ("   <-- the referral gap" if d["stranded"] else ""))
+        safe_print(f"         doors: {d['referred']} verified family, "
+                   f"{len(d['defaulted'])} catch-all, {len(d['stranded'])} none"
+                   + ("   <-- the families are lagging" if d["defaulted"] else ""))
         safe_print(f"         no credit: {len(d['uncredited'])} zero-scoring questions "
-                   f"nobody adjudicated (by design)\n")
-    return 0
+                   f"nobody adjudicated (by design)")
+        safe_print("")
 
 
 if __name__ == "__main__":

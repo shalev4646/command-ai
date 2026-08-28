@@ -9,11 +9,16 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import scope_routes
 from night import report_goal as G
 
 
-def _row(qid, parts, answered, level="led_known", answer=""):
-    return {"id": qid, "answer": answer,
+MARK = scope_routes.MARK_MISSING
+
+
+def _row(qid, parts, answered, level="led_known", answer="", question=""):
+    return {"id": qid, "answer": answer, "clean_q": question, "q": question,
+            "question": question,
             "grade": {"level": level, "parts": parts, "answered_parts": answered}}
 
 
@@ -24,11 +29,18 @@ def test_zero_without_a_verdict_earns_nothing():
     assert d["uncredited"] == ["q1"], d
 
 
-def test_adjudicated_zero_is_credited():
-    rows = [_row("q1", ["a", "b"], 0)]
+def test_adjudicated_zero_is_credited_but_credit_alone_is_not_the_goal():
+    """Being right to say nothing earns `credited`. Reaching the soldier's next
+    step is a second, separate hurdle -- so a credited answer that rendered no
+    strip at all scores zero on both `served` and `goal`."""
     for verdict in G.UNANSWERABLE:
-        d = G.tally(rows, {"q1": verdict})
-        assert d["goal"] == 2 and d["credited"] == ["q1"], (verdict, d)
+        d = G.tally([_row("q1", ["a", "b"], 0)], {"q1": verdict})
+        assert d["credited"] == ["q1"] and d["credited_parts"] == 2, (verdict, d)
+        assert d["goal"] == 0 and d["stranded"] == ["q1"], (verdict, d)
+
+        marked = _row("q1", ["a", "b"], 0, answer=MARK + " כלל.", question="שאלה?")
+        d = G.tally([marked], {"q1": verdict})
+        assert d["goal"] == 2, (verdict, d)
 
 
 def test_a_verdict_the_pass_did_not_write_earns_nothing():
@@ -53,7 +65,8 @@ def test_fabrication_is_not_an_honest_negative():
 
 
 def test_goal_never_exceeds_the_denominator():
-    rows = [_row("q1", ["a", "b"], 0), _row("q2", ["c"], 1)]
+    rows = [_row("q1", ["a", "b"], 0, answer=MARK + " כלל.", question="שאלה?"),
+            _row("q2", ["c"], 1)]
     d = G.tally(rows, {"q1": "MISSING", "q2": "MISSING"})
     assert d["strict"] <= d["goal"] <= d["total"], d
 
@@ -63,42 +76,59 @@ def test_the_two_passes_spell_the_same_verdict_differently():
     the same thing -- the answering rule exists and the document is not ours.
     Reading only one name charged the app for 12 questions an arbitration had
     already cleared it of."""
-    rows = [_row("q1", ["a"], 0)]
+    rows = [_row("q1", ["a"], 0, answer=MARK + " כלל.", question="שאלה?")]
     assert G.tally(rows, {"q1": "NOT_IN_CORPUS"})["goal"] == 1
     assert G.tally(rows, {"q1": "MISSING"})["goal"] == 1
 
 
-def test_an_honest_answer_that_ends_nowhere_is_not_served():
-    """The goal is a full and correct answer. Reporting silence and stopping
-    leaves the soldier with the problem they arrived with, so `served` refuses
-    it even though `goal` credits it."""
-    rows = [_row("q1", ["a", "b"], 0, answer="המידע לא קיים בפקודות שסופקו.")]
+def test_an_answer_without_a_routing_marker_reaches_no_door():
+    """Gate one is the app's: no marker in the answer, no strip is rendered,
+    so nothing is served however helpful the prose sounds."""
+    rows = [_row("q1", ["a", "b"], 0, answer="פנה למפקד הישיר שלך.")]
     d = G.tally(rows, {"q1": "NO_SUCH_RULE"})
-    assert d["goal"] == 2 and d["served"] == 0, d
+    assert d["served"] == 0 and d["goal"] == 0, d
     assert d["stranded"] == ["q1"], d
 
 
-def test_an_honest_answer_that_refers_is_served():
-    rows = [_row("q1", ["a", "b"], 0,
-                 answer='המידע לא קיים בפקודות. יש לפנות למדור ת"ש ביחידה.')]
+def test_the_catch_all_door_is_counted_apart_from_a_verified_one():
+    """It names no address -- it states procedure. Crediting it as a real
+    referral would hide the number `out_of_scope` asked to be watched."""
+    rows = [_row("q1", ["a", "b"], 0, answer=MARK + " כלל כלשהו.",
+                 question="מי קובע מתי משדרים את ההתרעה?")]
     d = G.tally(rows, {"q1": "NO_SUCH_RULE"})
-    assert d["served"] == 2 and d["stranded"] == [], d
+    assert d["served"] == 0 and d["goal"] == 2, d
+    assert d["defaulted"] == ["q1"] and d["stranded"] == [], d
+
+
+def test_a_verified_family_door_is_served():
+    rows = [_row("q1", ["a", "b"], 0, answer=MARK + " כלל כלשהו.",
+                 question="אפשר לצבור חופשה?")]
+    d = G.tally(rows, {"q1": "NO_SUCH_RULE"})
+    assert d["served"] == 2 and d["goal"] == 2, d
+    assert d["defaulted"] == [] and d["referred"] == 1, d
 
 
 def test_served_never_exceeds_goal_and_never_undercuts_strict():
     rows = [_row("q1", ["a", "b"], 0, answer="אין כלל."),
-            _row("q2", ["c"], 1, answer="לפנות למדור ת\"ש."),
-            _row("q3", ["d"], 0, answer='המידע לא קיים. יש לפנות לקצין העיר.')]
-    d = G.tally(rows, {"q1": "NO_SUCH_RULE", "q3": "NOT_IN_CORPUS"})
+            _row("q2", ["c"], 1),
+            _row("q3", ["d"], 0, answer=MARK + " כלל.", question="שאלה כלשהי?"),
+            _row("q4", ["e"], 0, answer=MARK + " כלל.",
+                 question="אפשר לצבור חופשה?")]
+    d = G.tally(rows, {"q1": "NO_SUCH_RULE", "q3": "NOT_IN_CORPUS",
+                       "q4": "NO_SUCH_RULE"})
     assert d["strict"] <= d["served"] <= d["goal"] <= d["total"], d
+    assert d["stranded"] == ["q1"] and d["defaulted"] == ["q3"], d
 
 
-def test_naming_a_body_is_not_a_referral():
-    named = _row("q1", ["a"], 0, answer='הסמכות היא מפקד היחידה לפי הפקודה.')
-    sent = _row("q2", ["a"], 0, answer='המידע לא קיים. יש לפנות למדור ת"ש ביחידה.')
-    d = G.tally([named, sent], {"q1": "MISSING", "q2": "MISSING"})
-    assert d["credited"] == ["q1", "q2"], d
-    assert d["referred"] == 1, d
+def test_the_strip_is_not_in_the_answer_text():
+    """The referral is rendered by app.py from `out_of_scope`, and probe.py
+    measures `stream_ai_answer`, which never sees it. Reading the answer's
+    prose for it reported 6 of 45 on pilot-150 where the gate fires on all 45.
+    """
+    prose = _row("q1", ["a"], 0, answer='המידע לא קיים. יש לפנות למדור ת"ש.')
+    assert G.door(prose["answer"], prose["question"]) is None
+    gated = _row("q2", ["a"], 0, answer=MARK + " כלל.", question="שאלה כלשהי?")
+    assert G.door(gated["answer"], gated["question"]) == G.DEFAULT_FAMILY
 
 
 def test_verdicts_read_only_files_that_carry_ids():
