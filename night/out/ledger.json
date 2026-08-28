@@ -1,5 +1,5 @@
 {
- "spent": 119.24130000000001,
+ "spent": 122.9799,
  "reserved": 4.3655,
  "entries": [
   {
@@ -4329,6 +4329,18 @@
    "actual": 0.0245
   },
   {
+   "id": "grade-grade-win16#4440-839",
+   "label": "grade-grade-win16",
+   "estimate": 0.108,
+   "actual": 0.0716
+  },
+  {
+   "id": "grade-grade-win_prod#9200-836",
+   "label": "grade-grade-win_prod",
+   "estimate": 0.108,
+   "actual": 0.0702
+  },
+  {
    "id": "grade-heldout_after#18052-310",
    "label": "grade-heldout_after",
    "estimate": 0.036,
@@ -4831,6 +4843,24 @@
    "label": "probe-remeasure6",
    "estimate": 0.84,
    "actual": 1.0678
+  },
+  {
+   "id": "probe-win16#10940-837",
+   "label": "probe-win16",
+   "estimate": 2.016,
+   "actual": 0.0
+  },
+  {
+   "id": "probe-win16#4440-838",
+   "label": "probe-win16",
+   "estimate": 2.016,
+   "actual": 2.0812
+  },
+  {
+   "id": "probe-win_prod#9200-835",
+   "label": "probe-win_prod",
+   "estimate": 2.016,
+   "actual": 1.5156
   },
   {
    "id": "prompt-ab-13#10384-765",
