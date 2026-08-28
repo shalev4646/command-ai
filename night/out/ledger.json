@@ -1,5 +1,5 @@
 {
- "spent": 118.24040000000001,
+ "spent": 119.24130000000001,
  "reserved": 4.3655,
  "entries": [
   {
@@ -3555,10 +3555,22 @@
    "actual": null
   },
   {
+   "id": "deepen:21.0401#18424-832",
+   "label": "deepen:21.0401",
+   "estimate": 0.0571,
+   "actual": 0.0876
+  },
+  {
    "id": "deepen:31.0103#13716-670",
    "label": "deepen:31.0103",
    "estimate": 0.053,
    "actual": 0.0733
+  },
+  {
+   "id": "deepen:31.0103#18424-827",
+   "label": "deepen:31.0103",
+   "estimate": 0.053,
+   "actual": 0.0662
   },
   {
    "id": "deepen:33-05-01#1096-821",
@@ -3571,6 +3583,12 @@
    "label": "deepen:33-05-01",
    "estimate": 0.0835,
    "actual": 0.1587
+  },
+  {
+   "id": "deepen:33.0115#18424-829",
+   "label": "deepen:33.0115",
+   "estimate": 0.0534,
+   "actual": 0.0944
   },
   {
    "id": "deepen:33.0201#19472-303",
@@ -3615,10 +3633,22 @@
    "actual": 0.0945
   },
   {
+   "id": "deepen:35.0822#18424-834",
+   "label": "deepen:35.0822",
+   "estimate": 0.0617,
+   "actual": 0.0947
+  },
+  {
    "id": "deepen:36.0205#1444-538",
    "label": "deepen:36.0205",
    "estimate": 0.0405,
    "actual": 0.0567
+  },
+  {
+   "id": "deepen:36.0401#18424-830",
+   "label": "deepen:36.0401",
+   "estimate": 0.0722,
+   "actual": 0.1754
   },
   {
    "id": "deepen:36.0406#1444-541",
@@ -3633,6 +3663,12 @@
    "actual": 0.176
   },
   {
+   "id": "deepen:61.0104#18424-833",
+   "label": "deepen:61.0104",
+   "estimate": 0.0693,
+   "actual": 0.1664
+  },
+  {
    "id": "deepen:61.0104#19472-305",
    "label": "deepen:61.0104",
    "estimate": 0.0693,
@@ -3643,6 +3679,12 @@
    "label": "deepen:61.0104",
    "estimate": 0.0693,
    "actual": 0.1696
+  },
+  {
+   "id": "deepen:CHOK-SHIPUT-1955#18424-831",
+   "label": "deepen:CHOK-SHIPUT-1955",
+   "estimate": 0.0573,
+   "actual": 0.1206
   },
   {
    "id": "deepen:PM-33.0302#13716-669",
@@ -3673,6 +3715,12 @@
    "label": "deepen:PM-35.0402",
    "estimate": 0.0778,
    "actual": 0.1954
+  },
+  {
+   "id": "deepen:PM-35.0402#18424-828",
+   "label": "deepen:PM-35.0402",
+   "estimate": 0.0778,
+   "actual": 0.1956
   },
   {
    "id": "digest:31.0116#1#22972-602",
