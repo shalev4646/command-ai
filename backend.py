@@ -62,6 +62,44 @@ MAX_CONTEXT_CHUNKS = int(os.environ.get("RETRIEVE_MAX_CHUNKS", "8"))
 #
 # Both default to today's values, so nothing moves until a paired measurement
 # says the ANSWERS move -- same rule as RETRIEVE_ROUTER_SLOTS and FULL_BLOCKS.
+# The second search. Reserve this many of the window's seats for a retrieval
+# driven by the answer's OWN statement of what it lacked.
+#
+# Why it exists: the app gets one shot at picking 8 chunks out of 10,324, and
+# they are scored by how much a chunk sounds like the question -- while a
+# soldier does not talk like an order:
+#
+#   soldier  "אני חם וחלש, מותר לי ללכת לקליניקה?"
+#   order    "חייל המעוניין בטיפול רפואי יפנה למפקדו"
+#
+# Not one shared word. But when the first window is wrong the answer says so,
+# and it says it in ORDER language, because it has just read four thousand
+# words of orders:
+#
+#   "טרם במאגר: זכאות חייל לחופשה מיוחדת עקב מחלה או אשפוז של קרוב משפחה"
+#
+# That sentence is a far better query than the question. Measured 2026-08-28
+# against the 46 arbitration targets where the block answers and the FIRST
+# retrieval failed to serve the order:
+#
+#   first pass  (the soldier's question)      13/46   28%
+#   second pass (the answer's own "lacked")   25/46   54%
+#   union                                     28/46   61%
+#
+# 15 of the 46 are reached ONLY by the second query. The app writes that
+# sentence in 81% of its answers and then throws it away.
+#
+# Reserved slots, not a merged sort -- the two retrievals' scores are not on
+# one scale (each call's lexical bonus and anchor lift are normalised against
+# its own query), the same reason the rewrite/raw union below reserves rather
+# than sorts. Holding the window at MAX_CONTEXT_CHUNKS keeps this separable
+# from the window-shape change measured the same day: same number of seats,
+# different query behind some of them.
+#
+# 0 = off, and off is the default until a paired measurement of the ANSWERS
+# says otherwise.
+RETRIEVE_SECOND_PASS = int(os.environ.get("RETRIEVE_SECOND_PASS", "0"))
+
 RETRIEVE_MAX_PER_DOC = int(os.environ.get("RETRIEVE_MAX_PER_DOC", "4"))
 RETRIEVE_TOP_DOC_DEPTH = int(os.environ.get("RETRIEVE_TOP_DOC_DEPTH", "4"))
 
@@ -1240,8 +1278,30 @@ def _compose_user_content(question: str, context: str, profile: list[str] | None
     )
 
 
+def lacked_from(answer: str) -> str:
+    """What an answer said it was missing, taken verbatim from its own text.
+
+    The prompt makes the model mark a gap with `scope_routes.MARK_MISSING`
+    ("**טרם במאגר:**") or MARK_OUT_OF_SCOPE, and the sentence after the marker
+    names the missing rule in the orders' own register. Empty when the answer
+    claimed no gap -- which is the gate: a successful answer is never re-searched
+    and never pays for a second call.
+
+    One sentence only. Past the first newline the answer moves on to its next
+    section, and that section's vocabulary drags the query off the gap.
+    """
+    if not answer:
+        return ""
+    import scope_routes as _sr
+    out = []
+    for mark in (getattr(_sr, "MARK_MISSING", ""), getattr(_sr, "MARK_OUT_OF_SCOPE", "")):
+        if mark and mark in answer:
+            out.append(answer.split(mark, 1)[1].split(chr(10), 1)[0].strip())
+    return " ".join(x for x in out if x)[:300]
+
+
 def stream_ai_answer(question: str, history: list[dict] | None = None, role: str = "soldier",
-                     profile: list[str] | None = None):
+                     profile: list[str] | None = None, first_answer: str | None = None):
     """Answer a question as a live stream.
 
     Returns (text_generator, sources, sent_user_content, usage_holder): the
@@ -1302,6 +1362,30 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
         if extra:
             keep = max(2, MAX_CONTEXT_CHUNKS - len(chunks))
             chunks = chunks[:MAX_CONTEXT_CHUNKS - keep] + extra[:keep]
+    # The second search. `first_answer` is a previous attempt at THIS question;
+    # if it declared a gap, that declaration is the query. See
+    # RETRIEVE_SECOND_PASS for the measurement -- the answering order reaches
+    # the window 28% of the time on the soldier's phrasing and 54% on this one.
+    #
+    # The router's shortlist is reused rather than recomputed: it is a hint,
+    # not a scope, and a second Haiku call per failed question would cost more
+    # than the retrieval it is hinting at.
+    if RETRIEVE_SECOND_PASS > 0 and first_answer:
+        lacked = lacked_from(first_answer)
+        if lacked:
+            seen = {(c["doc_id"], c.get("section"), c.get("clause")) for c in chunks}
+            extra = [
+                c for c in retrieve_for_role(lacked, role, route=route, widen=False)
+                if (c["doc_id"], c.get("section"), c.get("clause")) not in seen
+            ]
+            if extra:
+                # Reserved seats, and the first pass always keeps at least two:
+                # its chunks are what let the model say what it was missing, and
+                # a window that drops them entirely can lose a partial answer
+                # that was already working.
+                keep = min(RETRIEVE_SECOND_PASS, max(0, MAX_CONTEXT_CHUNKS - 2))
+                chunks = chunks[:MAX_CONTEXT_CHUNKS - keep] + extra[:keep]
+
     # after the union, never inside it: the union truncates to
     # MAX_CONTEXT_CHUNKS and would drop an appended chunk that was paid for
     chunks = widen_context(chunks, question, role, route)

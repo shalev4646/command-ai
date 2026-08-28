@@ -67,8 +67,11 @@ def _build_requests(rows, MessageCreateParamsNonStreaming, Request):
         # the generator is never consumed, so no Opus tokens are billed here —
         # this only runs retrieval and returns the exact user turn production
         # would have sent (verified with a trap on client.messages.stream)
+        # `first_answer` is set only by night.arm_second: it seeds the second
+        # search off what THIS question's previous answer said it lacked.
+        # Absent for every other arm, so their composition is unchanged.
         _gen, sources, user_content, _usage = backend.stream_ai_answer(
-            r["q"], None, r["role"], None)
+            r["q"], None, r["role"], None, first_answer=r.get("first_answer"))
         del _gen
         system_prompt = backend.SYSTEM_PROMPTS.get(r["role"], backend.SYSTEM_PROMPT_SOLDIER)
         reqs.append(Request(
