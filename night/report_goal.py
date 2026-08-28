@@ -50,7 +50,13 @@ from common import safe_print
 from night import config as C
 
 # Verdicts an arbitration pass writes when the app is right not to answer.
-UNANSWERABLE = ("NO_SUCH_RULE", "MISSING")
+#
+# NOT_IN_CORPUS is the pilot-150 pass's name for what the earlier two passes
+# called MISSING: the answering rule exists somewhere, and the document holding
+# it is not ours. Same concept, two passes, two names. Reading only one of them
+# charged the app for 12 questions an arbitration had already cleared it of --
+# the docs said 45 of 148 were not the app's failure and this module said 33.
+UNANSWERABLE = ("NO_SUCH_RULE", "MISSING", "NOT_IN_CORPUS")
 
 # Levels that mean the answer stated plainly what it does not have. Anything
 # outside this set on a zero-scoring question is a fabrication or a silence.
@@ -84,9 +90,10 @@ def verdicts() -> dict[str, str]:
 def tally(rows: list[dict], verds: dict[str, str], tag: str = "") -> dict:
     """The whole rule, over graded rows. Pure — no disk, so the credit rule is
     testable on rows written by hand instead of on a $4 measurement."""
-    strict = total = credited_parts = referred = 0
+    strict = total = credited_parts = referred = referred_parts = 0
     credited: list[str] = []
     uncredited: list[str] = []
+    stranded: list[str] = []
 
     for r in rows:
         g = r.get("grade") or {}
@@ -102,12 +109,17 @@ def tally(rows: list[dict], verds: dict[str, str], tag: str = "") -> dict:
             credited_parts += len(parts)
             if _REFERRAL.search(r.get("answer") or ""):
                 referred += 1
+                referred_parts += len(parts)
+            else:
+                stranded.append(r["id"])
         else:
             uncredited.append(r["id"])
 
     return {"tag": tag, "strict": strict, "total": total,
             "goal": strict + credited_parts, "credited_parts": credited_parts,
-            "credited": credited, "referred": referred, "uncredited": uncredited}
+            "credited": credited, "referred": referred, "uncredited": uncredited,
+            "served": strict + referred_parts, "referred_parts": referred_parts,
+            "stranded": stranded}
 
 
 def report(tag: str, verds: dict[str, str] | None = None) -> dict:
@@ -131,12 +143,13 @@ def main(tags: list[str]) -> int:
         d = report(tag, verds)
         safe_print(f"[goal] {d['tag']}")
         safe_print(f"         strict  {_pct(d['strict'], d['total'])}"
-                   f"   ->   goal  {_pct(d['goal'], d['total'])}")
+                   f"   ->   served  {_pct(d['served'], d['total'])}"
+                   f"      (goal, referral not required: {_pct(d['goal'], d['total'])})")
         safe_print(f"         credited: {len(d['credited'])} questions "
-                   f"({d['credited_parts']} parts) verified as not governed by the orders"
-                   + (f" — {', '.join(d['credited'])}" if d["credited"] else ""))
-        safe_print(f"         of those, {d['referred']} told the soldier where to turn"
-                   + ("   <-- the referral gap" if d["credited"] and not d["referred"] else ""))
+                   f"({d['credited_parts']} parts) verified as not governed by the orders")
+        safe_print(f"         of those, {d['referred']} told the soldier where to turn; "
+                   f"{len(d['stranded'])} end nowhere"
+                   + ("   <-- the referral gap" if d["stranded"] else ""))
         safe_print(f"         no credit: {len(d['uncredited'])} zero-scoring questions "
                    f"nobody adjudicated (by design)\n")
     return 0

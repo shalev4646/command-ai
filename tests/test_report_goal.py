@@ -58,6 +58,41 @@ def test_goal_never_exceeds_the_denominator():
     assert d["strict"] <= d["goal"] <= d["total"], d
 
 
+def test_the_two_passes_spell_the_same_verdict_differently():
+    """adjudication2/3 wrote MISSING; the pilot-150 pass wrote NOT_IN_CORPUS for
+    the same thing -- the answering rule exists and the document is not ours.
+    Reading only one name charged the app for 12 questions an arbitration had
+    already cleared it of."""
+    rows = [_row("q1", ["a"], 0)]
+    assert G.tally(rows, {"q1": "NOT_IN_CORPUS"})["goal"] == 1
+    assert G.tally(rows, {"q1": "MISSING"})["goal"] == 1
+
+
+def test_an_honest_answer_that_ends_nowhere_is_not_served():
+    """The goal is a full and correct answer. Reporting silence and stopping
+    leaves the soldier with the problem they arrived with, so `served` refuses
+    it even though `goal` credits it."""
+    rows = [_row("q1", ["a", "b"], 0, answer="המידע לא קיים בפקודות שסופקו.")]
+    d = G.tally(rows, {"q1": "NO_SUCH_RULE"})
+    assert d["goal"] == 2 and d["served"] == 0, d
+    assert d["stranded"] == ["q1"], d
+
+
+def test_an_honest_answer_that_refers_is_served():
+    rows = [_row("q1", ["a", "b"], 0,
+                 answer='המידע לא קיים בפקודות. יש לפנות למדור ת"ש ביחידה.')]
+    d = G.tally(rows, {"q1": "NO_SUCH_RULE"})
+    assert d["served"] == 2 and d["stranded"] == [], d
+
+
+def test_served_never_exceeds_goal_and_never_undercuts_strict():
+    rows = [_row("q1", ["a", "b"], 0, answer="אין כלל."),
+            _row("q2", ["c"], 1, answer="לפנות למדור ת\"ש."),
+            _row("q3", ["d"], 0, answer='המידע לא קיים. יש לפנות לקצין העיר.')]
+    d = G.tally(rows, {"q1": "NO_SUCH_RULE", "q3": "NOT_IN_CORPUS"})
+    assert d["strict"] <= d["served"] <= d["goal"] <= d["total"], d
+
+
 def test_naming_a_body_is_not_a_referral():
     named = _row("q1", ["a"], 0, answer='הסמכות היא מפקד היחידה לפי הפקודה.')
     sent = _row("q2", ["a"], 0, answer='המידע לא קיים. יש לפנות למדור ת"ש ביחידה.')
