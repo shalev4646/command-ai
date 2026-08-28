@@ -38,7 +38,32 @@ REWRITE_MODEL = "claude-haiku-4-5-20251001"
 # leading order's guaranteed depth (top_doc_depth=4) plus 4 other orders —
 # raised from 6 when the key-facts clauses added per order started crowding
 # the basic raw-text content out of the leading order's slots.
-MAX_CONTEXT_CHUNKS = 8
+MAX_CONTEXT_CHUNKS = int(os.environ.get("RETRIEVE_MAX_CHUNKS", "8"))
+
+# How the 8 seats are SHARED, measured on 2026-08-28 against the 59 arbitration
+# targets that carry a verbatim quote verified in raw_text. Five earlier
+# attempts all changed the RANKING; nobody had measured the allocation.
+#
+#   n=8  depth=4 cap=4   18/59 orders    5/59 answering CLAUSES   5.0 docs
+#   n=8  depth=2 cap=3   23/59           6/59                     6.9
+#   n=8  depth=1 cap=1   24/59           2/59                     8.0   <-- trap
+#   n=12 depth=2 cap=3   27/59           8/59                    10.7
+#   n=16 depth=2 cap=3   30/59          10/59                    14.5
+#
+# ⚠ The depth=1 row is why doc-level recall is the wrong target and why
+# top_doc_depth=4 was not an arbitrary number: spreading the window over the
+# most documents puts the most ORDERS in and collapses the answering CLAUSE
+# from 5 to 2. That is the "right doc, wrong chunk" failure this parameter was
+# written to prevent, and it is real.
+#
+# ⛔ And the number to hold on to: at production settings the clause that
+# answers reaches the window in 5 of 59. The right ORDER arrives three times
+# more often than the right CLAUSE.
+#
+# Both default to today's values, so nothing moves until a paired measurement
+# says the ANSWERS move -- same rule as RETRIEVE_ROUTER_SLOTS and FULL_BLOCKS.
+RETRIEVE_MAX_PER_DOC = int(os.environ.get("RETRIEVE_MAX_PER_DOC", "4"))
+RETRIEVE_TOP_DOC_DEPTH = int(os.environ.get("RETRIEVE_TOP_DOC_DEPTH", "4"))
 
 # Serve only orders that carry a curated key-facts block. Measured on
 # 2026-08-16 (night/remeasure, paired, 30 questions / 63 frozen parts): wave 2
@@ -816,7 +841,8 @@ def retrieve_for_role(question: str, role: str, route: set[str] | None = None,
     # already seen it.
     search = _glossary.expand(question) if _glossary.RETRIEVE_GLOSSARY and expand_terms else question
     chunks = retrieve(search, n_results=MAX_CONTEXT_CHUNKS, doc_ids=doc_ids,
-                      boost_docs=route)
+                      boost_docs=route, max_per_doc=RETRIEVE_MAX_PER_DOC,
+                      top_doc_depth=RETRIEVE_TOP_DOC_DEPTH)
     return widen_context(chunks, question, role, route) if widen else chunks
 
 
