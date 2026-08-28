@@ -38,8 +38,22 @@ BASE = "grade-win_prod"          # the arm whose answers seed the second pass
 QUESTIONS = C.OUT / "realstyle_questions.json"
 
 
-def main(tag: str) -> int:
-    if backend.RETRIEVE_SECOND_PASS <= 0:
+def main(tag: str, control: bool = False) -> int:
+    """`control=True` runs the CONTROL arm: the same questions, a fresh model
+    call, and NO second search.
+
+    It exists because 63 of the 72 are re-answered, and a fresh call resamples
+    the model. Without this arm, "full answers 15 -> 23" cannot be told apart
+    from a lucky draw — and this project has been burned by exactly that
+    (`57f4fea`: two runs of the identical configuration scored 28% and 40%).
+    Resampling alone should move verdicts in BOTH directions; the second-pass
+    arm lost zero. The control is what turns that argument into a measurement.
+    """
+    if control and backend.RETRIEVE_SECOND_PASS != 0:
+        safe_print("[arm] a control arm must run with RETRIEVE_SECOND_PASS=0, "
+                   f"not {backend.RETRIEVE_SECOND_PASS} — refusing.")
+        return 1
+    if not control and backend.RETRIEVE_SECOND_PASS <= 0:
         safe_print("[arm] RETRIEVE_SECOND_PASS is 0 — this arm would be a "
                    "byte-for-byte re-run of the base and would prove nothing.")
         return 1
@@ -67,14 +81,18 @@ def main(tag: str) -> int:
         prev = base.get(q["id"])
         first = (prev or {}).get("answer") or ""
         if prev and backend.lacked_from(first):
-            todo.append({**q, "first_answer": first})
+            # The control selects the SAME questions by the SAME rule and
+            # simply withholds the seed, so the two arms differ in one thing.
+            todo.append({**q} if control else {**q, "first_answer": first})
         elif prev:
             # answered without declaring a gap: the second pass is gated off it,
             # so re-running would buy an identical answer at full price
             carried.append({**prev})
 
     safe_print(f"[arm] {tag}: {len(todo)} re-answered, {len(carried)} carried "
-               f"from {BASE} unbilled | reserved seats={backend.RETRIEVE_SECOND_PASS}")
+               f"from {BASE} unbilled | "
+               + ("CONTROL — fresh call, no second search"
+                  if control else f"reserved seats={backend.RETRIEVE_SECOND_PASS}"))
 
     ledger = Ledger(C.LEDGER)
     reqs, meta = build_requests(todo)
@@ -94,4 +112,6 @@ def main(tag: str) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(sys.argv[1] if len(sys.argv) > 1 else "second4"))
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    raise SystemExit(main(args[0] if args else "second4",
+                          control="--control" in sys.argv))
