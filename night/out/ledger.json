@@ -1,6 +1,6 @@
 {
  "spent": 125.8026,
- "reserved": 4.3655,
+ "reserved": 0,
  "entries": [
   {
    "id": "anchors2:31.0116#20840-644",
@@ -666,7 +666,7 @@
    "id": "anchors:38.0118#20804-257",
    "label": "anchors:38.0118",
    "estimate": 0.0506,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "anchors:38.0123#16576-282",
@@ -924,7 +924,7 @@
    "id": "curate:30.0603#23448-69",
    "label": "curate:30.0603",
    "estimate": 0.0446,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "curate:30.0603#9108-73",
@@ -1818,7 +1818,7 @@
    "id": "curate:33.1001#9108-77",
    "label": "curate:33.1001",
    "estimate": 0.049,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "curate:33.1010#13076-32",
@@ -1890,7 +1890,7 @@
    "id": "curate:35.0108#37332-144",
    "label": "curate:35.0108",
    "estimate": 0.0417,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "curate:35.0111#15472-477",
@@ -3204,7 +3204,7 @@
    "id": "decompose#10040-813",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#10828-302",
@@ -3216,19 +3216,19 @@
    "id": "decompose#11260-546",
    "label": "decompose",
    "estimate": 0.0192,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#11300-810",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#11524-792",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#11656-825",
@@ -3246,25 +3246,25 @@
    "id": "decompose#13400-771",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#13880-779",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#13880-798",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#13940-776",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#14244-732",
@@ -3276,121 +3276,121 @@
    "id": "decompose#14492-791",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#1492-773",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#15148-807",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#1568-814",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#15696-775",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#15820-806",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#16372-770",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#17444-768",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#17756-799",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#17916-45",
    "label": "decompose",
    "estimate": 0.024,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#18252-809",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#18336-786",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#18360-812",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#18412-794",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#18416-808",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#18444-781",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#18648-782",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#1888-804",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#18880-801",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#20056-796",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#20072-726",
@@ -3402,19 +3402,19 @@
    "id": "decompose#20108-784",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#2044-767",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#21184-772",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#21328-760",
@@ -3426,7 +3426,7 @@
    "id": "decompose#21620-803",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#21688-815",
@@ -3438,55 +3438,55 @@
    "id": "decompose#21868-789",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#21920-800",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#21988-797",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#22324-785",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#2304-793",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#3820-769",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#4876-783",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#4940-788",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#5072-787",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#5580-819",
@@ -3498,13 +3498,13 @@
    "id": "decompose#6340-802",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#656-790",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#8160-549",
@@ -3516,43 +3516,43 @@
    "id": "decompose#8244-811",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#8260-766",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#8512-777",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#8660-795",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#9196-774",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#9588-778",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "decompose#9696-780",
    "label": "decompose",
    "estimate": 0.0128,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "deepen:21.0401#18424-832",
@@ -3900,7 +3900,7 @@
    "id": "digest:61.0104#1#21732-560",
    "label": "digest:61.0104#1",
    "estimate": 0.0575,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "digest:61.0104#1#22972-561",
@@ -4236,7 +4236,7 @@
    "id": "grade-base30#10040-44",
    "label": "grade-base30",
    "estimate": 0.0,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "grade-base30#2136-46",
@@ -4260,7 +4260,7 @@
    "id": "grade-base_v94#11788-547",
    "label": "grade-base_v94",
    "estimate": 0.042,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "grade-base_v94hn#7984-668",
@@ -4356,7 +4356,7 @@
    "id": "grade-heldout_after#18052-310",
    "label": "grade-heldout_after",
    "estimate": 0.036,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "grade-heldout_after#20224-311",
@@ -4374,19 +4374,19 @@
    "id": "grade-heldout_post#12024-738",
    "label": "grade-heldout_post",
    "estimate": 0.144,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "grade-heldout_post#1396-739",
    "label": "grade-heldout_post",
    "estimate": 0.144,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "grade-heldout_post#22148-737",
    "label": "grade-heldout_post",
    "estimate": 0.144,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "grade-heldout_post#2708-740",
@@ -4398,7 +4398,7 @@
    "id": "grade-heldout_post#9596-736",
    "label": "grade-heldout_post",
    "estimate": 0.1485,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "grade-heldout_pre#14244-733",
@@ -4668,7 +4668,7 @@
    "id": "probe-fb2#9688-805",
    "label": "probe-fb2",
    "estimate": 2.8,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "probe-final91#6416-759",
@@ -4962,7 +4962,7 @@
    "id": "unscramble:31.0603#11536-346",
    "label": "unscramble:31.0603",
    "estimate": 0.006,
-   "actual": null
+   "actual": 0.0
   },
   {
    "id": "unscramble:31.0608#11536-345",
