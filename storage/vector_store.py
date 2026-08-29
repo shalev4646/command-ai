@@ -1,6 +1,8 @@
 import hashlib
 import json
 import math
+import os
+import re
 import threading
 from pathlib import Path
 
@@ -459,6 +461,34 @@ def index_all_documents(json_dir: Path | None = None) -> int:
 # vs discipline); anchor them first, then this can go up.
 _ROUTE_BOOST = 0.05
 
+# Anchor→clause attribution (night/anchor_attrib.py): when the winning anchor
+# of a lifted document is attributed to a specific curated clause, the lift
+# lands on THAT clause instead of the doc's highest-scoring one. The anchor
+# was written from the clause's content, so a match on it is evidence about
+# which clause the asker needs — evidence the score-max rule throws away (the
+# "right order, wrong paragraph" coin flip both 2026-08-05 pilot misses fell
+# on). Off in code, same shipping rule as every retrieval knob: a paired
+# measurement of the ANSWERS decides.
+RETRIEVE_ANCHOR_CLAUSE = os.environ.get("RETRIEVE_ANCHOR_CLAUSE", "0") == "1"
+_ANCHOR_CLAUSES_PATH = Path(__file__).resolve().parent / "anchor_clauses.json"
+_anchor_clauses: dict | None = None
+
+
+def _attrib_norm(s: str) -> str:
+    """MUST mirror night/anchor_attrib._norm — the map is keyed by it."""
+    s = re.sub(r'["״׳\'“”‘’]', "", s or "")
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def _anchor_clause_map() -> dict:
+    global _anchor_clauses
+    if _anchor_clauses is None:
+        try:
+            _anchor_clauses = json.loads(_ANCHOR_CLAUSES_PATH.read_text(encoding="utf-8"))
+        except Exception:
+            _anchor_clauses = {}
+    return _anchor_clauses
+
 
 def retrieve(
     query: str,
@@ -574,13 +604,15 @@ def retrieve(
     # stops choosing and hands over its key-facts section as one merged block
     # (below). Merged, not promoted clause by clause: individually they took
     # four of the eight slots, which cost 12 probes and the source-page link.
-    sq_best: dict[str, float] = {}
+    sq_best: dict[str, tuple[float, str]] = {}
     best_real: dict[str, dict] = {}
     kf_by_doc: dict[str, list[dict]] = {}
     real_candidates = []
     for c in candidates:
         if c["section"] == "sq":
-            sq_best[c["doc_id"]] = max(sq_best.get(c["doc_id"], -1.0), c["score"])
+            prev = sq_best.get(c["doc_id"])
+            if prev is None or c["score"] > prev[0]:
+                sq_best[c["doc_id"]] = (c["score"], c["text"])
         else:
             real_candidates.append(c)
             cur = best_real.get(c["doc_id"])
@@ -590,15 +622,28 @@ def retrieve(
                 kf_by_doc.setdefault(c["doc_id"], []).append(c)
     candidates = real_candidates
     lifted: dict[str, dict] = {}
-    for doc_id, anchor_score in sq_best.items():
+    for doc_id, (anchor_score, anchor_text) in sq_best.items():
         best = best_real.get(doc_id)
         if best is None or anchor_score <= best["score"]:
             continue
         kfs = kf_by_doc.get(doc_id)
-        # the doc's highest-scoring clause carries the lift and keeps its own
-        # identity — it is what the source card cites and the only one with a
-        # chance of a page mapping
-        target = max(kfs, key=lambda x: x["score"]) if kfs else best
+        target = None
+        # the winning anchor's ATTRIBUTED clause takes the lift when known —
+        # the anchor was written from that clause, so the match is evidence
+        # about which paragraph the asker needs, not just which order
+        if kfs and RETRIEVE_ANCHOR_CLAUSE:
+            mapped = _anchor_clause_map().get(doc_id, {}).get(_attrib_norm(anchor_text))
+            if mapped:
+                sec, cl = str(mapped[0]), str(mapped[1])
+                for k in kfs:
+                    if str(k.get("section")) == sec and str(k.get("clause")) == cl:
+                        target = k
+                        break
+        if target is None:
+            # the doc's highest-scoring clause carries the lift and keeps its
+            # own identity — it is what the source card cites and the only one
+            # with a chance of a page mapping
+            target = max(kfs, key=lambda x: x["score"]) if kfs else best
         target["score"] = anchor_score
         lifted[doc_id] = target
 
