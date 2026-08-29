@@ -73,6 +73,17 @@ swap_size_mb = 768
   # bonus lifts its competitor by exactly as much). Turn off with "0".
   # ASCII only in this file: flyctl rejects Hebrew quote marks.
   RETRIEVE_ROUTER_SLOTS = "2"
+  # The second search (backend.RETRIEVE_SECOND_PASS + the app.py wiring):
+  # when an answer declares a gap, its own restatement of the missing rule is
+  # re-retrieved and the question re-answered with 4 window seats reserved for
+  # those chunks; the second answer replaces the first. Off in code; on here
+  # after the paired 72-question measurement of 2026-08-28: full answers
+  # 15 -> 23 (p=0.008, zero losses), control arm (fresh call, no second
+  # search) 17 - the first campaign result to clear p<0.05. Context size is
+  # unchanged; the price is one extra Opus call plus its latency, and ONLY on
+  # answers that declared a gap (a successful answer never re-searches).
+  # Turn off with "0" and redeploy - the code needs nothing else.
+  RETRIEVE_SECOND_PASS = "4"
   # How long backend.load_documents trusts its last freshness scan. Off in
   # code (0 = scan every call), which is what the night pipeline needs since
   # it writes into json_store while the same process reads it. Here it is on:

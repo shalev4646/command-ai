@@ -7198,7 +7198,66 @@ def handle_question(question: str):
                 user_msg["api_content"] = result[2]
             stage.markdown(_stage_html("קורא את הסעיפים ומנסח…"),
                            unsafe_allow_html=True)
-            text = _stream_answer(text_gen, acc, think=stage)
+            # the first answer paints inside a clearable holder so the second
+            # search below can REPLACE it on screen; on the no-gap path the
+            # container is invisible wrapping
+            first_paint = st.empty()
+            with first_paint.container():
+                text = _stream_answer(text_gen, acc, think=stage)
+            # ── The second search (backend.RETRIEVE_SECOND_PASS). ──
+            # When the answer just declared a gap, its own restatement of the
+            # missing rule is written in the orders' register — and retrieving
+            # on it lands the answering order 54% of the time against 28% for
+            # the soldier's phrasing. Measured end to end on the answers:
+            # full answers 15→23 of 72 (p=0.008), control arm 17, zero losses,
+            # context unchanged (commit 2a3051e). Only gap-declaring answers
+            # ever reach this block, so a successful answer never buys a
+            # second call. The retry is opportunistic: ANY failure inside it
+            # keeps the first answer, which is complete, billed, and already
+            # on screen — never trade it for an error notice.
+            if backend.RETRIEVE_SECOND_PASS > 0 and backend.lacked_from(text):
+                stage2 = st.empty()
+                try:
+                    stage2.markdown(_stage_html("מרחיב את החיפוש לפי מה שחסר…"),
+                                    unsafe_allow_html=True)
+                    result2 = stream_ai_answer(question, history,
+                                               role=st.session_state.role,
+                                               first_answer=text, **profile_kw)
+
+                    def _swap(g):
+                        # the first answer stays readable while the retry
+                        # thinks; it clears the moment replacement text exists
+                        cleared = False
+                        for c in g:
+                            if not cleared:
+                                first_paint.empty()
+                                cleared = True
+                            yield c
+
+                    acc2: list[str] = []
+                    text2 = _stream_answer(_swap(result2[0]), acc2, think=stage2)
+                    if text2.strip():
+                        # the kept answer is the second one — exactly what the
+                        # measurement graded. Its sources and sent-content go
+                        # with it (history must replay the content that
+                        # produced the kept answer), and the usage of BOTH
+                        # calls is summed so cost monitoring sees the true
+                        # price of the question.
+                        u1 = result[3] if len(result) > 3 else {}
+                        text, sources = text2, result2[1]
+                        if len(result2) > 2:
+                            user_msg["api_content"] = result2[2]
+                        if len(result2) > 3 and isinstance(u1, dict):
+                            for k, v in u1.items():
+                                if isinstance(v, (int, float)) and not isinstance(v, bool):
+                                    result2[3][k] = result2[3].get(k, 0) + v
+                        result = result2
+                except Exception as e:
+                    # BaseException (a mid-stream rerun) is NOT caught here:
+                    # the outer handler salvages the complete first answer
+                    # from `acc`, same as any interrupted stream
+                    safe_print(f"[chat] second pass failed: {e!r}")
+                    stage2.empty()
     except (APIConnectionError, APITimeoutError):
         if _keep_partial(acc, sources):
             return
