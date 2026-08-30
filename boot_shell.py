@@ -924,6 +924,10 @@ def _strip(src: str) -> str:
     src = re.sub(r'<link id="cai-icon"[^>]*>', "", src)
     src = re.sub(r'<link rel="apple-touch-startup-image" class="cai-launch"[^>]*>',
                  "", src)
+    # the lazy-chunk hints — glued back-to-back like the PWA links above, so
+    # this eats exactly the bytes the insert added and the round-trip stays
+    # byte-exact
+    src = re.sub(r'<link rel="modulepreload" class="cai-preload"[^>]*>', "", src)
     src = re.sub(r'<style id="cai-micro"[^>]*>.*?</style>', "", src, flags=re.S)
     src = re.sub(r'<script id="cai-pad">.*?</script>', "", src, flags=re.S)
     src = re.sub(r'\s*<style id="cai-boot".*?</style>', "", src, flags=re.S)
@@ -1260,6 +1264,75 @@ def _pwa_links() -> str:
         return ""
 
 
+# ── Lazy-chunk preloads ──────────────────────────────────────────────────────
+# index.html names exactly ONE script: Streamlit's entry bundle. Every other
+# chunk the first screen needs is discovered by RUNNING it — the entry asks for
+# IFrame, that asks for the markdown pipeline, and so on — so the boot is four
+# SERIALISED round-trips, not one download.
+#
+# Measured on production 2026-08-26, cold Chromium on a fast desktop line: the
+# entry lands at 2.14s and the last chunk at 6.15s. Four seconds for 457KB that
+# were all knowable up front. The control that makes it actionable is the same
+# four waves on a WARM load, every chunk a cache hit: 0.45s. So ~3.5s of it is
+# round-trips, not main-thread work — and a phone on cellular has more of them,
+# not fewer.
+#
+# This is the one remaining lever on the FIRST-EVER launch, which is the only
+# launch a store user gets to judge, and the one that overruns iOS's ~10s
+# launch-image budget and shows white. It does NOT touch the ~1.7s of parsing
+# the 2.36MB entry bundle, which is measurable warm and is Streamlit's, not
+# ours.
+#
+# WHY A PINNED LIST AND NOT A SCAN. What the first screen loads is a property
+# of the running app, not of the directory — static/js holds 111 chunks and
+# 16MB, and preloading one the boot never asks for is bandwidth stolen from one
+# it does. This list was read off the live worker's cache after a real
+# production boot: it is exactly what launch 1 fetches, no more.
+_PRELOAD_CHUNKS = (
+    # the widget layer the first screen renders
+    "IFrame", "IFrameUtil", "ComponentInstance", "withCalculatedWidth", "urls",
+    "Button", "iconPosition",
+    # the markdown pipeline — 447 of the 457KB, and the LAST wave to arrive,
+    # i.e. the one that holds up first content
+    "lib", "rehype-raw", "hastscript", "web-namespaces", "remark-emoji",
+)
+
+
+def _modulepreload_links() -> str:
+    """The lazy chunks the first screen needs, as parallel-fetch hints.
+
+    crossorigin is not decoration. Streamlit's entry tag is
+    <script type="module" crossorigin>, so the whole module graph is fetched in
+    CORS mode; a hint whose mode disagrees is not a hint for that fetch at all,
+    it is a SECOND download of the same bytes. Wrong here is worse than absent.
+
+    fetchpriority=low is the safety valve for a bandwidth-bound link — the
+    pilot's measured 13KB/s. There, 457KB pulled alongside the entry would
+    steal from the one download everything else waits for, and removing
+    round-trips does not pay for that. Low says "start these now, never ahead
+    of the bundle": the win survives, the risk does not. Safari honours it from
+    17.2; before that it is ignored, which is exactly today's behaviour.
+
+    A name that does not resolve to exactly one file is SKIPPED, not guessed.
+    Streamlit re-hashes these on every frontend build, and a hint pointing at a
+    chunk that is gone would 404 — which the worker reads as a stale pair and
+    answers by purging every cache it has. Silence is the safe failure;
+    tests/test_boot_preload.py is what makes it a loud one.
+    """
+    try:
+        js = _index_path().parent / "static" / "js"
+        links = ""
+        for name in _PRELOAD_CHUNKS:
+            hits = sorted(p.name for p in js.glob(name + ".*.js"))
+            if len(hits) != 1:
+                continue
+            links += ('<link rel="modulepreload" class="cai-preload" crossorigin '
+                      f'fetchpriority="low" href="./static/js/{hits[0]}">')
+        return links
+    except Exception:
+        return ""
+
+
 def patch_index_html() -> bool:
     """Inject the olive boot splash into Streamlit's static index.html.
 
@@ -1308,10 +1381,15 @@ def patch_index_html() -> bool:
         # content hashes, so editing a launch PNG re-patches the shell exactly
         # like editing the font does.
         pwa_links = _pwa_links()
+        # hashed with everything else: a Streamlit upgrade re-hashes the
+        # chunk filenames, which re-stamps the shell, which drops the old
+        # worker cache — the hints and the cache can never disagree.
+        preloads = _modulepreload_links()
         # stamped with a hash of exactly what is about to be written — including
         # the font bytes — so a swapped font file re-patches too
         stamp = _VERSION + "-" + hashlib.sha256(
-            (_MICRO + _PAD_JS + head_raw + pwa_links + _SPLASH_HTML + boot_js
+            (_MICRO + _PAD_JS + head_raw + pwa_links + _SPLASH_HTML
+             + preloads + boot_js
              + (_SW_JS if sw_on else "")
              + "".join(_STATIC_VIEWPORT_TOKENS)).encode("utf-8")
         ).hexdigest()[:8]
@@ -1345,7 +1423,12 @@ def patch_index_html() -> bool:
                                   '<meta charset="UTF-8" />' + _MICRO + _PAD_JS, 1)
         patched = patched.replace("</head>", head + pwa_links + "  </head>", 1)
         patched = _deblock_css(patched)
-        patched = patched.replace("<body>", "<body>" + _SPLASH_HTML, 1)
+        # _SPLASH_HTML ends with the split marker, so appending here puts the
+        # hints in the FIRST BYTES OF THE TAIL: the splash is already on the
+        # glass, the entry <script> up in <head> has had the whole hold as a
+        # head start, and the first flushed chunk has not grown by a byte.
+        patched = patched.replace("<body>",
+                                  "<body>" + _SPLASH_HTML + preloads, 1)
         # regex, not a string replace: </body> carries the host file's own
         # indentation, and gluing our block to a bare "</body>" left the old
         # indent orphaned before the script — off-by-two-spaces per cycle,
@@ -1362,6 +1445,16 @@ def patch_index_html() -> bool:
         if pwa_links and patched.count('class="cai-launch"') != len(
                 __import__("pwa_assets")._STARTUP_SIZES):
             return False
+        # Every hint must land BELOW the split. Everything above it rides in
+        # the worker's first flushed chunk, and that chunk being a small,
+        # complete, paintable screen IS the launch-flash argument — a hint that
+        # drifts into <head> trades the fix for the optimisation.
+        if preloads:
+            if patched.count('class="cai-preload"') != preloads.count("<link"):
+                return False
+            if (patched.index("<!--/cai-boot-splash-->")
+                    > patched.index('class="cai-preload"')):
+                return False
         # cover would resize the app, not just the splash — see the comment on
         # _STATIC_VIEWPORT_TOKENS. Assert it never creeps back in.
         if "viewport-fit" in patched:
