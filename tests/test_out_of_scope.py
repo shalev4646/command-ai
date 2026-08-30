@@ -151,6 +151,29 @@ def test_kol_zchut_is_an_information_link_and_never_the_authority():
             "kol-zchut is a place to read, not the door to knock on")
 
 
+def test_curated_kol_zchut_links_cover_the_measured_families():
+    """30.08.2026: three links curated from the 606-title pull of their
+    צבא-וביטחון category, via the MediaWiki API Kol Zchut themselves pointed
+    at when they declined the NC waiver (titles only, zero content). Each page
+    was verified live (HTTP 200) on the day it was added. Families whose
+    questions no single page serves stay linkless on purpose."""
+    by_name = {name: d for name, _, d in OS._FAMILIES}
+    for family, page in [
+        ("lone_soldier_aid", "מענקי_מזון_לחיילים_בודדים"),
+        ("reserve_pay", "תשלום_עבור_שירות_מילואים"),
+        ("family_distress", 'תשמ"ש'),
+        ("unit_level_default", "פנייה_לנציב_קבילות_החיילים"),
+    ]:
+        link = by_name[family]["link"]
+        assert link is not None, family
+        assert page in link[1], (family, link[1])
+    # pay_slip and medical_scope are exactly the FOI wave-4 gaps: Kol Zchut
+    # has no page for a serving soldier's pay slip or routine medical care,
+    # and a wrong-audience page must not be linked in their place.
+    assert by_name["pay_slip"]["link"] is None
+    assert by_name["medical_scope"]["link"] is None
+
+
 def test_evidence_and_families_stay_in_step():
     """Every TOPIC family cites the measured questions it came from, and no
     topic family exists that nothing was ever observed for.
