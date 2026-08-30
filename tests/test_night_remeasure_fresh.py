@@ -27,6 +27,15 @@ def test_fresh_is_red_band_blind_only():
 
 
 if __name__ == "__main__":
+    # sweep.jsonl is deliberately untracked (regenerable bulk, .gitignore) —
+    # on a clean checkout (CI) the instrument has no data to pin, so skip
+    # LOUDLY rather than fail. The instrument itself stays strict: an empty
+    # pool crashing fresh_ids() is correct in a measurement run.
+    if not C.read_jsonl(C.SWEEP):
+        print("SKIP: night/out/sweep.jsonl absent (untracked measurement "
+              "data) - fresh-set invariants only checkable on a machine "
+              "that ran the sweep")
+        sys.exit(0)
     for name, fn in list(globals().items()):
         if name.startswith("test_") and callable(fn):
             fn()
