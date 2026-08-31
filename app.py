@@ -3092,16 +3092,22 @@ components.html(
         // ── status-strip canvas sync ──
         // In the home-screen PWA the status-bar strip renders the html
         // CANVAS, which no in-viewport layer can reach: the dialog scrim
-        // (rgba(9,11,7,.66)) and the drawer backdrop (.62) dim the whole
-        // layout viewport while the strip above keeps the raw #14170E — an
-        // ~11/channel band over every open overlay (device still,
-        // 2026-08-31; same seam family as the 2026-08-01 toolbar case).
+        // (rgba(9,11,7,.66)) dims the whole layout viewport while the strip
+        // above keeps the raw #14170E — an ~11/channel band over every open
+        // dialog (device still, 2026-08-31; same seam family as the
+        // 2026-08-01 toolbar case). #0D0F09 is that scrim composited over
+        // #14170E; device-video pixels 20:31 confirmed strip==page with it.
+        // DIALOGS ONLY, deliberately: the first ship also dimmed for the
+        // open DRAWER (backdrop composite #0D100A), and the user circled the
+        // result — the drawer PANEL is opaque #14170E and owns ~85% of the
+        // top edge, so the darker strip read as a band sitting on the panel
+        // (device video 20:30). With one canvas color there is no value that
+        // matches both the panel and the backdrop sliver; the panel wins.
         // Inline+!important because the boot shell pinned the canvas that
-        // way at lift; the colors are those scrims composited over #14170E.
+        // way at lift.
         var syncCanvas = function () {
             try {
-                var dim = doc.querySelector('[data-testid="stDialog"]') ? "#0D0F09"
-                        : (root.classList.contains("cai-drawer-open") ? "#0D100A" : "#14170E");
+                var dim = doc.querySelector('[data-testid="stDialog"]') ? "#0D0F09" : "#14170E";
                 if (window.__caiCanvas !== dim) {
                     window.__caiCanvas = dim;
                     root.style.setProperty("background", dim, "important");
@@ -6539,16 +6545,13 @@ _WIPE_NOTE = (
     "לכך יש לשלוח בקשת מחיקה ממסך «יצירת קשר»."
 )
 
-# Coverage, stated BEFORE a question is spent. The measured reality is that
-# ~60% of questions come back "not in the supplied orders", and until now the
-# user met that only after burning one of five daily questions — which reads as
-# "this app is broken" rather than "that order is not in yet". {n} is counted at
-# call time on purpose: the corpus grows in ingest waves, and a number written
-# in here is wrong by the next one.
-_CORPUS_NOTE = (
-    "המאגר כולל {n} פקודות ונהלים — לא את כולם. אם התשובה אומרת שאין מידע, "
-    "ייתכן שהפקודה פשוט טרם נוספה."
-)
+# The greeting-screen coverage note ("the corpus holds N orders — not all of
+# them") lived here until 2026-08-31, when the user asked for it to be removed
+# outright — under the suggestion chips it read as an apology, not as
+# expectation-setting. The job it did (saying the corpus is partial BEFORE a
+# question is spent) now rests on the answers' own "טרם במאגר" line and the
+# drawer's per-role counts. tests/test_compliance_screens.py P6 locks the
+# removal.
 
 
 def _clear_history():
@@ -8862,19 +8865,8 @@ if not st.session_state.messages and not st.session_state.pending_question:
         if st.button(q, key=f"sug_{i}", use_container_width=True):
             queue_question(q)
             st.rerun()
-    # counted, never hardcoded — see _CORPUS_NOTE. get_loaded_docs_info() reads
-    # the already-loaded document list, so this costs nothing and cannot go
-    # stale; it is also the one name here that predates this screen, which
-    # keeps it safe against the cached-backend drift noted in backend.py.
-    try:
-        _ndocs = len(get_loaded_docs_info())
-    except Exception:
-        _ndocs = 0
-    if _ndocs:
-        st.markdown(
-            f"<div class='cai-corpus-note'>{_CORPUS_NOTE.format(n=_ndocs)}</div>",
-            unsafe_allow_html=True,
-        )
+    # (the corpus-coverage note that rendered here was removed 2026-08-31 at
+    # the user's request — see the removal note in the constants section)
 
 # ── Process pending question ──
 if st.session_state.pending_question:

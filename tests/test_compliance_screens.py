@@ -170,26 +170,17 @@ def test_wipe_button_does_not_promise_server_deletion():
     )
 
 
-# ── P6: corpus coverage is disclosed before a question is spent ──────────────
+# ── P6: the coverage note stays REMOVED (user decision, 2026-08-31) ──────────
 
-def test_coverage_is_disclosed_on_the_greeting_screen():
-    """60% of questions come back 'not in the supplied orders' and the user
-    only learns the corpus is partial AFTER burning one of five daily
-    questions. The greeting screen is the last surface before that spend."""
-    assert "_CORPUS_NOTE" in APP
-    # [-1], not [1]: the class is defined in CSS twice before the render site,
-    # and slicing from the first hit inspects a stylesheet instead of a screen
-    greet = APP.split("cai-greet-sub")[-1][:1400]
-    assert "_CORPUS_NOTE" in greet, "the note must render on the greeting screen"
-
-
-def test_coverage_note_is_derived_not_hardcoded():
-    """A hardcoded '289 orders' rots on the next ingest wave -- and this app
-    ingests in waves by design."""
-    note = APP.split("_CORPUS_NOTE")[1][:600]
-    assert not re.search(r"\b(289|447|124|98)\b", note), (
-        "the corpus size must be counted at runtime, not written in"
-    )
+def test_coverage_note_stays_removed():
+    """The greeting-screen corpus note ("המאגר כולל N פקודות…") was removed at
+    the user's explicit request on 2026-08-31 — under the suggestion chips it
+    read as an apology rather than expectation-setting. The disclosure job
+    moved to the answers' own "טרם במאגר" line and the drawer's per-role
+    counts. This locks the removal exactly the way the old P6 locked the
+    presence, so it cannot drift back in by accident."""
+    assert "המאגר כולל" not in APP, "the removed coverage note is back"
+    assert "_CORPUS_NOTE" not in APP, "a live _CORPUS_NOTE reference is back"
 
 
 # ── P7: the app may not claim to be an internal military system ──────────────
