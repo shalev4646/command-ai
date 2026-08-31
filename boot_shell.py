@@ -340,6 +340,15 @@ _SPLASH_HTML = """
         <div class="w"></div>
       </div>
     </div><script id="cai-painted">
+      // Stamp the shell's presence on <html> before ANY app CSS can matter.
+      // app.py keys boot-only styling off html.cai-shell (the entry screen's
+      // entrance stagger is disabled under the curtain — it played to nobody
+      // and the probe rerun REPLAYED it after the lift, which is the
+      // "the opening assembles in two stages" report of 2026-08-31). The
+      // class is permanent for the page's life: entry only ever renders at
+      // boot or after logout, and both are exactly the moments the stagger
+      // must not replay.
+      try { document.documentElement.classList.add('cai-shell'); } catch (e) {}
       // TELL THE WORKER THE MOMENT THE SPLASH IS ON THE GLASS.
       //
       // The worker holds this response open so iOS cannot start dissolving its
@@ -741,6 +750,14 @@ _BOOT_JS = """
         // as broken (video #3). The anchor element doubles as the stability
         // probe below.
         var ready = function () {
+          // The SETTLED marker comes first: app.py emits it only on a run
+          // whose device profile is resolved (cookie fast-path, or the
+          // profile probe's round-trip completed). Without it the curtain
+          // lifted on the PRE-probe run — .cai-entry existed and held still,
+          // the lift fired, and the probe's rerun then rebuilt the screen in
+          // the open (the "two screens" opening, 2026-08-31). The 90s
+          // failsafe below still covers a probe that never answers.
+          if (!document.querySelector('[data-cai-settled]')) return null;
           var scr = document.querySelector('.cai-entry, .st-key-cai_name_card, .cai-splash');
           if (scr) return scr;
           var chat = document.querySelector('.cai-greet, .cai-header');

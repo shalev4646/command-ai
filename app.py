@@ -880,10 +880,24 @@ components.html(
                         v.style.opacity = "0";
                         setTimeout(function () { try { v.remove(); } catch (e) {} }, 320);
                     };
+                    // Lift on the COMPLETE home, not on the first header: the
+                    // header lands seconds before the greeting/chips on a slow
+                    // rerun, and lifting on it exposed the same two-stage
+                    // assembly the boot curtain had (2026-08-31). The greeting
+                    // renders on every fresh home (it is CSS-hidden, not
+                    // unrendered, once messages exist), and script-state
+                    // 'running' covers everything streaming in after it. The
+                    // timeout grew 4s->8s to fit a full 3G home rerun; the
+                    // veil is the home background, so the wait reads as load,
+                    // not as breakage.
                     var poll = setInterval(function () {
-                        if (document.querySelector(".cai-header")) {
+                        var app = document.querySelector(".stApp");
+                        var running = app &&
+                            app.getAttribute("data-test-script-state") === "running";
+                        if (document.querySelector(".cai-header") &&
+                            document.querySelector(".cai-greet") && !running) {
                             clearInterval(poll); setTimeout(lift, 120);
-                        } else if (Date.now() - t0 > 4000) { clearInterval(poll); lift(); }
+                        } else if (Date.now() - t0 > 8000) { clearInterval(poll); lift(); }
                     }, 80);
                 } catch (e) {}
             };
@@ -1041,6 +1055,23 @@ if not st.session_state.get("cai_probe_done") and not _ck:
                 st.session_state.profile_name = str(_pd["name"])[:40]
             if _pd.get("asked"):
                 st.session_state.name_asked = True
+
+# ── Boot-settled marker ── The shell's curtain (boot_shell ready()) must not
+# lift on the PRE-probe run: that run's screen is rebuilt the moment the probe
+# value lands, and the rebuild then happened in the open — the "the opening
+# assembles in two stages" report (device video, 2026-08-31). A run is settled
+# once the device profile is resolved: the cookie fast-path, or the probe
+# round-trip completed. Emitted at every script exit point (the entry-screen
+# st.stop() and the end of the chat path); the shell refuses to even start its
+# stability countdown until the marker exists. A probe that never answers is
+# covered by the shell's own 90s failsafe.
+_boot_settled = bool(_ck) or bool(st.session_state.get("cai_probe_done"))
+
+
+def _emit_boot_settled() -> None:
+    if _boot_settled:
+        st.markdown("<span data-cai-settled hidden></span>", unsafe_allow_html=True)
+
 
 _startup_ingest()
 _start_media_reaper()
@@ -1752,6 +1783,15 @@ header {{ visibility: hidden; }}
 .cai-entry-footer {{ text-align: center; padding: 18px 0 8px;
     font: 500 10.5px ui-monospace, Menlo, monospace; letter-spacing: 2px; color: var(--text-faint);
     animation: enterUp .6s cubic-bezier(.2,.7,.2,1) both; animation-delay: calc(var(--ehold) + 1.05s); }}
+/* Under the boot shell the curtain covers the whole boot, so the stagger
+   above plays to nobody — and the probe rerun REPLAYED it after the lift:
+   cards (no entrance) held still while the hero blanked and re-staggered,
+   which is the "the opening is two screens" report (2026-08-31). The shell
+   stamps html.cai-shell in its first inline script; render the entry
+   complete and static there. Shell-less hosts keep the choreography, and
+   `both` fill means removing the animation shows the finished state. */
+html.cai-shell .cai-entry > div,
+html.cai-shell .cai-entry-footer {{ animation: none !important; }}
 
 /* ── Buttons — surface cards, radius 14, press scale ── */
 div[data-testid="stButton"] > button {{
@@ -3049,6 +3089,25 @@ components.html(
             var w = d ? d.getBoundingClientRect().width : 0;
             return w || Math.min(window.innerWidth * 0.85, 320);
         };
+        // ── status-strip canvas sync ──
+        // In the home-screen PWA the status-bar strip renders the html
+        // CANVAS, which no in-viewport layer can reach: the dialog scrim
+        // (rgba(9,11,7,.66)) and the drawer backdrop (.62) dim the whole
+        // layout viewport while the strip above keeps the raw #14170E — an
+        // ~11/channel band over every open overlay (device still,
+        // 2026-08-31; same seam family as the 2026-08-01 toolbar case).
+        // Inline+!important because the boot shell pinned the canvas that
+        // way at lift; the colors are those scrims composited over #14170E.
+        var syncCanvas = function () {
+            try {
+                var dim = doc.querySelector('[data-testid="stDialog"]') ? "#0D0F09"
+                        : (root.classList.contains("cai-drawer-open") ? "#0D100A" : "#14170E");
+                if (window.__caiCanvas !== dim) {
+                    window.__caiCanvas = dim;
+                    root.style.setProperty("background", dim, "important");
+                }
+            } catch (e) {}
+        };
         // hand the panel back to CSS: drop the inline transform and the drag
         // class in the same frame, so the transition picks the throw up from
         // wherever the finger let go instead of jumping
@@ -3058,6 +3117,7 @@ components.html(
             root.classList.remove("cai-drawer-drag");
             if (d) d.style.transform = "";
             if (b) b.style.opacity = "";
+            syncCanvas();
         };
 
         // ── the BACK target ──
@@ -3279,8 +3339,12 @@ components.html(
         // ── taps ──
         var TOGGLES = ".st-key-drawer_open_btn button";
         var CLOSERS = ".st-key-drawer_close button, .st-key-drawer_backdrop button";
-        // these DO rerun (they change real state) — close first, don't block
-        var ACTIONS = '.st-key-new_chat button, [class*="st-key-hist_"] button';
+        // these DO rerun (they change real state) — close first, don't block.
+        // The tool buttons are here since 2026-08-31: a tool opens an
+        // st.dialog over the page, and the drawer staying up underneath read
+        // through the card as a double exposure (device still, "מה מגיע לי"
+        // over the open drawer).
+        var ACTIONS = '.st-key-new_chat button, [class*="st-key-hist_"] button, .st-key-cai_tools button';
         doc.addEventListener("click", function (e) {
             var el = e.target;
             if (!el || !el.closest) return;
@@ -3294,6 +3358,32 @@ components.html(
                 settle(false);
             }
         }, true);
+
+        // dialogs mount and unmount on server reruns settle() never sees —
+        // watch the DOM and re-run the canvas sync one frame later. This also
+        // wins the race against any later canvas writer (a rerun re-mounting
+        // components) because every such write churns the DOM and lands back
+        // here. rAF-debounced: one querySelector per frame at worst.
+        var syncQueued = false;
+        var queueSync = function () {
+            if (syncQueued) return;
+            syncQueued = true;
+            // rAF for frame-sync; the timeout is the backstop for a throttled
+            // web view where rAF is starved (occluded pane, backgrounded
+            // standalone) — whichever runs first does the work, done() makes
+            // the loser a no-op.
+            var ran = false;
+            var done = function () {
+                if (ran) return;
+                ran = true; syncQueued = false; syncCanvas();
+            };
+            requestAnimationFrame(done);
+            setTimeout(done, 150);
+        };
+        try {
+            new MutationObserver(queueSync).observe(doc.body, { childList: true, subtree: true });
+        } catch (e) {}
+        syncCanvas();
 
         // ── orders accordion (same contract as the drawer: client-side only) ──
         // Expanding "פקודות מטכ״ל במערכת" and searching it used to be server
@@ -3840,6 +3930,7 @@ if st.session_state.role is None or _name_gate:
                     st.session_state.name_asked = True
                     st.rerun()
 
+    _emit_boot_settled()
     st.stop()
 
 # UI-only fallback for the moment the question pool is empty (documents
@@ -4066,7 +4157,12 @@ div[data-testid="stDialog"] [role="dialog"] { animation: caiCardIn .15s cubic-be
 }
 div[data-testid="stDialog"] [role="dialog"] {
     direction: rtl;
-    background: linear-gradient(180deg,var(--surface) 0%,#181B12 100%) !important;
+    /* OPAQUE, not var(--surface): the old 4.5%-alpha top stop let whatever
+       sat under the card — an open drawer's bright buttons — print through
+       the map as a double exposure (device still, 2026-08-31). #171A10 is
+       that same surface tint composited over the scrimmed page, so the look
+       is unchanged and the card now actually covers what it sits on. */
+    background: linear-gradient(180deg,#171A10 0%,#181B12 100%) !important;
     border: 1px solid rgba(236,237,230,.10) !important;
     border-radius: 26px !important;
     box-shadow: 0 -1px 0 rgba(255,255,255,.05) inset,
@@ -8786,6 +8882,8 @@ if st.session_state.pending_question:
     st.session_state.pending_question = None
     handle_question(q)
     st.rerun()
+
+_emit_boot_settled()
 
 # (the old "auto-collapse the sidebar after role pick" JS is gone — the
 # app-owned drawer above renders closed by default and never auto-opens)
