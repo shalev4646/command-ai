@@ -3097,40 +3097,24 @@ components.html(
         // dialog (device still, 2026-08-31; same seam family as the
         // 2026-08-01 toolbar case). #0D0F09 is that scrim composited over
         // #14170E; device-video pixels 20:31 confirmed strip==page with it.
-        // For the open DRAWER the strip is SPLIT, not dimmed (user decision
-        // 01.09, red-line sketch): a flat dim painted a dark band over the
-        // opaque panel, and a flat panel color broke the drawer's edge line
-        // at the strip. One canvas color cannot match both sides — but the
-        // canvas takes a GRADIENT, and a horizontal one keeps its columns
-        // through the strip: backdrop composite left of the panel's outer
-        // edge, the composited border color as a 1px stripe AT it, panel
-        // color right of it. The x comes from the live drawer width, so the
-        // stripe continues the panel's real edge on every device.
-        // Inline+!important because the boot shell pinned the canvas that
-        // way at lift.
+        // DIALOGS ONLY. The drawer experiments are deliberately deleted
+        // (user, 01.09 — „תמחק הכל"): the strip accepts exactly ONE flat
+        // color edge-to-edge — iOS flattens a canvas gradient, verified live
+        // (the split reached the DOM, the device painted uniform). So a
+        // split-at-the-drawer-edge is unimplementable, and either single
+        // color misrepresents one side of the line. The drawer keeps the
+        // neutral #14170E; the structural fix, if wanted, is the inset-card
+        // drawer (the panel stops BELOW the strip, the strip joins the
+        // dimmed background).
         var syncCanvas = function () {
             try {
-                var dim;
-                if (doc.querySelector('[data-testid="stDialog"]')) {
-                    dim = "#0D0F09";
-                } else if (root.classList.contains("cai-drawer-open")) {
-                    var x = Math.max(0, Math.round(window.innerWidth - W()));
-                    dim = "linear-gradient(90deg,#0D100A 0px,#0D100A " + x + "px," +
-                          "#303329 " + x + "px,#303329 " + (x + 1) + "px," +
-                          "#14170E " + (x + 1) + "px,#14170E 100%) #14170E";
-                } else {
-                    dim = "#14170E";
-                }
+                var dim = doc.querySelector('[data-testid="stDialog"]') ? "#0D0F09" : "#14170E";
                 if (window.__caiCanvas !== dim) {
                     window.__caiCanvas = dim;
                     root.style.setProperty("background", dim, "important");
                 }
             } catch (e) {}
         };
-        // orientation / resize moves the drawer edge — recompute the split
-        window.addEventListener("resize", function () {
-            if (root.classList.contains("cai-drawer-open")) syncCanvas();
-        });
         // hand the panel back to CSS: drop the inline transform and the drag
         // class in the same frame, so the transition picks the throw up from
         // wherever the finger let go instead of jumping
