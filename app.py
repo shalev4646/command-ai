@@ -638,7 +638,17 @@ components.html(
                 // block a resync (2026-07-17 video: composer stuck mid-screen
                 // after send, answer flowing below it)
                 if (ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName) && vvNow() < g * 0.95) return;
-                var h = vvNow();
+                // COVER-MODE BOTTOM (2026-09-01): with viewport-fit=cover the
+                // layout spans the full glass, but iOS still reports
+                // visualViewport.height EXCLUDING the top inset — pinning to
+                // it left a sat-tall dead band under the composer and the
+                // drawer (device video 18:03; July's "48px short" was the
+                // same defect at the pilot phone's sat=47). The glass bottom
+                // in layout coordinates is offsetTop + height — the identity
+                // the keyboard strip (--cai-kbb) has used all along. Without
+                // cover offsetTop is 0 and this is exactly the old reading.
+                var vvObj = window.visualViewport;
+                var h = vvNow() + ((vvObj && vvObj.offsetTop) || 0);
                 // keyboard hard-guard: never pin --cai-vvh to a keyboard-
                 // shrunken pane, even when focus tracking failed (Streamlit
                 // replaces the focused textarea without a focusout)
@@ -661,6 +671,16 @@ components.html(
                 if (g >= 400 && h < g - 24) {
                     window.__caiShort = (window.__caiShort || 0) + 1;
                     if (window.__caiShort <= 8) { kick(); return; }
+                    // Kicks exhausted and STILL short: pin to the glass, do
+                    // not accept. July's "some other device geometry might
+                    // legitimately read short" escape was written for
+                    // transient ghosts, but under viewport-fit=cover iOS
+                    // under-reports by the top inset CONSISTENTLY — accepting
+                    // it is precisely the sat-tall dead band of the 18:03
+                    // device video. At rest (the focused/keyboard guards
+                    // above already returned) a standalone pane on a phone
+                    // IS the glass.
+                    h = g;
                 } else { window.__caiShort = 0; }
                 if (g >= 400) h = Math.min(h, g); // ghost-viewport clamp (see above)
                 if (h < 400) return;
