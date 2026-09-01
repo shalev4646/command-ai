@@ -61,25 +61,25 @@ _VERSION = "v21"
 # the other way round — by _PAD_JS below, which changes only the splash.
 # maximum-scale=1 stays: it caps zoom, never geometry, and shipping it here
 # spares one more runtime write to this meta during boot.
-_STATIC_VIEWPORT_TOKENS = (", maximum-scale=1",)
-
-# The alignment fix, replacing viewport-fit=cover. In an iOS standalone web app
-# WITHOUT cover, the web view starts exactly at the top safe-area inset and
-# env(safe-area-inset-top) reads 0 — so the splash's `env(top) + 14vh` lands at
-# `sat + 0.14 * (screen - sat)` on screen, while _startup_png draws at
-# `sat + 0.14 * screen`. That difference is the ~8px jump, and it is 0.14*sat:
-# 8.26px predicted for the pilot's phone, 7.7-8.2 measured.
 #
-# screen.height is the FULL screen height in CSS px in either mode, so
-# `0.14 * screen.height` as the web-view-relative padding puts the content at
-# `sat + 0.14 * screen` — the launch image's formula exactly, with no device
-# table and no magic numbers. Gated on navigator.standalone, which is true in
-# precisely the case that has a launch image at all; everywhere else the CSS
-# fallback keeps today's behaviour. Synchronous and in <head>, so it lands
-# before first layout and cannot itself cause a reflow.
-_PAD_JS = ('<script id="cai-pad">try{if(navigator.standalone){'
-           'document.documentElement.style.setProperty('
-           '"--cai-pad",(0.14*screen.height)+"px")}}catch(e){}</script>')
+# viewport-fit=cover is BACK (2026-09-01, user decision: the open drawer must
+# run to the physical top of the glass, edge line included — a strip the web
+# view does not own can only ever be ONE flat color, verified live when iOS
+# flattened a canvas gradient). Static in the meta, never applied at runtime:
+# the 2026-07-29 splash jump (171→164→171) was the RUNTIME application
+# resizing the web view mid-boot, not cover itself. The July static-cover
+# regression (content ~48px short of the bottom, dead band under the
+# disclaimer) predates the measured-viewport engine — the empirical
+# stBottom corrective and the glass clamp now pin the column to the real
+# glass in either viewport mode; device checkpoint 1 verifies exactly that.
+_STATIC_VIEWPORT_TOKENS = (", maximum-scale=1", ", viewport-fit=cover")
+
+# Gone with cover's return (was the non-cover alignment shim): under cover the
+# splash CSS fallback `env(safe-area-inset-top) + 14vh` IS the launch image's
+# formula (`sat + 0.14 * screen`) — env is real and vh spans the full glass, so
+# a JS override would only mis-align what CSS already gets exact. _strip still
+# removes the old <script id="cai-pad"> block from previously patched files.
+_PAD_JS = ""
 
 _VIEWPORT_RE = re.compile(
     r'(<meta[^>]*\bname="viewport"[^>]*\bcontent=")(?P<val>[^"]*)(")'
@@ -101,8 +101,9 @@ def _cover_viewport(src: str) -> str:
 # Tokens THIS version never writes but older ones did. Without these a v12
 # file could not be stripped back to pristine, so patch_index_html would see a
 # leftover viewport-fit, trip its own guard and refuse to upgrade — a
-# permanently stuck dev venv. Retired tokens go here, they never come out.
-_LEGACY_VIEWPORT_TOKENS = (", viewport-fit=cover",)
+# permanently stuck dev venv. Retired tokens go here — and viewport-fit=cover
+# left this list on 2026-09-01 when it un-retired into the static set above.
+_LEGACY_VIEWPORT_TOKENS = ()
 
 
 def _uncover_viewport(src: str) -> str:
@@ -1452,9 +1453,13 @@ def patch_index_html() -> bool:
         # caught by the byte-exact round-trip test
         patched = re.sub(r"([ \t]*)</body>",
                          lambda m: boot_js + m.group(0), patched, count=1)
-        for marker in ('id="cai-micro"', 'id="cai-pad"', 'id="cai-boot"',
+        # id="cai-pad" left this list with _PAD_JS's retirement (2026-09-01);
+        # viewport-fit=cover joined it — a viewport regex that silently missed
+        # the meta would otherwise ship a shell whose whole point is missing.
+        for marker in ('id="cai-micro"', 'id="cai-boot"',
                        'id="cai-boot-splash"', 'id="cai-boot-js"',
-                       "maximum-scale=1", "var(--cai-pad"):
+                       "maximum-scale=1", "viewport-fit=cover",
+                       "var(--cai-pad"):
             if marker not in patched:
                 return False
         # only when the assets actually published — a read-only venv where
@@ -1472,10 +1477,9 @@ def patch_index_html() -> bool:
             if (patched.index("<!--/cai-boot-splash-->")
                     > patched.index('class="cai-preload"')):
                 return False
-        # cover would resize the app, not just the splash — see the comment on
-        # _STATIC_VIEWPORT_TOKENS. Assert it never creeps back in.
-        if "viewport-fit" in patched:
-            return False
+        # (the July "assert cover never creeps back in" guard lived here until
+        # 2026-09-01 — cover is now shipped DELIBERATELY, and the marker loop
+        # above asserts its presence instead)
         index.write_text(patched, encoding="utf-8")
         return True
     except Exception:

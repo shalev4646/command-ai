@@ -3737,20 +3737,14 @@ if _pwa:
                        {{ name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" }});
                 upsert('meta[name="apple-mobile-web-app-title"]', "meta",
                        {{ name: "apple-mobile-web-app-title", content: "CommandAI" }});
-                // NO viewport-fit=cover. It was added here for years so that
-                // black-translucent would give env(safe-area-inset-top) a real
-                // value — but it was applied AFTER first paint, which resized
-                // the web view mid-boot and made the splash jump up and drop
-                // back down on every launch the pilot filmed (2026-07-29:
-                // chevron ink row 171 -> 164 -> 171). Shipping it statically
-                // instead fixed the jump and then broke something worse: with
-                // cover the app's own layout, tuned for years against the
-                // inset viewport, ended ~48px short of the bottom — content
-                // shifted up, dead band under the disclaimer, for the whole
-                // session. Both directions are regressions, so the viewport is
-                // now left exactly as Streamlit ships it and the splash aligns
-                // itself instead (boot_shell._PAD_JS). --cai-sat below already
-                // supplies the real inset to everything that needs it.
+                // viewport-fit=cover ships STATICALLY from the boot shell
+                // since 2026-09-01 (user decision: the drawer runs to the
+                // physical top). Never upsert it HERE: the 2026-07-29 splash
+                // jump (chevron 171 -> 164 -> 171) was this very block adding
+                // it AFTER first paint and resizing the web view mid-boot.
+                // The July static-cover bottom-shortfall (~48px dead band)
+                // predates the measured-viewport engine; checkpoint 1 on
+                // device watches for exactly that regression.
                 // env(safe-area-inset-top) reads 0 inside the app iframe, so
                 // measure it HERE (the top/shell doc, where it's real) and push
                 // it into the app frame's :root as --cai-sat. The header band,
