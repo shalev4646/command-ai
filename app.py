@@ -452,15 +452,16 @@ if splash_active:
        splash read as a second, brighter screen on device */
     position: fixed; inset: 0; background: #14170E; z-index: 999990;
     display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 18px;
-    /* CENTERED (2026-09-02, device video: the top-anchored sat+14vh block
-       left ~80% of the glass empty — "הפתיח נראה בכלל לא כמו אפליקציה").
-       Identity block is 159px tall, so 50vh-80px centers it on the glass —
-       the SAME formula as boot_shell's #cai-boot-splash and _startup_png
-       (0.5*h/dpr - 80): all three must move together or the hand-off jumps.
-       The old entry-screen alignment (~26% down) is deliberately traded
-       away: first-run staggers its elements in after the lift anyway, and
-       the everyday returning-user boot is what the splash is for. */
-    padding-top: calc(50vh - 80px);
+    /* top-anchor the logo where the entry screen lands it (~26% down) so the
+       curtain lift reveals the same layout instead of the logo jumping up
+       from dead-center. --cai-sat pushes it clear of the iOS notch.
+       ⛔ REVERTED FROM CENTERED 2026-09-03: a 50vh−80px variant shipped and
+       broke on device within one launch — iOS's CACHED launch PNG stayed
+       top-anchored and cannot be refreshed remotely, so boots showed old-PNG
+       → centered-splash as two mismatched screens. This anchor moves only
+       as part of a migration that re-mints the installed PNG (see the
+       cache-lock note in boot_shell). */
+    padding-top: calc(var(--cai-sat, 0px) + 14vh);
     animation: bootCurtainUp 1.05s cubic-bezier(.7,0,.3,1) both; animation-delay: 30s;
     pointer-events: none;
 }

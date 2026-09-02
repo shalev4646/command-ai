@@ -50,11 +50,9 @@ _STARTUP_SIZES = [
 ]
 
 
-# status-bar heights (pt) per launch-image class. RETIRED FROM THE POSITION
-# MATH on 2026-09-02: the identity block is centered on the glass now
-# (0.5*h/dpr − 80, matching the splashes' 50vh − 80px), and the glass center
-# needs no notch input. Kept as device-class documentation and in case a
-# future element must clear the bar again.
+# status-bar heights (pt) per launch-image class — the ONLY per-device input
+# the PNG needs to land its chevron where the splash draws its own (the
+# splash pads by env(safe-area-inset-top), which iOS reports as these).
 # Keyed by the pixel triple because 828×1792@2 (XR, 48pt) and 1242×2688@3
 # (XS Max, 44pt) share a pt-size with different bars.
 _STARTUP_SAT = {
@@ -73,9 +71,8 @@ _STARTUP_SAT = {
 #           26x1px rules (rgba .31) at a 12px gap
 #   line 2  "בלמ״ס"          9.5px, ls 7, rgba(23,26,18,.37)
 #
-# Browser truth (pad = the splash's padding-top; 50vh − 80px since 2026-09-02
-# — all offsets below are relative to pad, so the centering move left them
-# untouched):
+# Browser truth (pad = the splash's padding-top, sat + 14vh — all offsets
+# below are relative to pad):
 #   .s1 flex row box: top pad+124, h 17 (asc 13 + desc 4, half-leading ZERO)
 #       -> text baseline pad+137;  rules flex-centred -> y [pad+132, pad+133]
 #       text item box w 100.953 (advance 76.947 + 12 x 2 tracking), box
@@ -162,13 +159,16 @@ def _startup_png(w: int, h: int, dpr: int) -> bytes:
     """Olive launch screen with the double-chevron mark at the SPLASH's
     chevron position, so the OS launch image morphs into the splash without
     a jump (the user filmed the old centered chevron leaping to the splash's
-    top-aligned one; since 2026-09-02 both sides are CENTERED — the top-
-    anchored layout read as a half-loaded web page, device video). The
-    splash pads by 50vh − 80px (identity block 159px tall, centered on the
-    glass), so the chevron's first apex sits at 0.5·(h/dpr) − 80 − 6.6px:
-    a 26px box + 6px border rotated 45° overhangs its layout top by
-    (32·√2−32)/2 ≈ 6.6px. Same formula here and in both splash stylesheets
-    — change one and you must change all three."""
+    top-aligned one). The splash chevron's first apex sits at
+    env(safe-area-inset-top) + 14vh − 6.6px: the .cai-splash padding is
+    sat+14vh, and a 26px box + 6px border rotated 45° overhangs its layout
+    top by (32·√2−32)/2 ≈ 6.6px. Verified against the launch video: apex at
+    ~176pt on a 393×852 device = 59 + 119.3 − 6.6.
+    ⛔ Cache-locked: a centered variant (2026-09-02) was reverted next
+    morning — iOS never refreshes the INSTALLED app's launch PNG, so a
+    formula change here strands existing installs on the old image and the
+    boot shows two mismatched screens (device video 00:15). Change this
+    only with a migration that re-mints the installed PNG."""
     import io
     from PIL import Image, ImageDraw
 
@@ -219,7 +219,8 @@ def _startup_png(w: int, h: int, dpr: int) -> bytes:
     # against the profile row by row. If the chevron size or border width
     # ever changes, re-run the foreignObject profile and re-fit this.
     cx = w / 2
-    pad = 0.5 * (h / dpr) - 80      # the splashes' 50vh - 80px, in pt
+    sat = _STARTUP_SAT.get((w, h, dpr), 47)
+    pad = sat + 0.14 * (h / dpr)    # the splashes' sat + 14vh, in pt
     apex = (pad - 6.6) * dpr
     S = 4
     x0, y0 = int(cx - dd) - 2, int(apex) - 2

@@ -43,7 +43,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v22"
+_VERSION = "v23"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -75,19 +75,21 @@ _VERSION = "v22"
 _STATIC_VIEWPORT_TOKENS = (", maximum-scale=1", ", viewport-fit=cover")
 
 # Gone with cover's return (was the non-cover alignment shim): under cover the
-# splash CSS fallback IS the launch image's formula — vh spans the full glass,
-# so a JS override would only mis-align what CSS already gets exact. _strip
-# still removes the old <script id="cai-pad"> block from previously patched
-# files.
+# splash CSS fallback `env(safe-area-inset-top) + 14vh` IS the launch image's
+# formula (`sat + 0.14 * screen`) — env is real and vh spans the full glass, so
+# a JS override would only mis-align what CSS already gets exact. _strip still
+# removes the old <script id="cai-pad"> block from previously patched files.
 #
-# CENTERED since 2026-09-02 (device video: "הפתיח נראה בכלל לא כמו אפליקציה")
-# — the top-anchored `sat + 14vh` block left ~80% of the glass empty and read
-# as a half-loaded web page, not an app splash. The identity block is 159px
-# tall (chev 43 + gap 18 + title 45 + gap 18 + subtitle 35, measured on the
-# live stylesheet), so `50vh - 80px` puts its middle on the middle of the
-# glass. No sat term: centering is on the physical glass, same coordinate the
-# PNG uses (0.5 * h/dpr - 80), so the hand-off stays pixel-exact. The wait
-# ring keeps its own bottom anchor.
+# ⛔ THE ANCHOR IS CACHE-LOCKED — the 2026-09-03 lesson, learned on device.
+# A centered variant (50vh − 80px, all three layers moved together) shipped on
+# 2026-09-02 and was REVERTED within the hour: iOS caches the launch PNG on
+# the installed home-screen app and there is NO remote way to refresh it, so
+# every existing install boots OLD PNG (top-anchored) → NEW splash (centered)
+# — a visible two-screen jump with mismatched chevrons, filmed by the user at
+# 00:15 ("שני מסכים... חיצים לא תואמים"). Moving this anchor is only safe
+# together with a step that re-mints the installed PNG (re-add to home
+# screen, or a native-wrapper migration) — as an explicit, user-approved
+# migration, never a plain deploy.
 _PAD_JS = ""
 
 _VIEWPORT_RE = re.compile(
@@ -222,7 +224,7 @@ _HEAD_TEMPLATE = """
       html, body { background: #14170E; }
       #cai-boot-splash { position: fixed; inset: 0; z-index: 2147483000; background: #14170E;
         display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-        padding-top: var(--cai-pad, calc(50vh - 80px));
+        padding-top: var(--cai-pad, calc(env(safe-area-inset-top, 0px) + 14vh));
         gap: 18px; transition: opacity .4s ease; pointer-events: none; }
       #cai-boot-splash .chev span { display: block; width: 26px; height: 26px;
         border-top: 6px solid #A3AE6E; border-left: 6px solid #A3AE6E; transform: rotate(45deg); }
