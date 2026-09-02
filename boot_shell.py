@@ -43,7 +43,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v23"
+_VERSION = "v24"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -587,6 +587,15 @@ _BOOT_JS = """
         var lift = function () {
           if (gone) return; gone = true;
           slow.forEach(clearTimeout);
+          // The wait ring must NOT ride the curtain: it kept spinning during
+          // the slide and lingered as a lone circle over the revealed home
+          // (user's 60fps slow-motion, 2026-09-03). Fade it during the paint
+          // dwell below, so by the time the slide starts the curtain carries
+          // only the identity block.
+          try {
+            var w = el.querySelector('.wait');
+            if (w) { w.style.transition = 'opacity .15s ease'; w.style.opacity = '0'; }
+          } catch (e) {}
           // Hand the DOCUMENT background over to the app's dark, now, while
           // the curtain still covers the screen — so the change itself is
           // invisible and what the curtain uncovers is one consistent colour.

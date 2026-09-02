@@ -2165,6 +2165,21 @@ html.cai-standalone [data-testid="stAppViewContainer"]:has(.cai-greet) [data-tes
 .st-key-sug_1 button {{ animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .32s; }}
 .st-key-sug_2 button {{ animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .4s; }}
 .st-key-sug_3 button {{ animation: enterUp .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: .48s; }}
+/* UNDER THE SHELL, NO HOME-SCREEN ENTRANCE AT ALL — the greet-screen twin of
+   the .cai-entry rule above (5d16877), written 2026-09-03 after the user's
+   60fps slow-motion: Streamlit re-mounts these nodes on the settle rerun,
+   every re-mount restarts the stagger, and the boot curtain is not obliged
+   to outwait it — so the reveal showed the home ASSEMBLING bottom-to-top
+   (composer → cards → greeting → header, ~370ms of visible construction,
+   device video 00:55). `both` fill means animation:none shows the finished
+   state, so under the shell every element paints complete the moment it
+   lands and the curtain uncovers a finished page. Bonus: mid-session home
+   re-mounts (back from settings, new chat) stop replaying the entrance too.
+   Browser-tab hosts (no shell) keep the choreography. */
+html.cai-shell .cai-greet,
+html.cai-shell .cai-greet-sub,
+html.cai-shell .cai-corpus-note,
+html.cai-shell [class*="st-key-sug_"] button {{ animation: none !important; }}
 
 /* ── Composer — pill bar + circular olive send ── */
 /* the composer strip is translucent glass over the fixed underlay: the old
