@@ -452,10 +452,15 @@ if splash_active:
        splash read as a second, brighter screen on device */
     position: fixed; inset: 0; background: #14170E; z-index: 999990;
     display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 18px;
-    /* top-anchor the logo where the entry screen lands it (~26% down) so the
-       curtain lift reveals the same layout instead of the logo jumping up
-       from dead-center. --cai-sat pushes it clear of the iOS notch. */
-    padding-top: calc(var(--cai-sat, 0px) + 14vh);
+    /* CENTERED (2026-09-02, device video: the top-anchored sat+14vh block
+       left ~80% of the glass empty — "הפתיח נראה בכלל לא כמו אפליקציה").
+       Identity block is 159px tall, so 50vh-80px centers it on the glass —
+       the SAME formula as boot_shell's #cai-boot-splash and _startup_png
+       (0.5*h/dpr - 80): all three must move together or the hand-off jumps.
+       The old entry-screen alignment (~26% down) is deliberately traded
+       away: first-run staggers its elements in after the lift anyway, and
+       the everyday returning-user boot is what the splash is for. */
+    padding-top: calc(50vh - 80px);
     animation: bootCurtainUp 1.05s cubic-bezier(.7,0,.3,1) both; animation-delay: 30s;
     pointer-events: none;
 }
@@ -493,7 +498,7 @@ if splash_active:
     border-top-color: rgba(236,237,230,.55);
     border-radius: 50%;
     animation: bootSpin .9s linear infinite, bootFadeIn .5s ease both;
-    animation-delay: 0s, 2.5s;
+    animation-delay: 0s, 1.2s;
 }
 </style>
 <div class='cai-splash'>
@@ -3267,7 +3272,10 @@ components.html(
             var off = g.mode === "open" ? g.w - g.travel : g.travel;
             var d = drawer(), b = backdrop();
             if (d) d.style.transform = "translateX(" + off + "px)";
-            if (b) b.style.opacity = String(1 - (off / g.w) * 0.9);
+            // dim tracks the panel 1:1 — the old 0.9 factor kept 10% of the
+            // dim on a fully-dragged-out panel, part of the "background
+            // reloads" read (device video 2026-09-02)
+            if (b) b.style.opacity = String(1 - off / g.w);
             e.preventDefault();
         }, { passive: false, capture: true });
 
@@ -4164,6 +4172,27 @@ _MODAL_CSS = """
    Darken the full-screen stDialog layer (the card below keeps its own bg). */
 div[data-testid="stDialog"] { background: rgba(9,11,7,.66) !important; }
 div[data-testid="stDialog"] > div { direction: rtl; background: transparent !important; }
+/* ---- Safe-area + in-card scrolling (2026-09-02 device video). Streamlit
+   1.58 lets the card GROW to its content (height 1512px measured on the
+   benefits guide) and scrolls the whole card through the full-viewport
+   stDialog layer — so under viewport-fit=cover the card's top edge parks
+   under the iOS clock and scrolled TEXT passes beneath the status bar with
+   nothing masking it (filmed at 17.0s and 19.5s: title colliding with the
+   clock, list rows under the island). Constrain the card to the glass minus
+   the insets and scroll INSIDE it, iOS-sheet style: the rounded top edge
+   stays put below the clock, the strip above it keeps the scrim, and the
+   clock always floats over dimmed backdrop instead of over card text.
+   The layer's own 32px padding-top is replaced by the inset-aware one. */
+div[data-testid="stDialog"] > div {
+    padding-top: calc(max(var(--cai-sat, 0px), env(safe-area-inset-top, 0px)) + 6px) !important;
+}
+div[data-testid="stDialog"] [role="dialog"] {
+    max-height: calc(100dvh - max(var(--cai-sat, 0px), env(safe-area-inset-top, 0px))
+                     - env(safe-area-inset-bottom, 0px) - 38px) !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
 /* 150ms entrance: fade the layer, rise the card (2026-08-03 review — dialogs
    popped in with zero transition; 150ms reads as response, not as delay).
    The layer fades via opacity, NOT background: the scrim color above is
@@ -4201,13 +4230,32 @@ div[data-testid="stDialog"] [data-testid="stRadio"] { margin-bottom: 12px; }
    the body. The close button is a SEPARATE absolutely-positioned element (sibling
    of the bar), so hiding the bar keeps it. */
 div[data-testid="stDialog"] [role="dialog"] > div:first-child { display: none !important; }
-/* native close button -> premium 34px circle, pinned to the top-left corner */
+/* native close button -> premium 34px circle, pinned to the top-left corner.
+   STICKY VIA FLEX ORDER (2026-09-02): the card scrolls internally now, and
+   both obvious pinnings fail — absolute rides the scroll out of view
+   (measured -198px after a 300px scroll), and fixed inherits a containing
+   block from baseweb's persistent translateY on the card, which degrades it
+   to the same scrolled-away absolute. Sticky is immune to the transform,
+   but Streamlit renders the button LAST so its flow slot is at the card's
+   bottom — hence the card becomes a flex column and order:-1 moves the
+   button's LAYOUT slot to the top without touching React's DOM. The
+   negative bottom margin gives its height back so the injected header keeps
+   its geometry, and the near-opaque chip bg keeps the glyph legible over
+   text scrolling beneath it. */
+div[data-testid="stDialog"] [role="dialog"] {
+    display: flex !important; flex-direction: column !important;
+}
+div[data-testid="stDialog"] [role="dialog"] > div { flex: 0 0 auto; }
 div[data-testid="stDialog"] button[aria-label="Close"],
 div[data-testid="stDialog"] [data-testid="stDialogCloseButton"] {
-    position: absolute !important; top: 20px !important; left: 20px !important; right: auto !important;
+    order: -1;
+    position: sticky !important; top: 0 !important;
+    align-self: flex-end;               /* RTL column: cross-axis end = left */
+    margin: 0 0 -34px !important;
     z-index: 6;
-    width: 34px !important; height: 34px !important; border-radius: 50% !important;
-    background: rgba(236,237,230,.06) !important;
+    width: 34px !important; height: 34px !important;
+    min-height: 34px !important; border-radius: 50% !important;
+    background: rgba(30,33,21,.92) !important;
     border: 1px solid rgba(236,237,230,.12) !important;
     color: rgba(236,237,230,.6) !important;
 }
@@ -5683,9 +5731,15 @@ _DS_CSS = """
   visibility: hidden;
   transition: transform .26s cubic-bezier(.2,.7,.2,1), visibility 0s linear .26s;
 }
+/* CLOSE uses the panel's own curve, not `ease`: with ease the dim consistently
+   OUTLIVED the slide (panel at 85% out with ~60% of the dim still up — device
+   video 2026-09-02, frames 44-52), so every close ended with the whole
+   background dark and then "lighting up" — read by the user as the app
+   reloading its background. Same duration + same bezier = the dim is gone
+   the moment the panel is. */
 .st-key-drawer_backdrop {
   opacity: 0; visibility: hidden; pointer-events: none;
-  transition: opacity .26s ease, visibility 0s linear .26s;
+  transition: opacity .26s cubic-bezier(.2,.7,.2,1), visibility 0s linear .26s;
 }
 html.cai-drawer-open .st-key-cai_drawer {
   transform: none; visibility: visible;
@@ -5721,8 +5775,14 @@ html.cai-drawer-drag .st-key-drawer_backdrop { pointer-events: none !important; 
    its .26s to slide out — so for a quarter second the wordmark and the
    identity sat ON TOP of a drawer that was still covering the screen (device
    video 2026-08-10: panel caught at x=72, mid-exit, with the name over it).
-   Ducking must be instant; coming back must wait for the panel to clear. */
-.cai-header > * { transition: opacity .18s ease .22s; }
+   Ducking must be instant; coming back must wait for the panel to clear.
+   .14s, not the old .22s: the panel's bezier clears the centered wordmark by
+   ~.1s (59% of travel at ~38% of time), so .22s+.18s meant a header that
+   assembled a third of a second AFTER the close — the last piece of the
+   "background reloads" read (device video 2026-09-02, logo absent at 12.5s).
+   .14s starts the fade just after the wordmark area is clear and finishes
+   right as the panel exits. */
+.cai-header > * { transition: opacity .18s ease .14s; }
 html.cai-drawer-open .cai-header > *, html.cai-drawer-drag .cai-header > * {
   opacity: 0; transition: opacity .18s ease 0s;
 }

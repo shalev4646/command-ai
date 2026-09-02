@@ -50,9 +50,11 @@ _STARTUP_SIZES = [
 ]
 
 
-# status-bar heights (pt) per launch-image class — the ONLY per-device input
-# the PNG needs to land its chevron where the splash draws its own (the
-# splash pads by env(safe-area-inset-top), which iOS reports as these).
+# status-bar heights (pt) per launch-image class. RETIRED FROM THE POSITION
+# MATH on 2026-09-02: the identity block is centered on the glass now
+# (0.5*h/dpr − 80, matching the splashes' 50vh − 80px), and the glass center
+# needs no notch input. Kept as device-class documentation and in case a
+# future element must clear the bar again.
 # Keyed by the pixel triple because 828×1792@2 (XR, 48pt) and 1242×2688@3
 # (XS Max, 44pt) share a pt-size with different bars.
 _STARTUP_SAT = {
@@ -71,7 +73,9 @@ _STARTUP_SAT = {
 #           26x1px rules (rgba .31) at a 12px gap
 #   line 2  "בלמ״ס"          9.5px, ls 7, rgba(23,26,18,.37)
 #
-# Browser truth (pad = sat + 14vh):
+# Browser truth (pad = the splash's padding-top; 50vh − 80px since 2026-09-02
+# — all offsets below are relative to pad, so the centering move left them
+# untouched):
 #   .s1 flex row box: top pad+124, h 17 (asc 13 + desc 4, half-leading ZERO)
 #       -> text baseline pad+137;  rules flex-centred -> y [pad+132, pad+133]
 #       text item box w 100.953 (advance 76.947 + 12 x 2 tracking), box
@@ -88,7 +92,7 @@ _STARTUP_SAT = {
 _SUB1_TEXT = 'מערכת פקודות'
 _SUB1_PX = 13
 _SUB1_WIDTH = 100.953    # layout width INCLUDING the trailing letter-spacing
-_SUB1_BASELINE = 137     # below sat + 14vh
+_SUB1_BASELINE = 137     # below pad (the splash padding-top)
 _SUB1_ALPHA = 150        # round(255 * .59)
 _RULE_W, _RULE_GAP = 26, 12          # the flanking rules, from .s1::before CSS
 _RULE_TOP, _RULE_ALPHA = 132, 79     # y below pad; round(255 * .31)
@@ -158,11 +162,13 @@ def _startup_png(w: int, h: int, dpr: int) -> bytes:
     """Olive launch screen with the double-chevron mark at the SPLASH's
     chevron position, so the OS launch image morphs into the splash without
     a jump (the user filmed the old centered chevron leaping to the splash's
-    top-aligned one). The splash chevron's first apex sits at
-    env(safe-area-inset-top) + 14vh − 6.6px: the .cai-splash padding is
-    sat+14vh, and a 26px box + 6px border rotated 45° overhangs its layout
-    top by (32·√2−32)/2 ≈ 6.6px. Verified against the launch video: apex at
-    ~176pt on a 393×852 device = 59 + 119.3 − 6.6."""
+    top-aligned one; since 2026-09-02 both sides are CENTERED — the top-
+    anchored layout read as a half-loaded web page, device video). The
+    splash pads by 50vh − 80px (identity block 159px tall, centered on the
+    glass), so the chevron's first apex sits at 0.5·(h/dpr) − 80 − 6.6px:
+    a 26px box + 6px border rotated 45° overhangs its layout top by
+    (32·√2−32)/2 ≈ 6.6px. Same formula here and in both splash stylesheets
+    — change one and you must change all three."""
     import io
     from PIL import Image, ImageDraw
 
@@ -213,8 +219,8 @@ def _startup_png(w: int, h: int, dpr: int) -> bytes:
     # against the profile row by row. If the chevron size or border width
     # ever changes, re-run the foreignObject profile and re-fit this.
     cx = w / 2
-    sat = _STARTUP_SAT.get((w, h, dpr), 47)
-    apex = (sat + 0.14 * (h / dpr) - 6.6) * dpr
+    pad = 0.5 * (h / dpr) - 80      # the splashes' 50vh - 80px, in pt
+    apex = (pad - 6.6) * dpr
     S = 4
     x0, y0 = int(cx - dd) - 2, int(apex) - 2
     x1 = int(cx + dd) + 3
@@ -242,8 +248,8 @@ def _startup_png(w: int, h: int, dpr: int) -> bytes:
     #
     # Geometry is exact, not eyeballed. Measured in the browser against the
     # live .cai-splash (364x904, sat=0): the chevron box is 43px tall from
-    # padding-top = sat + 14vh, the flex gap is 18px, so the title's line box
-    # starts at sat + 14vh + 61. Pillow reports ascent 34 / descent 11 for
+    # the padding-top (pad), the flex gap is 18px, so the title's line box
+    # starts at pad + 61. Pillow reports ascent 34 / descent 11 for
     # Suez One at 34px — a 45px sum that equals the browser's line box to the
     # pixel, so half-leading is zero and the baseline sits exactly one ascent
     # below the box top. Advance width agrees too (PIL 205px vs browser 205.1),
@@ -252,7 +258,7 @@ def _startup_png(w: int, h: int, dpr: int) -> bytes:
         from PIL import ImageFont
         fp = _ROOT / "branding" / "fonts" / "SuezOne-Regular.ttf"
         font = ImageFont.truetype(str(fp), int(round(34 * dpr)))
-        baseline = (sat + 0.14 * (h / dpr) + 61 + 34) * dpr
+        baseline = (pad + 61 + 34) * dpr
         # two-tone like the splash/entry ("Command" cream, "AI" olive): both
         # ends pinned to the full-string advance so the total width matches
         # the single-run CSS text; seam kerning error lands invisibly between
@@ -262,8 +268,7 @@ def _startup_png(w: int, h: int, dpr: int) -> bytes:
                   fill=(236, 237, 230, 255), anchor="ls")
         draw.text((x0 + total - font.getlength("AI"), baseline), "AI",
                   font=font, fill=(163, 174, 110, 255), anchor="ls")
-        _draw_subtitle(img, str(fp), cx,
-                       (sat + 0.14 * (h / dpr)) * dpr, dpr)
+        _draw_subtitle(img, str(fp), cx, pad * dpr, dpr)
     except Exception:
         # a missing/unreadable font must never break the launch image — the
         # chevron alone is exactly the old behaviour

@@ -43,7 +43,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v21"
+_VERSION = "v22"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -75,10 +75,19 @@ _VERSION = "v21"
 _STATIC_VIEWPORT_TOKENS = (", maximum-scale=1", ", viewport-fit=cover")
 
 # Gone with cover's return (was the non-cover alignment shim): under cover the
-# splash CSS fallback `env(safe-area-inset-top) + 14vh` IS the launch image's
-# formula (`sat + 0.14 * screen`) — env is real and vh spans the full glass, so
-# a JS override would only mis-align what CSS already gets exact. _strip still
-# removes the old <script id="cai-pad"> block from previously patched files.
+# splash CSS fallback IS the launch image's formula — vh spans the full glass,
+# so a JS override would only mis-align what CSS already gets exact. _strip
+# still removes the old <script id="cai-pad"> block from previously patched
+# files.
+#
+# CENTERED since 2026-09-02 (device video: "הפתיח נראה בכלל לא כמו אפליקציה")
+# — the top-anchored `sat + 14vh` block left ~80% of the glass empty and read
+# as a half-loaded web page, not an app splash. The identity block is 159px
+# tall (chev 43 + gap 18 + title 45 + gap 18 + subtitle 35, measured on the
+# live stylesheet), so `50vh - 80px` puts its middle on the middle of the
+# glass. No sat term: centering is on the physical glass, same coordinate the
+# PNG uses (0.5 * h/dpr - 80), so the hand-off stays pixel-exact. The wait
+# ring keeps its own bottom anchor.
 _PAD_JS = ""
 
 _VIEWPORT_RE = re.compile(
@@ -213,7 +222,7 @@ _HEAD_TEMPLATE = """
       html, body { background: #14170E; }
       #cai-boot-splash { position: fixed; inset: 0; z-index: 2147483000; background: #14170E;
         display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-        padding-top: var(--cai-pad, calc(env(safe-area-inset-top, 0px) + 14vh));
+        padding-top: var(--cai-pad, calc(50vh - 80px));
         gap: 18px; transition: opacity .4s ease; pointer-events: none; }
       #cai-boot-splash .chev span { display: block; width: 26px; height: 26px;
         border-top: 6px solid #A3AE6E; border-left: 6px solid #A3AE6E; transform: rotate(45deg); }
@@ -268,9 +277,11 @@ _HEAD_TEMPLATE = """
          geometrically settled (see ready()/stability in the script below),
          then lifts once over a finished static page. */
       /* Bottom-anchored waiting ring, matching .cai-splash-wait in app.py so the
-         hand-off does not move it. Fades in at 2.5s: a fast load never shows it,
-         a slow one stops looking frozen. This is the ONLY moving thing on screen
-         during the wait — the OS launch image before it cannot animate at all. */
+         hand-off does not move it. Fades in at 1.2s (was 2.5s — on device every
+         real load is slower than that, so the earlier fade only means the splash
+         stops looking frozen sooner; a fast local load still never shows it).
+         This is the ONLY moving thing on screen during the wait — the OS launch
+         image before it cannot animate at all. */
       @keyframes caiBootSpin { to { transform: rotate(360deg); } }
       @keyframes caiBootFade { from { opacity: 0; } to { opacity: 1; } }
       /* The wait stack is bottom-anchored and GROWS UPWARD: the ring is its
@@ -284,7 +295,7 @@ _HEAD_TEMPLATE = """
         border: 2px solid rgba(236,237,230,.20); border-top-color: rgba(236,237,230,.55);
         border-radius: 50%;
         animation: caiBootSpin .9s linear infinite, caiBootFade .5s ease both;
-        animation-delay: 0s, 2.5s; }
+        animation-delay: 0s, 1.2s; }
       /* SAY SOMETHING when the boot drags. 2026-07-28 device video: 51s of
          splash with a silent spinner (index.html alone took 13.7s to land)
          — indistinguishable from a hang, and the pilot had no way to tell
