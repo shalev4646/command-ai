@@ -1729,7 +1729,12 @@ header {{ visibility: hidden; }}
 }}
 .st-key-drawer_backdrop button {{
     width: 100% !important; height: 100% !important; min-height: 100% !important;
-    background: rgba(9, 11, 7, .62) !important;
+    /* .32, not the old .62 (user pick 2026-09-03, option A of three live
+       renders): even with the fade synced to the panel, a 62% global dim
+       made every close a full-screen relight — "כאילו עושה איפוס למכשיר".
+       At .32 the page behind stays readable and the close sweep is mild.
+       No strip coupling: syncCanvas has been dialogs-only since 2c1558e. */
+    background: rgba(9, 11, 7, .32) !important;
     border: none !important; border-radius: 0 !important; box-shadow: none !important;
 }}
 /* (its sr-only rule is grouped with the hamburger's above) */
