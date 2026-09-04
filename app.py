@@ -674,7 +674,24 @@ components.html(
                 // force a real re-layout instead, and only accept a short
                 // pane once it has survived the kicks (some other device
                 // geometry might legitimately read short).
-                if (g >= 400 && h < g - 24) {
+                // COVER-MODE FAST PATH (2026-09-05, device video 02:29, four
+                // launches): at a cold standalone launch iOS reports
+                // visualViewport.height = glass - top inset with offsetTop
+                // still 0, so h lands EXACTLY one status bar short. The
+                // guard below then spent 8 samples kicking (~2s) before
+                // pinning to the glass — and that pin landed ~200ms AFTER
+                // the boot curtain had lifted: the composer strip and the
+                // disclaimer dropped 59pt in the open, the user's "the
+                // bottom part runs away". A shortfall that equals the top
+                // inset (+-3px) is the consistent cover under-report, not a
+                // stuck viewport: pin to the glass on the spot. The boot
+                // shell's ready() gate also waits for this pin, so the
+                // curtain rises over settled geometry.
+                var satPx = 0;
+                try { satPx = px("env(safe-area-inset-top, 0px)"); } catch (e) {}
+                if (g >= 400 && satPx > 0 && Math.abs((g - h) - satPx) <= 3) {
+                    h = g; window.__caiShort = 0;
+                } else if (g >= 400 && h < g - 24) {
                     window.__caiShort = (window.__caiShort || 0) + 1;
                     if (window.__caiShort <= 8) { kick(); return; }
                     // Kicks exhausted and STILL short: pin to the glass, do

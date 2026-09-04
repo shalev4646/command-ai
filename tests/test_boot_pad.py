@@ -95,6 +95,30 @@ def test_websocket_compression_is_on():
     assert re.search(r"^enableWebsocketCompression\s*=\s*true", server, re.M)
 
 
+def test_cover_mode_fast_path_pins_the_glass_without_kicks():
+    """02:29 device video: the viewport pin landed ~200ms after the curtain
+    and the composer strip dropped one status bar in the open. A shortfall
+    equal to env(safe-area-inset-top) is the cover under-report: pin at once."""
+    app = (ROOT / "app.py").read_text(encoding="utf-8")
+    i = app.index("COVER-MODE FAST PATH")
+    body = app[i:i + 1600]
+    assert 'px("env(safe-area-inset-top, 0px)")' in body
+    assert "Math.abs((g - h) - satPx) <= 3" in body
+    assert "h = g; window.__caiShort = 0;" in body
+    # the fast path sits BEFORE the 8-kick shortfall guard, as an else-if chain
+    assert body.index("h = g; window.__caiShort = 0;") < body.index("window.__caiShort = (window.__caiShort || 0) + 1")
+
+
+def test_boot_curtain_waits_for_the_viewport_pin():
+    """The shell's ready() must not pass in standalone until --cai-vvh is on
+    <html> (bounded by PIN_WAIT_MS so a device that never pins still lifts)."""
+    js = boot_shell._BOOT_JS if hasattr(boot_shell, "_BOOT_JS") else boot_shell._index_path().read_text(encoding="utf-8")
+    assert "var PIN_WAIT_MS = 4000" in js
+    assert "getPropertyValue('--cai-vvh')" in js
+    gate = js.index("getPropertyValue('--cai-vvh')")
+    assert js.index("[data-cai-settled]") < gate < js.index(".cai-entry, .st-key-cai_name_card, .cai-splash")
+
+
 if __name__ == "__main__":
     failures = 0
     for name, fn in sorted(globals().items()):

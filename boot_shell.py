@@ -43,7 +43,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v25"
+_VERSION = "v26"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -826,6 +826,7 @@ _BOOT_JS = """
         // composer must exist too — a reveal without the question bar reads
         // as broken (video #3). The anchor element doubles as the stability
         // probe below.
+        var PIN_WAIT_MS = 4000, pinWaitSince = 0;
         var ready = function () {
           // The SETTLED marker comes first: app.py emits it only on a run
           // whose device profile is resolved (cookie fast-path, or the
@@ -835,6 +836,19 @@ _BOOT_JS = """
           // the open (the "two screens" opening, 2026-08-31). The 90s
           // failsafe below still covers a probe that never answers.
           if (!document.querySelector('[data-cai-settled]')) return null;
+          // VIEWPORT PIN GATE (2026-09-05). In standalone the app's viewport
+          // engine pins --cai-vvh on <html> once the glass height is
+          // confirmed; the composer strip is positioned by it. The 02:29
+          // device video (four launches) showed the pin landing ~200ms
+          // AFTER the lift — the strip and the disclaimer dropped one status
+          // bar in the open. So a standalone boot waits for the pin, bounded:
+          // the engine confirms within ~300ms of its first sample (cover
+          // fast path in app.py), and PIN_WAIT_MS caps a device where it
+          // never arrives so the 90s failsafe is not the only way out.
+          if (window.__caiSA && !document.documentElement.style.getPropertyValue('--cai-vvh')) {
+            if (!pinWaitSince) pinWaitSince = Date.now();
+            if (Date.now() - pinWaitSince < PIN_WAIT_MS) return null;
+          }
           var scr = document.querySelector('.cai-entry, .st-key-cai_name_card, .cai-splash');
           if (scr) return scr;
           var chat = document.querySelector('.cai-greet, .cai-header');
