@@ -43,7 +43,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v24"
+_VERSION = "v25"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -58,7 +58,9 @@ _VERSION = "v24"
 # words were "the whole screen went up and stays stuck", and he was right.
 #
 # So the viewport goes back to what the app expects, and the splash is aligned
-# the other way round — by _PAD_JS below, which changes only the splash.
+# the other way round — by the cai-pad script below, which changes only the
+# splash (retired 2026-09-01 with cover's return, back 2026-09-04 for the
+# first-frame env()=0 ghost — see _PAD_JS_TEMPLATE).
 # maximum-scale=1 stays: it caps zoom, never geometry, and shipping it here
 # spares one more runtime write to this meta during boot.
 #
@@ -74,11 +76,34 @@ _VERSION = "v24"
 # glass in either viewport mode; device checkpoint 1 verifies exactly that.
 _STATIC_VIEWPORT_TOKENS = (", maximum-scale=1", ", viewport-fit=cover")
 
-# Gone with cover's return (was the non-cover alignment shim): under cover the
-# splash CSS fallback `env(safe-area-inset-top) + 14vh` IS the launch image's
-# formula (`sat + 0.14 * screen`) — env is real and vh spans the full glass, so
-# a JS override would only mis-align what CSS already gets exact. _strip still
-# removes the old <script id="cai-pad"> block from previously patched files.
+# THE SPLASH TAKES ITS ANCHOR FROM THE LAUNCH PNG'S OWN TABLE, NOT FROM env().
+#
+# History: the non-cover alignment shim lived here until 2026-09-01, was
+# retired when viewport-fit=cover returned (under cover the CSS fallback
+# `env(safe-area-inset-top) + 14vh` IS the launch image's formula), and is
+# back on 2026-09-04 for a different reason, measured frame-by-frame on the
+# 21:58 device video (60fps): WebKit's FIRST TWO FRAMES lay the splash out with
+# env(safe-area-inset-top) = 0 — the UI process has not pushed the insets to
+# the web process yet — so while iOS dissolves the launch image into the web
+# view, the dissolving-in splash sits ~56pt ABOVE the PNG (device: sat 59pt),
+# a dim second logo over the real one for 33ms; on the third frame the insets
+# land, the splash drops onto the PNG and the rest of the dissolve is
+# invisible because the two layers are now pixel-identical. That two-frame
+# ghost is the user's "two screens".
+#
+# env() cannot be made early. The PNG's own math can: pwa_assets._startup_png
+# places the block at `sat + 0.14 * (h / dpr)` with sat from _STARTUP_SAT,
+# keyed by the device's physical screen — and screen.width/height/dpr are
+# known at parse time. So this first-KB script computes EXACTLY the PNG's
+# padding from EXACTLY the PNG's table and writes it as --cai-pad before the
+# splash markup is parsed: the very first painted frame already sits on the
+# PNG, whatever env() says. Unknown screens (Android, desktop, a future
+# iPhone) set nothing and fall back to the env() formula — today's behaviour.
+# The table is rendered from _STARTUP_SAT at patch time, never copied, so the
+# two can never drift (locked by tests/test_boot_pad.py).
+#
+# iOS reports screen.width/height in portrait regardless of orientation;
+# the min/max swap below is belt-and-braces for hosts that do not.
 #
 # ⛔ THE ANCHOR IS CACHE-LOCKED — the 2026-09-03 lesson, learned on device.
 # A centered variant (50vh − 80px, all three layers moved together) shipped on
@@ -89,8 +114,29 @@ _STATIC_VIEWPORT_TOKENS = (", maximum-scale=1", ", viewport-fit=cover")
 # 00:15 ("שני מסכים... חיצים לא תואמים"). Moving this anchor is only safe
 # together with a step that re-mints the installed PNG (re-add to home
 # screen, or a native-wrapper migration) — as an explicit, user-approved
-# migration, never a plain deploy.
-_PAD_JS = ""
+# migration, never a plain deploy. This script does NOT move the anchor: it
+# reproduces sat + 14vh, the formula the installed PNGs were minted with.
+_PAD_JS_TEMPLATE = (
+    '<script id="cai-pad">(function(){try{var T=__TABLE__;'
+    'var d=window.devicePixelRatio||1,w=screen.width,h=screen.height;'
+    'if(w>h){var t=w;w=h;h=t}'
+    'var k=Math.round(w*d)+"x"+Math.round(h*d)+"x"+Math.round(d);'
+    'if(!(k in T))return;'
+    'var f=function(){document.documentElement.style.setProperty("--cai-pad",(T[k]+0.14*h).toFixed(2)+"px")};'
+    'f();window.__caiPad=f;'
+    '}catch(e){}})()</script>'
+)
+
+
+def _pad_js() -> str:
+    """The cai-pad script with _STARTUP_SAT rendered in (lazy: pwa_assets
+    imports this module, so the table is fetched at patch time, not import)."""
+    sat = __import__("pwa_assets")._STARTUP_SAT
+    table = "{" + ",".join(
+        f'"{w}x{h}x{d}":{v}' for (w, h, d), v in sorted(sat.items())
+    ) + "}"
+    return _PAD_JS_TEMPLATE.replace("__TABLE__", table)
+
 
 _VIEWPORT_RE = re.compile(
     r'(<meta[^>]*\bname="viewport"[^>]*\bcontent=")(?P<val>[^"]*)(")'
@@ -224,6 +270,8 @@ _HEAD_TEMPLATE = """
       html, body { background: #14170E; }
       #cai-boot-splash { position: fixed; inset: 0; z-index: 2147483000; background: #14170E;
         display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+        /* --cai-pad = the launch PNG's own sat+14vh, set by #cai-pad at parse time
+           (see _PAD_JS_TEMPLATE); env() is the fallback for screens off the table */
         padding-top: var(--cai-pad, calc(env(safe-area-inset-top, 0px) + 14vh));
         gap: 18px; transition: opacity .4s ease; pointer-events: none; }
       #cai-boot-splash .chev span { display: block; width: 26px; height: 26px;
@@ -388,8 +436,14 @@ _SPLASH_HTML = """
           var ping = function () {
             try { sw.controller.postMessage('cai-painted'); } catch (e) {}
           };
+          // A THIRD frame since 2026-09-04: the 21:58 device video still caught
+          // one lifted frame (+15 levels on the backdrop, 16ms) right as the
+          // dissolve began — the web process had painted, the UI process had
+          // not yet composited it. Double rAF reports "painted", not "on the
+          // glass"; one more frame covers the commit. Costs 16ms of hold.
           if (window.requestAnimationFrame) {
-            requestAnimationFrame(function () { requestAnimationFrame(ping); });
+            requestAnimationFrame(function () { requestAnimationFrame(function () {
+              requestAnimationFrame(ping); }); });
           } else {
             setTimeout(ping, 50);
           }
@@ -1421,6 +1475,9 @@ def patch_index_html() -> bool:
         # content hashes, so editing a launch PNG re-patches the shell exactly
         # like editing the font does.
         pwa_links = _pwa_links()
+        # the PNG-table anchor script (see _PAD_JS_TEMPLATE) — rendered here
+        # so its table is hashed into the stamp with everything else
+        pad_js = _pad_js()
         # hashed with everything else: a Streamlit upgrade re-hashes the
         # chunk filenames, which re-stamps the shell, which drops the old
         # worker cache — the hints and the cache can never disagree.
@@ -1428,7 +1485,7 @@ def patch_index_html() -> bool:
         # stamped with a hash of exactly what is about to be written — including
         # the font bytes — so a swapped font file re-patches too
         stamp = _VERSION + "-" + hashlib.sha256(
-            (_MICRO + _PAD_JS + head_raw + pwa_links + _SPLASH_HTML
+            (_MICRO + pad_js + head_raw + pwa_links + _SPLASH_HTML
              + preloads + boot_js
              + (_SW_JS if sw_on else "")
              + "".join(_STATIC_VIEWPORT_TOKENS)).encode("utf-8")
@@ -1460,7 +1517,7 @@ def patch_index_html() -> bool:
         # script at the END of <body> where the DOM it touches exists.
         patched = _cover_viewport(src)
         patched = patched.replace('<meta charset="UTF-8" />',
-                                  '<meta charset="UTF-8" />' + _MICRO + _PAD_JS, 1)
+                                  '<meta charset="UTF-8" />' + _MICRO + pad_js, 1)
         patched = patched.replace("</head>", head + pwa_links + "  </head>", 1)
         patched = _deblock_css(patched)
         # _SPLASH_HTML ends with the split marker, so appending here puts the
@@ -1475,10 +1532,10 @@ def patch_index_html() -> bool:
         # caught by the byte-exact round-trip test
         patched = re.sub(r"([ \t]*)</body>",
                          lambda m: boot_js + m.group(0), patched, count=1)
-        # id="cai-pad" left this list with _PAD_JS's retirement (2026-09-01);
-        # viewport-fit=cover joined it — a viewport regex that silently missed
+        # id="cai-pad" is back (2026-09-04, the PNG-table anchor); viewport-fit
+        # =cover joined on 2026-09-01 — a viewport regex that silently missed
         # the meta would otherwise ship a shell whose whole point is missing.
-        for marker in ('id="cai-micro"', 'id="cai-boot"',
+        for marker in ('id="cai-micro"', 'id="cai-pad"', 'id="cai-boot"',
                        'id="cai-boot-splash"', 'id="cai-boot-js"',
                        "maximum-scale=1", "viewport-fit=cover",
                        "var(--cai-pad"):
