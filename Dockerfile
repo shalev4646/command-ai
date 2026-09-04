@@ -65,4 +65,10 @@ COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
     && chmod +x /usr/local/bin/docker-entrypoint.sh
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["streamlit", "run", "app.py"]
+# No source-file watcher in production (2026-09-04): the watcher re-scans
+# sys.modules after EVERY script run before the run's last messages leave —
+# measured locally 2026-09-04 (headless browser, real app.py, warm server):
+# script state running->notRunning 2.0s with the watcher, 0.55s without, the
+# WebSocket silent for ~1.4s in between while the client sat idle. Nothing in
+# the container ever edits a file, so the watcher only costs.
+CMD ["streamlit", "run", "app.py", "--server.fileWatcherType", "none"]

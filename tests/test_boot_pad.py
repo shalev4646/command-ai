@@ -77,6 +77,24 @@ def test_strip_removes_the_pad_script():
     assert 'id="cai-pad"' not in boot_shell._strip(src)
 
 
+def test_production_runs_without_a_source_watcher():
+    """The watcher re-scans sys.modules after every run before the run's last
+    messages leave (2026-09-04, measured: running->notRunning 2.0s vs 0.55s).
+    Nothing in the container edits files; the flag belongs on the prod CMD."""
+    docker = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+    m = re.search(r'^CMD \[(.*)\]', docker, re.M)
+    assert m, "Dockerfile has no CMD"
+    assert '"--server.fileWatcherType", "none"' in m.group(1)
+
+
+def test_websocket_compression_is_on():
+    """345KB per boot uncompressed (2026-09-04 manifest); deflate is the cheap
+    lever for the cellular boot. Lives in config.toml so dev and prod agree."""
+    cfg = (ROOT / ".streamlit" / "config.toml").read_text(encoding="utf-8")
+    server = cfg.split("[server]", 1)[1].split("\n[", 1)[0]
+    assert re.search(r"^enableWebsocketCompression\s*=\s*true", server, re.M)
+
+
 if __name__ == "__main__":
     failures = 0
     for name, fn in sorted(globals().items()):

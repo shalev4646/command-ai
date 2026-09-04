@@ -13,6 +13,14 @@ gatherUsageStats = false
 [server]
 enableStaticServing = true
 
+# WebSocket permessage-deflate (2026-09-04). Every boot and every rerun ships
+# the whole screen over the socket — measured 345KB per boot on the chat home
+# (191KB of <style> markdown blocks, 72KB of knowledge-base cards, 75KB of
+# component iframes), uncompressed by default. Text like that deflates ~5-8x,
+# and on the pilot's cellular link the transfer, not the server, is the
+# post-splash wait. uvicorn's per-message deflate; every browser negotiates it.
+enableWebsocketCompression = true
+
 # NO toolbarMode override. `toolbarMode = "minimal"` sounded like a clean
 # way to drop the platform icons from the first loading frame, but on 1.58
 # it UNMOUNTS the whole sidebar + stExpandSidebarButton from the DOM (A/B
