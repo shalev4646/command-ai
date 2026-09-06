@@ -264,7 +264,9 @@ def test_composer_guard_pins_an_empty_textarea_to_one_line():
     inline height, and never touches a typed value."""
     app = (ROOT / "app.py").read_text(encoding="utf-8")
     i = app.index("COMPOSER GUARD (2026-09-06 22:15")
-    g = app[i:i + 1600]
+    g = app[i:app.index("var sb = document.querySelector('[data-testid=\"stBottom\"]');", i)]
+    assert 'el.style.setProperty("max-height", "44px", "important")' in g, "wrapper pins"
+    assert 'classList.toggle("cai-empty", ta.value === "")' in g
     assert 'if (ta.value !== "") return;' in g
     assert 'ta.style.setProperty("height", "24px", "important")' in g
     assert 'attributeFilter: ["style"]' in g

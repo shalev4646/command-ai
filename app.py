@@ -820,8 +820,16 @@ components.html(
                 // zeroes any inner scroll. A typed value is never touched, so
                 // growth is autosize's as before. Re-attached after every
                 // Streamlit remount (the flag lives on the element).
+                // the empty state as a CLASS on the capsule (see .cai-empty in
+                // the CSS): WebKit skipped :has()/:placeholder-shown in 4 of 7
+                // launches on the 23:06 device video
+                var ci = ta && ta.closest('[data-testid="stChatInput"]');
+                if (ci) ci.classList.toggle("cai-empty", ta.value === "");
                 if (ta && !ta.__caiGuard) {
                     ta.__caiGuard = true;
+                    ta.addEventListener("input", function () {
+                        try { var c = ta.closest('[data-testid="stChatInput"]'); if (c) c.classList.toggle("cai-empty", ta.value === ""); } catch (e) {}
+                    });
                     var pin = function () {
                         try {
                             if (ta.value !== "") return;
@@ -830,8 +838,31 @@ components.html(
                                 ta.style.setProperty("min-height", "0px", "important");
                                 ta.scrollTop = 0;
                             }
+                            // and the wrappers between the textarea and the
+                            // capsule: baseweb mirrors the measured height
+                            // into its container's min-height, and an inline
+                            // value there out-votes any stylesheet cap
+                            var el = ta.parentElement, top = ta.closest('[data-testid="stChatInput"]');
+                            while (el && el !== top) {
+                                if (el.getBoundingClientRect().height > 44) {
+                                    el.style.setProperty("max-height", "44px", "important");
+                                    el.style.setProperty("min-height", "0px", "important");
+                                }
+                                el = el.parentElement;
+                            }
                         } catch (e) {}
                     };
+                    // typing must release the wrapper pins so the capsule grows
+                    ta.addEventListener("input", function () {
+                        try {
+                            if (ta.value === "") return;
+                            var el = ta.parentElement, top = ta.closest('[data-testid="stChatInput"]');
+                            while (el && el !== top) {
+                                el.style.removeProperty("max-height"); el.style.removeProperty("min-height");
+                                el = el.parentElement;
+                            }
+                        } catch (e) {}
+                    });
                     try {
                         new MutationObserver(pin).observe(ta, { attributes: true, attributeFilter: ["style"] });
                     } catch (e) {}
@@ -2375,18 +2406,26 @@ html:not(.cai-standalone) [data-testid="stBottom"] {{
    centred inside a clipped 44px wrapper is exactly "the placeholder cut in
    half at the capsule's top edge". px, not lh: lh resolved from the
    fallback font on iOS (21:23 video). */
-[data-testid="stChatInput"]:has(textarea:placeholder-shown) textarea {{
+[data-testid="stChatInput"]:has(textarea:placeholder-shown) textarea,
+[data-testid="stChatInput"].cai-empty textarea {{
     line-height: 24px !important;
     min-height: 0 !important;
     max-height: 24px !important;
 }}
+/* .cai-empty is the same state as :has(textarea:placeholder-shown), set from
+   JS by the viewport engine (2026-09-06 23:06 device video, reinstall, 4 of
+   7 launches still clipped): WebKit skipped the :has()/:placeholder-shown
+   match in those launches — the wrappers stayed 72px tall inside a 56px
+   capsule — so the empty state is now ALSO a plain class, toggled on every
+   input event and on every heal() pass. A class never needs invalidation. */
 /* ...and the WRAPPERS too (18:45 device video, launch 4 of 4): the textarea
    cap alone still left a tall capsule once — baseweb's textarea container
    carries its own min-height, so a stale inner measurement can hold the
    pill open from the outside. While the placeholder shows, no div inside
    the composer may exceed the send button's 44px: the capsule is the
    button row and nothing else. Typing hides the placeholder and lifts it. */
-[data-testid="stChatInput"]:has(textarea:placeholder-shown) div {{
+[data-testid="stChatInput"]:has(textarea:placeholder-shown) div,
+[data-testid="stChatInput"].cai-empty div {{
     max-height: 44px !important;
     min-height: 0 !important;
 }}

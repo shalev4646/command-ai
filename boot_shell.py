@@ -43,7 +43,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v35"
+_VERSION = "v36"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -781,13 +781,24 @@ _BOOT_JS = """
                    ' par' + Math.round(ta.parentElement.getBoundingClientRect().height) +
                    '/' + Math.round(ta.parentElement.parentElement.getBoundingClientRect().height);
             }
-            d.textContent = 'vp ' + out.slice(0, 6).join(' ') + cs;
+            if (ta) {
+              var ci1 = ta.closest('[data-testid="stChatInput"]');
+              cs += ' has' + ((ci1 && ci1.matches(':has(textarea:placeholder-shown)')) ? 1 : 0) +
+                    ' cls' + ((ci1 && ci1.classList.contains('cai-empty')) ? 1 : 0) +
+                    ' pill' + (ci1 ? Math.round(ci1.getBoundingClientRect().height) : -1);
+            }
+            d.textContent = (cs ? cs.replace(/^ [|] /, '') + ' | ' : '') + 'vp ' + out.slice(0, 5).join(' ');
             document.body.appendChild(d);
             setTimeout(function () { try { d.remove(); } catch (e) {} }, 10000);
           } catch (e) {}
         };
         var composerRemeasure = function () {
           try {
+            // the empty-capsule class (app.py .cai-empty) before the dwell
+            // paints the strip — the engine's heal() keeps it in sync later
+            var ta0 = document.querySelector('[data-testid="stChatInput"] textarea');
+            var ci0 = ta0 && ta0.closest('[data-testid="stChatInput"]');
+            if (ci0) ci0.classList.toggle('cai-empty', ta0.value === '');
             window.dispatchEvent(new Event('resize'));
             setTimeout(function () {
               try {
