@@ -175,8 +175,6 @@ def test_splash_chevrons_keep_the_png_box_model():
     ring = css[css.index("#cai-boot-splash .w {"):]
     ring = ring[:ring.index("}")]
     assert "box-sizing: content-box !important" in ring
-    png = (ROOT / "pwa_assets.py").read_text(encoding="utf-8")
-    assert "dd = 32 * 0.7071 * dpr" in png, "the PNG geometry the CSS must match"
     app = (ROOT / "app.py").read_text(encoding="utf-8")
     fb = app[app.index(".cai-splash-chev span {"):]
     assert "box-sizing:content-box !important" in fb[:fb.index("}")]
@@ -271,6 +269,35 @@ def test_composer_guard_pins_an_empty_textarea_to_one_line():
     assert 'ta.style.setProperty("height", "24px", "important")' in g
     assert 'attributeFilter: ["style"]' in g
     assert "ta.__caiGuard" in g
+
+
+def test_launch_image_is_a_plain_olive_field():
+    """Option A (2026-09-06): iOS jittered the logo launch image by 2px in
+    5 of 7 launches while the shell's copy stood still — so the launch image
+    carries no logo at all and the shell fades its own in."""
+    import io
+    from PIL import Image
+    for (w, h, d) in ((1179, 2556, 3), (750, 1334, 2), (1320, 2868, 3)):
+        im = Image.open(io.BytesIO(pwa_assets._startup_png(w, h, d))).convert("RGB")
+        assert im.size == (w, h)
+        assert im.getcolors(maxcolors=4) == [(w * h, (20, 23, 14))], "must be one colour, #14170E"
+
+
+def test_splash_paints_veiled_and_unveils_on_the_glass_resize():
+    html = boot_shell._SPLASH_HTML
+    assert '<div id="cai-boot-splash" dir="rtl" class="cai-veiled">' in html
+    i = html.index("UNVEIL: the identity block fades in")
+    js = html[i:i + 2600]
+    assert "sp.classList.remove('cai-veiled')" in js
+    assert "Math.abs(window.innerHeight - glass) <= 2" in js
+    assert "window.addEventListener('resize', onResize)" in js
+    assert "setTimeout(unveil, 2500)" in js
+    assert "if (!standalone || full()) { soon(); return; }" in js
+    css = boot_shell._HEAD_TEMPLATE
+    assert "#cai-boot-splash.cai-veiled .chev, #cai-boot-splash.cai-veiled .t," in css
+    assert "opacity: 0; transform: translateY(6px); }" in css
+    assert "transition: opacity .36s ease-out, transform .36s ease-out; }" in css
+    assert "-webkit-touch-callout" not in css, "the iOS subtitle nudge chased launch-image jitter; gone with the logo"
 
 
 if __name__ == "__main__":
