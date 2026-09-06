@@ -135,10 +135,10 @@ def test_composer_is_remeasured_at_the_lift_and_in_heal():
     assert "if (!ta || ta.value) return;" in body
     app = (ROOT / "app.py").read_text(encoding="utf-8")
     j = app.index("stale composer height (2026-09-06)")
-    heal = app[j:j + 1600]
-    assert 'ta.style.removeProperty("height")' in heal
-    assert 'new Event("resize")' in heal
-    assert "!ta.value && ta.style.height" in heal
+    heal = app[j:j + 2600]
+    # since 22:15 the heal path PINS (inline !important) instead of removing and re-measuring
+    assert 'ta.style.setProperty("height", "24px", "important")' in heal
+    assert "ta.__caiGuard" in heal
 
 
 def test_splash_bottom_is_pinned_to_the_glass():
@@ -255,6 +255,20 @@ def test_frosted_overlays_are_unpainted_under_the_curtain():
     assert "html.cai-curtain .cai-header" in rule
     assert "visibility: hidden !important" in rule and "backdrop-filter: none !important" in rule
     assert 'aroot.classList.contains("cai-curtain")' in app
+
+
+def test_composer_guard_pins_an_empty_textarea_to_one_line():
+    """22:15 device video: placeholder cut in half in 3 of 5 launches with all
+    CSS caps present. The engine's heal() attaches a style-attribute observer
+    that pins an EMPTY textarea back to 24px whenever autosize writes a tall
+    inline height, and never touches a typed value."""
+    app = (ROOT / "app.py").read_text(encoding="utf-8")
+    i = app.index("COMPOSER GUARD (2026-09-06 22:15")
+    g = app[i:i + 1600]
+    assert 'if (ta.value !== "") return;' in g
+    assert 'ta.style.setProperty("height", "24px", "important")' in g
+    assert 'attributeFilter: ["style"]' in g
+    assert "ta.__caiGuard" in g
 
 
 if __name__ == "__main__":

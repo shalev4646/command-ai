@@ -811,10 +811,35 @@ components.html(
                 if (aroot.classList.contains("cai-curtain") &&
                     !document.getElementById("cai-boot-splash")) aroot.classList.remove("cai-curtain");
                 var ta = document.querySelector('[data-testid="stChatInput"] textarea');
-                if (ta && !ta.value && ta.style.height &&
-                    ta.getBoundingClientRect().height > 40) {
-                    ta.style.removeProperty("height");
-                    window.dispatchEvent(new Event("resize"));
+                // COMPOSER GUARD (2026-09-06 22:15 device video: the capsule
+                // still opened with the placeholder cut in half in 3 of 5
+                // launches, with every CSS cap in place). Cause-independent:
+                // whenever autosize writes an inline height to an EMPTY
+                // textarea, a style-attribute observer pins it back to one
+                // 24px line in the same task — before the frame paints — and
+                // zeroes any inner scroll. A typed value is never touched, so
+                // growth is autosize's as before. Re-attached after every
+                // Streamlit remount (the flag lives on the element).
+                if (ta && !ta.__caiGuard) {
+                    ta.__caiGuard = true;
+                    var pin = function () {
+                        try {
+                            if (ta.value !== "") return;
+                            if (ta.getBoundingClientRect().height > 30 || ta.scrollTop) {
+                                ta.style.setProperty("height", "24px", "important");
+                                ta.style.setProperty("min-height", "0px", "important");
+                                ta.scrollTop = 0;
+                            }
+                        } catch (e) {}
+                    };
+                    try {
+                        new MutationObserver(pin).observe(ta, { attributes: true, attributeFilter: ["style"] });
+                    } catch (e) {}
+                    pin();
+                } else if (ta && !ta.value && ta.getBoundingClientRect().height > 30) {
+                    ta.style.setProperty("height", "24px", "important");
+                    ta.style.setProperty("min-height", "0px", "important");
+                    ta.scrollTop = 0;
                 }
                 var sb = document.querySelector('[data-testid="stBottom"]');
                 if (sb) {
