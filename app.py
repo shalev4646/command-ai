@@ -2340,13 +2340,17 @@ html:not(.cai-standalone) [data-testid="stBottom"] {{
    the placeholder shows, the box is exactly one line (1lh; 26px where lh is
    unsupported). Typed text hides the placeholder and the 132px cap above
    takes over, so growth is untouched. */
-[data-testid="stChatInputTextArea"]:placeholder-shown {{
-    /* 24px in BOTH the line box and the cap, in px, not lh (2026-09-06 21:23
-       device video, four launches): with `max-height: 1lh` iOS resolved the
-       cap from the fallback font's line height and never re-resolved it
-       once Heebo landed — a ~19px box around a 24px line, the placeholder
-       cut in half at the capsule's top edge. An explicit line-height makes
-       the line box exactly the cap, whatever font is in it. */
+/* THE EMPTY TEXTAREA IS ONE 24px LINE — matched through the composer's
+   :has(), never through the textarea's own :placeholder-shown (2026-09-06
+   21:49 device video, launches 1 and 4 of 4): the wrapper rule below, which
+   selects through `:has(textarea:placeholder-shown)`, held in every launch,
+   while the textarea's own `:placeholder-shown` rule was skipped in half of
+   them — WebKit misses the style invalidation for the pseudo-class on the
+   element itself when the placeholder lands after mount — and a 72px box
+   centred inside a clipped 44px wrapper is exactly "the placeholder cut in
+   half at the capsule's top edge". px, not lh: lh resolved from the
+   fallback font on iOS (21:23 video). */
+[data-testid="stChatInput"]:has(textarea:placeholder-shown) textarea {{
     line-height: 24px !important;
     min-height: 0 !important;
     max-height: 24px !important;

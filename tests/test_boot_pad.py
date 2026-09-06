@@ -155,7 +155,8 @@ def test_splash_bottom_is_pinned_to_the_glass():
 
 def test_empty_composer_is_capped_to_one_line():
     app = (ROOT / "app.py").read_text(encoding="utf-8")
-    i = app.index('[data-testid="stChatInputTextArea"]:placeholder-shown')
+    assert '[data-testid="stChatInputTextArea"]:placeholder-shown {' not in app,         "the textarea's own :placeholder-shown rule was skipped by WebKit in half the launches (21:49 video)"
+    i = app.index('[data-testid="stChatInput"]:has(textarea:placeholder-shown) textarea')
     rule = app[i:i + 700]
     assert "line-height: 24px !important" in rule
     assert "max-height: 24px !important" in rule

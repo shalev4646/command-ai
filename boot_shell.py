@@ -43,7 +43,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v33"
+_VERSION = "v34"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -464,6 +464,27 @@ _SPLASH_HTML = """
       // a new backdrop-filter layer showed through the opaque curtain for
       // 5 frames on the 2026-09-06 20:21 device video. lift() drops it.
       try { document.documentElement.classList.add('cai-curtain'); } catch (e) {}
+      // ── TEMPORARY DIAGNOSTIC (2026-09-06, remove after one device round) ──
+      // Records the viewport as iOS reports it from parse time: innerHeight,
+      // visualViewport.height/offsetTop, on every resize and every 250ms for
+      // 6s. lift() prints the change points in a small line for 10s so the
+      // user's screen recording carries them — the one datum that decides
+      // whether the launch-image dissolve coincides with a web-view resize
+      // (the whole-screen bright frame seen in ~half the launches).
+      (function () {
+        try {
+          var L = window.__caiVP = [];
+          var rec = function (tag) {
+            var vv = window.visualViewport;
+            L.push([Math.round(performance.now()), tag, window.innerHeight,
+                    vv ? Math.round(vv.height) : -1, vv ? Math.round(vv.offsetTop) : -1]);
+          };
+          rec('p');
+          window.addEventListener('resize', function () { rec('r'); });
+          if (window.visualViewport) window.visualViewport.addEventListener('resize', function () { rec('v'); });
+          var n = 0, iv = setInterval(function () { rec('t'); if (++n >= 24) clearInterval(iv); }, 250);
+        } catch (e) {}
+      })();
       // THE CANVAS IS OLIVE FROM THE FIRST FRAME (2026-09-06, videos 17:11/
       // 17:14 and every device video back to 04.09): for 0.4-1.5s after the
       // launch-image dissolve a band the height of the status bar showed at
@@ -727,6 +748,25 @@ _BOOT_JS = """
         // the curtain, once after it), and if an EMPTY composer still holds
         // an inline height above one row, drop the stale height — the next
         // measurement starts from the natural single row.
+        // TEMPORARY DIAGNOSTIC line (see the recorder in the painted script)
+        var vpDiag = function () {
+          try {
+            var L = window.__caiVP || []; if (!L.length) return;
+            var out = [], last = null;
+            for (var i = 0; i < L.length; i++) {
+              var e = L[i], key = e[2] + '/' + e[3] + '/' + e[4];
+              if (key !== last || e[1] === 'r' || e[1] === 'v') { out.push(e[1] + key + '@' + (e[0] / 1000).toFixed(2)); last = key; }
+            }
+            var d = document.createElement('div');
+            d.id = 'cai-vpdiag';
+            d.style.cssText = 'position:fixed;left:0;right:0;bottom:1px;z-index:2147483200;pointer-events:none;' +
+              'font:600 8px ui-monospace,Menlo,monospace;color:#B9C48A;text-align:center;direction:ltr;' +
+              'white-space:nowrap;overflow:hidden;background:rgba(20,23,14,.85);padding:1px 0;';
+            d.textContent = 'vp ' + out.slice(0, 9).join(' ');
+            document.body.appendChild(d);
+            setTimeout(function () { try { d.remove(); } catch (e) {} }, 10000);
+          } catch (e) {}
+        };
         var composerRemeasure = function () {
           try {
             window.dispatchEvent(new Event('resize'));
@@ -853,7 +893,7 @@ _BOOT_JS = """
               if (!el.parentNode) return;
               var b = 1;
               try { b = el.getBoundingClientRect().bottom; } catch (e) { b = -1; }
-              if (b <= 0) { el.remove(); composerRemeasure(); return; }
+              if (b <= 0) { el.remove(); composerRemeasure(); vpDiag(); return; }
               requestAnimationFrame(reap);
             };
             requestAnimationFrame(reap);
