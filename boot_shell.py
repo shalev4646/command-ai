@@ -43,7 +43,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v34"
+_VERSION = "v35"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -362,6 +362,13 @@ _HEAD_TEMPLATE = """
         content: ''; width: 26px; height: 1px; background: rgba(236,237,230,.31); }
       #cai-boot-splash .s2 { font: 400 9.5px 'Suez One', serif; letter-spacing: 7px;
         color: rgba(236,237,230,.37); }
+      /* iOS only (2026-09-06 22:15 device video, five launches): WebKit sets
+         this 9.5px line 2pt lower than the launch PNG (329-335 vs 327-333
+         video rows) while Chromium matches the PNG to 0.3pt; every other
+         line is identical. -webkit-touch-callout exists only in iOS WebKit. */
+      @supports (-webkit-touch-callout: none) {
+        #cai-boot-splash .s2 { margin-top: -2px; }
+      }
       /* NO lift choreography. A staggered per-element entrance was tried
          (2026-07-27, shell v4) and it FOUGHT Streamlit: reruns replace the
          DOM mid-cascade, so the curtain lifted onto a dark screen of
@@ -762,7 +769,19 @@ _BOOT_JS = """
             d.style.cssText = 'position:fixed;left:0;right:0;bottom:1px;z-index:2147483200;pointer-events:none;' +
               'font:600 8px ui-monospace,Menlo,monospace;color:#B9C48A;text-align:center;direction:ltr;' +
               'white-space:nowrap;overflow:hidden;background:rgba(20,23,14,.85);padding:1px 0;';
-            d.textContent = 'vp ' + out.slice(0, 9).join(' ');
+            // composer state on the same line (the capsule opened clipped in
+            // 2-3 of 5 launches with every cap in place — what does iOS see?)
+            var ta = document.querySelector('[data-testid="stChatInput"] textarea'), cs = '';
+            if (ta) {
+              var c = getComputedStyle(ta), r = ta.getBoundingClientRect();
+              cs = ' | ta ' + Math.round(r.height) + 'h max' + c.maxHeight + ' min' + c.minHeight +
+                   ' lh' + c.lineHeight + ' ps' + (ta.matches(':placeholder-shown') ? 1 : 0) +
+                   ' st' + ta.scrollTop + ' sh' + ta.scrollHeight + ' v' + ta.value.length +
+                   ' in[' + (ta.getAttribute('style') || '') + ']' +
+                   ' par' + Math.round(ta.parentElement.getBoundingClientRect().height) +
+                   '/' + Math.round(ta.parentElement.parentElement.getBoundingClientRect().height);
+            }
+            d.textContent = 'vp ' + out.slice(0, 6).join(' ') + cs;
             document.body.appendChild(d);
             setTimeout(function () { try { d.remove(); } catch (e) {} }, 10000);
           } catch (e) {}
