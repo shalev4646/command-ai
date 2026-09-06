@@ -292,6 +292,9 @@ def test_splash_paints_veiled_and_unveils_on_the_glass_resize():
     assert "Math.abs(window.innerHeight - glass) <= 2" in js
     assert "window.addEventListener('resize', onResize)" in js
     assert "setTimeout(unveil, 2500)" in js
+    assert "window.addEventListener('load', soon)" in js, "the launch image goes around load; the glass resize trails it (01:26 video)"
+    assert "document.readyState === 'complete'" in js
+    assert "__caiVP" not in boot_shell._SPLASH_HTML and "vpDiag" not in boot_shell._index_path().read_text(encoding="utf-8")
     assert "if (!standalone || full()) { soon(); return; }" in js
     css = boot_shell._HEAD_TEMPLATE
     assert "#cai-boot-splash.cai-veiled .chev, #cai-boot-splash.cai-veiled .t," in css

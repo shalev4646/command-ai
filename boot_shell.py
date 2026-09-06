@@ -43,7 +43,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v37"
+_VERSION = "v38"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -510,6 +510,16 @@ _SPLASH_HTML = """
           var standalone = (navigator.standalone === true) ||
             (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
           if (!standalone || full()) { soon(); return; }
+          // Under a launch image. iOS removes it around the document's load
+          // (the main resource's end — the SW hold exists for exactly that
+          // coupling), and the glass resize we measured (793→852) trails the
+          // removal by 0.35-1.5s — 01:26 device video: the logo vanished for
+          // ~0.8s between the two. So the load event is the trigger; the
+          // resize and a 2.5s ceiling remain as fallbacks. Firing a little
+          // EARLY is harmless: the launch image is plain, so iOS's own
+          // dissolve then fades the logo in; firing late is the blank page.
+          if (document.readyState === 'complete') { soon(); return; }
+          window.addEventListener('load', soon);
           var onResize = function () { if (full()) soon(); };
           window.addEventListener('resize', onResize);
           if (window.visualViewport) window.visualViewport.addEventListener('resize', onResize);
@@ -517,27 +527,6 @@ _SPLASH_HTML = """
         } catch (e) {
           try { document.getElementById('cai-boot-splash').classList.remove('cai-veiled'); } catch (e2) {}
         }
-      })();
-      // ── TEMPORARY DIAGNOSTIC (2026-09-06, remove after one device round) ──
-      // Records the viewport as iOS reports it from parse time: innerHeight,
-      // visualViewport.height/offsetTop, on every resize and every 250ms for
-      // 6s. lift() prints the change points in a small line for 10s so the
-      // user's screen recording carries them — the one datum that decides
-      // whether the launch-image dissolve coincides with a web-view resize
-      // (the whole-screen bright frame seen in ~half the launches).
-      (function () {
-        try {
-          var L = window.__caiVP = [];
-          var rec = function (tag) {
-            var vv = window.visualViewport;
-            L.push([Math.round(performance.now()), tag, window.innerHeight,
-                    vv ? Math.round(vv.height) : -1, vv ? Math.round(vv.offsetTop) : -1]);
-          };
-          rec('p');
-          window.addEventListener('resize', function () { rec('r'); });
-          if (window.visualViewport) window.visualViewport.addEventListener('resize', function () { rec('v'); });
-          var n = 0, iv = setInterval(function () { rec('t'); if (++n >= 24) clearInterval(iv); }, 250);
-        } catch (e) {}
       })();
       // THE CANVAS IS OLIVE FROM THE FIRST FRAME (2026-09-06, videos 17:11/
       // 17:14 and every device video back to 04.09): for 0.4-1.5s after the
@@ -802,43 +791,6 @@ _BOOT_JS = """
         // the curtain, once after it), and if an EMPTY composer still holds
         // an inline height above one row, drop the stale height — the next
         // measurement starts from the natural single row.
-        // TEMPORARY DIAGNOSTIC line (see the recorder in the painted script)
-        var vpDiag = function () {
-          try {
-            var L = window.__caiVP || []; if (!L.length) return;
-            var out = [], last = null;
-            for (var i = 0; i < L.length; i++) {
-              var e = L[i], key = e[2] + '/' + e[3] + '/' + e[4];
-              if (key !== last || e[1] === 'r' || e[1] === 'v') { out.push(e[1] + key + '@' + (e[0] / 1000).toFixed(2)); last = key; }
-            }
-            var d = document.createElement('div');
-            d.id = 'cai-vpdiag';
-            d.style.cssText = 'position:fixed;left:0;right:0;bottom:1px;z-index:2147483200;pointer-events:none;' +
-              'font:600 8px ui-monospace,Menlo,monospace;color:#B9C48A;text-align:center;direction:ltr;' +
-              'white-space:nowrap;overflow:hidden;background:rgba(20,23,14,.85);padding:1px 0;';
-            // composer state on the same line (the capsule opened clipped in
-            // 2-3 of 5 launches with every cap in place — what does iOS see?)
-            var ta = document.querySelector('[data-testid="stChatInput"] textarea'), cs = '';
-            if (ta) {
-              var c = getComputedStyle(ta), r = ta.getBoundingClientRect();
-              cs = ' | ta ' + Math.round(r.height) + 'h max' + c.maxHeight + ' min' + c.minHeight +
-                   ' lh' + c.lineHeight + ' ps' + (ta.matches(':placeholder-shown') ? 1 : 0) +
-                   ' st' + ta.scrollTop + ' sh' + ta.scrollHeight + ' v' + ta.value.length +
-                   ' in[' + (ta.getAttribute('style') || '') + ']' +
-                   ' par' + Math.round(ta.parentElement.getBoundingClientRect().height) +
-                   '/' + Math.round(ta.parentElement.parentElement.getBoundingClientRect().height);
-            }
-            if (ta) {
-              var ci1 = ta.closest('[data-testid="stChatInput"]');
-              cs += ' has' + ((ci1 && ci1.matches(':has(textarea:placeholder-shown)')) ? 1 : 0) +
-                    ' cls' + ((ci1 && ci1.classList.contains('cai-empty')) ? 1 : 0) +
-                    ' pill' + (ci1 ? Math.round(ci1.getBoundingClientRect().height) : -1);
-            }
-            d.textContent = (cs ? cs.replace(/^ [|] /, '') + ' | ' : '') + 'vp ' + out.slice(0, 5).join(' ');
-            document.body.appendChild(d);
-            setTimeout(function () { try { d.remove(); } catch (e) {} }, 10000);
-          } catch (e) {}
-        };
         var composerRemeasure = function () {
           try {
             // the empty-capsule class (app.py .cai-empty) before the dwell
@@ -970,7 +922,7 @@ _BOOT_JS = """
               if (!el.parentNode) return;
               var b = 1;
               try { b = el.getBoundingClientRect().bottom; } catch (e) { b = -1; }
-              if (b <= 0) { el.remove(); composerRemeasure(); vpDiag(); return; }
+              if (b <= 0) { el.remove(); composerRemeasure(); return; }
               requestAnimationFrame(reap);
             };
             requestAnimationFrame(reap);
