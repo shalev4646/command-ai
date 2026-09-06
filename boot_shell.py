@@ -43,7 +43,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v32"
+_VERSION = "v33"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -459,6 +459,11 @@ _SPLASH_HTML = """
       // boot or after logout, and both are exactly the moments the stagger
       // must not replay.
       try { document.documentElement.classList.add('cai-shell'); } catch (e) {}
+      // cai-curtain lives exactly as long as the curtain: app.py keeps its
+      // frosted overlays (composer strip, header band) unpainted under it —
+      // a new backdrop-filter layer showed through the opaque curtain for
+      // 5 frames on the 2026-09-06 20:21 device video. lift() drops it.
+      try { document.documentElement.classList.add('cai-curtain'); } catch (e) {}
       // THE CANVAS IS OLIVE FROM THE FIRST FRAME (2026-09-06, videos 17:11/
       // 17:14 and every device video back to 04.09): for 0.4-1.5s after the
       // launch-image dissolve a band the height of the status bar showed at
@@ -911,6 +916,9 @@ _BOOT_JS = """
           var PAINT_MS = 180;
           var started = false;
           var go = function () { if (started) return; started = true; slide(); };
+          // the frosted overlays may paint now — under the curtain, during
+          // the dwell below, never on the glass (see html.cai-curtain in app.py)
+          try { document.documentElement.classList.remove('cai-curtain'); } catch (e) {}
           el.style.opacity = '0.999';
           if (window.requestAnimationFrame) {
             requestAnimationFrame(function () {

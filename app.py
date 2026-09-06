@@ -806,6 +806,10 @@ components.html(
                 // the placeholder and never re-measures on its own) — drop
                 // it and let a resize re-measure. The boot shell does the
                 // same at the lift; this covers mid-session remounts.
+                // the curtain class must never outlive the curtain (a shell
+                // script that died before lift() would leave the strip hidden)
+                if (aroot.classList.contains("cai-curtain") &&
+                    !document.getElementById("cai-boot-splash")) aroot.classList.remove("cai-curtain");
                 var ta = document.querySelector('[data-testid="stChatInput"] textarea');
                 if (ta && !ta.value && ta.style.height &&
                     ta.getBoundingClientRect().height > 40) {
@@ -2229,6 +2233,24 @@ html.cai-shell [class*="st-key-sug_"] button {{ animation: none !important; }}
     /* env() is 0 inside the cloud shell's iframe, so give the disclaimer a
        real floor — on iPhone it sat right on the home-indicator bar */
     padding-bottom: max(14px, env(safe-area-inset-bottom, 0px));
+}}
+/* UNDER THE BOOT CURTAIN THE FROSTED OVERLAYS DO NOT EXIST (2026-09-06,
+   20:21 device video, six launches): ~0.7s before the lift, the composer
+   strip — this backdrop-filter layer — showed THROUGH the opaque curtain
+   for 5 frames (85ms) in every launch, disclaimer and all, while the logo
+   and the spinner never moved: a freshly created backdrop-filter layer is
+   composited above older layers for a few frames on iOS, z-index or not.
+   So while html.cai-curtain is on (set by the shell's painted script,
+   dropped by lift() before its paint dwell) the two frosted overlays are
+   not painted at all; the 180ms dwell then paints them under the curtain
+   before the slide reveals them. Geometry is untouched (visibility, not
+   display), so the shell's stability gate and the viewport engine measure
+   the same boxes. */
+html.cai-curtain [data-testid="stBottom"],
+html.cai-curtain .cai-header {{
+    visibility: hidden !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
 }}
 /* ...and in the BROWSER that tint has to follow the underlay down.
    The rule above is tuned to the home-screen underlay, whose bottom really is

@@ -135,7 +135,7 @@ def test_composer_is_remeasured_at_the_lift_and_in_heal():
     assert "if (!ta || ta.value) return;" in body
     app = (ROOT / "app.py").read_text(encoding="utf-8")
     j = app.index("stale composer height (2026-09-06)")
-    heal = app[j:j + 900]
+    heal = app[j:j + 1600]
     assert 'ta.style.removeProperty("height")' in heal
     assert 'new Event("resize")' in heal
     assert "!ta.value && ta.style.height" in heal
@@ -235,6 +235,24 @@ def test_empty_composer_wrappers_are_capped_too():
     i = app.index('[data-testid="stChatInput"]:has(textarea:placeholder-shown) div')
     rule = app[i:i + 200]
     assert "max-height: 44px !important" in rule and "min-height: 0 !important" in rule
+
+
+def test_frosted_overlays_are_unpainted_under_the_curtain():
+    """20:21 device video: the composer strip's backdrop-filter layer showed
+    through the opaque curtain for 5 frames in every launch. The shell keeps
+    html.cai-curtain on until lift(); app.py hides the two frosted overlays
+    under it; the engine's heal() removes a class that outlived the curtain."""
+    html = boot_shell._SPLASH_HTML
+    assert "classList.add('cai-curtain')" in html
+    boot = boot_shell._index_path().read_text(encoding="utf-8")
+    lift = boot[boot.index("var lift = function ()"):]
+    assert lift.index("classList.remove('cai-curtain')") < lift.index("el.style.opacity = '0.999'")
+    app = (ROOT / "app.py").read_text(encoding="utf-8")
+    i = app.index('html.cai-curtain [data-testid="stBottom"],')
+    rule = app[i:i + 320]
+    assert "html.cai-curtain .cai-header" in rule
+    assert "visibility: hidden !important" in rule and "backdrop-filter: none !important" in rule
+    assert 'aroot.classList.contains("cai-curtain")' in app
 
 
 if __name__ == "__main__":
