@@ -162,6 +162,24 @@ def test_empty_composer_is_capped_to_one_line():
     assert rule.index("26px") < rule.index("1lh"), "the lh cap must come last so it wins where supported"
 
 
+def test_splash_chevrons_keep_the_png_box_model():
+    """Device clip 2026-09-06 16:37: the splash chevrons shrank 32->26px when
+    Streamlit's global border-box landed — the launch PNG is drawn as a 32px
+    box (pwa_assets dd = 32*0.7071). content-box must be pinned explicitly."""
+    css = boot_shell._HEAD_TEMPLATE
+    chev = css[css.index("#cai-boot-splash .chev span {"):]
+    chev = chev[:chev.index("}")]
+    assert "box-sizing: content-box !important" in chev
+    ring = css[css.index("#cai-boot-splash .w {"):]
+    ring = ring[:ring.index("}")]
+    assert "box-sizing: content-box !important" in ring
+    png = (ROOT / "pwa_assets.py").read_text(encoding="utf-8")
+    assert "dd = 32 * 0.7071 * dpr" in png, "the PNG geometry the CSS must match"
+    app = (ROOT / "app.py").read_text(encoding="utf-8")
+    fb = app[app.index(".cai-splash-chev span {"):]
+    assert "box-sizing:content-box !important" in fb[:fb.index("}")]
+
+
 if __name__ == "__main__":
     failures = 0
     for name, fn in sorted(globals().items()):

@@ -43,7 +43,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v28"
+_VERSION = "v29"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -283,7 +283,17 @@ _HEAD_TEMPLATE = """
            (see _PAD_JS_TEMPLATE); env() is the fallback for screens off the table */
         padding-top: var(--cai-pad, calc(env(safe-area-inset-top, 0px) + 14vh));
         gap: 18px; transition: opacity .4s ease; pointer-events: none; }
-      #cai-boot-splash .chev span { display: block; width: 26px; height: 26px;
+      /* CONTENT-BOX, EXPLICITLY (2026-09-06, device clip 16:37 + local proof).
+         The launch PNG draws the chevron as a 32px box (26 + 6px border,
+         see pwa_assets: dd = 32·0.7071). So does this rule — until
+         Streamlit's global `*{box-sizing:border-box}` lands with its CSS a
+         moment later and the SAME 26px becomes the outer size: the chevrons
+         shrink 32→26 (45→37pt wide) mid-boot, and the wait ring 26→22.
+         Measured locally: offsetWidth 32 at first paint, 26 four seconds
+         later. On device the shrink lands around the launch-image dissolve,
+         which is the "two screens passing through each other". Pinning the
+         box model keeps the splash the PNG's shape for its whole life. */
+      #cai-boot-splash .chev span { display: block; width: 26px; height: 26px; box-sizing: content-box !important;
         border-top: 6px solid #A3AE6E; border-left: 6px solid #A3AE6E; transform: rotate(45deg); }
       #cai-boot-splash .chev span + span { border-color: rgba(163,174,110,.45); margin-top: -9px; }
       #cai-boot-splash .t { font: 400 34px 'Suez One', serif; color: #ECEDE6; }
@@ -350,7 +360,7 @@ _HEAD_TEMPLATE = """
          exactly the "it keeps switching screens" the pilot reported. */
       #cai-boot-splash .wait { margin: auto auto var(--cai-vh14, 14vh); display: flex;
         flex-direction: column; align-items: center; gap: 13px; }
-      #cai-boot-splash .w { width: 22px; height: 22px; margin: 0;
+      #cai-boot-splash .w { width: 22px; height: 22px; margin: 0; box-sizing: content-box !important;
         border: 2px solid rgba(236,237,230,.20); border-top-color: rgba(236,237,230,.55);
         border-radius: 50%;
         animation: caiBootSpin .9s linear infinite, caiBootFade .5s ease both;

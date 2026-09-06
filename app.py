@@ -473,7 +473,7 @@ if splash_active:
    an entrance would make it blink out and back. Typography mirrors
    boot_shell._HEAD_TEMPLATE exactly, for the same reason. */
 .cai-splash-chev { display:flex; flex-direction:column; align-items:center; }
-.cai-splash-chev span { display:block; width:26px; height:26px;
+.cai-splash-chev span { display:block; width:26px; height:26px; box-sizing:content-box !important;
     border-top:6px solid #A3AE6E; border-left:6px solid #A3AE6E; transform:rotate(45deg); }
 .cai-splash-chev span + span { border-color: rgba(163,174,110,.45); margin-top: -9px; }
 .cai-splash-title { font: 400 34px 'Suez One', serif; color: #ECEDE6; }
