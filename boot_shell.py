@@ -43,7 +43,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v38"
+_VERSION = "v39"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -505,25 +505,15 @@ _SPLASH_HTML = """
           var soon = function () {
             requestAnimationFrame(function () { requestAnimationFrame(unveil); });
           };
-          var glass = Math.max(screen.width || 0, screen.height || 0);
-          var full = function () { return glass > 0 && Math.abs(window.innerHeight - glass) <= 2; };
-          var standalone = (navigator.standalone === true) ||
-            (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
-          if (!standalone || full()) { soon(); return; }
-          // Under a launch image. iOS removes it around the document's load
-          // (the main resource's end — the SW hold exists for exactly that
-          // coupling), and the glass resize we measured (793→852) trails the
-          // removal by 0.35-1.5s — 01:26 device video: the logo vanished for
-          // ~0.8s between the two. So the load event is the trigger; the
-          // resize and a 2.5s ceiling remain as fallbacks. Firing a little
-          // EARLY is harmless: the launch image is plain, so iOS's own
-          // dissolve then fades the logo in; firing late is the blank page.
-          if (document.readyState === 'complete') { soon(); return; }
-          window.addEventListener('load', soon);
-          var onResize = function () { if (full()) soon(); };
-          window.addEventListener('resize', onResize);
-          if (window.visualViewport) window.visualViewport.addEventListener('resize', onResize);
-          setTimeout(unveil, 2500);
+          // UNVEIL AT THE FIRST PAINTED FRAMES, always (v39, 01:50 device video
+          // after the re-install): waiting for load left an EMPTY olive field
+          // for 0.3-0.8s after the launch image went — "the very start felt
+          // odd". Under the launch image the fade is invisible anyway, and the
+          // image is plain, so at its dismissal iOS's own cross-dissolve
+          // (~100ms) brings the logo in: the logo is there the instant the
+          // launch screen is gone, which is what a native app does. In a
+          // browser tab / Android PWA the same two frames give the CSS fade.
+          soon();
         } catch (e) {
           try { document.getElementById('cai-boot-splash').classList.remove('cai-veiled'); } catch (e2) {}
         }

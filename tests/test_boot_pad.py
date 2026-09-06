@@ -283,19 +283,15 @@ def test_launch_image_is_a_plain_olive_field():
         assert im.getcolors(maxcolors=4) == [(w * h, (20, 23, 14))], "must be one colour, #14170E"
 
 
-def test_splash_paints_veiled_and_unveils_on_the_glass_resize():
+def test_splash_paints_veiled_and_unveils_at_first_paint():
     html = boot_shell._SPLASH_HTML
     assert '<div id="cai-boot-splash" dir="rtl" class="cai-veiled">' in html
     i = html.index("UNVEIL: the identity block fades in")
     js = html[i:i + 2600]
     assert "sp.classList.remove('cai-veiled')" in js
-    assert "Math.abs(window.innerHeight - glass) <= 2" in js
-    assert "window.addEventListener('resize', onResize)" in js
-    assert "setTimeout(unveil, 2500)" in js
-    assert "window.addEventListener('load', soon)" in js, "the launch image goes around load; the glass resize trails it (01:26 video)"
-    assert "document.readyState === 'complete'" in js
+    assert "setTimeout(unveil, 2500)" not in js, "no waiting: the logo must be there the instant the launch image goes (01:50 video)"
+    assert "UNVEIL AT THE FIRST PAINTED FRAMES" in js
     assert "__caiVP" not in boot_shell._SPLASH_HTML and "vpDiag" not in boot_shell._index_path().read_text(encoding="utf-8")
-    assert "if (!standalone || full()) { soon(); return; }" in js
     css = boot_shell._HEAD_TEMPLATE
     assert "#cai-boot-splash.cai-veiled .chev, #cai-boot-splash.cai-veiled .t," in css
     assert "opacity: 0; transform: translateY(6px); }" in css
