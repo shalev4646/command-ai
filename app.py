@@ -2305,6 +2305,19 @@ html:not(.cai-standalone) [data-testid="stBottom"] {{
     overflow-y: auto !important;
 }}
 [data-testid="stChatInput"] textarea::placeholder {{ color: rgba(239,240,232,.5) !important; }}
+/* EMPTY COMPOSER = ONE ROW, whatever autosize measured (2026-09-06, device
+   videos 02:29/15:18/15:56 vs 21:58 the day before): react-textarea-autosize
+   sizes the box from a hidden clone carrying the PLACEHOLDER at the width of
+   the moment and writes the result inline with !important — on the device
+   it came out three rows tall in 4 of 5 launches and re-measuring did not
+   help. An inline height cannot be out-voted, but max-height caps it: while
+   the placeholder shows, the box is exactly one line (1lh; 26px where lh is
+   unsupported). Typed text hides the placeholder and the 132px cap above
+   takes over, so growth is untouched. */
+[data-testid="stChatInputTextArea"]:placeholder-shown {{
+    max-height: 26px !important;
+    max-height: 1lh !important;
+}}
 [data-testid="stChatInputSubmitButton"] {{
     background-color: var(--accent) !important;
     border-radius: 50% !important;

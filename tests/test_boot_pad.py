@@ -66,9 +66,10 @@ def test_splash_rule_consumes_cai_pad_with_env_fallback():
             in boot_shell._HEAD_TEMPLATE)
 
 
-def test_painted_ping_waits_three_frames():
+def test_painted_ping_waits_five_frames():
     html = boot_shell._SPLASH_HTML
-    assert html.count("requestAnimationFrame(") == 3
+    assert "var hops = 5" in html
+    assert "requestAnimationFrame(hop)" in html
 
 
 def test_strip_removes_the_pad_script():
@@ -138,6 +139,27 @@ def test_composer_is_remeasured_at_the_lift_and_in_heal():
     assert 'ta.style.removeProperty("height")' in heal
     assert 'new Event("resize")' in heal
     assert "!ta.value && ta.style.height" in heal
+
+
+def test_splash_bottom_is_pinned_to_the_glass():
+    """15:56 device video: the wait block jumped +78/-19 rows as iOS re-reported
+    the viewport mid-boot. The cai-pad script pins --cai-glass/--cai-vh14 from
+    screen.height and the splash consumes them, viewport-free."""
+    js = boot_shell._pad_js()
+    assert '"--cai-glass",h+"px"' in js
+    assert '"--cai-vh14",(0.14*h).toFixed(2)+"px"' in js
+    css = boot_shell._HEAD_TEMPLATE
+    assert "height: var(--cai-glass, 100vh)" in css
+    assert "margin: auto auto var(--cai-vh14, 14vh)" in css
+
+
+def test_empty_composer_is_capped_to_one_line():
+    app = (ROOT / "app.py").read_text(encoding="utf-8")
+    i = app.index('[data-testid="stChatInputTextArea"]:placeholder-shown')
+    rule = app[i:i + 200]
+    assert "max-height: 26px !important" in rule
+    assert "max-height: 1lh !important" in rule
+    assert rule.index("26px") < rule.index("1lh"), "the lh cap must come last so it wins where supported"
 
 
 if __name__ == "__main__":

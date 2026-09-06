@@ -43,7 +43,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v27"
+_VERSION = "v28"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -122,7 +122,9 @@ _PAD_JS_TEMPLATE = (
     'if(w>h){var t=w;w=h;h=t}'
     'var k=Math.round(w*d)+"x"+Math.round(h*d)+"x"+Math.round(d);'
     'if(!(k in T))return;'
-    'var f=function(){document.documentElement.style.setProperty("--cai-pad",(T[k]+0.14*h).toFixed(2)+"px")};'
+    'var f=function(){var st=document.documentElement.style;'
+    'st.setProperty("--cai-pad",(T[k]+0.14*h).toFixed(2)+"px");'
+    'st.setProperty("--cai-glass",h+"px");st.setProperty("--cai-vh14",(0.14*h).toFixed(2)+"px")};'
     'f();window.__caiPad=f;'
     '}catch(e){}})()</script>'
 )
@@ -268,7 +270,14 @@ _HEAD_TEMPLATE = """
     <style id="cai-boot" data-cai-ver="__VER__">
       __FACE__
       html, body { background: #14170E; }
-      #cai-boot-splash { position: fixed; inset: 0; z-index: 2147483000; background: #14170E;
+      /* height pinned to the GLASS, not the viewport (2026-09-06, device video
+         15:56): iOS re-reports the layout viewport twice during a cold boot
+         (793 → 852 → …) and the bottom-anchored wait block jumped with it
+         (+78 then −19 rows). --cai-glass = screen.height from the cai-pad
+         script; viewports off the PNG table fall back to 100vh as before. */
+      #cai-boot-splash { position: fixed; inset: 0; bottom: auto; height: var(--cai-glass, 100vh);
+        box-sizing: border-box; /* the height is the whole box, padding-top included */
+        z-index: 2147483000; background: #14170E;
         display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
         /* --cai-pad = the launch PNG's own sat+14vh, set by #cai-pad at parse time
            (see _PAD_JS_TEMPLATE); env() is the fallback for screens off the table */
@@ -339,7 +348,7 @@ _HEAD_TEMPLATE = """
          whether or not the long-wait copy above it is showing. The ring
          must not move — a splash element that shifts position mid-wait is
          exactly the "it keeps switching screens" the pilot reported. */
-      #cai-boot-splash .wait { margin: auto auto 14vh; display: flex;
+      #cai-boot-splash .wait { margin: auto auto var(--cai-vh14, 14vh); display: flex;
         flex-direction: column; align-items: center; gap: 13px; }
       #cai-boot-splash .w { width: 22px; height: 22px; margin: 0;
         border: 2px solid rgba(236,237,230,.20); border-top-color: rgba(236,237,230,.55);
@@ -442,8 +451,13 @@ _SPLASH_HTML = """
           // not yet composited it. Double rAF reports "painted", not "on the
           // glass"; one more frame covers the commit. Costs 16ms of hold.
           if (window.requestAnimationFrame) {
-            requestAnimationFrame(function () { requestAnimationFrame(function () {
-              requestAnimationFrame(ping); }); });
+            // FIVE frames since 2026-09-06: with three, the 15:56 device video
+            // still caught one frame of WebKit's pre-paint canvas dissolving in
+            // (+6 levels on the backdrop, every launch) — the composited splash
+            // had not reached the glass when the response ended. Two more
+            // frames of hold (~33ms) for the UI-process commit.
+            var hops = 5, hop = function () { if (--hops <= 0) ping(); else requestAnimationFrame(hop); };
+            requestAnimationFrame(hop);
           } else {
             setTimeout(ping, 50);
           }
