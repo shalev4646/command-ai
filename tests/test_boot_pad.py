@@ -156,10 +156,11 @@ def test_splash_bottom_is_pinned_to_the_glass():
 def test_empty_composer_is_capped_to_one_line():
     app = (ROOT / "app.py").read_text(encoding="utf-8")
     i = app.index('[data-testid="stChatInputTextArea"]:placeholder-shown')
-    rule = app[i:i + 200]
-    assert "max-height: 26px !important" in rule
-    assert "max-height: 1lh !important" in rule
-    assert rule.index("26px") < rule.index("1lh"), "the lh cap must come last so it wins where supported"
+    rule = app[i:i + 700]
+    assert "line-height: 24px !important" in rule
+    assert "max-height: 24px !important" in rule
+    assert "min-height: 0 !important" in rule
+    assert "max-height: 1lh" not in rule.replace("`max-height: 1lh`", ""),         "lh resolved from the fallback font on iOS and clipped the placeholder (21:23 video)"
 
 
 def test_splash_chevrons_keep_the_png_box_model():

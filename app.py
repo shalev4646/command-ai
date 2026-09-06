@@ -2341,8 +2341,15 @@ html:not(.cai-standalone) [data-testid="stBottom"] {{
    unsupported). Typed text hides the placeholder and the 132px cap above
    takes over, so growth is untouched. */
 [data-testid="stChatInputTextArea"]:placeholder-shown {{
-    max-height: 26px !important;
-    max-height: 1lh !important;
+    /* 24px in BOTH the line box and the cap, in px, not lh (2026-09-06 21:23
+       device video, four launches): with `max-height: 1lh` iOS resolved the
+       cap from the fallback font's line height and never re-resolved it
+       once Heebo landed — a ~19px box around a 24px line, the placeholder
+       cut in half at the capsule's top edge. An explicit line-height makes
+       the line box exactly the cap, whatever font is in it. */
+    line-height: 24px !important;
+    min-height: 0 !important;
+    max-height: 24px !important;
 }}
 /* ...and the WRAPPERS too (18:45 device video, launch 4 of 4): the textarea
    cap alone still left a tall capsule once — baseweb's textarea container
