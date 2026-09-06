@@ -149,8 +149,8 @@ def test_splash_bottom_is_pinned_to_the_glass():
     assert '"--cai-glass",h+"px"' in js
     assert '"--cai-vh14",(0.14*h).toFixed(2)+"px"' in js
     css = boot_shell._HEAD_TEMPLATE
-    assert "height: var(--cai-glass, 100vh)" in css
-    assert "margin: auto auto var(--cai-vh14, 14vh)" in css
+    assert "min-height: var(--cai-glass, 100vh)" in css, "the splash covers the viewport, never less than the glass"
+    assert "top: calc(var(--cai-glass, 100vh) - var(--cai-vh14, 14vh)); transform: translateY(-100%)" in css
 
 
 def test_empty_composer_is_capped_to_one_line():
@@ -178,6 +178,17 @@ def test_splash_chevrons_keep_the_png_box_model():
     app = (ROOT / "app.py").read_text(encoding="utf-8")
     fb = app[app.index(".cai-splash-chev span {"):]
     assert "box-sizing:content-box !important" in fb[:fb.index("}")]
+
+
+def test_document_canvas_is_olive_from_parse_time():
+    """Videos 17:11/17:14 (and every one back to 04.09): Streamlit's stock
+    #0E1117 body colour showed as a bottom band below the splash for up to
+    1.5s. The painted script hands html/body over inline-important at parse."""
+    html = boot_shell._SPLASH_HTML
+    i = html.index("THE CANVAS IS OLIVE FROM THE FIRST FRAME")
+    body = html[i:i + 1500]
+    assert "document.documentElement.style.setProperty('background', '#14170E', 'important')" in body
+    assert "document.body.style.setProperty('background', '#14170E', 'important')" in body
 
 
 if __name__ == "__main__":

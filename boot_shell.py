@@ -43,7 +43,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v29"
+_VERSION = "v30"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -275,7 +275,7 @@ _HEAD_TEMPLATE = """
          (793 → 852 → …) and the bottom-anchored wait block jumped with it
          (+78 then −19 rows). --cai-glass = screen.height from the cai-pad
          script; viewports off the PNG table fall back to 100vh as before. */
-      #cai-boot-splash { position: fixed; inset: 0; bottom: auto; height: var(--cai-glass, 100vh);
+      #cai-boot-splash { position: fixed; inset: 0; min-height: var(--cai-glass, 100vh);
         box-sizing: border-box; /* the height is the whole box, padding-top included */
         z-index: 2147483000; background: #14170E;
         display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
@@ -358,8 +358,12 @@ _HEAD_TEMPLATE = """
          whether or not the long-wait copy above it is showing. The ring
          must not move — a splash element that shifts position mid-wait is
          exactly the "it keeps switching screens" the pilot reported. */
-      #cai-boot-splash .wait { margin: auto auto var(--cai-vh14, 14vh); display: flex;
-        flex-direction: column; align-items: center; gap: 13px; }
+      /* the wait block hangs from the GLASS bottom (--cai-glass, cai-pad script),
+         not from the splash box: iOS re-reports the viewport during a cold boot
+         and a margin-anchored block rode every change (+78 rows, 15:56 video) */
+      #cai-boot-splash .wait { position: absolute; left: 0; right: 0;
+        top: calc(var(--cai-glass, 100vh) - var(--cai-vh14, 14vh)); transform: translateY(-100%);
+        display: flex; flex-direction: column; align-items: center; gap: 13px; }
       #cai-boot-splash .w { width: 22px; height: 22px; margin: 0; box-sizing: content-box !important;
         border: 2px solid rgba(236,237,230,.20); border-top-color: rgba(236,237,230,.55);
         border-radius: 50%;
@@ -430,6 +434,22 @@ _SPLASH_HTML = """
       // boot or after logout, and both are exactly the moments the stagger
       // must not replay.
       try { document.documentElement.classList.add('cai-shell'); } catch (e) {}
+      // THE CANVAS IS OLIVE FROM THE FIRST FRAME (2026-09-06, videos 17:11/
+      // 17:14 and every device video back to 04.09): for 0.4-1.5s after the
+      // launch-image dissolve a band the height of the status bar showed at
+      // the bottom in rgb(16,17,20) — Streamlit's stock dark background
+      // (#0E1117), which its bundle puts on <body> until the server's theme
+      // (#14170E) arrives. iOS paints the web view taller than the layout
+      // viewport during that window, so the canvas below the fixed splash is
+      // on the glass. lift() already hands the document over inline-important
+      // at the END of the boot; do it here, at parse time, so the stock
+      // colour never gets a frame. Inline-important outranks the bundle's
+      // class; app.py's syncCanvas writes inline-important too and lands
+      // later, so dialog/drawer canvases still win.
+      try {
+        document.documentElement.style.setProperty('background', '#14170E', 'important');
+        if (document.body) document.body.style.setProperty('background', '#14170E', 'important');
+      } catch (e) {}
       // TELL THE WORKER THE MOMENT THE SPLASH IS ON THE GLASS.
       //
       // The worker holds this response open so iOS cannot start dissolving its
