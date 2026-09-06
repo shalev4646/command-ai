@@ -119,6 +119,27 @@ def test_boot_curtain_waits_for_the_viewport_pin():
     assert js.index("[data-cai-settled]") < gate < js.index(".cai-entry, .st-key-cai_name_card, .cai-splash")
 
 
+def test_composer_is_remeasured_at_the_lift_and_in_heal():
+    """Device videos 2026-09-05/06: the chat capsule opened into a three-row
+    box after the boot got faster — react-textarea-autosize measured the
+    placeholder at the wrong width and never re-measured. The shell fires a
+    resize at the lift and after the reap and drops a stale inline height on
+    an empty composer; the engine's heal loop does the same mid-session."""
+    js = boot_shell._index_path().read_text(encoding="utf-8")
+    assert js.count("composerRemeasure()") >= 2, "lift and reap must both re-measure"
+    i = js.index("var composerRemeasure = function")
+    body = js[i:i + 900]
+    assert "new Event('resize')" in body
+    assert "ta.style.removeProperty('height')" in body
+    assert "if (!ta || ta.value) return;" in body
+    app = (ROOT / "app.py").read_text(encoding="utf-8")
+    j = app.index("stale composer height (2026-09-06)")
+    heal = app[j:j + 900]
+    assert 'ta.style.removeProperty("height")' in heal
+    assert 'new Event("resize")' in heal
+    assert "!ta.value && ta.style.height" in heal
+
+
 if __name__ == "__main__":
     failures = 0
     for name, fn in sorted(globals().items()):

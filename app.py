@@ -796,6 +796,18 @@ components.html(
                 ].forEach(function (el) {
                     if (el && el.scrollTop > 0) el.scrollTop = 0;
                 });
+                // stale composer height (2026-09-06): an EMPTY chat textarea
+                // holding an inline height above one row is a measurement
+                // taken at the wrong width (react-textarea-autosize sizes by
+                // the placeholder and never re-measures on its own) — drop
+                // it and let a resize re-measure. The boot shell does the
+                // same at the lift; this covers mid-session remounts.
+                var ta = document.querySelector('[data-testid="stChatInput"] textarea');
+                if (ta && !ta.value && ta.style.height &&
+                    ta.getBoundingClientRect().height > 40) {
+                    ta.style.removeProperty("height");
+                    window.dispatchEvent(new Event("resize"));
+                }
                 var sb = document.querySelector('[data-testid="stBottom"]');
                 if (sb) {
                     var r = sb.getBoundingClientRect();

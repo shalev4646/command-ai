@@ -43,7 +43,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v26"
+_VERSION = "v27"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -638,9 +638,40 @@ _BOOT_JS = """
           setTimeout(function () { say('החיבור איטי מהרגיל — עדיין טוענים'); }, 28000),
           setTimeout(function () { if (!gone && rtry) rtry.style.display = 'block'; }, 45000)
         ];
+        // COMPOSER RE-MEASURE (2026-09-06, device videos 02:29 and 15:18 vs
+        // 21:58 the day before). Streamlit's chat textarea is sized by
+        // react-textarea-autosize: it measures a hidden clone carrying the
+        // PLACEHOLDER text at the textarea's width of THAT moment, writes the
+        // result as an inline height, and re-measures only on a window
+        // resize or a value change. Since the boot got faster (deflate, no
+        // watcher stall) the composer mounts earlier in the layout, and on
+        // the device the first measurement came out three rows tall — the
+        // capsule opened into a box with the placeholder at the top and the
+        // arrow at the bottom, and it stayed that way (nothing ever re-
+        // measured). No app CSS changed between the two states. So: give
+        // autosize a resize to re-measure with the settled width (once under
+        // the curtain, once after it), and if an EMPTY composer still holds
+        // an inline height above one row, drop the stale height — the next
+        // measurement starts from the natural single row.
+        var composerRemeasure = function () {
+          try {
+            window.dispatchEvent(new Event('resize'));
+            setTimeout(function () {
+              try {
+                var ta = document.querySelector('[data-testid="stChatInput"] textarea');
+                if (!ta || ta.value) return;
+                if (ta.getBoundingClientRect().height > 40) {
+                  ta.style.removeProperty('height');
+                  window.dispatchEvent(new Event('resize'));
+                }
+              } catch (e) {}
+            }, 120);
+          } catch (e) {}
+        };
         var lift = function () {
           if (gone) return; gone = true;
           slow.forEach(clearTimeout);
+          composerRemeasure();
           // The wait ring must NOT ride the curtain: it kept spinning during
           // the slide and lingered as a lone circle over the revealed home
           // (user's 60fps slow-motion, 2026-09-03). Fade it during the paint
@@ -748,7 +779,7 @@ _BOOT_JS = """
               if (!el.parentNode) return;
               var b = 1;
               try { b = el.getBoundingClientRect().bottom; } catch (e) { b = -1; }
-              if (b <= 0) { el.remove(); return; }
+              if (b <= 0) { el.remove(); composerRemeasure(); return; }
               requestAnimationFrame(reap);
             };
             requestAnimationFrame(reap);
