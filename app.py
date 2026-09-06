@@ -3807,10 +3807,17 @@ if _pwa:
                     return base + u;
                 }};
                 var head = doc.head;
+                // WRITE ONLY ON CHANGE (2026-09-06): the Apple web-app metas
+                // now ship statically in the boot shell's first bytes, and a
+                // same-value setAttribute here would still make iOS
+                // re-evaluate the status-bar treatment and re-lay the web
+                // view mid-boot — the very step this round removed.
                 var upsert = function (sel, tag, attrs) {{
                     var el = head.querySelector(sel);
                     if (!el) {{ el = doc.createElement(tag); head.appendChild(el); }}
-                    for (var k in attrs) el.setAttribute(k, attrs[k]);
+                    for (var k in attrs) {{
+                        if (el.getAttribute(k) !== String(attrs[k])) el.setAttribute(k, attrs[k]);
+                    }}
                 }};
                 upsert('link[rel="manifest"]', "link",
                        {{ id: "cai-pwa-manifest", rel: "manifest", href: abs(manifest) }});

@@ -191,6 +191,28 @@ def test_document_canvas_is_olive_from_parse_time():
     assert "document.body.style.setProperty('background', '#14170E', 'important')" in body
 
 
+def test_apple_web_app_metas_are_static_in_the_first_bytes():
+    """Until v31 the status-bar-style/capable/title metas arrived only via the
+    runtime injector, 1-2s after load; iOS re-laid the web view when they
+    landed (793->852pt): viewport step, spinner jump, dark bottom band, and
+    the dissolve-time lifted frame. Static from the first byte, they never
+    transition. The runtime upsert must not rewrite an equal value."""
+    assert boot_shell.patch_index_html(), "patch_index_html refused to write"
+    src = boot_shell._index_path().read_text(encoding="utf-8")
+    body = src.index("<body>")
+    for name, val in (("apple-mobile-web-app-status-bar-style", "black-translucent"),
+                      ("apple-mobile-web-app-capable", "yes"),
+                      ("mobile-web-app-capable", "yes"),
+                      ("apple-mobile-web-app-title", "CommandAI")):
+        m = re.search(r'<meta id="cai-[a-z]+" name="' + name + r'" content="([^"]*)">', src)
+        assert m and m.group(1) == val, name
+        assert m.start() < body
+    assert 'id="cai-sbstyle"' not in boot_shell._strip(src)
+    app = (ROOT / "app.py").read_text(encoding="utf-8")
+    i = app.index("var upsert = function (sel, tag, attrs)")
+    assert "if (el.getAttribute(k) !== String(attrs[k])) el.setAttribute(k, attrs[k]);" in app[i:i + 600]
+
+
 if __name__ == "__main__":
     failures = 0
     for name, fn in sorted(globals().items()):

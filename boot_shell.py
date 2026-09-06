@@ -43,7 +43,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v30"
+_VERSION = "v31"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -253,6 +253,19 @@ _MICRO = ('<style id="cai-micro">:root{color-scheme:dark}'
 # __FACE__ is substituted at patch time. A plain placeholder, not an f-string:
 # this block is nearly all CSS braces and escaping them all would bury it.
 #
+# THE APPLE WEB-APP METAS ARE STATIC TOO (2026-09-06, v31). Until now
+# apple-mobile-web-app-status-bar-style (black-translucent), -capable and
+# -title reached the page only through app.py's runtime injector, 1-2s after
+# load. Every cold launch therefore began with the DEFAULT status-bar
+# treatment — a web view one status bar short (793 of 852pt on the pilot's
+# phone) — and iOS re-laid the whole view the moment the meta landed: that
+# re-layout is the viewport step the engine had to chase (793→852), the
+# spinner's +78-row jump (15:56 video), the dark band under the splash for
+# 0.35-1.5s (exactly as long as the server took to deliver the injector),
+# and the intermittent lifted frame at the launch-image dissolve. The
+# theme-color story below is the same bug class, fixed the same way: a meta
+# that is present from the first byte never transitions.
+#
 # The <meta name="theme-color"> is HERE, statically, and not only in the
 # runtime PWA injector — that placement is a bug fix, not tidiness. When the
 # meta first appears at runtime (the Streamlit component lands ~3.5s after
@@ -267,6 +280,10 @@ _MICRO = ('<style id="cai-micro">:root{color-scheme:dark}'
 _HEAD_TEMPLATE = """
     <meta id="cai-theme" name="theme-color" content="#14170E">
     <meta id="cai-scheme" name="color-scheme" content="dark">
+    <meta id="cai-capable" name="apple-mobile-web-app-capable" content="yes">
+    <meta id="cai-mcapable" name="mobile-web-app-capable" content="yes">
+    <meta id="cai-sbstyle" name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta id="cai-apptitle" name="apple-mobile-web-app-title" content="CommandAI">
     <style id="cai-boot" data-cai-ver="__VER__">
       __FACE__
       html, body { background: #14170E; }
@@ -1101,6 +1118,8 @@ def _strip(src: str) -> str:
     src = re.sub(r'\s*<link id="cai-boot-font"[^>]*>', "", src)
     src = re.sub(r'\s*<meta id="cai-theme"[^>]*>', "", src)
     src = re.sub(r'\s*<meta id="cai-scheme"[^>]*>', "", src)
+    for mid in ("cai-capable", "cai-mcapable", "cai-sbstyle", "cai-apptitle"):
+        src = re.sub(r'\s*<meta id="' + mid + '"[^>]*>', "", src)
     # the static PWA links (manifest / icon / launch images) — anchored on our
     # own id/class, glued back-to-back by _pwa_links so no whitespace to eat
     src = re.sub(r'<link id="cai-manifest"[^>]*>', "", src)
@@ -1625,6 +1644,7 @@ def patch_index_html() -> bool:
         # =cover joined on 2026-09-01 — a viewport regex that silently missed
         # the meta would otherwise ship a shell whose whole point is missing.
         for marker in ('id="cai-micro"', 'id="cai-pad"', 'id="cai-boot"',
+                       'id="cai-sbstyle"', 'id="cai-capable"',
                        'id="cai-boot-splash"', 'id="cai-boot-js"',
                        "maximum-scale=1", "viewport-fit=cover",
                        "var(--cai-pad"):
