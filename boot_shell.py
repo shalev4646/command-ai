@@ -43,7 +43,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v31"
+_VERSION = "v32"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -310,6 +310,14 @@ _HEAD_TEMPLATE = """
          later. On device the shrink lands around the launch-image dissolve,
          which is the "two screens passing through each other". Pinning the
          box model keeps the splash the PNG's shape for its whole life. */
+      /* .chev is 43px tall BY DECLARATION (2026-09-06 18:45 device video): the
+         launch PNG places the wordmark where a 43px chevron block puts it —
+         the height two 26px BORDER-BOX spans used to give once Streamlit's
+         global box-sizing landed. With the spans pinned to content-box (32px
+         outer, matching the PNG's chevron size) the block grew to 55px and
+         the wordmark + subtitle dropped 12pt at the dissolve ("CommandAI
+         goes down a bit"). The spans overflow the 43px block by design. */
+      #cai-boot-splash .chev { height: 43px; }
       #cai-boot-splash .chev span { display: block; width: 26px; height: 26px; box-sizing: content-box !important;
         border-top: 6px solid #A3AE6E; border-left: 6px solid #A3AE6E; transform: rotate(45deg); }
       #cai-boot-splash .chev span + span { border-color: rgba(163,174,110,.45); margin-top: -9px; }
@@ -948,10 +956,17 @@ _BOOT_JS = """
           return document.querySelector('[data-testid="stChatInput"]') ? chat : null;
         };
         // Lift only once the layout is SETTLED: the anchor's position must
-        // hold still for 3 consecutive samples (~450ms) — a Streamlit rerun
+        // hold still for 3 consecutive samples — a Streamlit rerun
         // replacing the DOM mid-boot resets the count, so the curtain never
         // rises over a page that is still being rebuilt (the dark-flash +
         // popping-in reveal of video #3).
+        // 100ms samples since 2026-09-06 (were 150): the settled marker, the
+        // script-state check and the viewport-pin gate above now carry the
+        // "is it really built" question, so the geometry watch only has to
+        // catch a late layout shift — 300ms of stillness does that, and the
+        // ~350ms it gives back is the largest lever left on a warm boot
+        // (measured: ready→dwell 700ms → ~350ms).
+        var TICK_MS = 100, STABLE_N = 3, POST_MS = 100;
         var lastY = -1e9, stable = 0;
         var tick = setInterval(function () {
           // a rerun mid-boot dims the whole app (stale elements) — lifting
@@ -968,8 +983,8 @@ _BOOT_JS = """
           try { y = a.getBoundingClientRect().top; } catch (e) {}
           stable = (Math.abs(y - lastY) < 1) ? stable + 1 : 0;
           lastY = y;
-          if (stable >= 3) { clearInterval(tick); setTimeout(lift, 150); }
-        }, 150);
+          if (stable >= STABLE_N) { clearInterval(tick); setTimeout(lift, POST_MS); }
+        }, TICK_MS);
         setTimeout(function () { clearInterval(tick); lift(); }, 90000);
       })();
     </script>

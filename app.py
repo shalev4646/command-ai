@@ -733,17 +733,16 @@ components.html(
             try {
                 if (!window.__caiSA) return;
                 window.scrollTo(0, 1); window.scrollTo(0, 0);
-                var vp = document.querySelector('meta[name="viewport"]');
-                if (vp && !window.__caiNudged) {
-                    window.__caiNudged = true;
-                    // restore a CANONICAL string, never the captured read: a
-                    // torn read during another re-stamp would persist a
-                    // viewport with the zoom clamp missing
-                    var c = vp.getAttribute("content") || "";
-                    if (c.indexOf("maximum-scale=1") < 0) c += ", maximum-scale=1";
-                    vp.setAttribute("content", c + ", minimum-scale=1");
-                    setTimeout(function () { try { vp.setAttribute("content", c); } catch (e) {} }, 120);
-                }
+                // NO viewport-meta perturbation any more (2026-09-06, 18:47
+                // device video, bottom strip): the 120ms re-stamp made iOS
+                // re-anchor every fixed element for those frames — the boot
+                // curtain lifted off the glass bottom and the app's
+                // disclaimer showed through under the spinner, one blink per
+                // launch. The symptom it was written for (in-flow content one
+                // status bar too low until a native re-layout) was the
+                // status-bar-style meta arriving at runtime; that meta is
+                // static in the shell since v31, so the geometry is right
+                // from the first frame and there is nothing left to kick.
             } catch (e) {}
         };
         // kick = forced UIKit re-layout, callable repeatedly (unlike the
@@ -757,6 +756,11 @@ components.html(
         var kick = function () {
             try {
                 if (!window.__caiSA) return;
+                // never under the boot curtain: the meta re-stamp un-anchors
+                // fixed elements for ~60ms and the curtain would expose the
+                // glass bottom (see nudge above); the pin gate in the shell
+                // already refuses to lift on an unpinned viewport
+                if (document.getElementById('cai-boot-splash')) return;
                 var now = Date.now();
                 if (window.__caiKickAt && now - window.__caiKickAt < 900) return;
                 window.__caiKickAt = now;
@@ -2317,6 +2321,16 @@ html:not(.cai-standalone) [data-testid="stBottom"] {{
 [data-testid="stChatInputTextArea"]:placeholder-shown {{
     max-height: 26px !important;
     max-height: 1lh !important;
+}}
+/* ...and the WRAPPERS too (18:45 device video, launch 4 of 4): the textarea
+   cap alone still left a tall capsule once — baseweb's textarea container
+   carries its own min-height, so a stale inner measurement can hold the
+   pill open from the outside. While the placeholder shows, no div inside
+   the composer may exceed the send button's 44px: the capsule is the
+   button row and nothing else. Typing hides the placeholder and lifts it. */
+[data-testid="stChatInput"]:has(textarea:placeholder-shown) div {{
+    max-height: 44px !important;
+    min-height: 0 !important;
 }}
 [data-testid="stChatInputSubmitButton"] {{
     background-color: var(--accent) !important;

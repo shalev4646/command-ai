@@ -213,6 +213,30 @@ def test_apple_web_app_metas_are_static_in_the_first_bytes():
     assert "if (el.getAttribute(k) !== String(attrs[k])) el.setAttribute(k, attrs[k]);" in app[i:i + 600]
 
 
+def test_chevron_block_is_43px_so_the_wordmark_sits_on_the_png():
+    css = boot_shell._HEAD_TEMPLATE
+    assert "#cai-boot-splash .chev { height: 43px; }" in css
+
+
+def test_boot_nudge_no_longer_perturbs_the_viewport_meta():
+    """18:47 device video: the 120ms viewport re-stamp un-anchored the curtain
+    and the disclaimer blinked through under the spinner, once per launch."""
+    app = (ROOT / "app.py").read_text(encoding="utf-8")
+    i = app.index("var nudge = function ()")
+    nudge = app[i:app.index("var kick = function ()")]
+    assert "minimum-scale=1" not in nudge
+    assert "__caiNudged" not in nudge
+    k = app.index("var kick = function ()")
+    assert "if (document.getElementById('cai-boot-splash')) return;" in app[k:k + 900]
+
+
+def test_empty_composer_wrappers_are_capped_too():
+    app = (ROOT / "app.py").read_text(encoding="utf-8")
+    i = app.index('[data-testid="stChatInput"]:has(textarea:placeholder-shown) div')
+    rule = app[i:i + 200]
+    assert "max-height: 44px !important" in rule and "min-height: 0 !important" in rule
+
+
 if __name__ == "__main__":
     failures = 0
     for name, fn in sorted(globals().items()):
