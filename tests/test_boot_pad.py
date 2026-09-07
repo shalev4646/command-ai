@@ -299,22 +299,14 @@ def test_splash_paints_veiled_and_unveils_at_first_paint():
     assert "-webkit-touch-callout" not in css, "the iOS subtitle nudge chased launch-image jitter; gone with the logo"
 
 
-def test_bundle_rides_behind_load():
-    """16:41 device video: 0.6s of plain launch screen between the zoom and the
-    logo — iOS keeps it up until load, and load waited for the 2MB module
-    bundle. The HTML carries the bundle inert; the boot script issues it at
-    load (or 1.5s). The round trip must restore Streamlit's own tag."""
+def test_bundle_is_parser_inserted_again():
+    """v40 deferred the bundle behind load; the 17:07 device video showed the
+    one-frame handover brightening back (+1..+4 in 4/6) after 0.0 in 5/5 on
+    v39, and the launch screen did not drop any sooner. Reverted."""
     assert boot_shell.patch_index_html(), "patch_index_html refused to write"
     src = boot_shell._index_path().read_text(encoding="utf-8")
-    assert src.count('<script id="cai-bundle" type="cai/module" crossorigin src="./static/js/index') == 1
-    assert '<script type="module" crossorigin src="./static/js/index' not in src
-    js = src[src.index('<script id="cai-boot-js">'):]
-    assert "document.getElementById('cai-bundle')" in js
-    assert "window.addEventListener('load', go)" in js and "setTimeout(go, 1500)" in js
-    pristine = boot_shell._strip(src)
-    assert pristine.count('<script type="module" crossorigin src="./static/js/index') == 1
-    assert "cai-bundle" not in pristine
-
+    assert src.count('<script type="module" crossorigin src="./static/js/index') == 1
+    assert "cai-bundle" not in src and "cai/module" not in src
 
 if __name__ == "__main__":
     failures = 0
