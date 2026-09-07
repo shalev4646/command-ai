@@ -43,7 +43,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v39"
+_VERSION = "v40"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -582,6 +582,27 @@ _SPLASH_HTML = """
 
 _BOOT_JS = """
     <script id="cai-boot-js">
+      // ── the bundle, behind load (see patch_index_html) ──
+      (function () {
+        try {
+          var b = document.getElementById('cai-bundle');
+          if (!b || !b.getAttribute('src')) return;
+          var done = false;
+          var go = function () {
+            if (done) return; done = true;
+            var s = document.createElement('script');
+            s.type = 'module';
+            if (b.hasAttribute('crossorigin')) s.crossOrigin = b.getAttribute('crossorigin') || 'anonymous';
+            s.src = b.getAttribute('src');
+            document.head.appendChild(s);
+          };
+          if (document.readyState === 'complete') go();
+          else window.addEventListener('load', go);
+          // a load event that never fires (a hung stylesheet, a dead preload)
+          // must not strand the app behind its own splash
+          setTimeout(go, 1500);
+        } catch (e) {}
+      })();
       // ── connection watchdog ──
       // A dropped websocket was COMPLETELY invisible. Streamlit's only
       // disconnect indicator is [data-testid="stStatusWidget"], and both
@@ -1232,6 +1253,8 @@ def _strip(src: str) -> str:
     # restore Streamlit's stylesheet link from the <noscript> copy, so a
     # re-patch starts from pristine markup instead of stacking swaps
     src = _CSS_SWAP_RE.sub(lambda m: m.group("orig"), src)
+    src = src.replace('<script id="cai-bundle" type="cai/module" crossorigin src="',
+                      '<script type="module" crossorigin src="', 1)
     src = _uncover_viewport(src)
     return src
 
@@ -1706,6 +1729,19 @@ def patch_index_html() -> bool:
         # complete splash is paintable at ~15KB into the stream; the wiring
         # script at the END of <body> where the DOM it touches exists.
         patched = _cover_viewport(src)
+        # THE BUNDLE RIDES BEHIND `load` (2026-09-07, v40). iOS keeps the
+        # launch screen up until the document's load event, and load waits
+        # for Streamlit's 2MB module bundle to arrive and compile — on the
+        # 16:41 device video that is 0.6s of plain olive between the icon
+        # zoom and the logo, with the splash long since painted. Renaming the
+        # script's type makes the parser skip it (unknown types are neither
+        # fetched nor run); the boot script re-creates it as a real module
+        # the moment load fires (or at 1.5s, whichever first). The module was
+        # deferred anyway — it could never run before the parser finished,
+        # and the parser finishes when the worker releases the tail — so the
+        # app boot moves by the bundle's compile time at most.
+        patched = patched.replace('<script type="module" crossorigin src="',
+                                  '<script id="cai-bundle" type="cai/module" crossorigin src="', 1)
         patched = patched.replace('<meta charset="UTF-8" />',
                                   '<meta charset="UTF-8" />' + _MICRO + pad_js, 1)
         patched = patched.replace("</head>", head + pwa_links + "  </head>", 1)
@@ -1726,7 +1762,7 @@ def patch_index_html() -> bool:
         # =cover joined on 2026-09-01 — a viewport regex that silently missed
         # the meta would otherwise ship a shell whose whole point is missing.
         for marker in ('id="cai-micro"', 'id="cai-pad"', 'id="cai-boot"',
-                       'id="cai-sbstyle"', 'id="cai-capable"',
+                       'id="cai-sbstyle"', 'id="cai-capable"', 'id="cai-bundle"',
                        'id="cai-boot-splash"', 'id="cai-boot-js"',
                        "maximum-scale=1", "viewport-fit=cover",
                        "var(--cai-pad"):
