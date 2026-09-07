@@ -100,6 +100,20 @@ _SUB2_BASELINE = 156
 _SUB2_ALPHA = 94         # round(255 * .37)
 
 
+# THE IDENTITY BLOCK IS ONE RASTER PER DEVICE PIXEL RATIO (2026-09-07, v43),
+# shared byte-for-byte by the launch PNG (pasted at integer device pixels) and
+# the boot shell (painted as a data-URI background at the same device pixels).
+# Two months of making CSS + web fonts reproduce Pillow to the pixel still
+# left a seam iOS could show: the 06.09 23:06 device video has the subtitle
+# doubled for ~12 frames at the launch-image dissolve, because WebKit lays
+# the letter-spaced Hebrew lines out a few px from where Chromium (which the
+# PNG was calibrated against) does. One raster has no seam by construction.
+# Box in pt: 230 wide (±115 around the centre), 182 tall, the ink's own
+# padding-top 12pt inside the box (the chevron overhangs it by 6.6pt).
+_ID_W, _ID_H = 230, 182
+_ID_CX, _ID_PAD = 115, 12
+
+
 def _draw_subtitle(img, fp: str, cx: float, pad_px: float, dpr: int) -> None:
     """Lay layout D out the way CSS lays out RTL runs with letter-spacing.
 
@@ -155,42 +169,27 @@ def _draw_subtitle(img, fp: str, cx: float, pad_px: float, dpr: int) -> None:
 
 
 @lru_cache(maxsize=None)
-def _startup_png(w: int, h: int, dpr: int) -> bytes:
-    """Olive launch screen with the double-chevron mark at the SPLASH's
-    chevron position, so the OS launch image morphs into the splash without
-    a jump (the user filmed the old centered chevron leaping to the splash's
-    top-aligned one). The splash chevron's first apex sits at
-    env(safe-area-inset-top) + 14vh − 6.6px: the .cai-splash padding is
-    sat+14vh, and a 26px box + 6px border rotated 45° overhangs its layout
-    top by (32·√2−32)/2 ≈ 6.6px. Verified against the launch video: apex at
-    ~176pt on a 393×852 device = 59 + 119.3 − 6.6.
-    ⛔ Cache-locked: a centered variant (2026-09-02) was reverted next
-    morning — iOS never refreshes the INSTALLED app's launch PNG, so a
-    formula change here strands existing installs on the old image and the
-    boot shows two mismatched screens (device video 00:15). Change this
-    only with a migration that re-mints the installed PNG.
+def _identity_raster(dpr: int):
+    """Chevron + wordmark + subtitle on olive, in a 230x182pt box at `dpr`
+    device pixels per pt — the ONE raster the launch PNG and the shell share.
 
-    2026-09-07 (v42): back after one day as a plain field (61ce350, option
-    A). That commit blamed a 2px launch-image jitter; re-measuring the same
-    22:15/23:06 videos frame by frame shows launch-image and shell rows
-    identical in all 12 launches (wordmark 255-272, subtitle 307-314 and
-    328-333 with the shell's iOS nudge) — the "jitter" was the zoom's spring
-    tail (rows 293→255 over 0.33s) and the ×1.26 bright frame lifting
-    anti-aliased rows over the detector's threshold. The plain field, on the
-    other hand, made iOS's own fade-in of the launch image (black→olive over
-    ~0.25s from the tap, present for every web clip, invisible under a logo)
-    the only thing on screen, and left the logo to arrive 0.8s later. A
-    native launch has its launch screen — logo included — in the zooming
-    window from the first frame; this image is what gives the web clip the
-    same thing. Still ⛔ cache-locked: existing installs keep the plain
-    field until removed and re-added."""
+    The ink sits where the splash always put it: the chevron's first apex
+    6.6pt above the pad (a 26px box + 6px border rotated 45° overhangs its
+    layout top by (32·√2−32)/2), the wordmark's line box 61pt below the pad,
+    the subtitle per _draw_subtitle. Inside this box the pad is _ID_PAD and
+    the centre _ID_CX; the launch PNG places the box so that its pad lands on
+    sat + 14vh (see _startup_png). Every calibration note below is history
+    that still holds — the geometry was matched to the browser's splash over
+    July-September and the PNG side is unchanged; what changed in v43 is that
+    the browser now shows THIS raster instead of re-deriving it from CSS and
+    fonts."""
     import io
     from PIL import Image, ImageDraw
 
     # Dark chain (2026-08-03): the launch image shares the APP's backdrop —
     # the sage field read as a bright second screen that then "flashed" into
     # the dark app. Ink flips accordingly: olive chevron, cream wordmark.
-    img = Image.new("RGB", (w, h), "#14170E")
+    img = Image.new("RGB", (_ID_W * dpr, _ID_H * dpr), "#14170E")
     draw = ImageDraw.Draw(img, "RGBA")
     dd = 32 * 0.7071 * dpr          # apex-to-arm-tip reach of the 32px box
     tv = 6 * 1.4142 * dpr           # vertical band thickness of a 6px stroke
@@ -233,9 +232,8 @@ def _startup_png(w: int, h: int, dpr: int) -> bytes:
     # 0.35px (unscaled) up the arm to land on the measured raster, verified
     # against the profile row by row. If the chevron size or border width
     # ever changes, re-run the foreignObject profile and re-fit this.
-    cx = w / 2
-    sat = _STARTUP_SAT.get((w, h, dpr), 47)
-    pad = sat + 0.14 * (h / dpr)    # the splashes' sat + 14vh, in pt
+    cx = _ID_CX * dpr
+    pad = _ID_PAD                   # the box's own padding-top, in pt
     apex = (pad - 6.6) * dpr
     S = 4
     x0, y0 = int(cx - dd) - 2, int(apex) - 2
@@ -289,6 +287,52 @@ def _startup_png(w: int, h: int, dpr: int) -> bytes:
         # a missing/unreadable font must never break the launch image — the
         # chevron alone is exactly the old behaviour
         pass
+    return img
+
+
+def _identity_png(dpr: int) -> bytes:
+    """The raster as PNG bytes — the same bytes go into the shell's data URI."""
+    import io
+    buf = io.BytesIO()
+    _identity_raster(dpr).save(buf, "PNG", optimize=True)
+    return buf.getvalue()
+
+
+def identity_data_uris() -> dict:
+    """{2: 'data:image/png;base64,…', 3: …} — what the boot shell paints."""
+    return {d: "data:image/png;base64," + base64.b64encode(_identity_png(d)).decode("ascii")
+            for d in (2, 3)}
+
+
+@lru_cache(maxsize=None)
+def _startup_png(w: int, h: int, dpr: int) -> bytes:
+    """Olive launch screen with the identity raster pasted at INTEGER device
+    pixels: pad = round(sat + 14vh) CSS px, left = floor(width/2) − 115 CSS
+    px. The boot shell paints the same raster at the same device pixels
+    (cai-pad script: --cai-pad and --cai-idx with the same integer CSS px),
+    so the launch-image → page dissolve has nothing to show.
+
+    ⛔ Cache-locked: iOS never refreshes the INSTALLED app's launch PNG. A
+    centered variant (2026-09-02) was reverted next morning for that reason,
+    and the plain field of 2026-09-06 (option A — blamed a "2px jitter" that
+    turned out to be the zoom's spring tail plus the ×1.26 bright frame, see
+    boot_shell's .id note) needs a remove + re-add to be replaced by this.
+    Change the geometry only with a migration that re-mints the installed
+    PNG. Verified on device (23:06 video, 7 launches): wordmark rows 255-272,
+    subtitle 307-314 / 328-333 in both phases with the identity in the image."""
+    import io
+    from PIL import Image
+
+    img = Image.new("RGB", (w, h), "#14170E")
+    sat = _STARTUP_SAT.get((w, h, dpr), 47)
+    # WHOLE CSS PIXELS, not just whole device pixels: Blink snaps a box to
+    # integer CSS px before scaling (81.333px painted at 81 → one device px
+    # off in the Edge proof), WebKit snaps to device px; an integer CSS px
+    # lands on the same device pixel in both. Half a CSS px off true centre
+    # is invisible; a one-device-px seam at the dissolve is not.
+    pad_css = round(sat + 0.14 * (h / dpr))            # sat + 14vh, whole CSS px
+    left_css = (w // dpr) // 2 - _ID_CX                 # floor(width/2) − 115
+    img.paste(_identity_raster(dpr), (left_css * dpr, (pad_css - _ID_PAD) * dpr))
     buf = io.BytesIO()
     img.save(buf, "PNG", optimize=True)
     return buf.getvalue()

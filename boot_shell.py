@@ -43,7 +43,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v42"
+_VERSION = "v43"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -123,7 +123,8 @@ _PAD_JS_TEMPLATE = (
     'var k=Math.round(w*d)+"x"+Math.round(h*d)+"x"+Math.round(d);'
     'if(!(k in T))return;'
     'var f=function(){var st=document.documentElement.style;'
-    'st.setProperty("--cai-pad",(T[k]+0.14*h).toFixed(2)+"px");'
+    'st.setProperty("--cai-pad",Math.round(T[k]+0.14*h)+"px");'
+    'st.setProperty("--cai-idx",(Math.floor(w/2)-__IDCX__)+"px");'
     'st.setProperty("--cai-glass",h+"px");st.setProperty("--cai-vh14",(0.14*h).toFixed(2)+"px")};'
     'f();window.__caiPad=f;'
     '}catch(e){}})()</script>'
@@ -137,7 +138,8 @@ def _pad_js() -> str:
     table = "{" + ",".join(
         f'"{w}x{h}x{d}":{v}' for (w, h, d), v in sorted(sat.items())
     ) + "}"
-    return _PAD_JS_TEMPLATE.replace("__TABLE__", table)
+    return (_PAD_JS_TEMPLATE.replace("__TABLE__", table)
+            .replace("__IDCX__", str(__import__("pwa_assets")._ID_CX)))
 
 
 _VIEWPORT_RE = re.compile(
@@ -300,94 +302,33 @@ _HEAD_TEMPLATE = """
            (see _PAD_JS_TEMPLATE); env() is the fallback for screens off the table */
         padding-top: var(--cai-pad, calc(env(safe-area-inset-top, 0px) + 14vh));
         gap: 18px; transition: opacity .4s ease; pointer-events: none; }
-      /* CONTENT-BOX, EXPLICITLY (2026-09-06, device clip 16:37 + local proof).
-         The launch PNG draws the chevron as a 32px box (26 + 6px border,
-         see pwa_assets: dd = 32·0.7071). So does this rule — until
-         Streamlit's global `*{box-sizing:border-box}` lands with its CSS a
-         moment later and the SAME 26px becomes the outer size: the chevrons
-         shrink 32→26 (45→37pt wide) mid-boot, and the wait ring 26→22.
-         Measured locally: offsetWidth 32 at first paint, 26 four seconds
-         later. On device the shrink lands around the launch-image dissolve,
-         which is the "two screens passing through each other". Pinning the
-         box model keeps the splash the PNG's shape for its whole life. */
-      /* .chev is 43px tall BY DECLARATION (2026-09-06 18:45 device video): the
-         launch PNG places the wordmark where a 43px chevron block puts it —
-         the height two 26px BORDER-BOX spans used to give once Streamlit's
-         global box-sizing landed. With the spans pinned to content-box (32px
-         outer, matching the PNG's chevron size) the block grew to 55px and
-         the wordmark + subtitle dropped 12pt at the dissolve ("CommandAI
-         goes down a bit"). The spans overflow the 43px block by design. */
-      #cai-boot-splash .chev { height: 43px; }
-      #cai-boot-splash .chev span { display: block; width: 26px; height: 26px; box-sizing: content-box !important;
-        border-top: 6px solid #A3AE6E; border-left: 6px solid #A3AE6E; transform: rotate(45deg); }
-      #cai-boot-splash .chev span + span { border-color: rgba(163,174,110,.45); margin-top: -9px; }
-      #cai-boot-splash .t { font: 400 34px 'Suez One', serif; color: #ECEDE6; }
-      #cai-boot-splash .t b { color: #A3AE6E; font-weight: 400; }
-      /* SUEZ ONE, NOT ui-monospace — and this is load-bearing, not taste.
-         The launch image now paints this line too (see _startup_png), so the
-         two must agree to the pixel or the hand-off shows the subtitle
-         swapping typefaces. Menlo and friends carry NO Hebrew: iOS silently
-         fell back to its system Hebrew face, which Pillow cannot reproduce
-         server-side, so identity was unreachable while this said monospace.
-         Suez One is already inlined above as a data URI — same file the PNG
-         draws with, zero extra bytes on the critical path.
-
-         The numbers follow from that swap. Tracking 4.8px (was 3px) keeps the
-         line at the ~192px width the layout was composed around, since Suez
-         One is the narrower face. Alpha .4 (was .6) because its stroke is
-         markedly heavier at this size — .6 read as bold next to the old line.
-         The .4 is bisected, not eyeballed: it reproduces the ink energy of the
-         real subtitle in the 2026-07-28 device video to within 1%. It must stay
-         in step with app._SUB_ALPHA (round(255 * .4) = 102).
-
-         NO entrance animation. The subtitle is already on screen, painted
-         into the launch image, before this stylesheet exists; fading it in
-         makes it blink out and back at the exact moment the hand-off has to
-         be invisible. (The .8s fade this replaces was itself the fix for an
-         earlier slide-up that the pilot read as a screen switch — 2026-07-27
-         video #2. Neither is needed once the two screens are identical.)
-
-         Layout D, the user's pick from four rendered candidates (2026-07-28
-         evening): "מערכת פקודות" flanked by thin rules, "בלמ״ס" spaced out
-         beneath. The rules are ::before/::after on .s1 — flex children, so
-         they stay symmetric in RTL and the trailing-letter-spacing quirk
-         (see app._draw_subtitle) affects only the TEXT ink inside the row,
-         exactly as the PNG reproduces it. */
-      #cai-boot-splash .s { display: flex; flex-direction: column; align-items: center;
-        gap: 6px; }
-      #cai-boot-splash .s1 { display: flex; align-items: center; gap: 12px;
-        font: 400 13px 'Suez One', serif; letter-spacing: 2px;
-        color: rgba(236,237,230,.59); }
-      #cai-boot-splash .s1::before, #cai-boot-splash .s1::after {
-        content: ''; width: 26px; height: 1px; background: rgba(236,237,230,.31); }
-      #cai-boot-splash .s2 { font: 400 9.5px 'Suez One', serif; letter-spacing: 7px;
-        color: rgba(236,237,230,.37); }
-      /* THE FIRST FRAME IS THE LAUNCH IMAGE, TO THE PIXEL — no veil, no fade.
-         v37-v41 painted the identity at opacity 0 and faded it in, because the
-         launch PNG had been emptied after "iOS jitters the logo image by 2px"
-         (23:06 video). Re-measured 2026-09-07 frame by frame on that video
-         and the 22:15 one: wordmark rows 255-272, subtitle 307-314 / 328-333
-         in the launch-image phase AND in the shell phase, all 12 launches —
-         the "2px" was the zoom's spring tail (rows 293→255 over 0.33s) and
-         the ×1.26 bright frame pushing anti-aliased rows over the detector's
-         threshold, never a placement difference. The plain image + fade, on
-         the other hand, gave the user an empty field brightening from black
-         (iOS fades every web clip's launch image in over ~0.25s from the tap;
-         under a logo that reads as the app arriving, on a bare field as a
-         colour change) and a logo 0.8s late — the opposite of a native
-         launch, whose launch screen, logo included, is in the zooming window
-         from frame one. So the launch image carries the logo again and the
-         shell shows the identical logo from its first paint; the dissolve
-         between them has nothing to show. */
-      /* iOS only (2026-09-06 22:15 device video, five launches): WebKit sets
-         this 9.5px line 2pt lower than the launch PNG (329-335 vs 327-333
-         video rows) while Chromium matches the PNG to 0.3pt; every other
-         line is identical. With the nudge (23:06 video, seven launches) both
-         phases read 328-333 in every launch. -webkit-touch-callout exists
-         only in iOS WebKit. */
-      @supports (-webkit-touch-callout: none) {
-        #cai-boot-splash .s2 { margin-top: -2px; }
-      }
+      /* THE IDENTITY IS A RASTER — THE SAME RASTER THE LAUNCH PNG CARRIES (v43,
+         2026-09-07). Two months of making CSS + fonts reproduce Pillow to the
+         pixel (mitered chevron tips, 4x supersampling, the RTL letter-spacing
+         quirk, content-box pins, a 43px chevron block, a 2px iOS nudge) still
+         left one seam: on the 06.09 23:06 device video the dissolve from the
+         launch image to the page shows the subtitle DOUBLED for ~12 frames —
+         WebKit lays the letter-spaced Hebrew lines out a few px from where
+         Chromium (which the PNG was calibrated against) does, and iOS
+         cross-fades the two. Only one raster has no seam. So
+         pwa_assets._identity_raster draws chevron + wordmark + subtitle once
+         per device pixel ratio; the launch PNG pastes it at integer device
+         pixels — pad = round(sat + 14vh) and left = floor(width/2) − 115,
+         both WHOLE CSS px, because Blink snaps a box to integer CSS px before
+         scaling while WebKit snaps to device px, and an integer CSS px is the
+         same pixel in both (the Edge proof caught 81.333px painted at 81);
+         and this rule paints the identical bytes at the identical device
+         pixels: --cai-pad / --cai-idx come from the cai-pad script with the
+         same integers, the box is 230x182pt, background-size pins one raster
+         px to one device px. No font, no layout, nothing for the dissolve to
+         show. Screens off the PNG table (Android, desktop) fall back to
+         env()+14vh and centring — there is no launch image to match there. */
+      #cai-boot-splash .id { position: absolute; width: 230px; height: 182px;
+        top: calc(var(--cai-pad, calc(env(safe-area-inset-top, 0px) + 14vh)) - 12px);
+        left: var(--cai-idx, calc(50% - 115px));
+        background: url(__ID2X__) 0 0 / 230px 182px no-repeat; }
+      @media (-webkit-min-device-pixel-ratio: 2.5), (min-resolution: 2.5dppx) {
+        #cai-boot-splash .id { background-image: url(__ID3X__); } }
       /* NO lift choreography. A staggered per-element entrance was tried
          (2026-07-27, shell v4) and it FOUGHT Streamlit: reruns replace the
          DOM mid-cascade, so the curtain lifted onto a dark screen of
@@ -467,9 +408,7 @@ _HEAD_TEMPLATE = """
 # removes up to; do not drop it.
 _SPLASH_HTML = """
     <div id="cai-boot-splash" dir="rtl">
-      <div class="chev"><span></span><span></span></div>
-      <div class="t">Command<b>AI</b></div>
-      <div class="s"><span class="s1">מערכת פקודות</span><span class="s2">בלמ"ס</span></div>
+      <div class="id" role="img" aria-label="CommandAI"></div>
       <div class="wait">
         <div class="m"></div>
         <button class="r" type="button">נסה שוב</button>
@@ -491,7 +430,7 @@ _SPLASH_HTML = """
       // 5 frames on the 2026-09-06 20:21 device video. lift() drops it.
       try { document.documentElement.classList.add('cai-curtain'); } catch (e) {}
       // No veil (v42): the launch image carries the logo and the splash paints
-      // the same logo from its first frame — see the note above .s2's nudge.
+      // the same raster from its first frame — see the .id note in the CSS.
       // THE CANVAS IS OLIVE FROM THE FIRST FRAME (2026-09-06, videos 17:11/
       // 17:14 and every device video back to 04.09): for 0.4-1.5s after the
       // launch-image dissolve a band the height of the status bar showed at
@@ -1614,6 +1553,10 @@ def patch_index_html() -> bool:
                     "font-weight: 400; src: url(data:font/woff2;base64," + b64 +
                     ") format('woff2'); }")
         head_raw = _HEAD_TEMPLATE.replace("__FACE__", face)
+        # the identity raster, per device pixel ratio, as data URIs — hashed
+        # into the stamp with everything else, so redrawing it re-patches
+        uris = __import__("pwa_assets").identity_data_uris()
+        head_raw = head_raw.replace("__ID2X__", uris[2]).replace("__ID3X__", uris[3])
         # OFF BY DEFAULT, opt in with CAI_SW=1.
         #
         # The worker was built to kill the launch flash. An earlier note here

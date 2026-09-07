@@ -164,14 +164,13 @@ def test_empty_composer_is_capped_to_one_line():
     assert "max-height: 1lh" not in rule.replace("`max-height: 1lh`", ""),         "lh resolved from the fallback font on iOS and clipped the placeholder (21:23 video)"
 
 
-def test_splash_chevrons_keep_the_png_box_model():
+def test_splash_ring_and_fallback_chevrons_keep_the_png_box_model():
     """Device clip 2026-09-06 16:37: the splash chevrons shrank 32->26px when
-    Streamlit's global border-box landed — the launch PNG is drawn as a 32px
-    box (pwa_assets dd = 32*0.7071). content-box must be pinned explicitly."""
+    Streamlit's global border-box landed. Since v43 the shell's chevron is
+    part of the identity raster (no box model to pin); the wait ring and the
+    no-shell fallback splash in app.py still draw with CSS and stay pinned."""
     css = boot_shell._HEAD_TEMPLATE
-    chev = css[css.index("#cai-boot-splash .chev span {"):]
-    chev = chev[:chev.index("}")]
-    assert "box-sizing: content-box !important" in chev
+    assert "#cai-boot-splash .chev" not in css
     ring = css[css.index("#cai-boot-splash .w {"):]
     ring = ring[:ring.index("}")]
     assert "box-sizing: content-box !important" in ring
@@ -213,9 +212,41 @@ def test_apple_web_app_metas_are_static_in_the_first_bytes():
     assert "if (el.getAttribute(k) !== String(attrs[k])) el.setAttribute(k, attrs[k]);" in app[i:i + 600]
 
 
-def test_chevron_block_is_43px_so_the_wordmark_sits_on_the_png():
+def test_identity_raster_is_shared_by_launch_image_and_shell():
+    """v43: the launch PNG and the shell paint ONE raster at the same device
+    pixels — pad and left whole CSS px (Blink snaps to CSS px, WebKit to
+    device px; an integer CSS px is the same in both), 230x182pt box."""
+    import io
+    from PIL import Image, ImageChops
+    assert (pwa_assets._ID_W, pwa_assets._ID_H, pwa_assets._ID_CX, pwa_assets._ID_PAD) == (230, 182, 115, 12)
     css = boot_shell._HEAD_TEMPLATE
-    assert "#cai-boot-splash .chev { height: 43px; }" in css
+    rule = css[css.index("#cai-boot-splash .id {"):]
+    rule = rule[:rule.index("} }") + 3]
+    assert "width: 230px; height: 182px;" in rule
+    assert "top: calc(var(--cai-pad, calc(env(safe-area-inset-top, 0px) + 14vh)) - 12px);" in rule
+    assert "left: var(--cai-idx, calc(50% - 115px));" in rule
+    assert "background: url(__ID2X__) 0 0 / 230px 182px no-repeat;" in rule
+    assert "(-webkit-min-device-pixel-ratio: 2.5), (min-resolution: 2.5dppx)" in rule and "url(__ID3X__)" in rule
+    js = boot_shell._pad_js()
+    assert 'st.setProperty("--cai-pad",Math.round(T[k]+0.14*h)+"px");' in js, "whole CSS px: Blink and WebKit snap it alike"
+    assert 'st.setProperty("--cai-idx",(Math.floor(w/2)-115)+"px");' in js
+    # the PNG carries the raster's bytes exactly, at integer device pixels
+    for (w, h, d) in ((1179, 2556, 3), (750, 1334, 2), (1290, 2796, 3)):
+        im = Image.open(io.BytesIO(pwa_assets._startup_png(w, h, d))).convert("RGB")
+        sat = pwa_assets._STARTUP_SAT[(w, h, d)]
+        x0, y0 = ((w // d) // 2 - 115) * d, (round(sat + 0.14 * (h / d)) - 12) * d
+        crop = im.crop((x0, y0, x0 + 230 * d, y0 + 182 * d))
+        assert ImageChops.difference(crop, pwa_assets._identity_raster(d).convert("RGB")).getbbox() is None, (w, h, d)
+    uris = pwa_assets.identity_data_uris()
+    assert set(uris) == {2, 3} and all(u.startswith("data:image/png;base64,") for u in uris.values())
+    # the patched shell carries both data URIs inside the boot style, and the raster div
+    assert boot_shell.patch_index_html()
+    src = boot_shell._index_path().read_text(encoding="utf-8")
+    style = src[src.index('<style id="cai-boot"'):]
+    style = style[:style.index("</style>")]
+    assert uris[2] in style and uris[3] in style
+    assert '<div class="id" role="img" aria-label="CommandAI"></div>' in src
+    assert 'class="chev"' not in src and 'class="t"' not in src
 
 
 def test_boot_nudge_no_longer_perturbs_the_viewport_meta():
@@ -297,18 +328,18 @@ def test_launch_image_carries_the_logo_again():
 
 
 def test_splash_shows_its_logo_from_the_first_paint():
-    """No veil, no fade: the launch image and the splash are the same picture,
-    so the identity must be at full opacity on the very first painted frame,
-    and the iOS-only subtitle nudge (v35) is back with the subtitle in the image."""
+    """No veil, no fade: the launch image and the splash are the same picture
+    (v43: literally the same raster), so the identity is on the very first
+    painted frame at full opacity."""
     html = boot_shell._SPLASH_HTML
     assert '<div id="cai-boot-splash" dir="rtl">' in html
     assert "cai-veiled" not in html and "unveil" not in html
     assert "__caiVP" not in html and "vpDiag" not in boot_shell._index_path().read_text(encoding="utf-8")
+    assert '<div class="id" role="img" aria-label="CommandAI"></div>' in html
     css = boot_shell._HEAD_TEMPLATE
     assert "cai-veiled" not in css
     assert "transition: opacity .36s" not in css
-    assert "@supports (-webkit-touch-callout: none)" in css
-    assert "#cai-boot-splash .s2 { margin-top: -2px; }" in css
+    assert "-webkit-touch-callout" not in css, "the iOS subtitle nudge chased a CSS/Pillow seam; the raster has none"
 
 
 def test_bundle_is_parser_inserted_again():
