@@ -43,7 +43,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v43"
+_VERSION = "v44"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -701,6 +701,9 @@ _BOOT_JS = """
             var ta0 = document.querySelector('[data-testid="stChatInput"] textarea');
             var ci0 = ta0 && ta0.closest('[data-testid="stChatInput"]');
             if (ci0) ci0.classList.toggle('cai-empty', ta0.value === '');
+            // v44: the engine's guard pins the one-row geometry on every
+            // frame for 2.5s from here (see COMPOSER GUARD in app.py)
+            try { if (window.__caiPinBurst) window.__caiPinBurst(); } catch (e) {}
             window.dispatchEvent(new Event('resize'));
             setTimeout(function () {
               try {
@@ -714,9 +717,38 @@ _BOOT_JS = """
             }, 120);
           } catch (e) {}
         };
+        // TEMPORARY DIAGNOSTIC (v44): what does iOS see in the composer at
+        // the lift and 0.3/0.7/1.5s later? Read off the device video, then
+        // remove. Per snapshot: rect height/top, computed padding, line-height,
+        // box-sizing, scrollTop, scrollHeight/clientHeight, wrapper heights,
+        // cai-empty, Heebo loaded, inline style.
+        var cdiag = function (tag) {
+          try {
+            var d = document.getElementById('cai-cdiag');
+            if (!d) {
+              d = document.createElement('div'); d.id = 'cai-cdiag';
+              d.style.cssText = 'position:fixed;left:0;right:0;bottom:1px;z-index:2147483200;pointer-events:none;' +
+                'font:600 8px/9px ui-monospace,Menlo,monospace;color:#B9C48A;text-align:left;direction:ltr;' +
+                'white-space:normal;word-break:break-all;background:rgba(20,23,14,.85);padding:1px 2px;';
+              document.body.appendChild(d);
+            }
+            var ta = document.querySelector('[data-testid="stChatInput"] textarea');
+            if (!ta) { d.textContent += tag + ':no-ta | '; return; }
+            var c = getComputedStyle(ta), r = ta.getBoundingClientRect(), ci = ta.closest('[data-testid="stChatInput"]');
+            var ws = [], el = ta.parentElement;
+            while (el && el !== ci) { ws.push(Math.round(el.getBoundingClientRect().height)); el = el.parentElement; }
+            d.textContent += tag + ' h' + Math.round(r.height) + 'y' + Math.round(r.top) + ' p' + c.paddingTop + '/' + c.paddingBottom +
+              ' lh' + c.lineHeight + ' ' + c.boxSizing.slice(0, 1) + ' st' + ta.scrollTop + ' sh' + ta.scrollHeight + '/' + ta.clientHeight +
+              ' w' + ws.join('/') + ' e' + (ci && ci.classList.contains('cai-empty') ? 1 : 0) +
+              ' f' + (document.fonts && document.fonts.check('16px Heebo') ? 1 : 0) +
+              ' in[' + (ta.getAttribute('style') || '').replace(/ !important/g, '!').slice(0, 70) + '] | ';
+          } catch (e) {}
+        };
         var lift = function () {
           if (gone) return; gone = true;
           slow.forEach(clearTimeout);
+          cdiag('L'); setTimeout(function () { cdiag('A'); }, 300);
+          setTimeout(function () { cdiag('B'); }, 700); setTimeout(function () { cdiag('C'); }, 1500);
           composerRemeasure();
           // The wait ring must NOT ride the curtain: it kept spinning during
           // the slide and lingered as a lone circle over the revealed home

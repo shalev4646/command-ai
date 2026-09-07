@@ -830,12 +830,28 @@ components.html(
                     ta.addEventListener("input", function () {
                         try { var c = ta.closest('[data-testid="stChatInput"]'); if (c) c.classList.toggle("cai-empty", ta.value === ""); } catch (e) {}
                     });
+                    // THE WHOLE ONE-ROW GEOMETRY, INLINE (v44, 2026-09-07 23:34
+                    // device video, fresh install, 4 of 6 launches): the
+                    // capsule was the right height but the placeholder showed
+                    // only its upper half — the text line overflowed a box
+                    // whose padding/line-height had not come from the app
+                    // stylesheet (the same launches as the 23:06 video, back
+                    // once the boot got fast again: 2.2s tap-to-home). A
+                    // stylesheet rule can be skipped by WebKit's invalidation;
+                    // an inline !important value cannot. So an EMPTY textarea
+                    // is pinned to height/max 24, line-height 24, padding 0,
+                    // overflow hidden — and "the line does not fit its box"
+                    // is detected directly: scrollHeight > clientHeight.
+                    var PINS = [["height", "24px"], ["min-height", "0px"], ["max-height", "24px"],
+                                ["line-height", "24px"], ["padding-top", "0px"], ["padding-bottom", "0px"],
+                                ["overflow-y", "hidden"]];
                     var pin = function () {
                         try {
                             if (ta.value !== "") return;
-                            if (ta.getBoundingClientRect().height > 30 || ta.scrollTop) {
-                                ta.style.setProperty("height", "24px", "important");
-                                ta.style.setProperty("min-height", "0px", "important");
+                            var r = ta.getBoundingClientRect();
+                            if (r.height > 30 || r.height < 20 || ta.scrollTop || ta.scrollHeight > ta.clientHeight + 1 ||
+                                getComputedStyle(ta).paddingTop !== "0px") {
+                                PINS.forEach(function (kv) { ta.style.setProperty(kv[0], kv[1], "important"); });
                                 ta.scrollTop = 0;
                             }
                             // and the wrappers between the textarea and the
@@ -844,7 +860,7 @@ components.html(
                             // value there out-votes any stylesheet cap
                             var el = ta.parentElement, top = ta.closest('[data-testid="stChatInput"]');
                             while (el && el !== top) {
-                                if (el.getBoundingClientRect().height > 44) {
+                                if (el.getBoundingClientRect().height > 44 || parseFloat(getComputedStyle(el).minHeight) > 44) {
                                     el.style.setProperty("max-height", "44px", "important");
                                     el.style.setProperty("min-height", "0px", "important");
                                 }
@@ -852,10 +868,26 @@ components.html(
                             }
                         } catch (e) {}
                     };
-                    // typing must release the wrapper pins so the capsule grows
+                    // BURST: pin on every frame for 2.5s — after the guard
+                    // attaches and again whenever the shell lifts the curtain
+                    // (window.__caiPinBurst) — because the 23:34 video shows
+                    // the clipped state standing for 0.7s+ after the lift,
+                    // i.e. across heal() passes 600ms apart.
+                    var burstEnd = 0, bursting = false;
+                    var burst = function () {
+                        pin();
+                        if (performance.now() < burstEnd) requestAnimationFrame(burst); else bursting = false;
+                    };
+                    window.__caiPinBurst = function () {
+                        burstEnd = performance.now() + 2500;
+                        if (!bursting) { bursting = true; requestAnimationFrame(burst); }
+                    };
+                    // typing must release every pin so the capsule grows
+                    // (autosize + the 132px stylesheet cap take over)
                     ta.addEventListener("input", function () {
                         try {
                             if (ta.value === "") return;
+                            PINS.forEach(function (kv) { ta.style.removeProperty(kv[0]); });
                             var el = ta.parentElement, top = ta.closest('[data-testid="stChatInput"]');
                             while (el && el !== top) {
                                 el.style.removeProperty("max-height"); el.style.removeProperty("min-height");
@@ -865,8 +897,14 @@ components.html(
                     });
                     try {
                         new MutationObserver(pin).observe(ta, { attributes: true, attributeFilter: ["style"] });
+                        // the wrappers' style attributes too: a container's
+                        // inline min-height written AFTER the textarea pin
+                        // is what balloons the capsule into a card
+                        var cap = ta.closest('[data-testid="stChatInput"]');
+                        if (cap) new MutationObserver(pin).observe(cap, { attributes: true, subtree: true, attributeFilter: ["style"] });
                     } catch (e) {}
                     pin();
+                    window.__caiPinBurst();
                 } else if (ta && !ta.value && ta.getBoundingClientRect().height > 30) {
                     ta.style.setProperty("height", "24px", "important");
                     ta.style.setProperty("min-height", "0px", "important");

@@ -129,15 +129,16 @@ def test_composer_is_remeasured_at_the_lift_and_in_heal():
     js = boot_shell._index_path().read_text(encoding="utf-8")
     assert js.count("composerRemeasure()") >= 2, "lift and reap must both re-measure"
     i = js.index("var composerRemeasure = function")
-    body = js[i:i + 900]
+    body = js[i:i + 1400]   # v44 added the pin-burst call and its comment ahead of the stale-height drop
     assert "new Event('resize')" in body
     assert "ta.style.removeProperty('height')" in body
     assert "if (!ta || ta.value) return;" in body
     app = (ROOT / "app.py").read_text(encoding="utf-8")
     j = app.index("stale composer height (2026-09-06)")
-    heal = app[j:j + 2600]
-    # since 22:15 the heal path PINS (inline !important) instead of removing and re-measuring
-    assert 'ta.style.setProperty("height", "24px", "important")' in heal
+    heal = app[j:j + 5200]   # v44 grew the guard (full-row pins, wrapper observer, burst)
+    # since 22:15 the heal path PINS (inline !important) instead of removing and re-measuring;
+    # since v44 the pin is the whole one-row geometry (PINS table)
+    assert '["height", "24px"]' in heal and "PINS.forEach(function (kv) { ta.style.setProperty(kv[0], kv[1], \"important\"); });" in heal
     assert "ta.__caiGuard" in heal
 
 
@@ -300,6 +301,30 @@ def test_composer_guard_pins_an_empty_textarea_to_one_line():
     assert 'ta.style.setProperty("height", "24px", "important")' in g
     assert 'attributeFilter: ["style"]' in g
     assert "ta.__caiGuard" in g
+
+
+def test_composer_guard_pins_the_whole_row_and_bursts_after_the_lift():
+    """23:34 device video (v43, fresh install): capsule 56 rows but the
+    placeholder cut to its upper half in 4 of 6 launches, standing 0.7s+
+    after the lift. v44: the empty textarea is pinned inline on height,
+    line-height, padding and overflow (a skipped stylesheet rule cannot
+    reach an inline !important), the overflow is detected as
+    scrollHeight > clientHeight, wrapper style writes are observed too,
+    and the pin runs every frame for 2.5s after the guard attaches and
+    after every lift."""
+    app = (ROOT / "app.py").read_text(encoding="utf-8")
+    i = app.index("COMPOSER GUARD (2026-09-06 22:15")
+    g = app[i:app.index("var sb = document.querySelector('[data-testid=\"stBottom\"]');", i)]
+    for prop, val in (("line-height", "24px"), ("padding-top", "0px"), ("padding-bottom", "0px"), ("overflow-y", "hidden"), ("max-height", "24px")):
+        assert f'["{prop}", "{val}"]' in g, prop
+    assert "ta.scrollHeight > ta.clientHeight + 1" in g
+    assert 'getComputedStyle(ta).paddingTop !== "0px"' in g
+    assert "window.__caiPinBurst = function ()" in g and "burstEnd = performance.now() + 2500" in g
+    assert 'observe(cap, { attributes: true, subtree: true, attributeFilter: ["style"] })' in g
+    assert 'PINS.forEach(function (kv) { ta.style.removeProperty(kv[0]); });' in g, "typing releases every pin"
+    js = boot_shell._index_path().read_text(encoding="utf-8")
+    i = js.index("var composerRemeasure = function")
+    assert "if (window.__caiPinBurst) window.__caiPinBurst();" in js[i:i + 900]
 
 
 def test_launch_image_carries_the_logo_again():
