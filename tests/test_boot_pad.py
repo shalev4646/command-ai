@@ -271,32 +271,44 @@ def test_composer_guard_pins_an_empty_textarea_to_one_line():
     assert "ta.__caiGuard" in g
 
 
-def test_launch_image_is_a_plain_olive_field():
-    """Option A (2026-09-06): iOS jittered the logo launch image by 2px in
-    5 of 7 launches while the shell's copy stood still — so the launch image
-    carries no logo at all and the shell fades its own in."""
+def test_launch_image_carries_the_logo_again():
+    """v42 (2026-09-07): the plain olive image of option A gave the pilot an
+    empty field brightening from black and a logo 0.8s late. Re-measured on
+    the 06.09 22:15/23:06 videos: launch-image and shell rows identical in all
+    12 launches (wordmark 255-272, subtitle 307-314 / 328-333) — the "2px
+    jitter" was the zoom's spring tail plus the bright frame. So the launch
+    image is the shell's first frame again: chevron, wordmark, subtitle."""
     import io
     from PIL import Image
     for (w, h, d) in ((1179, 2556, 3), (750, 1334, 2), (1320, 2868, 3)):
         im = Image.open(io.BytesIO(pwa_assets._startup_png(w, h, d))).convert("RGB")
         assert im.size == (w, h)
-        assert im.getcolors(maxcolors=4) == [(w * h, (20, 23, 14))], "must be one colour, #14170E"
+        px = im.load()
+        assert px[0, 0] == (20, 23, 14) and px[w - 1, h - 1] == (20, 23, 14), "olive field"
+        sat = pwa_assets._STARTUP_SAT[(w, h, d)]
+        pad = (sat + 0.14 * (h / d)) * d
+        band = im.crop((0, int(pad - 10 * d), w, int(pad + 110 * d)))
+        colors = band.getcolors(maxcolors=1 << 20)
+        assert colors and len(colors) > 50, "chevron and wordmark ink in the identity band"
+        assert any(c == (236, 237, 230) for _, c in colors), "cream wordmark ink"
+        assert any(c == (163, 174, 110) for _, c in colors), "olive chevron ink"
+        below = im.crop((0, int(pad + 200 * d), w, h - 40 * d))
+        assert below.getcolors(maxcolors=4) == [(below.size[0] * below.size[1], (20, 23, 14))], "nothing but olive under the identity"
 
 
-def test_splash_paints_veiled_and_unveils_at_first_paint():
+def test_splash_shows_its_logo_from_the_first_paint():
+    """No veil, no fade: the launch image and the splash are the same picture,
+    so the identity must be at full opacity on the very first painted frame,
+    and the iOS-only subtitle nudge (v35) is back with the subtitle in the image."""
     html = boot_shell._SPLASH_HTML
-    assert '<div id="cai-boot-splash" dir="rtl" class="cai-veiled">' in html
-    i = html.index("UNVEIL: the identity block fades in")
-    js = html[i:i + 2600]
-    assert "sp.classList.remove('cai-veiled')" in js
-    assert "setTimeout(unveil, 2500)" not in js, "no waiting: the logo must be there the instant the launch image goes (01:50 video)"
-    assert "UNVEIL AT THE FIRST PAINTED FRAMES" in js
-    assert "__caiVP" not in boot_shell._SPLASH_HTML and "vpDiag" not in boot_shell._index_path().read_text(encoding="utf-8")
+    assert '<div id="cai-boot-splash" dir="rtl">' in html
+    assert "cai-veiled" not in html and "unveil" not in html
+    assert "__caiVP" not in html and "vpDiag" not in boot_shell._index_path().read_text(encoding="utf-8")
     css = boot_shell._HEAD_TEMPLATE
-    assert "#cai-boot-splash.cai-veiled .chev, #cai-boot-splash.cai-veiled .t," in css
-    assert "opacity: 0; transform: translateY(6px); }" in css
-    assert "transition: opacity .36s ease-out, transform .36s ease-out; }" in css
-    assert "-webkit-touch-callout" not in css, "the iOS subtitle nudge chased launch-image jitter; gone with the logo"
+    assert "cai-veiled" not in css
+    assert "transition: opacity .36s" not in css
+    assert "@supports (-webkit-touch-callout: none)" in css
+    assert "#cai-boot-splash .s2 { margin-top: -2px; }" in css
 
 
 def test_bundle_is_parser_inserted_again():

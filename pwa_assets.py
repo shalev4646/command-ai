@@ -63,31 +63,232 @@ _STARTUP_SAT = {
 }
 
 
+# Subtitle metrics, READ OUT OF A BROWSER, not derived. Measured 2026-07-28
+# (evening, layout D — the user's pick of four rendered candidates) in the
+# patched index.html at 375x812 with sat=0. Layout D is two tiers:
+#
+#   line 1  "מערכת פקודות"  13px, ls 2, rgba(23,26,18,.59), flanked by
+#           26x1px rules (rgba .31) at a 12px gap
+#   line 2  "בלמ״ס"          9.5px, ls 7, rgba(23,26,18,.37)
+#
+# Browser truth (pad = the splash's padding-top, sat + 14vh — all offsets
+# below are relative to pad):
+#   .s1 flex row box: top pad+124, h 17 (asc 13 + desc 4, half-leading ZERO)
+#       -> text baseline pad+137;  rules flex-centred -> y [pad+132, pad+133]
+#       text item box w 100.953 (advance 76.947 + 12 x 2 tracking), box
+#       centred; rules symmetric about the centre (measured 99.031/275.984
+#       about a 187.5 centre)
+#   .s2 box: top pad+147 (s1 bottom 141 + 6 flex gap), h 12, asc 9
+#       -> baseline pad+156;  box w 60.141 (advance 25.137 + 5 x 7 tracking)
+#
+# The subtitle is the one splash element the launch image used to omit, which
+# is what made the hand-off read as a second screen. Painting it here closes
+# that, but only if it lands on the shell's copy to the pixel — hence measured
+# constants and the matching CSS in boot_shell._HEAD_TEMPLATE. Change one side
+# and you must change the other.
+_SUB1_TEXT = 'מערכת פקודות'
+_SUB1_PX = 13
+_SUB1_WIDTH = 100.953    # layout width INCLUDING the trailing letter-spacing
+_SUB1_BASELINE = 137     # below pad (the splash padding-top)
+_SUB1_ALPHA = 150        # round(255 * .59)
+_RULE_W, _RULE_GAP = 26, 12          # the flanking rules, from .s1::before CSS
+_RULE_TOP, _RULE_ALPHA = 132, 79     # y below pad; round(255 * .31)
+_SUB2_TEXT = 'בלמ"ס'
+_SUB2_PX = 9.5
+_SUB2_WIDTH = 60.141
+_SUB2_BASELINE = 156
+_SUB2_ALPHA = 94         # round(255 * .37)
+
+
+def _draw_subtitle(img, fp: str, cx: float, pad_px: float, dpr: int) -> None:
+    """Lay layout D out the way CSS lays out RTL runs with letter-spacing.
+
+    CSS adds the tracking AFTER every character including the last, so in RTL
+    the leftover spacing lands on the run's visual LEFT — inside the layout box
+    but outside the ink. The BOX is what gets centred, so each line's INK ends
+    up letter-spacing/2 to the RIGHT of the viewport centre (verified per
+    character in the browser). The RULES, by contrast, are flex siblings and
+    sit symmetric about the true centre. Reproducing all of that means walking
+    right to left from each layout box's right edge — do not "fix" it by
+    centring the ink.
+
+    Tracking is recomputed from THIS font's advances rather than hardcoded:
+    Pillow hints advances to whole pixels while the browser lays out
+    fractionally; solving for the spacing that reproduces the measured layout
+    width pins both ends of each run (v9 verification: worst glyph 0.22 CSS px,
+    ends within 0.02).
+
+    Composited through an L mask because ImageDraw.text() SILENTLY IGNORES the
+    alpha channel of an RGBA fill — unlike polygon(), which is why the
+    chevron's faded second stroke works while a first attempt at the subtitle
+    came out at full opacity. Coverage x alpha through a mask is precisely what
+    CSS does with color: rgba().
+    """
+    from PIL import Image, ImageDraw, ImageFont
+
+    mask = Image.new("L", img.size, 0)
+    mdraw = ImageDraw.Draw(mask)
+
+    def run(text, px, width, baseline, alpha):
+        font = ImageFont.truetype(fp, int(px * dpr + 0.5))
+        adv = [font.getlength(ch) for ch in text]
+        ls = (width * dpr - sum(adv)) / len(text)
+        x = cx + width * dpr / 2           # right edge of the layout box
+        for ch, a in zip(text, adv):
+            x -= a
+            mdraw.text((x, pad_px + baseline * dpr), ch,
+                       font=font, fill=alpha, anchor="ls")
+            x -= ls
+
+    run(_SUB1_TEXT, _SUB1_PX, _SUB1_WIDTH, _SUB1_BASELINE, _SUB1_ALPHA)
+    run(_SUB2_TEXT, _SUB2_PX, _SUB2_WIDTH, _SUB2_BASELINE, _SUB2_ALPHA)
+    # the flanking rules: symmetric about cx, 1 CSS px tall, flex-centred on
+    # line 1's optical middle
+    half = _SUB1_WIDTH * dpr / 2
+    y0, y1 = pad_px + _RULE_TOP * dpr, pad_px + (_RULE_TOP + 1) * dpr - 1
+    for sgn in (1, -1):
+        inner = cx + sgn * (half + _RULE_GAP * dpr)
+        outer = inner + sgn * _RULE_W * dpr
+        mdraw.rectangle([min(inner, outer), y0, max(inner, outer), y1],
+                        fill=_RULE_ALPHA)
+    img.paste((236, 237, 230), (0, 0), mask)
+
+
+@lru_cache(maxsize=None)
 def _startup_png(w: int, h: int, dpr: int) -> bytes:
-    """A PLAIN olive field — no chevron, no wordmark (2026-09-06, user's call,
-    option A). The logo lives in the boot shell only and fades in there.
+    """Olive launch screen with the double-chevron mark at the SPLASH's
+    chevron position, so the OS launch image morphs into the splash without
+    a jump (the user filmed the old centered chevron leaping to the splash's
+    top-aligned one). The splash chevron's first apex sits at
+    env(safe-area-inset-top) + 14vh − 6.6px: the .cai-splash padding is
+    sat+14vh, and a 26px box + 6px border rotated 45° overhangs its layout
+    top by (32·√2−32)/2 ≈ 6.6px. Verified against the launch video: apex at
+    ~176pt on a 393×852 device = 59 + 119.3 − 6.6.
+    ⛔ Cache-locked: a centered variant (2026-09-02) was reverted next
+    morning — iOS never refreshes the INSTALLED app's launch PNG, so a
+    formula change here strands existing installs on the old image and the
+    boot shows two mismatched screens (device video 00:15). Change this
+    only with a migration that re-mints the installed PNG.
 
-    Why the logo left the launch image, after two months of pixel-matching:
-    the device videos of 2026-09-06 (22:15, 23:06 — the latter a fresh
-    install) showed iOS placing the launch image itself 2px lower in 5 of 7
-    launches and exactly on the pixel in the other 2, while the shell's
-    splash never moved. Two copies of one logo, one of which jitters by the
-    OS, cannot be made to coincide; the seam was visible at every launch
-    ("two parts"). With nothing but the backdrop here, the dissolve into the
-    shell is olive→olive by construction, and the one-frame brightening iOS
-    adds when it resizes the web view at dismissal (793→852pt, read off the
-    shell's diagnostic line) lands on a plain surface, where 3% is nothing.
-    The shell then fades the identity block in (see cai-veiled in
-    boot_shell) once the web view has been handed the full glass.
-
-    ⛔ Cache-locked: iOS never refreshes the INSTALLED app's launch PNG. An
-    existing install keeps whatever image it was added with (the pilot's
-    2026-09-06 23:00 install carries the last logo image); only a remove +
-    re-add picks this one up. Every fresh install does."""
+    2026-09-07 (v42): back after one day as a plain field (61ce350, option
+    A). That commit blamed a 2px launch-image jitter; re-measuring the same
+    22:15/23:06 videos frame by frame shows launch-image and shell rows
+    identical in all 12 launches (wordmark 255-272, subtitle 307-314 and
+    328-333 with the shell's iOS nudge) — the "jitter" was the zoom's spring
+    tail (rows 293→255 over 0.33s) and the ×1.26 bright frame lifting
+    anti-aliased rows over the detector's threshold. The plain field, on the
+    other hand, made iOS's own fade-in of the launch image (black→olive over
+    ~0.25s from the tap, present for every web clip, invisible under a logo)
+    the only thing on screen, and left the logo to arrive 0.8s later. A
+    native launch has its launch screen — logo included — in the zooming
+    window from the first frame; this image is what gives the web clip the
+    same thing. Still ⛔ cache-locked: existing installs keep the plain
+    field until removed and re-added."""
     import io
-    from PIL import Image
+    from PIL import Image, ImageDraw
 
+    # Dark chain (2026-08-03): the launch image shares the APP's backdrop —
+    # the sage field read as a bright second screen that then "flashed" into
+    # the dark app. Ink flips accordingly: olive chevron, cream wordmark.
     img = Image.new("RGB", (w, h), "#14170E")
+    draw = ImageDraw.Draw(img, "RGBA")
+    dd = 32 * 0.7071 * dpr          # apex-to-arm-tip reach of the 32px box
+    tv = 6 * 1.4142 * dpr           # vertical band thickness of a 6px stroke
+    # The arm tips are MITERED, and blunt tips are what betrayed the hand-off.
+    # Once the 2026-08-09 hand-off finally went flash-free, the PNG->HTML swap
+    # was STILL visible on the chevrons alone (the user pointed straight at
+    # them). Pixel rows off the 21:34 video, all four launches: bright ink
+    # ended at apex+29 before the swap vs apex+21 after, dim tail at ~80 luma
+    # down to +52 before vs ~46 down to +39 after — the arms visibly retract.
+    # The reason is how each renderer ends the stroke. This polygon used to
+    # close the tips with a full-thickness vertical cut; WebKit draws the
+    # splash's chevron as border-top+border-left of a rotated square, and a
+    # border strip meeting a zero-width neighbour ends in a MITER: the outer
+    # corner is cut diagonally back to the inner edge. Rotated 45°, that cut
+    # runs from the tip (dd, dd) inward+down by 6/√2 on each axis — the tip
+    # tapers, it does not end square. Same spec geometry in Blink/WebKit, so
+    # matching the miter makes the two chevrons agree to antialiasing noise,
+    # and the swap has nothing left to show.
+    tc = 6 * 0.7071 * dpr           # the miter cut's inward/downward reach
+    # SUPERSAMPLED, because the geometry fix alone left a measurable seam.
+    # With the miter in place the device video (2026-08-10 22:32) still read
+    # the PNG's bright ink 4 rows lower than the HTML splash's, launch after
+    # launch — and profiling both rasters at 3x against the browser (same
+    # >120 threshold, rows apex+55..+79) pinned it: identical taper slope,
+    # but Pillow's hard-edged polygon runs 4-6px wider per row and ~2 rows
+    # longer, because draw.polygon paints full-brightness pixels right up to
+    # the vector edge while WebKit's antialiasing leaves partial-coverage
+    # pixels that fall below threshold. Same vectors, different rasters.
+    # Drawing 4x and reducing with a BOX filter is exact area-average
+    # coverage — the same quantity WebKit's AA computes — and the profiles
+    # line up to +-1px. The wordmark never had this problem: draw.text is
+    # antialiased already.
+    #
+    # TIP_TRIM is calibrated, not derived. With supersampling in place the
+    # arm BAND matches the browser exactly (bright-width 50==50 on every row
+    # through apex+65 at 3x), but the taper still began 2px lower than the
+    # engine's: browser tapers from +67 and dies at +79, the ideal-vector cut
+    # gave +69 and +81, a flat +4px per tip row. Where the engine puts the
+    # very end of a mitered stroke is its own business — so the cut is slid
+    # 0.35px (unscaled) up the arm to land on the measured raster, verified
+    # against the profile row by row. If the chevron size or border width
+    # ever changes, re-run the foreignObject profile and re-fit this.
+    cx = w / 2
+    sat = _STARTUP_SAT.get((w, h, dpr), 47)
+    pad = sat + 0.14 * (h / dpr)    # the splashes' sat + 14vh, in pt
+    apex = (pad - 6.6) * dpr
+    S = 4
+    x0, y0 = int(cx - dd) - 2, int(apex) - 2
+    x1 = int(cx + dd) + 3
+    y1 = int(apex + 23 * dpr + dd + tv) + 3
+    layer = Image.new("RGBA", ((x1 - x0) * S, (y1 - y0) * S), (0, 0, 0, 0))
+    ldraw = ImageDraw.Draw(layer)
+    e = 0.35 * dpr                  # TIP_TRIM — see the calibration note above
+    for i, color in enumerate([(163, 174, 110, 255), (163, 174, 110, 115)]):
+        ay = apex + i * 23 * dpr
+        pts = [(cx - dd + e, ay + dd - e), (cx, ay), (cx + dd - e, ay + dd - e),
+               (cx + dd - e - tc, ay + dd - e + tc), (cx, ay + tv),
+               (cx - dd + e + tc, ay + dd - e + tc)]
+        ldraw.polygon([((px - x0) * S, (py - y0) * S) for px, py in pts],
+                      fill=color)
+    layer = layer.resize((x1 - x0, y1 - y0),
+                         getattr(Image, "Resampling", Image).BOX)
+    img.paste(layer, (x0, y0), layer)
+    # ── wordmark ──────────────────────────────────────────────────────────
+    # The launch image used to be chevron-only, on the theory that the splash
+    # would supply the wordmark a moment later. On a phone that moment is
+    # SIX AND A HALF SECONDS (2026-07-27 video: launch image t=3.5-10.0, splash
+    # at t=11.0) — the user stares at a near-empty olive field for most of the
+    # boot. Painting the wordmark here makes the very first frame the finished
+    # splash instead of a fragment of it.
+    #
+    # Geometry is exact, not eyeballed. Measured in the browser against the
+    # live .cai-splash (364x904, sat=0): the chevron box is 43px tall from
+    # the padding-top (pad), the flex gap is 18px, so the title's line box
+    # starts at pad + 61. Pillow reports ascent 34 / descent 11 for
+    # Suez One at 34px — a 45px sum that equals the browser's line box to the
+    # pixel, so half-leading is zero and the baseline sits exactly one ascent
+    # below the box top. Advance width agrees too (PIL 205px vs browser 205.1),
+    # which is what lets a centred draw land on the CSS-centred text.
+    try:
+        from PIL import ImageFont
+        fp = _ROOT / "branding" / "fonts" / "SuezOne-Regular.ttf"
+        font = ImageFont.truetype(str(fp), int(round(34 * dpr)))
+        baseline = (pad + 61 + 34) * dpr
+        # two-tone like the splash/entry ("Command" cream, "AI" olive): both
+        # ends pinned to the full-string advance so the total width matches
+        # the single-run CSS text; seam kerning error lands invisibly between
+        total = font.getlength("CommandAI")
+        x0 = cx - total / 2
+        draw.text((x0, baseline), "Command", font=font,
+                  fill=(236, 237, 230, 255), anchor="ls")
+        draw.text((x0 + total - font.getlength("AI"), baseline), "AI",
+                  font=font, fill=(163, 174, 110, 255), anchor="ls")
+        _draw_subtitle(img, str(fp), cx, pad * dpr, dpr)
+    except Exception:
+        # a missing/unreadable font must never break the launch image — the
+        # chevron alone is exactly the old behaviour
+        pass
     buf = io.BytesIO()
     img.save(buf, "PNG", optimize=True)
     return buf.getvalue()

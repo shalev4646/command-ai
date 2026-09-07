@@ -43,7 +43,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v41"
+_VERSION = "v42"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -362,24 +362,32 @@ _HEAD_TEMPLATE = """
         content: ''; width: 26px; height: 1px; background: rgba(236,237,230,.31); }
       #cai-boot-splash .s2 { font: 400 9.5px 'Suez One', serif; letter-spacing: 7px;
         color: rgba(236,237,230,.37); }
-      /* THE IDENTITY FADES IN; IT NO LONGER HAS TO MATCH A LAUNCH IMAGE.
-         Since 2026-09-06 (user's option A) the launch PNG is a plain olive
-         field — iOS placed the logo image 2px lower in 5 of 7 launches while
-         the shell's copy never moved (23:06 video), and two copies of one
-         logo that the OS jitters cannot coincide. So the splash paints
-         VEILED (identity + wait block at opacity 0: the first frame is the
-         launch image's twin, olive on olive), and the painted script lifts
-         the veil once iOS has handed the web view the full glass — the
-         resize from 793 to 852pt that the diagnostic line showed at every
-         launch-image dismissal — or 2.5s after paint if that never comes.
-         Browser tabs (no launch image) unveil on the first painted frame. */
-      #cai-boot-splash.cai-veiled .chev, #cai-boot-splash.cai-veiled .t,
-      #cai-boot-splash.cai-veiled .s, #cai-boot-splash.cai-veiled .wait {
-        opacity: 0; transform: translateY(6px); }
-      #cai-boot-splash.cai-veiled .wait { transform: translateY(calc(-100% + 6px)); }
-      #cai-boot-splash .chev, #cai-boot-splash .t, #cai-boot-splash .s {
-        transition: opacity .36s ease-out, transform .36s ease-out; }
-      #cai-boot-splash .wait { transition: opacity .36s ease-out, transform .36s ease-out; }
+      /* THE FIRST FRAME IS THE LAUNCH IMAGE, TO THE PIXEL — no veil, no fade.
+         v37-v41 painted the identity at opacity 0 and faded it in, because the
+         launch PNG had been emptied after "iOS jitters the logo image by 2px"
+         (23:06 video). Re-measured 2026-09-07 frame by frame on that video
+         and the 22:15 one: wordmark rows 255-272, subtitle 307-314 / 328-333
+         in the launch-image phase AND in the shell phase, all 12 launches —
+         the "2px" was the zoom's spring tail (rows 293→255 over 0.33s) and
+         the ×1.26 bright frame pushing anti-aliased rows over the detector's
+         threshold, never a placement difference. The plain image + fade, on
+         the other hand, gave the user an empty field brightening from black
+         (iOS fades every web clip's launch image in over ~0.25s from the tap;
+         under a logo that reads as the app arriving, on a bare field as a
+         colour change) and a logo 0.8s late — the opposite of a native
+         launch, whose launch screen, logo included, is in the zooming window
+         from frame one. So the launch image carries the logo again and the
+         shell shows the identical logo from its first paint; the dissolve
+         between them has nothing to show. */
+      /* iOS only (2026-09-06 22:15 device video, five launches): WebKit sets
+         this 9.5px line 2pt lower than the launch PNG (329-335 vs 327-333
+         video rows) while Chromium matches the PNG to 0.3pt; every other
+         line is identical. With the nudge (23:06 video, seven launches) both
+         phases read 328-333 in every launch. -webkit-touch-callout exists
+         only in iOS WebKit. */
+      @supports (-webkit-touch-callout: none) {
+        #cai-boot-splash .s2 { margin-top: -2px; }
+      }
       /* NO lift choreography. A staggered per-element entrance was tried
          (2026-07-27, shell v4) and it FOUGHT Streamlit: reruns replace the
          DOM mid-cascade, so the curtain lifted onto a dark screen of
@@ -458,7 +466,7 @@ _HEAD_TEMPLATE = """
 # parse would find half a DOM. The trailing comment anchor is what _strip
 # removes up to; do not drop it.
 _SPLASH_HTML = """
-    <div id="cai-boot-splash" dir="rtl" class="cai-veiled">
+    <div id="cai-boot-splash" dir="rtl">
       <div class="chev"><span></span><span></span></div>
       <div class="t">Command<b>AI</b></div>
       <div class="s"><span class="s1">מערכת פקודות</span><span class="s2">בלמ"ס</span></div>
@@ -482,42 +490,8 @@ _SPLASH_HTML = """
       // a new backdrop-filter layer showed through the opaque curtain for
       // 5 frames on the 2026-09-06 20:21 device video. lift() drops it.
       try { document.documentElement.classList.add('cai-curtain'); } catch (e) {}
-      // ── UNVEIL: the identity block fades in once the launch image is gone ──
-      // (see .cai-veiled in the CSS). In a home-screen app iOS creates the web
-      // view one status bar short and extends it to the full glass exactly
-      // when it removes the launch image (diagnostic line, 2026-09-06 22:15
-      // and 23:06 videos: p793 … v852 at the dismissal, 12 launches of 12).
-      // That resize is the cue. Two frames after it, so the fade starts on a
-      // page that has already re-laid out at the new size. If the web view
-      // is full-size from the start (Android, browser tabs, other iOS
-      // versions) there is no launch image over us: unveil on the first
-      // painted frame. And a 2.5s ceiling so a device that never resizes
-      // still gets its logo.
-      (function () {
-        try {
-          var sp = document.getElementById('cai-boot-splash');
-          if (!sp) return;
-          var done = false;
-          var unveil = function () {
-            if (done) return; done = true;
-            try { sp.classList.remove('cai-veiled'); } catch (e) {}
-          };
-          var soon = function () {
-            requestAnimationFrame(function () { requestAnimationFrame(unveil); });
-          };
-          // UNVEIL AT THE FIRST PAINTED FRAMES, always (v39, 01:50 device video
-          // after the re-install): waiting for load left an EMPTY olive field
-          // for 0.3-0.8s after the launch image went — "the very start felt
-          // odd". Under the launch image the fade is invisible anyway, and the
-          // image is plain, so at its dismissal iOS's own cross-dissolve
-          // (~100ms) brings the logo in: the logo is there the instant the
-          // launch screen is gone, which is what a native app does. In a
-          // browser tab / Android PWA the same two frames give the CSS fade.
-          soon();
-        } catch (e) {
-          try { document.getElementById('cai-boot-splash').classList.remove('cai-veiled'); } catch (e2) {}
-        }
-      })();
+      // No veil (v42): the launch image carries the logo and the splash paints
+      // the same logo from its first frame — see the note above .s2's nudge.
       // THE CANVAS IS OLIVE FROM THE FIRST FRAME (2026-09-06, videos 17:11/
       // 17:14 and every device video back to 04.09): for 0.4-1.5s after the
       // launch-image dissolve a band the height of the status bar showed at
