@@ -43,7 +43,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v44"
+_VERSION = "v45"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -735,8 +735,15 @@ _BOOT_JS = """
             var ta = document.querySelector('[data-testid="stChatInput"] textarea');
             if (!ta) { d.textContent += tag + ':no-ta | '; return; }
             var c = getComputedStyle(ta), r = ta.getBoundingClientRect(), ci = ta.closest('[data-testid="stChatInput"]');
+            // per wrapper: rect height, then computed height|min|max and the inline style (v45 — the 13:10 video
+            // showed the wrappers at 13px with a 24px textarea inside; whose 13 is it?)
             var ws = [], el = ta.parentElement;
-            while (el && el !== ci) { ws.push(Math.round(el.getBoundingClientRect().height)); el = el.parentElement; }
+            while (el && el !== ci) {
+              var wc = getComputedStyle(el);
+              ws.push(Math.round(el.getBoundingClientRect().height) + '(' + wc.height + '|' + wc.minHeight + '|' + wc.maxHeight + '|' +
+                      (el.getAttribute('style') || '').replace(/ !important/g, '!').slice(0, 40) + ')');
+              el = el.parentElement;
+            }
             d.textContent += tag + ' h' + Math.round(r.height) + 'y' + Math.round(r.top) + ' p' + c.paddingTop + '/' + c.paddingBottom +
               ' lh' + c.lineHeight + ' ' + c.boxSizing.slice(0, 1) + ' st' + ta.scrollTop + ' sh' + ta.scrollHeight + '/' + ta.clientHeight +
               ' w' + ws.join('/') + ' e' + (ci && ci.classList.contains('cai-empty') ? 1 : 0) +

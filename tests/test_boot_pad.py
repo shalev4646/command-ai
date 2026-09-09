@@ -321,6 +321,10 @@ def test_composer_guard_pins_the_whole_row_and_bursts_after_the_lift():
     assert 'getComputedStyle(ta).paddingTop !== "0px"' in g
     assert "window.__caiPinBurst = function ()" in g and "burstEnd = performance.now() + 2500" in g
     assert 'observe(cap, { attributes: true, subtree: true, attributeFilter: ["style"] })' in g
+    # v45: a wrapper shorter than the textarea (13px around a 24px box on the 09.09 13:10 diag line) is fixed too
+    assert "} else if (wh < r.height - 1) {" in g
+    assert 'el.style.setProperty("height", "auto", "important");' in g and 'el.style.setProperty("min-height", "24px", "important");' in g
+    assert 'el.style.removeProperty("height");' in g, "typing releases the wrapper height pin too"
     assert 'PINS.forEach(function (kv) { ta.style.removeProperty(kv[0]); });' in g, "typing releases every pin"
     js = boot_shell._index_path().read_text(encoding="utf-8")
     i = js.index("var composerRemeasure = function")

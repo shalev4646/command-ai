@@ -858,11 +858,23 @@ components.html(
                             // capsule: baseweb mirrors the measured height
                             // into its container's min-height, and an inline
                             // value there out-votes any stylesheet cap
+                            // ...and wrappers SMALLER than the row (v45, 2026-09-09
+                            // 13:10 device video, diag line in 2 of 4 launches:
+                            // textarea 24px, the three wrappers around it 13px,
+                            // one of them overflow:hidden — the placeholder cut
+                            // to its upper half, and nothing ever re-laid it
+                            // out). A wrapper shorter than the textarea gets its
+                            // height back to auto and a 24px floor, inline.
                             var el = ta.parentElement, top = ta.closest('[data-testid="stChatInput"]');
                             while (el && el !== top) {
-                                if (el.getBoundingClientRect().height > 44 || parseFloat(getComputedStyle(el).minHeight) > 44) {
+                                var wh = el.getBoundingClientRect().height;
+                                if (wh > 44 || parseFloat(getComputedStyle(el).minHeight) > 44) {
                                     el.style.setProperty("max-height", "44px", "important");
                                     el.style.setProperty("min-height", "0px", "important");
+                                } else if (wh < r.height - 1) {
+                                    el.style.setProperty("height", "auto", "important");
+                                    el.style.setProperty("min-height", "24px", "important");
+                                    el.style.setProperty("max-height", "44px", "important");
                                 }
                                 el = el.parentElement;
                             }
@@ -890,7 +902,7 @@ components.html(
                             PINS.forEach(function (kv) { ta.style.removeProperty(kv[0]); });
                             var el = ta.parentElement, top = ta.closest('[data-testid="stChatInput"]');
                             while (el && el !== top) {
-                                el.style.removeProperty("max-height"); el.style.removeProperty("min-height");
+                                el.style.removeProperty("max-height"); el.style.removeProperty("min-height"); el.style.removeProperty("height");
                                 el = el.parentElement;
                             }
                         } catch (e) {}
