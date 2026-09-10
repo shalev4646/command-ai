@@ -43,7 +43,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v45"
+_VERSION = "v46"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -717,45 +717,9 @@ _BOOT_JS = """
             }, 120);
           } catch (e) {}
         };
-        // TEMPORARY DIAGNOSTIC (v44): what does iOS see in the composer at
-        // the lift and 0.3/0.7/1.5s later? Read off the device video, then
-        // remove. Per snapshot: rect height/top, computed padding, line-height,
-        // box-sizing, scrollTop, scrollHeight/clientHeight, wrapper heights,
-        // cai-empty, Heebo loaded, inline style.
-        var cdiag = function (tag) {
-          try {
-            var d = document.getElementById('cai-cdiag');
-            if (!d) {
-              d = document.createElement('div'); d.id = 'cai-cdiag';
-              d.style.cssText = 'position:fixed;left:0;right:0;bottom:1px;z-index:2147483200;pointer-events:none;' +
-                'font:600 8px/9px ui-monospace,Menlo,monospace;color:#B9C48A;text-align:left;direction:ltr;' +
-                'white-space:normal;word-break:break-all;background:rgba(20,23,14,.85);padding:1px 2px;';
-              document.body.appendChild(d);
-            }
-            var ta = document.querySelector('[data-testid="stChatInput"] textarea');
-            if (!ta) { d.textContent += tag + ':no-ta | '; return; }
-            var c = getComputedStyle(ta), r = ta.getBoundingClientRect(), ci = ta.closest('[data-testid="stChatInput"]');
-            // per wrapper: rect height, then computed height|min|max and the inline style (v45 — the 13:10 video
-            // showed the wrappers at 13px with a 24px textarea inside; whose 13 is it?)
-            var ws = [], el = ta.parentElement;
-            while (el && el !== ci) {
-              var wc = getComputedStyle(el);
-              ws.push(Math.round(el.getBoundingClientRect().height) + '(' + wc.height + '|' + wc.minHeight + '|' + wc.maxHeight + '|' +
-                      (el.getAttribute('style') || '').replace(/ !important/g, '!').slice(0, 40) + ')');
-              el = el.parentElement;
-            }
-            d.textContent += tag + ' h' + Math.round(r.height) + 'y' + Math.round(r.top) + ' p' + c.paddingTop + '/' + c.paddingBottom +
-              ' lh' + c.lineHeight + ' ' + c.boxSizing.slice(0, 1) + ' st' + ta.scrollTop + ' sh' + ta.scrollHeight + '/' + ta.clientHeight +
-              ' w' + ws.join('/') + ' e' + (ci && ci.classList.contains('cai-empty') ? 1 : 0) +
-              ' f' + (document.fonts && document.fonts.check('16px Heebo') ? 1 : 0) +
-              ' in[' + (ta.getAttribute('style') || '').replace(/ !important/g, '!').slice(0, 70) + '] | ';
-          } catch (e) {}
-        };
         var lift = function () {
           if (gone) return; gone = true;
           slow.forEach(clearTimeout);
-          cdiag('L'); setTimeout(function () { cdiag('A'); }, 300);
-          setTimeout(function () { cdiag('B'); }, 700); setTimeout(function () { cdiag('C'); }, 1500);
           composerRemeasure();
           // The wait ring must NOT ride the curtain: it kept spinning during
           // the slide and lingered as a lone circle over the revealed home

@@ -363,7 +363,8 @@ def test_splash_shows_its_logo_from_the_first_paint():
     html = boot_shell._SPLASH_HTML
     assert '<div id="cai-boot-splash" dir="rtl">' in html
     assert "cai-veiled" not in html and "unveil" not in html
-    assert "__caiVP" not in html and "vpDiag" not in boot_shell._index_path().read_text(encoding="utf-8")
+    idx = boot_shell._index_path().read_text(encoding="utf-8")
+    assert "__caiVP" not in html and "vpDiag" not in idx and "cai-cdiag" not in idx, "diagnostic lines are temporary: v34-v35 vp, v44 composer"
     assert '<div class="id" role="img" aria-label="CommandAI"></div>' in html
     css = boot_shell._HEAD_TEMPLATE
     assert "cai-veiled" not in css
