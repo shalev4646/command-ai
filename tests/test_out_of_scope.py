@@ -77,6 +77,19 @@ MEASURED_NEWSRC = {
 }
 
 
+# 10.09.2026 — הסט האמיתי (adjudication_realstyle.json), שלא השתתף בכתיבת אף
+# משפחה, חשף שתי דלתות שגויות; שתיהן NO_SUCH_RULE מבורר, ושתיהן חייבות להישאר
+# בלי דלת ספציפית. q00158 נוספה כשומר: הרחבה שנשקלה לתיקון (`מעביר אות[יוה]`)
+# הייתה שולחת אותה אל קצין השלישות — „מעביר אותו ליום חפצי" הוא שינוי מעמד
+# רפואי, לא הצבה.
+MEASURED_REALSTYLE = {
+    "rs016": ("אמר שאני לא יכול לדבר עם חייל מיחידה אחרת. זה בסדר?", None),
+    "rs065": ("פחתו לי שקל מהמשכורת, מי בודק את זה?", None),
+    "q00158": ("לחייל שלי יש ניתוח מתוכנן ביום כ' ואחרי זה הוא יצטרך שבועות. "
+               "איך אני מעביר אותו ליום חפצי?", None),
+}
+
+
 # ⚠ 26.08: `None` in the tables above used to mean "family_of returns None".
 # The last-resort family (`unit_level_default`, added by the user's decision —
 # see tests/test_out_of_scope_default.py) means every question now lands
@@ -89,7 +102,8 @@ LAST_RESORT = "unit_level_default"
 
 
 def test_every_measured_question_lands_where_the_table_says():
-    for qid, (question, expected) in {**MEASURED, **MEASURED_NEWSRC}.items():
+    for qid, (question, expected) in {**MEASURED, **MEASURED_NEWSRC,
+                                      **MEASURED_REALSTYLE}.items():
         got = OS.family_of(question)
         want = LAST_RESORT if expected is None else expected
         assert got == want, f"{qid}: got {got!r}, expected {want!r}"
