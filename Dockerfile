@@ -71,4 +71,6 @@ ENTRYPOINT ["docker-entrypoint.sh"]
 # script state running->notRunning 2.0s with the watcher, 0.55s without, the
 # WebSocket silent for ~1.4s in between while the client sat idle. Nothing in
 # the container ever edits a file, so the watcher only costs.
-CMD ["streamlit", "run", "app.py", "--server.fileWatcherType", "none"]
+# Through run_server.py (2026-09-11): the heavy state warms from PROCESS
+# start instead of inside the first session — see run_server.py.
+CMD ["python", "run_server.py", "--server.fileWatcherType", "none"]

@@ -1564,3 +1564,72 @@ def warm_index() -> int:
     n = get_index_stats()["total_chunks"]
     warm_ef()
     return n
+
+
+# ── Process-start warm-up + keep-warm (2026-09-11) ────────────────────────
+# warm_index's promise ("at app startup, behind the health check") was only
+# ever kept by app.py's _startup_ingest — a cached call inside the FIRST
+# SESSION's script run. So after every process start (a deploy, or Fly moving
+# the machine: 10.09 14:49Z) the first person to open the app paid the whole
+# thing: Fly logged the HTTP health check failing for 15s at 20:56:56Z, the
+# exact second the pilot tapped the icon, and his launch took 43.7s; my own
+# warm-up session after the 21:17Z deploy tripped the same 15s failure at
+# 21:18:53Z. run_server.py now calls start_keep_warm() before Streamlit
+# starts, so the ONNX stack (~430MB), the index, the parsed corpus and the
+# suggestions are resident before the first WebSocket ever connects — and a
+# light probe every CAI_KEEP_WARM_SEC keeps them resident and turns any
+# regression into a logged duration instead of a user's launch time.
+_warm_state: dict = {"started": False, "done": False, "runs": 0, "last_ms": None, "error": None}
+_warm_lock = threading.Lock()
+
+
+def warm_all() -> dict:
+    """Everything the first session used to pay for, paid here. Idempotent:
+    every part is cached at module level, so app.py's _startup_ingest finds
+    it done. Never raises — a failing part is reported, the rest still runs."""
+    t = time.monotonic()
+    out: dict = {}
+    for name, fn in (("ingest", ensure_pdfs_ingested), ("index", warm_index),
+                     ("docs", load_documents), ("suggest", get_suggested_questions)):
+        t0 = time.monotonic()
+        try:
+            fn()
+            out[name] = round((time.monotonic() - t0) * 1000)
+        except Exception as e:  # noqa: BLE001 — a warm-up must never take the server down
+            out[name] = ("error: " + repr(e))[:160]
+    out["total_ms"] = round((time.monotonic() - t) * 1000)
+    return out
+
+
+def start_keep_warm(interval_sec: float = 600.0, delay_sec: float = 3.0) -> bool:
+    """Once per process: a daemon thread runs warm_all() after `delay_sec`
+    (the server binds its port first, so the platform health check sees a
+    listener), then every `interval_sec` (0 = never) embeds one short query
+    and re-checks the corpus scan — the two things a question touches first.
+    Returns False if the thread is already running."""
+    with _warm_lock:
+        if _warm_state["started"]:
+            return False
+        _warm_state["started"] = True
+
+    def _run() -> None:
+        time.sleep(max(0.0, delay_sec))
+        r = warm_all()
+        _warm_state.update(done=True, runs=1, last_ms=r.get("total_ms"))
+        print(f"[cai-warm] first warm: {r}", flush=True)
+        while interval_sec > 0:
+            time.sleep(interval_sec)
+            t0 = time.monotonic()
+            try:
+                from storage.vector_store import warm_ef
+                warm_ef()
+                load_documents()
+                ms = round((time.monotonic() - t0) * 1000)
+                _warm_state.update(last_ms=ms, runs=_warm_state["runs"] + 1)
+                if ms > 2000:
+                    print(f"[cai-warm] slow probe: {ms}ms", flush=True)
+            except Exception as e:  # noqa: BLE001
+                _warm_state["error"] = repr(e)[:200]
+
+    threading.Thread(target=_run, daemon=True, name="cai-keep-warm").start()
+    return True
