@@ -43,7 +43,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v46"
+_VERSION = "v47"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -465,6 +465,21 @@ _SPLASH_HTML = """
       // Deliberately NOT deferred to the boot script at the end of <body>:
       // that lives after the split and would not arrive until the hold is
       // already over — it could never report anything in time.
+      // LAUNCH RECORDER (v47): what the page saw at its first paint. lift()
+      // finishes the record into a localStorage ring (8) that the About
+      // screen prints — the way to learn where a cold launch's time goes
+      // (16:15 device video: the first launch of the day still shows one
+      // white-canvas frame at the dissolve, the warm ones do not) without
+      // asking for another video. sw = was a worker controlling this page
+      // from the start (a cache-held document) or not (streamed, no hold).
+      try {
+        var __L = window.__caiLaunch = { paint: Math.round(performance.now()),
+          sw: (navigator.serviceWorker && navigator.serviceWorker.controller) ? 1 : 0,
+          ih0: window.innerHeight, glass: (window.screen && screen.height) || 0, ih852: null };
+        window.addEventListener('resize', function () {
+          try { if (__L.ih852 === null && window.innerHeight >= __L.glass) __L.ih852 = Math.round(performance.now()); } catch (e) {}
+        });
+      } catch (e) {}
       (function () {
         try {
           var sw = navigator.serviceWorker;
@@ -704,6 +719,39 @@ _BOOT_JS = """
             // v44: the engine's guard pins the one-row geometry on every
             // frame for 2.5s from here (see COMPOSER GUARD in app.py)
             try { if (window.__caiPinBurst) window.__caiPinBurst(); } catch (e) {}
+            // v47: tell the engine to heal NOW (it attaches the guard + burst),
+            // and pin the empty composer here, every frame for 2.5s, without
+            // waiting for it — the 16:15 device video (launch 4 of 7) showed the
+            // capsule tall with the placeholder at its top for ~0.4s after the
+            // lift: the lift had landed between two heal() passes and
+            // __caiPinBurst did not exist yet.
+            try { window.dispatchEvent(new Event('cai-lift')); } catch (e) {}
+            (function () {
+              var end = performance.now() + 2500;
+              var PINS = [['height', '24px'], ['min-height', '0px'], ['max-height', '24px'], ['line-height', '24px'],
+                          ['padding-top', '0px'], ['padding-bottom', '0px'], ['overflow-y', 'hidden']];
+              var step = function () {
+                try {
+                  var t = document.querySelector('[data-testid="stChatInput"] textarea');
+                  if (t && t.value === '') {
+                    var r = t.getBoundingClientRect();
+                    if (r.height > 30 || r.height < 20 || t.scrollTop || t.scrollHeight > t.clientHeight + 1) {
+                      PINS.forEach(function (kv) { t.style.setProperty(kv[0], kv[1], 'important'); });
+                      t.scrollTop = 0;
+                    }
+                    var el = t.parentElement, top = t.closest('[data-testid="stChatInput"]');
+                    while (el && el !== top) {
+                      var h = el.getBoundingClientRect().height;
+                      if (h > 44) { el.style.setProperty('max-height', '44px', 'important'); el.style.setProperty('min-height', '0px', 'important'); }
+                      else if (h < 20) { el.style.setProperty('height', 'auto', 'important'); el.style.setProperty('min-height', '24px', 'important'); el.style.setProperty('max-height', '44px', 'important'); }
+                      el = el.parentElement;
+                    }
+                  }
+                } catch (e) {}
+                if (performance.now() < end) requestAnimationFrame(step);
+              };
+              requestAnimationFrame(step);
+            })();
             window.dispatchEvent(new Event('resize'));
             setTimeout(function () {
               try {
@@ -720,6 +768,23 @@ _BOOT_JS = """
         var lift = function () {
           if (gone) return; gone = true;
           slow.forEach(clearTimeout);
+          // finish the launch record (v47) — see the recorder in the painted script
+          try {
+            var L = window.__caiLaunch || {};
+            var nav = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || null;
+            var bs = document.getElementById('cai-boot');
+            var rec = { at: new Date().toISOString().slice(5, 16).replace('T', ' '),
+              ver: bs ? (bs.getAttribute('data-cai-ver') || '').slice(0, 3) : '',
+              sw: L.sw === undefined ? -1 : L.sw, paint: L.paint === undefined ? -1 : L.paint,
+              rs: nav ? Math.round(nav.responseStart) : -1, re: nav ? Math.round(nav.responseEnd) : -1,
+              ih0: L.ih0 === undefined ? -1 : L.ih0, ih852: L.ih852 === undefined ? null : L.ih852,
+              lift: Math.round(performance.now()) };
+            var key = 'cai-launch-log', arr = [];
+            try { arr = JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) { arr = []; }
+            if (!Array.isArray(arr)) arr = [];
+            arr.push(rec); while (arr.length > 8) arr.shift();
+            localStorage.setItem(key, JSON.stringify(arr));
+          } catch (e) {}
           composerRemeasure();
           // The wait ring must NOT ride the curtain: it kept spinning during
           // the slide and lingered as a lone circle over the revealed home

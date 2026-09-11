@@ -922,6 +922,19 @@ components.html(
                     ta.style.setProperty("min-height", "0px", "important");
                     ta.scrollTop = 0;
                 }
+                // launch log (v47): the About screen's placeholder, filled from
+                // the ring the shell's lift() writes (see LAUNCH RECORDER)
+                var ll = document.getElementById("cai-launchlog");
+                if (ll && !ll.__caiFilled) {
+                    ll.__caiFilled = true;
+                    try {
+                        var arr = JSON.parse(localStorage.getItem("cai-launch-log") || "[]");
+                        ll.textContent = arr.length ? arr.slice().reverse().map(function (r) {
+                            return r.at + " " + r.ver + " sw" + r.sw + " paint" + r.paint + " resp" + r.rs + "/" + r.re +
+                                   " ih" + r.ih0 + ">" + (r.ih852 === null ? "-" : r.ih852) + " lift" + r.lift;
+                        }).join("\n") : "אין עדיין רשומות";
+                    } catch (e) { ll.textContent = "-"; }
+                }
                 var sb = document.querySelector('[data-testid="stBottom"]');
                 if (sb) {
                     var r = sb.getBoundingClientRect();
@@ -984,6 +997,9 @@ components.html(
             setTimeout(nudge, 350);
             setTimeout(nudge, 1500);
             var iv = setInterval(heal, 600);
+            // v47: the shell announces the lift; heal at once so the composer
+            // guard attaches in the same frame instead of up to 600ms later
+            window.addEventListener("cai-lift", function () { try { heal(); } catch (e) {} });
             setTimeout(function () {
                 clearInterval(iv);
                 // permanent slow resync: a mid-session stuck state (--cai-vvh
@@ -7286,6 +7302,15 @@ def _settings_about():
         "<b>אנדרואיד:</b> בכרום — תפריט ⋮ ואז «הוספה למסך הבית».<br>"
         "האפליקציה תיפתח במסך מלא, עם אייקון CommandAI."
         "</div></div>", unsafe_allow_html=True)
+    # launch log (v47): the last 8 launches as the boot shell recorded them —
+    # SW-controlled?, first paint, response start/end, the 793->852 step, the
+    # lift — filled by the viewport engine from localStorage. Diagnostic, not
+    # product: it answers where a cold launch's time goes.
+    st.markdown("<div class='cai-set-seclabel'>אבחון פתיחות</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='cai-lang-card' style='padding:12px'><pre id='cai-launchlog' class='cai-tos-b' "
+        "style='direction:ltr;text-align:left;white-space:pre-wrap;font-size:11px;margin:0'>…</pre></div>",
+        unsafe_allow_html=True)
     st.markdown(
         "<div class='cai-set-foot'><div class='a'>מחשבון זכאויות · גרסה 2.4</div>"
         "<div class='b'>כלי עזר פרטי · אינו כלי רשמי של צה\"ל</div></div>", unsafe_allow_html=True)

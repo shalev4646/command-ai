@@ -129,7 +129,7 @@ def test_composer_is_remeasured_at_the_lift_and_in_heal():
     js = boot_shell._index_path().read_text(encoding="utf-8")
     assert js.count("composerRemeasure()") >= 2, "lift and reap must both re-measure"
     i = js.index("var composerRemeasure = function")
-    body = js[i:i + 1400]   # v44 added the pin-burst call and its comment ahead of the stale-height drop
+    body = js[i:i + 5200]   # v44 added the pin burst, v47 the lift-time pin loop, ahead of the stale-height drop
     assert "new Event('resize')" in body
     assert "ta.style.removeProperty('height')" in body
     assert "if (!ta || ta.value) return;" in body
@@ -329,6 +329,27 @@ def test_composer_guard_pins_the_whole_row_and_bursts_after_the_lift():
     js = boot_shell._index_path().read_text(encoding="utf-8")
     i = js.index("var composerRemeasure = function")
     assert "if (window.__caiPinBurst) window.__caiPinBurst();" in js[i:i + 900]
+
+
+def test_lift_pins_the_composer_itself_and_records_the_launch():
+    """16:15 device video (v46), launch 4 of 7: the capsule stood tall with the
+    placeholder at its top for ~0.4s after the lift — the engine's guard had
+    not attached yet. v47: the shell pins the empty composer at the lift and
+    every frame for 2.5s on its own, announces the lift so the engine heals at
+    once, and writes a launch record (sw/paint/response/852-step/lift) that
+    the About screen prints."""
+    js = boot_shell._index_path().read_text(encoding="utf-8")
+    i = js.index("var composerRemeasure = function")
+    body = js[i:i + 5200]
+    assert "window.dispatchEvent(new Event('cai-lift'))" in body
+    assert "var end = performance.now() + 2500;" in body and "requestAnimationFrame(step)" in body
+    assert "['overflow-y', 'hidden']" in body and "el.style.setProperty('min-height', '24px', 'important')" in body
+    assert "window.__caiLaunch = { paint: Math.round(performance.now())" in js
+    assert "localStorage.setItem(key, JSON.stringify(arr))" in js and "'cai-launch-log'" in js
+    app = (ROOT / "app.py").read_text(encoding="utf-8")
+    assert 'window.addEventListener("cai-lift", function () { try { heal(); } catch (e) {} });' in app
+    assert 'document.getElementById("cai-launchlog")' in app
+    assert "id='cai-launchlog'" in app
 
 
 def test_launch_image_carries_the_logo_again():
