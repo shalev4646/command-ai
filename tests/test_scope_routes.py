@@ -93,7 +93,10 @@ def test_out_of_scope_refusal_gets_the_routed_label():
 def test_missing_order_refusal_gets_its_own_label():
     body = f"{REFUSAL}\n\n{scope_routes.MARK_MISSING} מועדי הודעה מוקדמת על צו מילואים."
     chip, _ = _chip(body)
-    assert chip and "טרם במאגר" in chip
+    # 11.09: "טרם במאגר" promised an addition that mostly never comes; the
+    # chip now says what is true in every gap — the rule was not found
+    assert chip and "לא נמצא בפקודות" in chip
+    assert "טרם במאגר" not in chip
 
 
 def test_unmarked_refusal_still_falls_back_to_the_old_chip():

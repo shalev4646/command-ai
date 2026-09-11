@@ -7843,11 +7843,16 @@ def _verdict_chip(content: str) -> tuple[str | None, str]:
         # 12 of 16 unanswered asks had no order behind them at all, and about a
         # third of those no order will ever answer). The bare chip stays as the
         # fallback for an answer that skipped the marker.
+        # 11.09: the MISSING chip read "טרם במאגר" — a promise that the rule
+        # will be added. On the realstyle set most such gaps are matters no
+        # order will ever hold (unit routine), and the rest are retrieval
+        # misses on orders already held; neither is "not yet". "לא נמצא
+        # בפקודות" is true in every case and promises nothing.
         label = "לא נמצא במאגר"
         if _MARK_OOS in content:
             label = "לא נקבע בפקודות"
         elif _MARK_MISS in content:
-            label = "טרם במאגר"
+            label = "לא נמצא בפקודות"
         return (f'<div class="verdict-solo">'
                 f'<span class="verdict-chip verdict-none">ⓘ {label}</span></div>'), content
     return None, content
