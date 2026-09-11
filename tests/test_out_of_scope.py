@@ -87,6 +87,33 @@ MEASURED_REALSTYLE = {
     "rs065": ("פחתו לי שקל מהמשכורת, מי בודק את זה?", None),
     "q00158": ("לחייל שלי יש ניתוח מתוכנן ביום כ' ואחרי זה הוא יצטרך שבועות. "
                "איך אני מעביר אותו ליום חפצי?", None),
+    # 11.09 — NO_SUCH_RULE מבורר, הבוררות כתבה „נקבע ביחידה" על כל אחת
+    "rs044": ("כמה שעות מותר להיות בחוץ בערב?", "unit_routine"),
+    "rs056": ("מותר לי לצאת בשביל דברים אישיים אם אחזור עד הערב?", "unit_routine"),
+    "rs038": ("כמה זמן לפני הכניסה צריך להיות בחזרה?", "unit_routine"),
+    "rs011": ("אם מחרתיים יש מחוב, מותר לי ללכת היום בערב?", "unit_routine"),
+    "rs068": ("צריך לומר לשומר איפה אני הולך?", "unit_routine"),
+    # unit-level in the adjudication too, and deliberately NOT caught: no
+    # hours-or-movement signal in the phrasing, and a pattern cut to one
+    # question is the mirror trap the module warns about
+    "rs061": ("מי קובע מתי משדרים את ההתרעה בבוקר?", None),
+    "rs003": ("איך מדווחים שיש בעיה בתאורה בגדר בשעה 3 בלילה?", None),
+}
+
+# Questions an ORDER answers that sound like unit routine. Each is a measured
+# false positive of the 11.09 prototype or its nearest neighbour; the family
+# must stay silent on every one of them — a "your unit settles this" door on a
+# question פ"מ 33.0213 or פ"מ 35.0402 answers is worse than no door.
+UNIT_ROUTINE_NEGATIVES = {
+    "real013": "האם למפקד שלי מותר להעיר אותי בשלוש בבוקר לבצע משימה של 20 דקות ולחזור לישון?",
+    "real014": "מותר למפקד שלי להעיר אותי ב2 בלילה לעשות מסדר?",
+    "q00115": "מצב חירום בבית - הורה חולה ודחוף, כמה זמן אני יכול להיות בחוץ בלי לחזור למחנה?",
+    "rs059": "מי אני צריך לבדוק איתו לפני שאני יוצא?",
+    "q00008": "אני משתחרר בעוד חודש, מה אני צריך לבקש מהמחלקה האדמיניסטרטיבית לפני שאני יוצא?",
+    "rs045": "כמה שעות שינה מגיעות לי בלילה כשיש שמירה?",
+    # the guard is anchored: a leave word ANYWHERE in the question silences
+    # the family, not only before the match
+    "guard": "לפני החופשה כמה שעות מותר להיות בחוץ בערב?",
 }
 
 
@@ -206,6 +233,48 @@ def test_evidence_and_families_stay_in_step():
         assert ids, name
         for qid in ids:
             assert qid not in OS._UNMATCHED, f"{qid} is claimed by {name} and unmatched"
+
+
+def test_unit_routine_stays_silent_where_an_order_answers():
+    for qid, q in UNIT_ROUTINE_NEGATIVES.items():
+        assert OS.family_of(q) != "unit_routine", (qid, q)
+
+
+def test_unit_routine_never_claims_a_question_the_arms_answered():
+    """דיוק לפני כיסוי, על הנתונים השמורים: כל שאלה שדורגה כנענתה (חלק אחד
+    לפחות) בזרועות שבריפו — ולא בוררה NO_SUCH_RULE — המשפחה שותקת עליה.
+    11.09: 0 תפיסות על 256 כאלה; הבדיקה מחזיקה את זה כשהדפוס יורחב."""
+    import json
+    out = Path(__file__).resolve().parents[1] / "night" / "out"
+    no_rule = set()
+    for name in ("adjudication_pilot150.json", "adjudication_realstyle.json"):
+        p = out / name
+        if p.exists():
+            no_rule |= {r["question"].strip() for r in json.loads(p.read_text(encoding="utf-8"))
+                        if r.get("verdict") == "NO_SUCH_RULE"}
+    checked = 0
+    for name in ("grades_grade-second4.jsonl", "grades_pilot150.jsonl", "grades_real24.jsonl"):
+        p = out / name
+        if not p.exists():
+            continue
+        for line in p.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            r = json.loads(line)
+            q = (r.get("clean_q") or r.get("q") or "").strip()
+            if not q or q in no_rule or not int((r.get("grade") or {}).get("answered_parts") or 0):
+                continue
+            checked += 1
+            assert OS.family_of(q) != "unit_routine", (r.get("id"), q[:80])
+    assert checked >= 80, f"only {checked} answered questions on disk — the guard has nothing to hold"
+
+
+def test_unit_routine_cites_the_orders_that_delegate_and_rules_nothing():
+    d = OS.destination_for(MEASURED_REALSTYLE["rs044"][0])
+    assert d and d["label"].startswith("נקבע ביחידה שלך")
+    for cite in ("33.0401", "33.0202", "61.0104", "פקודות הקבע של היחידה"):
+        assert cite in d["why"], cite
+    assert "35.0822" in d["where"] and "33.0336" in d["where"]
 
 
 def test_unmatched_ids_reach_no_specific_family():
