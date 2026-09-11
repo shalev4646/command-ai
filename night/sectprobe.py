@@ -21,6 +21,14 @@ word verbatim run of one (checked against 42/62 targets whose curated clauses
 carry such a run — a verbatim run is copied text, so this cannot be gamed by
 the same similarity machinery the treatments tune).
 
+The window is the production window PLUS the free extensions the environment
+turns on (RETRIEVE_FULL_BLOCKS, RETRIEVE_V2, RETRIEVE_QUANTITY_CLAUSES) —
+that is what the model reads, and "the clause reaches the window" must be
+judged on it. The paid extensions never run here: the hypothetical is forced
+off for the run and the router seats get an empty shortlist. With every flag
+at its code default the window is the bare ranking, as before 2026-09-11, so
+paired runs stay paired: same env on both sides except the flag under test.
+
 Reported per run, all free (route=set(), no HyDE, no API):
   doc-in-window   the answering ORDER made the served window
   sect-in-window  answering CONTENT made the served window (rule above)
@@ -112,11 +120,22 @@ def _global_ranking(question: str, role: str) -> list[dict]:
                        boost_docs=set())
 
 
+def _free_window(question: str, role: str) -> list[dict]:
+    """The ranking plus the free extensions only — see the module docstring."""
+    win = backend.retrieve_for_role(question, role, route=set(), widen=False)
+    hyde = backend.RETRIEVE_HYDE
+    backend.RETRIEVE_HYDE = False
+    try:
+        return backend.widen_context(win, question, role, route=set())
+    finally:
+        backend.RETRIEVE_HYDE = hyde
+
+
 def run(out_path: Path | None = None) -> dict:
     ts = targets()
     per = []
     for t in ts:
-        win = backend.retrieve_for_role(t["q"], t["role"], route=set(), widen=False)
+        win = _free_window(t["q"], t["role"])
         win_docs = {c["doc_id"] for c in win}
         served = [_norm(c["text"]) for c in win if c["doc_id"] == t["doc_id"]]
         sect = any(q in s for q in t["quotes"] for s in served) or \

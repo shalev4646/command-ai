@@ -15,6 +15,7 @@ from common import ROLES, safe_print
 from metadata_overrides import apply_overrides
 from storage.vector_store import retrieve
 from storage import glossary as _glossary
+from storage import clause_index as _ci
 
 load_dotenv(Path(__file__).parent / ".env")
 
@@ -257,6 +258,45 @@ RETRIEVE_SECOND_PASS_KEEP_RULING = int(os.environ.get("RETRIEVE_SECOND_PASS_KEEP
 # words, and it cannot move a ranking — it only appends, so the retrieval gate
 # is untouched by construction.
 RETRIEVE_QUANTITY_CLAUSES = int(os.environ.get("RETRIEVE_QUANTITY_CLAUSES", "0"))
+
+# ── The clause-title path (RETRIEVE_V2) — night/PLAN_ROUND4.md, שלב 1 ────────
+# Production ranks 10,324 chunks by how much each SOUNDS like the question, and
+# a soldier does not talk like an order. Measured on the adjudicated targets:
+# the answering ORDER reaches the window three times more often than the
+# answering CLAUSE (18/59 vs 5/59, 2026-08-28), and 11 of the 45 realstyle
+# zeros (2026-09-10) are "the order sat at seat 2-5, its answering clause was
+# never served". Two ideas, one flag:
+#
+#   1.1  Match the question to QUESTIONS. Every curated clause carries a
+#        question-shaped title the curator wrote in soldier language
+#        ("אילו תכשיטים מותר לענוד עם מדים?"), and 1,379 anchor questions are
+#        attributed to a clause. storage/clause_index.py scores the question
+#        against those (character 4-grams, IDF — the night/why_default
+#        instrument) and returns clause-level evidence.
+#   1.2  Serve the ORDER, not fragments. For the RETRIEVE_V2 best orders the
+#        whole curated block is appended; a block over RETRIEVE_V2_BLOCK_WORDS
+#        (PM-33.0302 is 7,117 words) is reduced to its RETRIEVE_V2_TOP_K
+#        clauses by the same evidence, in block order. "Right order, wrong
+#        clause" cannot happen to an order served whole.
+#
+# The router's shortlist, when the caller has one, adds RETRIEVE_V2_ROUTE_BONUS
+# to an order's score — a hint on the index's own scale, never a scope, the
+# same rule as _ROUTE_BOOST. Appended after the window and the full-blocks
+# extension, deduplicated, never reordered: OFF is byte-identical to before.
+#
+# Free pre-screen (night/titleprobe.py, 2026-09-11, the 83 adjudicated targets,
+# no router, no embedding): the index's top-2 orders hold the answering order
+# in 20/83 — fewer than the production window's 31/83 — and serve the
+# answering CLAUSE in 16 of the 53 whose clause is known, against the
+# embedding window's historical 5/59. Complementary, not a replacement: that
+# is why this is an appended extension. Price: ~930 words a question at
+# RETRIEVE_V2=2. Value = how many orders' blocks to serve. OFF until the paired
+# measurement of the ANSWERS (night/PLAN_ROUND4.md 1.b, 1.c) says otherwise —
+# the rule every knob here ships under.
+RETRIEVE_V2 = int(os.environ.get("RETRIEVE_V2", "0"))
+RETRIEVE_V2_BLOCK_WORDS = int(os.environ.get("RETRIEVE_V2_BLOCK_WORDS", "600"))
+RETRIEVE_V2_TOP_K = int(os.environ.get("RETRIEVE_V2_TOP_K", "6"))
+RETRIEVE_V2_ROUTE_BONUS = float(os.environ.get("RETRIEVE_V2_ROUTE_BONUS", "0.05"))
 
 # "How much / how many / what is the maximum" — the demand, not the topic.
 # Deliberately narrow: "כמה" alone would fire on "כמה שיותר מהר" and on any
@@ -977,15 +1017,93 @@ def second_answer_regressed(first: str, second: str) -> bool:
 
 
 
+# ── The clause-title path (RETRIEVE_V2) ──────────────────────────────────────
+_v2_index: tuple[tuple, "_ci.ClauseIndex"] | None = None
+_v2_lock = threading.Lock()
+
+
+def _clause_index() -> "_ci.ClauseIndex":
+    """The clause-title index over the loaded corpus. Built once (~1s for 287
+    orders, 6,600 units) and rebuilt when the corpus changes: the key is the
+    json_store stamp load_documents scans by, plus the identity of the list it
+    handed back, so a test that stubs load_documents gets an index over its
+    own documents."""
+    global _v2_index
+    docs = load_documents()
+    key = (_docs_cache[0] if _docs_cache else None, id(docs), len(docs))
+    if _v2_index is None or _v2_index[0] != key:
+        with _v2_lock:
+            if _v2_index is None or _v2_index[0] != key:
+                _v2_index = (key, _ci.ClauseIndex(docs))
+    return _v2_index[1]
+
+
+def v2_block_chunks(doc: dict, clause_scores: dict, block_words: int | None = None,
+                    top_k: int | None = None) -> list[dict]:
+    """שלב 1.2 — the order's curated block, as chunks shaped like the index's
+    own. Whole when it fits `block_words`; otherwise the `top_k` clauses the
+    clause-title index scored for this question, in BLOCK order — the reading
+    order the curator wrote, not the score order. A clause with no evidence at
+    all is never served from an oversized block: the block was chosen for the
+    order, the clause must earn its own seat."""
+    block = _full_block(doc)
+    limit = RETRIEVE_V2_BLOCK_WORDS if block_words is None else block_words
+    k = RETRIEVE_V2_TOP_K if top_k is None else top_k
+    if sum(len(c["text"].split()) for c in block) <= limit:
+        return block
+    scored = [(clause_scores.get((c["section"], c["clause"]), 0.0), i, c)
+              for i, c in enumerate(block)]
+    top = sorted((x for x in scored if x[0] > 0), key=lambda x: -x[0])[:max(0, k)]
+    top.sort(key=lambda x: x[1])
+    return [c for _, _, c in top]
+
+
+def extend_with_clause_index(chunks: list[dict], question: str, role: str,
+                             route: set[str] | None = None) -> list[dict]:
+    """שלב 1.1 + 1.2: the blocks of the RETRIEVE_V2 orders the clause-title
+    index ranks best for the question (router shortlist as a bonus), appended
+    after everything already in the window and deduplicated against it. Reads
+    the role's curated orders only — the same scope as ranking
+    (RETRIEVE_CURATED_ONLY), so no order enters through this door that the
+    window could not have served. Appends, never reorders."""
+    if RETRIEVE_V2 <= 0 or not (question or "").strip():
+        return chunks
+    docs = _docs_for_role(role)
+    if RETRIEVE_CURATED_ONLY:
+        docs = [d for d in docs if _has_key_facts(d)]
+    by_id = {d["document_id"]: d for d in docs if d.get("document_id")}
+    if not by_id:
+        return chunks
+    hits = _clause_index().rank(question, doc_ids=by_id.keys())
+    scores = {d: s for s, d in hits.docs}
+    if route and RETRIEVE_V2_ROUTE_BONUS > 0:
+        for d in route:
+            if d in by_id:
+                scores[d] = scores.get(d, 0.0) + RETRIEVE_V2_ROUTE_BONUS
+    if not scores:
+        return chunks
+    picks: list[dict] = []
+    for d in sorted(scores, key=lambda x: -scores[x])[:RETRIEVE_V2]:
+        cl = hits.clause_scores(d)
+        for c in v2_block_chunks(by_id[d], cl):
+            c = dict(c)
+            c["score"] = round(cl.get((c["section"], c["clause"]), 0.0), 3)
+            picks.append(c)
+    return _append_new(chunks, picks, None)
+
+
+
 def widen_context(chunks: list[dict], question: str, role: str,
                   route: set[str] | None) -> list[dict]:
-    """The four appended extensions, in the order they were measured to
-    stack: hypothetical, router seats, full blocks, amount-bearing clauses.
-    Each is a no-op when its flag is off, so production with all flags off is
-    byte-identical to the pre-extension pipeline."""
+    """The five appended extensions, in the order they were measured to
+    stack: hypothetical, router seats, full blocks, the clause-title path
+    (RETRIEVE_V2), amount-bearing clauses. Each is a no-op when its flag is
+    off, so production with all flags off is byte-identical to the
+    pre-extension pipeline."""
     out = extend_with_hypothetical(chunks, question, role, route)
     out = extend_with_router_slots(out, question, role, route)
     out = extend_with_full_blocks(out, role)
+    out = extend_with_clause_index(out, question, role, route)
     return extend_with_quantity_clauses(out, question, role)
 
 
