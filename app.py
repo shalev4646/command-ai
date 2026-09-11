@@ -7236,7 +7236,23 @@ def handle_question(question: str):
 
                     acc2: list[str] = []
                     text2 = _stream_answer(_swap(result2[0]), acc2, think=stage2)
-                    if text2.strip():
+                    if (text2.strip() and backend.RETRIEVE_SECOND_PASS_KEEP_RULING > 0
+                            and backend.second_answer_regressed(text, text2)):
+                        # the retry came back as a refusal while the first
+                        # answer carried a grounded ruling (realstyle arm,
+                        # 2026-09-10: rs063, rs071, rs009). Keep the first —
+                        # on screen, in history, with its own sources and
+                        # sent-content. Both calls were paid, so the retry's
+                        # usage is summed onto the kept result.
+                        stage2.empty()
+                        with first_paint.container():
+                            st.markdown(text)
+                        u2 = result2[3] if len(result2) > 3 else {}
+                        if len(result) > 3 and isinstance(u2, dict):
+                            for k, v in u2.items():
+                                if isinstance(v, (int, float)) and not isinstance(v, bool):
+                                    result[3][k] = result[3].get(k, 0) + v
+                    elif text2.strip():
                         # the kept answer is the second one — exactly what the
                         # measurement graded. Its sources and sent-content go
                         # with it (history must replay the content that

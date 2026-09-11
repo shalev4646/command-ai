@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import re
 import threading
@@ -209,6 +210,30 @@ HYDE_EXTRA_CHUNKS = int(os.environ.get("HYDE_EXTRA_CHUNKS", "1"))
 # Both default OFF until the paired re-measure says the ANSWERS move.
 RETRIEVE_ROUTER_SLOTS = int(os.environ.get("RETRIEVE_ROUTER_SLOTS", "0"))
 RETRIEVE_FULL_BLOCKS = int(os.environ.get("RETRIEVE_FULL_BLOCKS", "0"))
+
+# The second pass's own clause finder. RETRIEVE_SECOND_PASS retrieves on the
+# answer's lack statement with the same embedding that missed the clause the
+# first time. On the realstyle set (adjudicated 2026-09-10) 11 of 45 zeros had
+# the answering ORDER in the window and its answering CLAUSE not — the order
+# sat at seat 2-5 and only its question-shaped chunks were served — and the
+# embedding retry left the clause out again. Scored free against those windows
+# (plus the two block-depth cases): character 4-grams of the lack statement,
+# the night/why_default instrument (AUC 0.758 on its calibration set), rank
+# the answering clause FIRST among the curated clauses of the orders already
+# in the window in 7 of 13, and top-3 in 9 of 13. So when the answer says what
+# it lacked, append the K best-matching curated clauses of the orders it
+# already had. Deterministic, no model call, ~50-100 words a clause, and it
+# only appends — the ranking is untouched. Value = K. OFF until a paired
+# re-measure says the ANSWERS move, same rule as every extension here.
+RETRIEVE_LACK_CLAUSES = int(os.environ.get("RETRIEVE_LACK_CLAUSES", "0"))
+
+# When the retry comes back as a refusal while the first answer carried a
+# ruling, keep the first. On the realstyle arm (2026-09-10) the second answer
+# replaced a grounded ruling with "המידע לא קיים" three times in 72 — rs063
+# "אסור בשעת זמן אישי" (21.0113 §§7-8, 14-18 were in BOTH windows), rs071
+# "מותר בתנאים" (33.0220 §§7-8), rs009 — and the grader scored the refusal.
+# A refusal never carries what the first answer had. OFF until measured.
+RETRIEVE_SECOND_PASS_KEEP_RULING = int(os.environ.get("RETRIEVE_SECOND_PASS_KEEP_RULING", "0"))
 
 # The ceiling clause, for questions that ask for a ceiling.
 #
@@ -834,6 +859,124 @@ def extend_with_quantity_clauses(chunks: list[dict], question: str,
     return _append_new(chunks, picks, RETRIEVE_QUANTITY_CLAUSES)
 
 
+# ── The second pass's clause finder (RETRIEVE_LACK_CLAUSES) ──────────────────
+# Character 4-grams over Hebrew letters and spaces, IDF-weighted — the same
+# weighting as night/why_default.py, whose calibration is the reason this
+# exists; tests/test_lack_clauses.py keeps the two normalisations in step.
+_LACK_NGRAM = 4
+_LACK_MIN_IDF = 0.01
+_LACK_MIN_GRAMS = 8
+_LACK_HEB = re.compile(r"[^֐-׿ ]+")
+_lack_idf: tuple[dict, float] | None = None
+_lack_lock = threading.Lock()
+
+
+def _lack_grams(text: str) -> frozenset:
+    t = re.sub(r"\s+", " ", _LACK_HEB.sub(" ", text or "")).strip()
+    return frozenset(t[i:i + _LACK_NGRAM] for i in range(len(t) - _LACK_NGRAM + 1))
+
+
+def _lack_index() -> tuple[dict, float]:
+    """IDF of every 4-gram over the curated clauses of the whole corpus. Built
+    once per process, lazily — the second pass is the only reader."""
+    global _lack_idf
+    if _lack_idf is None:
+        with _lack_lock:
+            if _lack_idf is None:
+                df: dict[str, int] = {}
+                n = 0
+                for d in load_documents():
+                    for cl in _full_block(d):
+                        g = _lack_grams(cl["text"].split("\n", 1)[-1])
+                        if len(g) < _LACK_MIN_GRAMS:
+                            continue
+                        n += 1
+                        for x in g:
+                            df[x] = df.get(x, 0) + 1
+                total = float(n) or 1.0
+                _lack_idf = ({k: max(_LACK_MIN_IDF, math.log(total / (1 + v)))
+                              for k, v in df.items()}, total)
+    return _lack_idf
+
+
+def lack_clause_scores(lacked: str, docs: list[dict]) -> list[tuple[float, dict]]:
+    """Every curated clause of `docs`, scored against the lack statement,
+    best first. Pure: the caller decides how many to serve."""
+    q = _lack_grams(lacked)
+    if not q:
+        return []
+    idf, n = _lack_index()
+    default = math.log(n)
+    qw = {g: idf.get(g, default) for g in q}
+    nq = math.sqrt(sum(v * v for v in qw.values())) or 1.0
+    scored: list[tuple[float, dict]] = []
+    for doc in docs:
+        for cl in _full_block(doc):
+            g = _lack_grams(cl["text"].split("\n", 1)[-1])
+            inter = q & g
+            if not inter:
+                continue
+            s = sum(qw[x] for x in inter) / (nq * math.sqrt(len(g)))
+            if s > 0:
+                scored.append((s, cl))
+    scored.sort(key=lambda x: -x[0])
+    return scored
+
+
+def extend_with_lack_clauses(chunks: list[dict], lacked: str, role: str,
+                             first_window: list[dict] | None = None) -> list[dict]:
+    """For the second pass: the curated clauses of the orders ALREADY in the
+    window that best match the answer's own statement of what it lacked,
+    appended. Reads the FIRST window — that is where the answering order sat
+    in 11 of 45 realstyle zeros, and the reserved-seat swap may just have
+    dropped it. Only orders that already earned a seat are read: this buys
+    the clause the ranking missed inside an order it chose, never an order
+    it rejected. Appends, never reorders."""
+    if RETRIEVE_LACK_CLAUSES <= 0 or not lacked or not chunks:
+        return chunks
+    order: list[str] = []
+    for c in (first_window if first_window is not None else chunks):
+        if c["doc_id"] not in order:
+            order.append(c["doc_id"])
+    by_id = {d["document_id"]: d for d in _docs_for_role(role) if d.get("document_id")}
+    docs = [by_id[d] for d in order if d in by_id]
+    picks = []
+    for s, cl in lack_clause_scores(lacked, docs):
+        cl = dict(cl)
+        cl["score"] = s
+        picks.append(cl)
+    return _append_new(chunks, picks, RETRIEVE_LACK_CLAUSES)
+
+
+# ── The second pass's regression guard (RETRIEVE_SECOND_PASS_KEEP_RULING) ────
+_RULING_LINE = re.compile(r"\*\*פסיקה:\*\*\s*([^\n]*)")
+_REFUSAL_OPENERS = ("המידע לא קיים", "לא נמצא", "לא קיים")
+
+
+def _opening_claim(text: str) -> str:
+    """The answer's first substantive words — past leading markup and a
+    `פסיקה:` / `תשובה:` label. What a reader sees first."""
+    t = (text or "").strip()
+    t = re.sub(r"^[\s*#_>]+", "", t)
+    t = re.sub(r"^(?:פסיקה|תשובה)\s*:\s*\**\s*", "", t)
+    return t.strip("* \n")
+
+
+def second_answer_regressed(first: str, second: str) -> bool:
+    """True when the retry is a refusal and the first answer carried a ruling
+    that was not one. A refusal never carries what the first answer had; the
+    only thing it adds is a gap line, and the first answer already has one —
+    that is what bought the retry."""
+    m = _RULING_LINE.search(first or "")
+    if not m:
+        return False
+    ruling = m.group(1).strip("* ")
+    if not ruling or ruling.startswith(_REFUSAL_OPENERS):
+        return False
+    return _opening_claim(second).startswith(_REFUSAL_OPENERS)
+
+
+
 def widen_context(chunks: list[dict], question: str, role: str,
                   route: set[str] | None) -> list[dict]:
     """The four appended extensions, in the order they were measured to
@@ -1373,6 +1516,7 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
     if RETRIEVE_SECOND_PASS > 0 and first_answer:
         lacked = lacked_from(first_answer)
         if lacked:
+            first_window = list(chunks)
             seen = {(c["doc_id"], c.get("section"), c.get("clause")) for c in chunks}
             extra = [
                 c for c in retrieve_for_role(lacked, role, route=route, widen=False)
@@ -1385,6 +1529,11 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
                 # that was already working.
                 keep = min(RETRIEVE_SECOND_PASS, max(0, MAX_CONTEXT_CHUNKS - 2))
                 chunks = chunks[:MAX_CONTEXT_CHUNKS - keep] + extra[:keep]
+            # the clause finder reads the FIRST window (see
+            # extend_with_lack_clauses): the answering order was already there
+            # in 11 of 45 realstyle zeros, and the swap above may have dropped
+            # it. No-op while RETRIEVE_LACK_CLAUSES is 0.
+            chunks = extend_with_lack_clauses(chunks, lacked, role, first_window=first_window)
 
     # after the union, never inside it: the union truncates to
     # MAX_CONTEXT_CHUNKS and would drop an appended chunk that was paid for

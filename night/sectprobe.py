@@ -8,8 +8,9 @@ future treatment is judged by the same ruler. The absolute level is not
 comparable to the historical 5/59 (that script's exact hit criterion was lost
 with it); PAIRED deltas on this instrument are the currency.
 
-Targets: the pilot-150 arbitration rows whose verdict says the corpus answers
-and that carry quotes verified verbatim in raw_text.
+Targets: the arbitration rows (pilot-150 and, since 2026-09-10, the realstyle
+set) whose verdict says the corpus answers and that carry quotes verified
+verbatim in raw_text.
 
 The section hit is judged on CONTENT, not chunk identity: the fold merges the
 winning document's key-facts clauses into the lead chunk's text, so answering
@@ -44,7 +45,9 @@ import storage.vector_store as vs
 from common import safe_print
 from night import config as C
 
-ADJ = C.OUT / "adjudication_pilot150.json"
+# pilot-150 (2026-08-25) and the realstyle set (2026-09-10) — both carry
+# regex-located verbatim quotes; a file that is not on disk is skipped
+ADJ = (C.OUT / "adjudication_pilot150.json", C.OUT / "adjudication_realstyle.json")
 RANK_POOL = 200   # global ranking depth for the rank diagnostics
 
 
@@ -66,7 +69,10 @@ def _runs(q: str, k: int = 6) -> list[str]:
 
 def targets() -> list[dict]:
     """Arbitration rows the corpus can answer, with their answering evidence."""
-    rows = json.loads(ADJ.read_text(encoding="utf-8"))
+    rows: list[dict] = []
+    for path in ADJ:
+        if path.exists():
+            rows.extend(json.loads(path.read_text(encoding="utf-8")))
     by_doc: dict[str, list[dict]] = {}
     for c in vs._get_corpus():
         by_doc.setdefault(c["doc_id"], []).append(c)
