@@ -84,7 +84,10 @@ MEASURED_NEWSRC = {
 # רפואי, לא הצבה.
 MEASURED_REALSTYLE = {
     "rs016": ("אמר שאני לא יכול לדבר עם חייל מיחידה אחרת. זה בסדר?", None),
-    "rs065": ("פחתו לי שקל מהמשכורת, מי בודק את זה?", None),
+    # 10.09 this was pinned to None: the only door that reached it then was the
+    # reserve-money one, and that was wrong. 12.09 pay_slip's pattern reaches
+    # it and names the right desk (ת"ש ושלישות מול מרכז התשלומים).
+    "rs065": ("פחתו לי שקל מהמשכורת, מי בודק את זה?", "pay_slip"),
     "q00158": ("לחייל שלי יש ניתוח מתוכנן ביום כ' ואחרי זה הוא יצטרך שבועות. "
                "איך אני מעביר אותו ליום חפצי?", None),
     # 11.09 — NO_SUCH_RULE מבורר, הבוררות כתבה „נקבע ביחידה" על כל אחת
@@ -98,6 +101,40 @@ MEASURED_REALSTYLE = {
     # question is the mirror trap the module warns about
     "rs061": ("מי קובע מתי משדרים את ההתרעה בבוקר?", None),
     "rs003": ("איך מדווחים שיש בעיה בתאורה בגדר בשעה 3 בלילה?", None),
+    # 12.09 — שלב 3.2: the silences with an address, all adjudicated
+    "rs043": ("כמה כסף אני אמור לשלוח הביתה?", "family_support_pay"),
+    "rs047": ("למה לא קיבלתי את התוספת של החודש הזה?", "pay_slip"),
+    "rs027": ("האם אפשר לבקש השמטה מהמסדר הסיום?", "training_framework"),
+    "rs022": ("אפשר לבקש כסף עבור ביגוד שקרע?", "quartermaster_issue"),
+    "rs041": ("כמה ימים חופש חולים מגיע לי על שפעת?", "medical_scope"),
+    "rs004": ("אם אני בבסיס איך אני מתקשר עם המשפחה?", "unit_routine"),
+    # still deliberately without a door: reserve money without a reserve word
+    # in the question (rs049) and a civilian school matter (rs053) — the only
+    # patterns that reach them are cut to the one question, the mirror trap
+    "rs049": ("מגיע לי כסף על שעות נוספות או לא?", None),
+    "rs053": ("מותר לי להוציא את הבן שלי מבית ספר לביקור?", None),
+}
+
+# pilot-150 rows (2026-08-25 adjudication) that 12.09 gave a door
+MEASURED_PILOT150 = {
+    "q00071": ("אמרו לי שחייב להשלים קורס רכיבה אבל אני לא רוצה. יש מישהו שאני יכול "
+               "לבקש ממנו להוציא אותי מזה?", "training_framework"),
+    "q00028": ("כמה זמן מינימום צריך להישאר ביחידה שלך לפני שמעבירים אותך לשום מקום?",
+               "placement_transfer"),
+    "q00062": ("קרה לי סיטואציה שחייל שלי מחזיק במסמכים שלו אצלו כי הוא עובר יחידה - "
+               "זה בסדר? למי צריך לחזור?", "placement_transfer"),
+}
+
+# Answered questions that sit next to the 12.09 patterns: each names the door
+# it must NOT get. An order answers every one of them (adjudicated or graded),
+# so a door there is a wrong door.
+NEAR_MISSES = {
+    "q00200": ("שלוש שנים שלא קיבלתי תוספת סיום כמו שאמרו לי בגיוס, זה מגיע לי או לא?", "pay_slip"),
+    "q00318": ("הצעתי לכאבים בשיניים והשלחו אותי לרופא. האם זה יוצא מהמשכורת שלי או הצבא משלם?", "pay_slip"),
+    "q00139": ("המפקד שלי אמר שאני לא זכאי לימי מחלה בחודשיים הסיום שלי. זה לא נכון בטח?", "medical_scope"),
+    "q00122": ("בן שלי התאונן וצריך להוציא אותו מבית הספר. האם זה נחשב חירום מספיק כדי לצאת?", "family_support_pay"),
+    "q00102": ("מה כוללת חבילת השחרור? ביטוח, כסף, קורסים?", "training_framework"),
+    "dress": ("מותר ללבוש ביגוד אזרחי בדרך הביתה מהבסיס?", "quartermaster_issue"),
 }
 
 # Questions an ORDER answers that sound like unit routine. Each is a measured
@@ -130,7 +167,7 @@ LAST_RESORT = "unit_level_default"
 
 def test_every_measured_question_lands_where_the_table_says():
     for qid, (question, expected) in {**MEASURED, **MEASURED_NEWSRC,
-                                      **MEASURED_REALSTYLE}.items():
+                                      **MEASURED_REALSTYLE, **MEASURED_PILOT150}.items():
         got = OS.family_of(question)
         want = LAST_RESORT if expected is None else expected
         assert got == want, f"{qid}: got {got!r}, expected {want!r}"
@@ -203,6 +240,8 @@ def test_curated_kol_zchut_links_cover_the_measured_families():
         ("lone_soldier_aid", "מענקי_מזון_לחיילים_בודדים"),
         ("reserve_pay", "תשלום_עבור_שירות_מילואים"),
         ("family_distress", 'תשמ"ש'),
+        ("family_support_pay", 'תשמ"ש'),
+        ("unit_routine", "פנייה_לנציב_קבילות_החיילים"),
         ("unit_level_default", "פנייה_לנציב_קבילות_החיילים"),
     ]:
         link = by_name[family]["link"]
@@ -233,6 +272,17 @@ def test_evidence_and_families_stay_in_step():
         assert ids, name
         for qid in ids:
             assert qid not in OS._UNMATCHED, f"{qid} is claimed by {name} and unmatched"
+
+
+def test_the_new_doors_stay_off_their_answered_neighbours():
+    for qid, (q, door) in NEAR_MISSES.items():
+        assert OS.family_of(q) != door, (qid, OS.family_of(q))
+
+
+def test_family_support_pay_cites_the_family_payments_order():
+    d = OS.destination_for(MEASURED_REALSTYLE["rs043"][0])
+    assert d and "35.0210" in d["where"] and "35.0210" in d["why"]
+    assert d["link"] and 'תשמ"ש' in d["link"][1]
 
 
 def test_unit_routine_stays_silent_where_an_order_answers():
