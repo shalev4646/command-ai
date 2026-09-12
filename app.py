@@ -338,6 +338,12 @@ st.session_state.setdefault("profile_name", str(_ck.get("name") or "")[:40])
 # name_asked: the one-time name prompt (gate) was answered or skipped — never
 # nag again on this device, on any later role switch
 st.session_state.setdefault("name_asked", bool(_ck.get("asked")))
+# consent_given: Apple 5.1.2(i) wants explicit, informed agreement BEFORE a
+# user's content reaches a third party, and every question in this app is sent
+# to Anthropic. It rides the device cookie exactly like the role and the name,
+# so it is asked once per install and never again -- and, like them, a wipe
+# clears it and the screen comes back.
+st.session_state.setdefault("consent_given", bool(_ck.get("ok")))
 # role_picked_here: the role was chosen by a TAP in THIS session, not restored
 # from the device cookie. The name gate is a first-run prompt that belongs after
 # that tap — a remembered device (role in the cookie, name never answered) used
@@ -1144,17 +1150,16 @@ components.html(
             document.addEventListener("click", function (e) {
                 try {
                     if (!e.target || !e.target.closest) return;
-                    // name-gate continue/skip always leads to the chat screen
-                    // (the only buttons inside the gate card are the two submits;
-                    // keyed forms carry no st-key class in 1.58)
-                    if (e.target.closest(".st-key-cai_name_card button")) { veil(); return; }
-                    // a role tap veils ONLY when it goes straight to the chat;
-                    // on a first visit (#cai-gate-pending) it opens the name
-                    // gate, which has no .cai-header — the veil would hang
-                    // opaque until its 4s timeout
+                    // The welcome card's continue/skip lead to the ROLE screen,
+                    // which has no .cai-header — and the veil lifts on that
+                    // header. Veiling here left the screen blank until the 4s
+                    // timeout (2026-09-12). Entry-to-entry moves are fast and
+                    // need no cover.
+                    if (e.target.closest(".st-key-cai_welcome button")) return;
+                    // a role tap now ALWAYS goes straight to the chat, which has
+                    // the header the veil waits for
                     if (e.target.closest(
-                        ".st-key-role_soldier, .st-key-role_commander, .st-key-role_reserve")
-                        && !document.getElementById("cai-gate-pending"))
+                        ".st-key-role_soldier, .st-key-role_commander, .st-key-role_reserve"))
                         veil();
                 } catch (err) {}
             }, true);
@@ -1581,10 +1586,8 @@ SURFACE = "#21261A"
 # the real entry screen keeps rendering under the gate overlay
 # single source of truth for "the name gate is up" — the CSS padding below and
 # the render at the entry gate must never disagree about it
-_name_gate = (bool(st.session_state.get("role_picked_here"))
-              and st.session_state.role is not None
-              and not st.session_state.get("name_asked"))
-_entry_like = st.session_state.role is None or _name_gate
+_welcome_gate = not st.session_state.get("consent_given")
+_entry_like = _welcome_gate or st.session_state.role is None
 MAIN_TOP_PADDING = "12px" if _entry_like else "calc(72px + var(--cai-sat, 0px))"
 
 # entry elements stagger in around the boot splash curtain lift (delay 1.15s
@@ -2178,19 +2181,32 @@ div[data-testid="stButton"] > button:active {{
    (~15vh) so the iOS keyboard never covers the input. No entrance animation:
    Streamlit may replace the keyed VB on the text-commit rerun, and a replay
    would read as a blink. ── */
-.st-key-cai_name_gate {{
-    position: fixed; inset: 0; z-index: 999950;
-    background: rgba(8,10,5,.62);
-    display: flex; flex-direction: column; align-items: center;
-    justify-content: flex-start;
-    padding: calc(var(--cai-sat, 0px) + 15vh) 24px 0;
-}}
-.st-key-cai_name_card {{
-    width: min(320px, 100%); flex: none;
+/* The welcome card. It used to be a FIXED overlay (.st-key-cai_name_gate)
+   floating over the role screen with a scrim -- it covered the three buttons
+   it had just been launched from, and the user read that, correctly, as
+   unfinished. It is now the first screen's own content: no scrim, no z-index,
+   in the flow. */
+/* NEITHER of the entry blocks may shrink. They are flex items in the main
+   column with min-height:0, so on a phone too short for the content the
+   column squeezed the head by exactly 16px and the lead paragraph's last
+   line rendered UNDER the card (measured 375x812: block 319px, container
+   302.6px, scrollHeight 319). Pinned, the page scrolls instead — which is
+   the correct answer on a small phone, and a no-op on a tall one. */
+.st-key-cai_entry_head, .st-key-cai_welcome {{ flex: 0 0 auto !important; }}
+.st-key-cai_entry_head [data-testid="stElementContainer"] {{ flex: 0 0 auto !important; }}
+/* Streamlit's markdown wrapper ships margin-bottom:-1rem to cancel the 16px
+   bottom margin of a markdown <p>. The entry head is a <div> — there is no
+   margin to cancel, so the -16px just pulled the welcome card UP over the
+   lead paragraph's last line (measured 2026-09-12: a 13px overlap at both
+   375x812 and 375x667). Cancelled for this block only; the rest of the app
+   keeps Streamlit's spacing exactly as it was. */
+.st-key-cai_entry_head [data-testid="stMarkdownContainer"] {{ margin-bottom: 0 !important; }}
+.st-key-cai_welcome {{
+    width: min(340px, 100%); margin: 0 auto;
     background: #1A1E12;
     border: 1px solid rgba(239,240,232,.14);
     border-radius: 18px;
-    padding: 20px 18px 16px;
+    padding: 18px 18px 16px;
 }}
 /* ── Streamlit's "Missing Submit Button" warning, suppressed. ──
    A red developer error box, in English, over the name gate, on a soldier's
@@ -2211,18 +2227,54 @@ div[data-testid="stButton"] > button:active {{
    cannot jump when it comes and goes. ── */
 [data-testid="stForm"] > div:not([data-testid]) {{ display: none !important; }}
 
+/* the lead paragraph on the welcome screen: what this app is, before it
+   asks for anything */
+.cai-entry-lead {{ font: 400 13.5px Heebo, sans-serif; color: rgba(239,240,232,.62);
+    line-height: 1.65; margin: 22px auto 0; max-width: 300px; text-align: center; }}
 .cai-gate-title {{ font: 600 17px Heebo, sans-serif; color: var(--text); text-align: right; }}
+/* the consent block. The sentence is a paragraph and the tick is its own
+   control: consent implied by pressing "continue" is the pattern App Review
+   rejects, and a separate act is also what we can record. */
+.st-key-cai_consent {{ border: 1px solid rgba(163,174,110,.35);
+    background: rgba(163,174,110,.14); border-radius: 13px;
+    padding: 11px 12px 8px; margin: 4px 0 12px; gap: 0 !important; }}
+/* same -1rem wrapper trick as the entry head: the sentence is a <div>, so
+   there is no paragraph margin for it to cancel and the tick was pulled up
+   into the text */
+/* every markdown block on this card is a <div>, not a paragraph, so none of
+   them has the 16px margin the -1rem exists to cancel — it only ever pulls
+   the NEXT block up over them (the hint line, then the consent card) */
+.st-key-cai_welcome [data-testid="stMarkdownContainer"] {{ margin-bottom: 0 !important; }}
+.cai-consent-t {{ font: 400 calc(12px * var(--cai-fs, 1)) Heebo, sans-serif;
+    color: var(--text); line-height: 1.55; text-align: right; }}
+.cai-consent-more {{ font: 400 calc(12px * var(--cai-fs, 1)) Heebo, sans-serif;
+    color: rgba(239,240,232,.5); line-height: 1.5; text-align: right; margin-top: 6px; }}
+.st-key-cai_welcome [data-testid="stCheckbox"] {{ margin: 9px 0 0; }}
+.st-key-cai_welcome [data-testid="stCheckbox"] label {{ align-items: center; }}
+.st-key-cai_welcome [data-testid="stCheckbox"] label span {{
+    font: 500 calc(13px * var(--cai-fs, 1)) Heebo, sans-serif !important;
+    color: var(--text) !important; }}
+/* the requirement, stated only after someone tried to pass it */
+.cai-gate-err {{ font: 500 calc(12px * var(--cai-fs, 1)) Heebo, sans-serif;
+    color: #E8B4A0; background: rgba(232,180,160,.1);
+    border: 1px solid rgba(232,180,160,.3); border-radius: 11px;
+    padding: 9px 11px; margin-top: 10px; text-align: right; line-height: 1.5; }}
+/* the second screen greets with the name the first one collected */
+.cai-entry-greet {{ font: 400 26px 'Suez One', serif; color: var(--text);
+    margin-top: 22px; }}
+.cai-entry-greet-sub {{ font: 400 13px Heebo, sans-serif;
+    color: rgba(239,240,232,.55); margin-top: 5px; }}
 .cai-gate-sub {{ font: 400 12px Heebo, sans-serif; color: rgba(239,240,232,.5);
     margin: 5px 0 0; text-align: right; line-height: 1.5; }}
-.st-key-cai_name_card [data-testid="stTextInput"] {{ margin: 12px 0 14px; }}
-.st-key-cai_name_card [data-testid="stTextInput"] div[data-baseweb="input"],
-.st-key-cai_name_card [data-testid="stTextInput"] div[data-baseweb="base-input"] {{
+.st-key-cai_welcome [data-testid="stTextInput"] {{ margin: 12px 0 14px; }}
+.st-key-cai_welcome [data-testid="stTextInput"] div[data-baseweb="input"],
+.st-key-cai_welcome [data-testid="stTextInput"] div[data-baseweb="base-input"] {{
     background-color: rgba(239,240,232,.045) !important;
     border: 1px solid rgba(239,240,232,.16) !important;
     border-radius: 14px !important;
 }}
-.st-key-cai_name_card [data-testid="stTextInput"] div[data-baseweb="base-input"] {{ border: none !important; background: transparent !important; }}
-.st-key-cai_name_card [data-testid="stTextInput"] input {{
+.st-key-cai_welcome [data-testid="stTextInput"] div[data-baseweb="base-input"] {{ border: none !important; background: transparent !important; }}
+.st-key-cai_welcome [data-testid="stTextInput"] input {{
     background: transparent !important; color: var(--text) !important;
     /* 16px floor — same iOS focus-zoom trigger as the composer (see the
        stChatInputTextArea comment); this is the first field every new user
@@ -2233,49 +2285,49 @@ div[data-testid="stButton"] > button:active {{
        control a new user is asked to hit */
     min-height: 44px !important; box-sizing: border-box !important;
 }}
-.st-key-cai_name_card [data-testid="stTextInput"] input::placeholder {{
+.st-key-cai_welcome [data-testid="stTextInput"] input::placeholder {{
     color: rgba(239,240,232,.5) !important;
 }}
 /* המשך/דלג side by side even on phones (Streamlit stacks columns <640px) */
-.st-key-cai_name_card [data-testid="stHorizontalBlock"] {{
+.st-key-cai_welcome [data-testid="stHorizontalBlock"] {{
     flex-wrap: nowrap !important; gap: 10px !important;
 }}
-.st-key-cai_name_card [data-testid="stHorizontalBlock"] [data-testid="stColumn"] {{
+.st-key-cai_welcome [data-testid="stHorizontalBlock"] [data-testid="stColumn"] {{
     width: auto !important; min-width: 0 !important; flex: 1 1 0 !important;
 }}
 /* keep the 5:3 המשך/דלג ratio the nowrap override flattened */
-.st-key-cai_name_card [data-testid="stHorizontalBlock"] [data-testid="stColumn"]:last-child {{
+.st-key-cai_welcome [data-testid="stHorizontalBlock"] [data-testid="stColumn"]:last-child {{
     flex: .62 1 0 !important;
 }}
 /* the gate form is layout-only: kill the stForm frame (keyed FORMS don't
    get an st-key-* class in 1.58 — scope through the card container) */
-.st-key-cai_name_card [data-testid="stForm"] {{ border: none !important; padding: 0 !important; }}
+.st-key-cai_welcome [data-testid="stForm"] {{ border: none !important; padding: 0 !important; }}
 /* Streamlit's own "Press Enter to submit form" hint (InputInstructions) is
    laid out in the field row and lands ON the RTL placeholder / typed text
    (2026-07-27 video, t=16-19.5). It also happens to be the only English
    string on the screen, and the card already has explicit המשך/דלג buttons —
    so it carries no information here. Same widget-in-a-form shape in the
    settings card, same collision, killed together. */
-.st-key-cai_name_card [data-testid="InputInstructions"],
+.st-key-cai_welcome [data-testid="InputInstructions"],
 .st-key-cai_pf_form [data-testid="InputInstructions"] {{ display: none !important; }}
-.st-key-cai_name_card [data-testid="stFormSubmitButton"] button {{
+.st-key-cai_welcome [data-testid="stFormSubmitButton"] button {{
     justify-content: center !important; text-align: center !important;
     margin-bottom: 0 !important; padding: 11px 0 !important;
     border-radius: 12px !important;
 }}
-.st-key-cai_name_card button[kind="primaryFormSubmit"] {{
+.st-key-cai_welcome button[kind="primaryFormSubmit"] {{
     background-color: var(--accent) !important;
     border: 1px solid var(--accent) !important;
 }}
-.st-key-cai_name_card button[kind="primaryFormSubmit"] p {{ color: #14170E !important; font-weight: 600 !important; }}
-.st-key-cai_name_card button[kind="secondaryFormSubmit"] {{
+.st-key-cai_welcome button[kind="primaryFormSubmit"] p {{ color: #14170E !important; font-weight: 600 !important; }}
+.st-key-cai_welcome button[kind="secondaryFormSubmit"] {{
     background-color: transparent !important;
     border: 1px solid rgba(239,240,232,.16) !important;
 }}
-.st-key-cai_name_card button[kind="secondaryFormSubmit"] p {{ color: rgba(239,240,232,.6) !important; }}
+.st-key-cai_welcome button[kind="secondaryFormSubmit"] p {{ color: rgba(239,240,232,.6) !important; }}
 @media (hover: hover) {{
-    .st-key-cai_name_card button[kind="primaryFormSubmit"]:hover {{ background-color: var(--accent-hover) !important; border-color: var(--accent-hover) !important; }}
-    .st-key-cai_name_card button[kind="secondaryFormSubmit"]:hover {{ border-color: rgba(239,240,232,.3) !important; }}
+    .st-key-cai_welcome button[kind="primaryFormSubmit"]:hover {{ background-color: var(--accent-hover) !important; border-color: var(--accent-hover) !important; }}
+    .st-key-cai_welcome button[kind="secondaryFormSubmit"]:hover {{ border-color: rgba(239,240,232,.3) !important; }}
 }}
 
 /* ── Chat header: FIXED top bar (sticky can't work here — Streamlit wraps
@@ -2339,7 +2391,7 @@ div[data-testid="stButton"] > button:active {{
     max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }}
 .cai-ident .rl {{
-    font: 400 10.5px Heebo, sans-serif; color: var(--accent-bright);
+    font: 400 calc(12px * var(--cai-fs, 1)) Heebo, sans-serif; color: var(--accent-bright);
     opacity: .8; line-height: 1; white-space: nowrap;
 }}
 
@@ -3214,7 +3266,10 @@ div[data-testid="stDialog"] textarea {{ direction: rtl; font: 400 14px/1.7 Heebo
     font: 400 13px Heebo, sans-serif;
     text-align: right;
     text-decoration: none !important;
-    padding: 7px 10px;
+    /* 44px touch target (31.08 audit: 33px on device); symmetric padding keeps
+       the baseline-aligned title + date badge centred in the taller row */
+    padding: 12px 10px;
+    min-height: 44px;
     margin: 0 8px 2px 0;
     direction: rtl;
     transition: color .15s ease, border-color .15s ease;
@@ -3233,7 +3288,7 @@ a.cai-order-link:hover {{
 /* freshness badge — the order's own version date, so "how current is
    this?" is answered in the list itself */
 .cai-order-date {{
-    font: 400 10.5px Heebo, sans-serif;
+    font: 400 calc(12px * var(--cai-fs, 1)) Heebo, sans-serif;
     color: var(--text-faint);
     flex: none;
     white-space: nowrap;
@@ -3708,10 +3763,49 @@ components.html(
             ".st-key-settings_back button": "חזרה",
             ".st-key-drawer_open_btn button": "תפריט",
             ".st-key-drawer_backdrop button": "סגירת התפריט",
-            ".st-key-settings_backdrop button": "סגירת הגדרות"
+            ".st-key-settings_backdrop button": "סגירת הגדרות",
+            // Streamlit's own send button ships the English name "Send
+            // message" — measured 2026-09-12 as the ONE visible control in
+            // the app whose accessible name was not Hebrew, and it is the
+            // control a soldier presses on every question.
+            '[data-testid="stChatInputSubmitButton"]': "שליחת השאלה"
+        };
+        // st.feedback renders two icon buttons whose accessible name is
+        // EMPTY (measured in the running app 2026-09-12) — VoiceOver reads
+        // "button" and the reporting route is invisible to anyone who cannot
+        // see the glyphs. Streamlit exposes no label for them, and there is
+        // one pair per answer, so this runs over all of them rather than
+        // through the single-element NAMES map above.
+        var THUMBS = ["התשובה עזרה", "התשובה שגויה או פוגענית"];
+        var nameThumbs = function () {
+            try {
+                var rows = doc.querySelectorAll('[data-testid="stFeedback"]');
+                for (var i = 0; i < rows.length; i++) {
+                    var bs = rows[i].querySelectorAll("button");
+                    for (var j = 0; j < bs.length && j < THUMBS.length; j++) {
+                        if (bs[j].getAttribute("aria-label") !== THUMBS[j])
+                            bs[j].setAttribute("aria-label", THUMBS[j]);
+                    }
+                }
+            } catch (e) {}
         };
         var nameCtrls = function () {
             try {
+                nameThumbs();
+                // <html lang> is where VoiceOver and TalkBack pick the voice
+                // and the phonemes. Streamlit ships lang="en" and every word
+                // in this app is Hebrew, so the whole interface was being
+                // pronounced by an English synthesiser (measured 2026-09-12:
+                // "en" on the role gate, home, drawer and settings).
+                // Written here, on the same tick as the names above, rather
+                // than in the boot shell's index patch: lang carries no
+                // geometry, so it costs nothing to set late, and it keeps the
+                // splash file out of a change that has nothing to do with it.
+                // dir is deliberately NOT touched — the app sets direction per
+                // container and its logical properties (padding-inline-start
+                // on the tool rows) were tuned against an LTR root.
+                if (doc.documentElement.lang !== "he")
+                    doc.documentElement.lang = "he";
                 Object.keys(NAMES).forEach(function (sel) {
                     var el = doc.querySelector(sel);
                     if (el && el.getAttribute("aria-label") !== NAMES[sel])
@@ -4181,6 +4275,7 @@ if _pwa:
 _sync_settled = (
     st.session_state.role is not None
     or st.session_state.get("name_asked")
+    or st.session_state.get("consent_given")
     or bool((st.session_state.get("profile_name") or "").strip())
     or st.session_state.get("cai_wipe_pending")
 )
@@ -4189,6 +4284,8 @@ _ck_dict = {
     "role": st.session_state.role,
     "name": (st.session_state.get("profile_name") or "")[:40],
     "asked": bool(st.session_state.get("name_asked")),
+    # the consent, next to the role and the name it belongs with
+    "ok": bool(st.session_state.get("consent_given")),
     # unconditional, unlike "mil" below: the id is worthless if it only
     # survives for users who filled a form. Written on the same run as the
     # first role tap, which is always before the first question.
@@ -4250,38 +4347,110 @@ if _sync_settled:
 # scrim + card sit above it. The gate derives from name_asked rather than
 # a session flag so a mid-gate refresh lands back IN the gate (cookie
 # already carries the role) instead of silently dropping the question.
-if st.session_state.role is None or _name_gate:
-    st.markdown(
-        "<div class='cai-entry'>"
-        "<div class='cai-entry-classif'>מערכת פקודות · בלמ\"ס</div>"
-        "<div class='cai-entry-chev'><span></span><span></span></div>"
-        "<div class='cai-entry-title'>Command<span class='cai-wm-ai'>AI</span></div>"
-        "<div class='cai-entry-sub'>העוזר החכם לפקודות מטכ\"ל</div>"
-        "<div class='cai-entry-divider'></div>"
-        "<div class='cai-entry-choose'>בחר את סוג הכניסה שלך</div>"
-        # marker for the injected nav-veil: a role tap that leads to the name
-        # gate (first visit) must NOT raise the veil — the gate has no
-        # .cai-header, so the veil would sit opaque until its 4s timeout
-        + ("<span id='cai-gate-pending'></span>"
-           if not st.session_state.get("name_asked") else "")
-        + "</div>",
-        unsafe_allow_html=True,
-    )
+if _welcome_gate or st.session_state.role is None:
+    # ── SCREEN 1 · welcome: what this is, the name, the consent ──
+    if _welcome_gate:
+        with st.container(key="cai_entry_head"):
+            st.markdown(
+                "<div class='cai-entry'>"
+                "<div class='cai-entry-classif'>מערכת פקודות · בלמ\"ס</div>"
+                "<div class='cai-entry-chev'><span></span><span></span></div>"
+                "<div class='cai-entry-title'>Command<span class='cai-wm-ai'>AI</span></div>"
+                "<div class='cai-entry-sub'>העוזר החכם לפקודות מטכ\"ל</div>"
+                "<div class='cai-entry-lead'>כאן שואלים על פקודות מטכ\"ל ומקבלים "
+                "תשובה עם הסעיף שממנו היא נובעת. לפני שמתחילים, שתי שורות.</div>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
+        # st.form is essential, not cosmetic: a bare st.button tap right after
+        # typing loses the race with the text_input blur-commit rerun (the tap
+        # lands on a replaced node — first tap swallowed). The form bundles the
+        # field, the tick and the press into ONE event, and Enter submits too.
+        # It is also why the tick lives INSIDE the form and the button is not
+        # dimmed: an in-form checkbox commits only on submit, so the server
+        # cannot know its value in time to disable anything. The requirement is
+        # enforced on submit instead, and said out loud when it is not met.
+        with st.container(key="cai_welcome"):
+            with st.form(key="cai_welcome_form", border=False):
+                st.text_input("שם פרטי", key="gate_name_w",
+                              label_visibility="collapsed",
+                              placeholder="השם הפרטי שלך", max_chars=20)
+                st.markdown(
+                    "<div class='cai-gate-sub'>לברכה אישית · נשמר במכשיר בלבד, "
+                    "לא נשלח לשום מקום</div>",
+                    unsafe_allow_html=True,
+                )
+                # a keyed container, not raw <div> around a widget: Streamlit
+                # renders every element in its own container, so an opening tag
+                # in one markdown and its closing tag in another cannot wrap a
+                # widget — the browser closes the div at the end of the first
+                # block and the tick lands OUTSIDE the card (seen 2026-09-12).
+                with st.container(key="cai_consent"):
+                    st.markdown(
+                        "<div class='cai-consent-t'>השאלות שלך נשלחות לספק בינה "
+                        "מלאכותית חיצוני (Anthropic) כדי להפיק את התשובה. אין להזין "
+                        "מידע מסווג.</div>"
+                        "<div class='cai-consent-more'>הפירוט המלא — מה נאסף, למי "
+                        "מועבר וכמה זמן נשמר — במדיניות הפרטיות שבמסך ההגדרות.</div>",
+                        unsafe_allow_html=True,
+                    )
+                    st.checkbox("קראתי ואני מאשר", key="gate_consent")
+                _w_go = st.form_submit_button(
+                    "המשך", use_container_width=True, type="primary")
+                _w_skip = st.form_submit_button(
+                    "אפשר גם בלי שם", use_container_width=True)
+            if _w_go or _w_skip:
+                if st.session_state.get("gate_consent"):
+                    if _w_go:
+                        # display-only: feeds the greeting/pill and seeds the
+                        # settings "שם מלא" field; never sent to the API
+                        _nm = (st.session_state.get("gate_name_w") or "").strip()
+                        if _nm:
+                            st.session_state.profile_name = _nm[:40]
+                    st.session_state.consent_given = True
+                    st.session_state.name_asked = True
+                    st.rerun()
+                else:
+                    st.markdown(
+                        "<div class='cai-gate-err'>כדי להמשיך צריך לסמן את האישור "
+                        "שלמעלה. הדילוג מוותר על הברכה בשם, לא על האישור.</div>",
+                        unsafe_allow_html=True,
+                    )
 
-    # role_picked_here arms the name gate — see the setdefault near the top.
-    # Set it on the tap, never on the cookie restore.
-    if st.button("**כניסת חיילים**  \nחובה / סדיר", key="role_soldier", use_container_width=True):
-        st.session_state.role = "soldier"
-        st.session_state.role_picked_here = True
-        st.rerun()
-    if st.button("**כניסת מפקדים**  \nקבע", key="role_commander", use_container_width=True):
-        st.session_state.role = "commander"
-        st.session_state.role_picked_here = True
-        st.rerun()
-    if st.button("**כניסת מילואים**  \nמערך המילואים", key="role_reserve", use_container_width=True):
-        st.session_state.role = "reserve"
-        st.session_state.role_picked_here = True
-        st.rerun()
+    # ── SCREEN 2 · the role, with nothing floating over it ──
+    else:
+        _gname = (st.session_state.get("profile_name") or "").strip()
+        with st.container(key="cai_entry_head"):
+            st.markdown(
+                "<div class='cai-entry'>"
+                "<div class='cai-entry-classif'>מערכת פקודות · בלמ\"ס</div>"
+                "<div class='cai-entry-chev'><span></span><span></span></div>"
+                + ("<div class='cai-entry-greet'>ערב טוב, "
+                   + html.escape(_gname) + "</div>" if _gname else
+                   "<div class='cai-entry-greet'>ערב טוב</div>")
+                + "<div class='cai-entry-greet-sub'>נשאר רק לבחור איך אתה משרת</div>"
+                "<div class='cai-entry-divider'></div>"
+                "<div class='cai-entry-choose'>בחר את סוג הכניסה שלך</div>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
+        # role_picked_here marks a tap in THIS session (never a cookie restore);
+        # other surfaces still read it.
+        if st.button("**כניסת חיילים**  \nחובה / סדיר", key="role_soldier",
+                     use_container_width=True):
+            st.session_state.role = "soldier"
+            st.session_state.role_picked_here = True
+            st.rerun()
+        if st.button("**כניסת מפקדים**  \nקבע", key="role_commander",
+                     use_container_width=True):
+            st.session_state.role = "commander"
+            st.session_state.role_picked_here = True
+            st.rerun()
+        if st.button("**כניסת מילואים**  \nמערך המילואים", key="role_reserve",
+                     use_container_width=True):
+            st.session_state.role = "reserve"
+            st.session_state.role_picked_here = True
+            st.rerun()
 
     # Until 2026-08-16 this read "בלמ״ס · [internal use only]" — the phrasing of
     # an official IDF document, on the first screen of a public app whose ToS
@@ -4289,42 +4458,8 @@ if st.session_state.role is None or _name_gate:
     # About-screen footer already carried the honest line; this and the two
     # other footers now say the same thing (tests/test_compliance_screens.py
     # pins the wording, which is why the old phrase is not quoted here).
-    st.markdown("<div class='cai-entry-footer'>כלי עזר פרטי · אינו כלי רשמי של צה\"ל</div>", unsafe_allow_html=True)
-
-    if _name_gate:
-        # scrim (outer container) + card (inner) — plain keyed containers, no
-        # entrance animation on purpose: Streamlit may replace the keyed VB
-        # node on a rerun, which would replay the animation.
-        # st.form is essential, not cosmetic: a bare st.button tap right
-        # after typing loses the race with the text_input blur-commit rerun
-        # (the tap lands on a replaced node — first tap swallowed). The form
-        # bundles the field value and the press into ONE event, and Enter
-        # submits too.
-        with st.container(key="cai_name_gate"):
-            with st.container(key="cai_name_card"):
-                st.markdown(
-                    "<div class='cai-gate-title'>איך קוראים לך?</div>"
-                    "<div class='cai-gate-sub'>לברכה אישית בכניסה · נשמר במכשיר בלבד</div>",
-                    unsafe_allow_html=True,
-                )
-                with st.form(key="cai_name_form", border=False):
-                    st.text_input("שם פרטי", key="gate_name_w",
-                                  label_visibility="collapsed",
-                                  placeholder="השם הפרטי שלך", max_chars=20)
-                    _gc1, _gc2 = st.columns([5, 3], gap="small")
-                    _gate_go = _gc1.form_submit_button(
-                        "המשך", use_container_width=True, type="primary")
-                    _gate_skip = _gc2.form_submit_button(
-                        "דלג", use_container_width=True)
-                if _gate_go or _gate_skip:
-                    if _gate_go:
-                        _nm = (st.session_state.get("gate_name_w") or "").strip()
-                        if _nm:
-                            # display-only: feeds the greeting/pill and seeds
-                            # the settings "שם מלא" field; never sent to the API
-                            st.session_state.profile_name = _nm[:40]
-                    st.session_state.name_asked = True
-                    st.rerun()
+    st.markdown("<div class='cai-entry-footer'>כלי עזר פרטי · אינו כלי רשמי של צה\"ל</div>",
+                unsafe_allow_html=True)
 
     _emit_boot_settled()
     st.stop()
@@ -4953,7 +5088,7 @@ div[data-testid="stDialog"] [data-testid="InputInstructions"] { display: none !i
 /* another disclaimer, same reasoning as the composer's — routed through the
    token so it tracks --text-faint rather than drifting on its own */
 .cai-ent-disc span.g { flex: none; font-size: 12px; line-height: 1.55; color: var(--text-faint); }
-.cai-ent-disc span.t { font: 400 11px Heebo, sans-serif; color: var(--text-faint); line-height: 1.55; }
+.cai-ent-disc span.t { font: 400 calc(12px * var(--cai-fs, 1)) Heebo, sans-serif; color: var(--text-faint); line-height: 1.55; }
 
 /* ---- Punishment-authority views (share the card shell) ---- */
 .cai-pa-intro { direction: rtl; text-align: right; font: 400 12.5px/1.6 Heebo, sans-serif;
@@ -4971,7 +5106,7 @@ div[data-testid="stDialog"] [data-testid="InputInstructions"] { display: none !i
 /* --text-faint (.4) measures 3.48:1 at 10.5px — under AA. Raised locally
    rather than at the token, which is also used for decorative monospace where
    the faintness is the point; the app-wide sweep is a separate job. */
-.cai-pa-clause { font: 500 10.5px Heebo, sans-serif; color: rgba(239,240,232,.58); }
+.cai-pa-clause { font: 500 calc(12px * var(--cai-fs, 1)) Heebo, sans-serif; color: rgba(239,240,232,.58); }
 .cai-pa-max { flex: 0 0 auto; border-radius: 9px; padding: 4px 12px; white-space: nowrap;
     font: 700 12.5px Heebo, sans-serif; border: 1px solid; }
 .cai-pa-max.ok    { color:#A9C687; background:rgba(148,183,110,.13); border-color:rgba(148,183,110,.4); }
@@ -4989,7 +5124,7 @@ div[data-testid="stDialog"] [data-testid="InputInstructions"] { display: none !i
     border: 1.5px solid var(--accent); border-radius: 3px; transform: rotate(45deg); }
 .cai-pa-note { margin: 4px 8px 0 0; padding-right: 18px; }
 .cai-pa-note li { font: 400 12px/1.6 Heebo, sans-serif; color: var(--text-dim); margin-bottom: 6px; }
-.cai-pa-disc { direction: rtl; text-align: right; font: 400 11px/1.55 Heebo, sans-serif;
+.cai-pa-disc { direction: rtl; text-align: right; font: 400 calc(12px * var(--cai-fs, 1)) Heebo, sans-serif; line-height: 1.55;
     color: rgba(236,237,230,.4); border-top: 1px solid rgba(236,237,230,.08);
     padding-top: 12px; margin-top: 16px; }
 
@@ -5071,7 +5206,7 @@ div[data-testid="stDialog"] [data-testid="stRadio"] label:active { filter: brigh
 .cai-mil-det .tt { font: 600 14px Heebo, sans-serif; color: var(--text); }
 .cai-mil-det .sb { font: 400 12px Heebo, sans-serif; color: rgba(236,237,230,.6);
     margin-top: 2px; line-height: 1.45; }
-.cai-mil-tag { font: 600 10.5px Heebo, sans-serif; color: var(--accent-bright);
+.cai-mil-tag { font: 600 calc(12px * var(--cai-fs, 1)) Heebo, sans-serif; color: var(--accent-bright);
     background: var(--accent-soft); border: 1px solid var(--accent-border);
     border-radius: 99px; padding: 1px 8px; flex: none;
     /* a pill is an atom: it may DROP to the next line whole, never split
@@ -9262,10 +9397,14 @@ for msg_i, msg in enumerate(st.session_state.messages):
                     )
             if msg.get("fb_value") == 0 and not msg.get("fb_comment_sent"):
                 fb_col, send_col = st.columns([4, 1])
+                # "פוגעני" is not decoration: Google's generative-AI policy
+                # requires an in-product route to report content the model
+                # produced, offensive content included, and a box that asks
+                # only about "missing or wrong" is not read as that route.
                 fb_comment = fb_col.text_input(
-                    "מה היה חסר או שגוי?", key=f"fbc_{mid}",
+                    "מה היה שגוי, חסר או פוגעני?", key=f"fbc_{mid}",
                     label_visibility="collapsed", max_chars=500,
-                    placeholder="מה היה חסר או שגוי? (לא חובה)",
+                    placeholder="מה היה שגוי, חסר או פוגעני? (לא חובה)",
                 )
                 if send_col.button("שלח", key=f"fbs_{mid}") and fb_comment.strip():
                     metrics.log_feedback(
