@@ -43,7 +43,7 @@ import streamlit as st
 # re-injected rather than nursed along with targeted swaps: a long-lived dev venv
 # keeps its patched index.html forever, and silently testing last week's boot
 # shell is worse than the cost of a rewrite.
-_VERSION = "v47"
+_VERSION = "v48"
 
 
 # viewport-fit=cover is NOT here, and that is the whole lesson of v12.
@@ -466,7 +466,7 @@ _SPLASH_HTML = """
       // that lives after the split and would not arrive until the hold is
       // already over — it could never report anything in time.
       // LAUNCH RECORDER (v47): what the page saw at its first paint. lift()
-      // finishes the record into a localStorage ring (8) that the About
+      // finishes the record into a localStorage ring (16) that the About
       // screen prints — the way to learn where a cold launch's time goes
       // (16:15 device video: the first launch of the day still shows one
       // white-canvas frame at the dissolve, the warm ones do not) without
@@ -782,7 +782,7 @@ _BOOT_JS = """
             var key = 'cai-launch-log', arr = [];
             try { arr = JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) { arr = []; }
             if (!Array.isArray(arr)) arr = [];
-            arr.push(rec); while (arr.length > 8) arr.shift();
+            arr.push(rec); while (arr.length > 16) arr.shift();
             localStorage.setItem(key, JSON.stringify(arr));
           } catch (e) {}
           composerRemeasure();
