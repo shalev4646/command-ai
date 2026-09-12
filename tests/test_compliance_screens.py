@@ -134,7 +134,7 @@ def test_thumbs_down_names_the_address():
     attached automatically. It logged into a sheet the soldier never sees, so
     a sent report vanished without a trace. The address must appear both while
     the box is open and in the post-send confirmation, via the constant."""
-    row = APP.split('placeholder="מה היה חסר או שגוי? (לא חובה)"')[1][:2600]
+    row = APP.split('placeholder="מה היה שגוי, חסר או פוגעני? (לא חובה)"')[1][:2600]
     assert row.count("_CONTACT_EMAIL") >= 2, (
         "the 👎 flow must name the contact address (open + sent states)"
     )
@@ -313,6 +313,29 @@ def test_letter_call_is_bounded():
     10 minutes x 3 attempts."""
     assert "with_options(timeout=" in LETTERS, (
         "compose_letter can hang for half an hour under a modal spinner"
+    )
+
+
+def test_the_report_box_covers_offensive_content():
+    """Google's generative-AI policy requires an in-product way to report what
+    the model produced, offensive content included. The box asked only "what
+    was missing or wrong" — a soldier offended by an answer does not read that
+    as the place to say so."""
+    assert "פוגעני" in APP, "the report control never mentions offensive content"
+    assert "מה היה חסר או שגוי?" not in APP, "the old wording is back"
+
+
+def test_the_thumbs_carry_accessible_names():
+    """Measured in the running app on 2026-09-12: both thumbs had an EMPTY
+    accessible name, so a blind user reaching the row hears "button" and
+    learns nothing. st.feedback gives no way to name them, so the app's own
+    naming script labels every rendered pair."""
+    assert "var THUMBS = [" in APP, "the thumbs carry no names"
+    block = APP.split("var THUMBS = [")[1][:900]
+    for word in ("התשובה עזרה", "פוגענית"):
+        assert word in block, f"the thumbs naming is missing {word!r}"
+    assert 'data-testid="stFeedback"' in block, (
+        "the names are declared but never applied to the feedback widgets"
     )
 
 

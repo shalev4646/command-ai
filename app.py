@@ -3659,8 +3659,28 @@ components.html(
             // control a soldier presses on every question.
             '[data-testid="stChatInputSubmitButton"]': "שליחת השאלה"
         };
+        // st.feedback renders two icon buttons whose accessible name is
+        // EMPTY (measured in the running app 2026-09-12) — VoiceOver reads
+        // "button" and the reporting route is invisible to anyone who cannot
+        // see the glyphs. Streamlit exposes no label for them, and there is
+        // one pair per answer, so this runs over all of them rather than
+        // through the single-element NAMES map above.
+        var THUMBS = ["התשובה עזרה", "התשובה שגויה או פוגענית"];
+        var nameThumbs = function () {
+            try {
+                var rows = doc.querySelectorAll('[data-testid="stFeedback"]');
+                for (var i = 0; i < rows.length; i++) {
+                    var bs = rows[i].querySelectorAll("button");
+                    for (var j = 0; j < bs.length && j < THUMBS.length; j++) {
+                        if (bs[j].getAttribute("aria-label") !== THUMBS[j])
+                            bs[j].setAttribute("aria-label", THUMBS[j]);
+                    }
+                }
+            } catch (e) {}
+        };
         var nameCtrls = function () {
             try {
+                nameThumbs();
                 // <html lang> is where VoiceOver and TalkBack pick the voice
                 // and the phonemes. Streamlit ships lang="en" and every word
                 // in this app is Hebrew, so the whole interface was being
@@ -9249,10 +9269,14 @@ for msg_i, msg in enumerate(st.session_state.messages):
                     )
             if msg.get("fb_value") == 0 and not msg.get("fb_comment_sent"):
                 fb_col, send_col = st.columns([4, 1])
+                # "פוגעני" is not decoration: Google's generative-AI policy
+                # requires an in-product route to report content the model
+                # produced, offensive content included, and a box that asks
+                # only about "missing or wrong" is not read as that route.
                 fb_comment = fb_col.text_input(
-                    "מה היה חסר או שגוי?", key=f"fbc_{mid}",
+                    "מה היה שגוי, חסר או פוגעני?", key=f"fbc_{mid}",
                     label_visibility="collapsed", max_chars=500,
-                    placeholder="מה היה חסר או שגוי? (לא חובה)",
+                    placeholder="מה היה שגוי, חסר או פוגעני? (לא חובה)",
                 )
                 if send_col.button("שלח", key=f"fbs_{mid}") and fb_comment.strip():
                     metrics.log_feedback(
