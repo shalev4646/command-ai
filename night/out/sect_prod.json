@@ -1,0 +1,834 @@
+{
+ "agg": {
+  "n": 82,
+  "doc_in_window": 29,
+  "sect_in_window": 12,
+  "sect_rank_top8": 1,
+  "sect_rank_top25": 1,
+  "sect_rank_median": 201,
+  "avg_words": 1244,
+  "avg_docs": 5.0
+ },
+ "per": [
+  {
+   "id": "q00119",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 15,
+   "sect_rank": null,
+   "window_words": 880,
+   "window_docs": 5
+  },
+  {
+   "id": "q00152",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "doc_rank": 2,
+   "sect_rank": null,
+   "window_words": 2281,
+   "window_docs": 5
+  },
+  {
+   "id": "q00172",
+   "doc_id": "31.0605",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 74,
+   "sect_rank": null,
+   "window_words": 1002,
+   "window_docs": 5
+  },
+  {
+   "id": "q00250",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 20,
+   "sect_rank": null,
+   "window_words": 1073,
+   "window_docs": 5
+  },
+  {
+   "id": "q00014",
+   "doc_id": "31.0103",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 7,
+   "sect_rank": null,
+   "window_words": 1108,
+   "window_docs": 5
+  },
+  {
+   "id": "q00039",
+   "doc_id": "61.0104",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "doc_rank": 5,
+   "sect_rank": null,
+   "window_words": 1143,
+   "window_docs": 5
+  },
+  {
+   "id": "q00120",
+   "doc_id": "31.0606",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 42,
+   "sect_rank": null,
+   "window_words": 1264,
+   "window_docs": 5
+  },
+  {
+   "id": "q00153",
+   "doc_id": "36.0401",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "doc_rank": 1,
+   "sect_rank": null,
+   "window_words": 800,
+   "window_docs": 4
+  },
+  {
+   "id": "q00189",
+   "doc_id": "31.0603",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 14,
+   "sect_rank": null,
+   "window_words": 929,
+   "window_docs": 5
+  },
+  {
+   "id": "q00251",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 34,
+   "sect_rank": null,
+   "window_words": 974,
+   "window_docs": 5
+  },
+  {
+   "id": "q00015",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 20,
+   "sect_rank": null,
+   "window_words": 1255,
+   "window_docs": 5
+  },
+  {
+   "id": "q00040",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 75,
+   "sect_rank": null,
+   "window_words": 933,
+   "window_docs": 5
+  },
+  {
+   "id": "q00060",
+   "doc_id": "31.0507",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 115,
+   "sect_rank": null,
+   "window_words": 1357,
+   "window_docs": 5
+  },
+  {
+   "id": "q00096",
+   "doc_id": "35.0209",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 18,
+   "sect_rank": null,
+   "window_words": 875,
+   "window_docs": 5
+  },
+  {
+   "id": "q00154",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "doc_rank": 2,
+   "sect_rank": null,
+   "window_words": 687,
+   "window_docs": 5
+  },
+  {
+   "id": "q00177",
+   "doc_id": "36.0301",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 9,
+   "sect_rank": null,
+   "window_words": 1155,
+   "window_docs": 5
+  },
+  {
+   "id": "q00252",
+   "doc_id": "32.0101",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 22,
+   "sect_rank": null,
+   "window_words": 955,
+   "window_docs": 5
+  },
+  {
+   "id": "q00042",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 22,
+   "sect_rank": null,
+   "window_words": 1080,
+   "window_docs": 5
+  },
+  {
+   "id": "q00075",
+   "doc_id": "33.0336",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 9,
+   "sect_rank": null,
+   "window_words": 1001,
+   "window_docs": 5
+  },
+  {
+   "id": "q00097",
+   "doc_id": "33.0115",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 32,
+   "sect_rank": null,
+   "window_words": 1365,
+   "window_docs": 5
+  },
+  {
+   "id": "q00158",
+   "doc_id": "61.0104",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "doc_rank": 1,
+   "sect_rank": 147,
+   "window_words": 2811,
+   "window_docs": 5
+  },
+  {
+   "id": "q00194",
+   "doc_id": "35.0822",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 138,
+   "sect_rank": null,
+   "window_words": 1187,
+   "window_docs": 5
+  },
+  {
+   "id": "q00099",
+   "doc_id": "35.0206",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 32,
+   "sect_rank": null,
+   "window_words": 1478,
+   "window_docs": 5
+  },
+  {
+   "id": "q00159",
+   "doc_id": "36.0401",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "doc_rank": 1,
+   "sect_rank": null,
+   "window_words": 628,
+   "window_docs": 5
+  },
+  {
+   "id": "q00179",
+   "doc_id": "56.0131",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 15,
+   "sect_rank": null,
+   "window_words": 1397,
+   "window_docs": 5
+  },
+  {
+   "id": "q00195",
+   "doc_id": "CHOK-SHIPUT-1955",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 66,
+   "sect_rank": null,
+   "window_words": 921,
+   "window_docs": 5
+  },
+  {
+   "id": "q00030",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "doc_rank": 1,
+   "sect_rank": null,
+   "window_words": 1663,
+   "window_docs": 5
+  },
+  {
+   "id": "q00044",
+   "doc_id": "61.0104",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 6,
+   "sect_rank": null,
+   "window_words": 1052,
+   "window_docs": 5
+  },
+  {
+   "id": "q00064",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "doc_rank": 4,
+   "sect_rank": null,
+   "window_words": 1639,
+   "window_docs": 5
+  },
+  {
+   "id": "q00087",
+   "doc_id": "21.0401",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "doc_rank": 1,
+   "sect_rank": null,
+   "window_words": 844,
+   "window_docs": 5
+  },
+  {
+   "id": "q00109",
+   "doc_id": "HKA-31-08-01",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 8,
+   "sect_rank": null,
+   "window_words": 1561,
+   "window_docs": 5
+  },
+  {
+   "id": "q00160",
+   "doc_id": "PM-33.0302",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 8,
+   "sect_rank": null,
+   "window_words": 1095,
+   "window_docs": 5
+  },
+  {
+   "id": "q00197",
+   "doc_id": "31.0308",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 54,
+   "sect_rank": null,
+   "window_words": 990,
+   "window_docs": 5
+  },
+  {
+   "id": "q00255",
+   "doc_id": "3.0501",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 17,
+   "sect_rank": null,
+   "window_words": 1179,
+   "window_docs": 5
+  },
+  {
+   "id": "q00046",
+   "doc_id": "61.0104",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "doc_rank": 2,
+   "sect_rank": null,
+   "window_words": 1276,
+   "window_docs": 5
+  },
+  {
+   "id": "q00065",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "doc_rank": 2,
+   "sect_rank": null,
+   "window_words": 1882,
+   "window_docs": 5
+  },
+  {
+   "id": "q00088",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 28,
+   "sect_rank": null,
+   "window_words": 1004,
+   "window_docs": 5
+  },
+  {
+   "id": "q00110",
+   "doc_id": "33.0336",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 87,
+   "sect_rank": null,
+   "window_words": 1388,
+   "window_docs": 5
+  },
+  {
+   "id": "q00135",
+   "doc_id": "35.0314",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 20,
+   "sect_rank": null,
+   "window_words": 902,
+   "window_docs": 5
+  },
+  {
+   "id": "q00198",
+   "doc_id": "35.0822",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 24,
+   "sect_rank": null,
+   "window_words": 1047,
+   "window_docs": 5
+  },
+  {
+   "id": "q00032",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 17,
+   "sect_rank": null,
+   "window_words": 1277,
+   "window_docs": 5
+  },
+  {
+   "id": "q00112",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 6,
+   "sect_rank": null,
+   "window_words": 1262,
+   "window_docs": 5
+  },
+  {
+   "id": "q00137",
+   "doc_id": "HKA-31-08-01",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 91,
+   "sect_rank": null,
+   "window_words": 1633,
+   "window_docs": 5
+  },
+  {
+   "id": "q00184",
+   "doc_id": "HKA-31-08-01",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 47,
+   "sect_rank": null,
+   "window_words": 838,
+   "window_docs": 6
+  },
+  {
+   "id": "q00267",
+   "doc_id": "31.0513",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "doc_rank": 2,
+   "sect_rank": null,
+   "window_words": 864,
+   "window_docs": 5
+  },
+  {
+   "id": "q00033",
+   "doc_id": "61.0104",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "doc_rank": 2,
+   "sect_rank": 140,
+   "window_words": 1120,
+   "window_docs": 5
+  },
+  {
+   "id": "q00139",
+   "doc_id": "61.0104",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "doc_rank": 1,
+   "sect_rank": null,
+   "window_words": 3389,
+   "window_docs": 5
+  },
+  {
+   "id": "q00067",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 11,
+   "sect_rank": null,
+   "window_words": 1332,
+   "window_docs": 5
+  },
+  {
+   "id": "q00115",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "doc_rank": 1,
+   "sect_rank": null,
+   "window_words": 1583,
+   "window_docs": 5
+  },
+  {
+   "id": "q00035",
+   "doc_id": "36.0528",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": null,
+   "sect_rank": null,
+   "window_words": 1048,
+   "window_docs": 4
+  },
+  {
+   "id": "q00201",
+   "doc_id": "36.0401",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": null,
+   "sect_rank": null,
+   "window_words": 1473,
+   "window_docs": 5
+  },
+  {
+   "id": "q00053",
+   "doc_id": "33.0146",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 46,
+   "sect_rank": null,
+   "window_words": 1082,
+   "window_docs": 5
+  },
+  {
+   "id": "q00092",
+   "doc_id": "CHOK-SHIPUT-1955",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 157,
+   "sect_rank": null,
+   "window_words": 1179,
+   "window_docs": 5
+  },
+  {
+   "id": "q00116",
+   "doc_id": "31.0513",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "doc_rank": 2,
+   "sect_rank": null,
+   "window_words": 1302,
+   "window_docs": 5
+  },
+  {
+   "id": "q00093",
+   "doc_id": "31.0513",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 51,
+   "sect_rank": null,
+   "window_words": 1331,
+   "window_docs": 5
+  },
+  {
+   "id": "q00117",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 68,
+   "sect_rank": null,
+   "window_words": 3275,
+   "window_docs": 5
+  },
+  {
+   "id": "q00248",
+   "doc_id": "32.0220",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "doc_rank": 1,
+   "sect_rank": null,
+   "window_words": 1011,
+   "window_docs": 5
+  },
+  {
+   "id": "q00146",
+   "doc_id": "61.0104",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 19,
+   "sect_rank": null,
+   "window_words": 1058,
+   "window_docs": 5
+  },
+  {
+   "id": "q00164",
+   "doc_id": "35.0822",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "doc_rank": 2,
+   "sect_rank": 2,
+   "window_words": 1214,
+   "window_docs": 5
+  },
+  {
+   "id": "q00186",
+   "doc_id": "36.0401",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": null,
+   "sect_rank": null,
+   "window_words": 847,
+   "window_docs": 5
+  },
+  {
+   "id": "q00188",
+   "doc_id": "61.0104",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 7,
+   "sect_rank": null,
+   "window_words": 774,
+   "window_docs": 5
+  },
+  {
+   "id": "q00200",
+   "doc_id": "35.0205",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 61,
+   "sect_rank": null,
+   "window_words": 880,
+   "window_docs": 5
+  },
+  {
+   "id": "rs005",
+   "doc_id": "31.0513",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "doc_rank": 1,
+   "sect_rank": null,
+   "window_words": 1490,
+   "window_docs": 5
+  },
+  {
+   "id": "rs054",
+   "doc_id": "35.0807",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "doc_rank": 3,
+   "sect_rank": null,
+   "window_words": 1720,
+   "window_docs": 4
+  },
+  {
+   "id": "rs024",
+   "doc_id": "33-05-01",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 10,
+   "sect_rank": 83,
+   "window_words": 1258,
+   "window_docs": 5
+  },
+  {
+   "id": "rs018",
+   "doc_id": "CHOK-SHIPUT-1955",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 166,
+   "sect_rank": null,
+   "window_words": 995,
+   "window_docs": 5
+  },
+  {
+   "id": "rs060",
+   "doc_id": "35.0223",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 14,
+   "sect_rank": null,
+   "window_words": 1334,
+   "window_docs": 5
+  },
+  {
+   "id": "rs033",
+   "doc_id": "33-05-01",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "doc_rank": 2,
+   "sect_rank": null,
+   "window_words": 670,
+   "window_docs": 5
+  },
+  {
+   "id": "rs063",
+   "doc_id": "21.0113",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "doc_rank": 1,
+   "sect_rank": null,
+   "window_words": 1094,
+   "window_docs": 5
+  },
+  {
+   "id": "rs010",
+   "doc_id": "CHOK-SHIPUT-1955",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 43,
+   "sect_rank": null,
+   "window_words": 1039,
+   "window_docs": 5
+  },
+  {
+   "id": "rs000",
+   "doc_id": "33.0115",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 18,
+   "sect_rank": null,
+   "window_words": 815,
+   "window_docs": 6
+  },
+  {
+   "id": "rs012",
+   "doc_id": "PM-33.0302",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 28,
+   "sect_rank": null,
+   "window_words": 795,
+   "window_docs": 5
+  },
+  {
+   "id": "rs059",
+   "doc_id": "HKA-31-08-01",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 145,
+   "sect_rank": null,
+   "window_words": 1259,
+   "window_docs": 5
+  },
+  {
+   "id": "rs045",
+   "doc_id": "PM-33.0213",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "doc_rank": 1,
+   "sect_rank": null,
+   "window_words": 1812,
+   "window_docs": 5
+  },
+  {
+   "id": "rs007",
+   "doc_id": "35.0206",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": null,
+   "sect_rank": null,
+   "window_words": 1461,
+   "window_docs": 5
+  },
+  {
+   "id": "rs039",
+   "doc_id": "HKA-31-08-01",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "doc_rank": 4,
+   "sect_rank": null,
+   "window_words": 1391,
+   "window_docs": 4
+  },
+  {
+   "id": "rs070",
+   "doc_id": "CHOK-SHIPUT-1955",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "doc_rank": 3,
+   "sect_rank": null,
+   "window_words": 787,
+   "window_docs": 6
+  },
+  {
+   "id": "rs014",
+   "doc_id": "33-05-01",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "doc_rank": 62,
+   "sect_rank": null,
+   "window_words": 1265,
+   "window_docs": 5
+  },
+  {
+   "id": "rs067",
+   "doc_id": "31.0103",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "doc_rank": 4,
+   "sect_rank": null,
+   "window_words": 1245,
+   "window_docs": 4
+  },
+  {
+   "id": "rs009",
+   "doc_id": "35.0107",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "doc_rank": 2,
+   "sect_rank": null,
+   "window_words": 1784,
+   "window_docs": 5
+  },
+  {
+   "id": "rs048",
+   "doc_id": "36.0401",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "doc_rank": 4,
+   "sect_rank": null,
+   "window_words": 1165,
+   "window_docs": 5
+  },
+  {
+   "id": "rs071",
+   "doc_id": "33.0220",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "doc_rank": 1,
+   "sect_rank": null,
+   "window_words": 834,
+   "window_docs": 5
+  }
+ ]
+}
