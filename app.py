@@ -2228,7 +2228,7 @@ div[data-testid="stButton"] > button:active {{
     max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }}
 .cai-ident .rl {{
-    font: 400 10.5px Heebo, sans-serif; color: var(--accent-bright);
+    font: 400 calc(12px * var(--cai-fs, 1)) Heebo, sans-serif; color: var(--accent-bright);
     opacity: .8; line-height: 1; white-space: nowrap;
 }}
 
@@ -3103,7 +3103,10 @@ div[data-testid="stDialog"] textarea {{ direction: rtl; font: 400 14px/1.7 Heebo
     font: 400 13px Heebo, sans-serif;
     text-align: right;
     text-decoration: none !important;
-    padding: 7px 10px;
+    /* 44px touch target (31.08 audit: 33px on device); symmetric padding keeps
+       the baseline-aligned title + date badge centred in the taller row */
+    padding: 12px 10px;
+    min-height: 44px;
     margin: 0 8px 2px 0;
     direction: rtl;
     transition: color .15s ease, border-color .15s ease;
@@ -3122,7 +3125,7 @@ a.cai-order-link:hover {{
 /* freshness badge — the order's own version date, so "how current is
    this?" is answered in the list itself */
 .cai-order-date {{
-    font: 400 10.5px Heebo, sans-serif;
+    font: 400 calc(12px * var(--cai-fs, 1)) Heebo, sans-serif;
     color: var(--text-faint);
     flex: none;
     white-space: nowrap;
@@ -4833,7 +4836,7 @@ div[data-testid="stDialog"] [data-testid="InputInstructions"] { display: none !i
 /* another disclaimer, same reasoning as the composer's — routed through the
    token so it tracks --text-faint rather than drifting on its own */
 .cai-ent-disc span.g { flex: none; font-size: 12px; line-height: 1.55; color: var(--text-faint); }
-.cai-ent-disc span.t { font: 400 11px Heebo, sans-serif; color: var(--text-faint); line-height: 1.55; }
+.cai-ent-disc span.t { font: 400 calc(12px * var(--cai-fs, 1)) Heebo, sans-serif; color: var(--text-faint); line-height: 1.55; }
 
 /* ---- Punishment-authority views (share the card shell) ---- */
 .cai-pa-intro { direction: rtl; text-align: right; font: 400 12.5px/1.6 Heebo, sans-serif;
@@ -4851,7 +4854,7 @@ div[data-testid="stDialog"] [data-testid="InputInstructions"] { display: none !i
 /* --text-faint (.4) measures 3.48:1 at 10.5px — under AA. Raised locally
    rather than at the token, which is also used for decorative monospace where
    the faintness is the point; the app-wide sweep is a separate job. */
-.cai-pa-clause { font: 500 10.5px Heebo, sans-serif; color: rgba(239,240,232,.58); }
+.cai-pa-clause { font: 500 calc(12px * var(--cai-fs, 1)) Heebo, sans-serif; color: rgba(239,240,232,.58); }
 .cai-pa-max { flex: 0 0 auto; border-radius: 9px; padding: 4px 12px; white-space: nowrap;
     font: 700 12.5px Heebo, sans-serif; border: 1px solid; }
 .cai-pa-max.ok    { color:#A9C687; background:rgba(148,183,110,.13); border-color:rgba(148,183,110,.4); }
@@ -4869,7 +4872,7 @@ div[data-testid="stDialog"] [data-testid="InputInstructions"] { display: none !i
     border: 1.5px solid var(--accent); border-radius: 3px; transform: rotate(45deg); }
 .cai-pa-note { margin: 4px 8px 0 0; padding-right: 18px; }
 .cai-pa-note li { font: 400 12px/1.6 Heebo, sans-serif; color: var(--text-dim); margin-bottom: 6px; }
-.cai-pa-disc { direction: rtl; text-align: right; font: 400 11px/1.55 Heebo, sans-serif;
+.cai-pa-disc { direction: rtl; text-align: right; font: 400 calc(12px * var(--cai-fs, 1)) Heebo, sans-serif; line-height: 1.55;
     color: rgba(236,237,230,.4); border-top: 1px solid rgba(236,237,230,.08);
     padding-top: 12px; margin-top: 16px; }
 
@@ -4951,7 +4954,7 @@ div[data-testid="stDialog"] [data-testid="stRadio"] label:active { filter: brigh
 .cai-mil-det .tt { font: 600 14px Heebo, sans-serif; color: var(--text); }
 .cai-mil-det .sb { font: 400 12px Heebo, sans-serif; color: rgba(236,237,230,.6);
     margin-top: 2px; line-height: 1.45; }
-.cai-mil-tag { font: 600 10.5px Heebo, sans-serif; color: var(--accent-bright);
+.cai-mil-tag { font: 600 calc(12px * var(--cai-fs, 1)) Heebo, sans-serif; color: var(--accent-bright);
     background: var(--accent-soft); border: 1px solid var(--accent-border);
     border-radius: 99px; padding: 1px 8px; flex: none;
     /* a pill is an atom: it may DROP to the next line whole, never split
