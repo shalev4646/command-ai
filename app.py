@@ -257,6 +257,27 @@ _profile_probe = components.declare_component(
     path=str(Path(__file__).parent / "components" / "profile_probe"),
 )
 
+# ── Conversation probe (2026-09-12). Same transport, different payload: the
+# chat itself. messages/conversation_history live only in session_state, so a
+# page load loses them — measured that day on the real app: a frozen web view
+# kept the chat at 10s, 60s and 150s, while ONE reload took it from two
+# bubbles to zero. iOS discards a backgrounded web view under memory pressure
+# (and a swipe-away is the same thing), which is the user's "I asked
+# something, went out, came back, and it was gone".
+_chat_probe = components.declare_component(
+    "cai_chat_probe",
+    path=str(Path(__file__).parent / "components" / "chat_probe"),
+)
+
+# How much of the chat rides to the device. The cap is on SERIALIZED BYTES,
+# not on a message count, because one answer with its sources outweighs a
+# dozen questions; the oldest messages are dropped until it fits, and the
+# archive is trimmed before the live chat is touched (losing yesterday's
+# conversation matters less than losing the one on screen). 200KB leaves the
+# 5MB localStorage quota almost untouched and costs ~40ms over the socket.
+_CHAT_MAX_BYTES = 200_000
+_CHAT_MAX_ARCHIVE = 5
+
 # ── Device profile cookie (cai_profile) — the app's only cross-visit memory.
 # Written by a tiny JS component every run (see the sync block); read here
 # from the WebSocket handshake via st.context.cookies where the platform
@@ -1244,6 +1265,45 @@ if not st.session_state.get("cai_probe_done") and not _ck:
             if _pd.get("asked"):
                 st.session_state.name_asked = True
 
+# ── Conversation restore — once per session, before anything renders the chat.
+# Gated on a session flag rather than on `messages` being empty: after the user
+# clears the chat it is empty again, and re-restoring what they just deleted is
+# the opposite of what they asked for. The flag is set whatever comes back,
+# including "" (nothing saved) — one round trip per page load, never two.
+# THE ROUND TRIP IS NOT FREE — so it is only paid where there is something to
+# restore. The profile cookie arrives with the WebSocket handshake, before any
+# component exists, so a one-character flag in it ("ch") answers "does this
+# device hold a chat?" for nothing. No flag, no probe, no extra rerun: a first
+# visit and a device with an empty chat boot exactly as fast as they did before
+# this feature existed. Where the cookie itself is missing (Community Cloud
+# strips it) the profile probe is already round-tripping, so the chat probe
+# rides along at no extra cost.
+_chat_maybe_saved = bool(_ck.get("ch")) or not _ck
+if not st.session_state.get("cai_chat_restored") and not _chat_maybe_saved:
+    st.session_state.cai_chat_restored = True
+if not st.session_state.get("cai_chat_restored"):
+    _cv = _chat_probe(default=None)
+    if _cv is not None:
+        st.session_state.cai_chat_restored = True
+        try:
+            _cd = json.loads(_cv) if _cv else {}
+        except Exception:
+            _cd = {}
+        if isinstance(_cd, dict) and _cd.get("v") == 1:
+            _msgs = _cd.get("m")
+            if isinstance(_msgs, list) and not st.session_state.messages:
+                st.session_state.messages = [
+                    m for m in _msgs
+                    if isinstance(m, dict) and m.get("role") in ("user", "assistant")
+                    and isinstance(m.get("content"), str)
+                ]
+            _hist = _cd.get("h")
+            if isinstance(_hist, list) and not st.session_state.conversation_history:
+                st.session_state.conversation_history = [
+                    h for h in _hist
+                    if isinstance(h, dict) and isinstance(h.get("messages"), list)
+                ]
+
 # ── Boot-settled marker ── The shell's curtain (boot_shell ready()) must not
 # lift on the PRE-probe run: that run's screen is rebuilt the moment the probe
 # value lands, and the rebuild then happened in the open — the "the opening
@@ -1253,10 +1313,58 @@ if not st.session_state.get("cai_probe_done") and not _ck:
 # st.stop() and the end of the chat path); the shell refuses to even start its
 # stability countdown until the marker exists. A probe that never answers is
 # covered by the shell's own 90s failsafe.
-_boot_settled = bool(_ck) or bool(st.session_state.get("cai_probe_done"))
+# The conversation probe joins the same gate: a run that lifts the curtain
+# before the chat lands shows an empty screen and then rebuilds it in the
+# open, which is the two-stage opening the 2026-08-31 video caught.
+_boot_settled = ((bool(_ck) or bool(st.session_state.get("cai_probe_done")))
+                 and bool(st.session_state.get("cai_chat_restored")))
+
+
+def _mirror_chat_to_device() -> None:
+    """Write the live conversation to the device, at the end of a run.
+
+    Called from the two script exit points, so it always snapshots the FINAL
+    state of the run: `handle_question` appends the answer last, and anything
+    written earlier would store a chat without it.
+
+    Never before the restore round-trip has landed. That ordering is the whole
+    safety story — the same race the profile sync hit on Community Cloud, where
+    an unconditional writer wiped the device memory with an empty payload while
+    the probe was still in flight. With the flag set, writing an EMPTY chat is
+    correct and wanted: it is what "clear history" has to leave behind.
+    """
+    if not st.session_state.get("cai_chat_restored"):
+        return
+    msgs = [m for m in st.session_state.messages if isinstance(m, dict)]
+    hist = st.session_state.conversation_history[:_CHAT_MAX_ARCHIVE]
+    try:
+        payload = json.dumps({"v": 1, "m": msgs, "h": hist}, ensure_ascii=False)
+        # trim to fit: the archive first, then the oldest live messages
+        while len(payload.encode("utf-8")) > _CHAT_MAX_BYTES and hist:
+            hist = hist[:-1]
+            payload = json.dumps({"v": 1, "m": msgs, "h": hist}, ensure_ascii=False)
+        while len(payload.encode("utf-8")) > _CHAT_MAX_BYTES and len(msgs) > 2:
+            msgs = msgs[2:]
+            payload = json.dumps({"v": 1, "m": msgs, "h": hist}, ensure_ascii=False)
+        if len(payload.encode("utf-8")) > _CHAT_MAX_BYTES:
+            return
+    except (TypeError, ValueError):
+        # a message carrying something unserializable must never take the app
+        # down — the device simply keeps the previous copy
+        return
+    if st.session_state.get("cai_chat_mirrored") == payload:
+        return                                   # unchanged: no component, no rerun noise
+    st.session_state.cai_chat_mirrored = payload
+    components.html(
+        "<script>try{window.top.localStorage.setItem('cai_chat',"
+        + json.dumps(payload, ensure_ascii=False)
+        + ");}catch(e){}</script>",
+        height=0,
+    )
 
 
 def _emit_boot_settled() -> None:
+    _mirror_chat_to_device()
     if _boot_settled:
         st.markdown("<span data-cai-settled hidden></span>", unsafe_allow_html=True)
 
@@ -4086,6 +4194,15 @@ _ck_dict = {
     # first role tap, which is always before the first question.
     "did": st.session_state.device_id,
 }
+# "ch" — does this device hold a saved chat? Read on the NEXT load to decide
+# whether the restore probe is worth a round trip (see the restore block).
+# Conditional like "mil"/"sol": absent for anyone who never asked anything, so
+# their cookie payload stays byte-identical to the pre-restore format. It
+# trails by one run (the cookie is written before the chat path appends this
+# run's answer) and that is fine — `handle_question` always ends in a rerun,
+# so the flag lands the moment the first answer does.
+if st.session_state.messages or st.session_state.conversation_history:
+    _ck_dict["ch"] = 1
 # text scale rides the device cookie, and like "mil"/"sol" it is written ONLY
 # when it differs from the default — so the payload of everyone who never
 # touched the setting stays byte-identical to the pre-text-scale format.
@@ -6793,7 +6910,10 @@ _PRIVACY_SECTIONS = [
      "בטופס, ובהם השם והדרגה; נוסח הטיוטה עצמו אינו נרשם אצלנו.<br><br>"
      "<b>מה שנשמר רק אצלך במכשיר ולא מגיע אלינו:</b> שם הפרופיל, תאריכי גיוס ושחרור, "
      "וגובה השכר שהוזן במחשבון התגמול. השכר במפורש אינו נשלח לשום מקום — הוא משמש "
-     "לחישוב מקומי בלבד.<br><br>"
+     "לחישוב מקומי בלבד. <b>גם השיחה עצמה</b> — השאלות והתשובות שעל המסך, ועד חמש "
+     "שיחות אחרונות — נשמרת במכשיר בלבד, כדי שתחזור אליך אם האפליקציה נסגרה או "
+     "הוסרה מהזיכרון. «מחיקת היסטוריית שיחות» במסך «פרטיות ואבטחה» מוחקת גם את "
+     "העותק הזה.<br><br>"
      "האפליקציה אינה מבקשת ואינה שומרת מספר אישי, מספר טלפון, כתובת או דוא\"ל."),
     ("למה נאסף",
      "נוסח השאלה נשלח לשירות הבינה המלאכותית כדי להפיק את התשובה — בלעדיו אין מוצר.<br><br>"
@@ -6880,7 +7000,11 @@ _WIPE_NOTE = (
 
 
 def _clear_history():
-    """Wipe archived conversations + the active chat (a deliberate cleanup)."""
+    """Wipe archived conversations + the active chat (a deliberate cleanup).
+
+    The device copy goes with them: the mirror runs at the end of this run and
+    writes the now-empty chat, which is what makes the wipe survive a reload.
+    """
     st.session_state.conversation_history = []
     st.session_state.messages = []
 

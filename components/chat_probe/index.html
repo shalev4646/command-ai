@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<!-- cai_chat_probe: hands the device's saved conversation back to Python.
+
+     The conversation lives ONLY in st.session_state (messages +
+     conversation_history), so every page load loses it — measured 2026-09-12:
+     freezing the web view for 10s, 60s and 150s kept the chat alive, while a
+     single reload dropped it from two bubbles to zero. iOS discards a
+     backgrounded web view under memory pressure, and swiping the app away
+     does the same thing, so "I asked something, left, came back, it's gone"
+     is that reload.
+
+     Same transport as cai_profile_probe (plain-JS component protocol, no npm
+     build): read window.top.localStorage, post the string back, Python
+     restores it into session_state before the curtain lifts. The payload is
+     written by the mirror script in app.py; this side only reads, and an
+     unreadable or absent store simply returns "". -->
+<body>
+<script>
+(function () {
+    "use strict";
+    function send(type, data) {
+        var msg = { isStreamlitMessage: true, type: type };
+        if (data) { for (var k in data) { msg[k] = data[k]; } }
+        window.parent.postMessage(msg, "*");
+    }
+    function readChat() {
+        var raw = null;
+        try { raw = window.top.localStorage.getItem("cai_chat"); } catch (e) {}
+        return raw || "";
+    }
+    window.addEventListener("message", function (ev) {
+        var d = ev.data || {};
+        if (d.type === "streamlit:render") {
+            send("streamlit:setFrameHeight", { height: 0 });
+            send("streamlit:setComponentValue", { dataType: "json", value: readChat() });
+        }
+    });
+    send("streamlit:componentReady", { apiVersion: 1 });
+})();
+</script>
+</body>
+</html>
