@@ -316,6 +316,39 @@ RETRIEVE_V3 = int(os.environ.get("RETRIEVE_V3", "0"))
 RETRIEVE_V3_MODEL = os.environ.get("RETRIEVE_V3_MODEL", "minilm")
 RETRIEVE_V3_ONLY = os.environ.get("RETRIEVE_V3_ONLY", "0") == "1"
 
+# ── The window as ORDERS, not chunks (RETRIEVE_DOC_BLOCKS) — 12.09 ───────────
+# The measurement that produced this, free, on the 82 adjudicated targets
+# (night/out/sect_*.json, 2026-09-12):
+#
+#   the answering order sits in the GLOBAL ranking at   top-8   35/82
+#                                                        top-16  43/82
+#                                                        top-25  54/82
+#   ...and today's window delivers                               29/82
+#
+# So the ranking already knows. What loses it is the window's SHAPE:
+# top_doc_depth=4 and max_per_doc=4 spend four of eight seats on the leading
+# order, because a single chunk of the right order is usually the wrong
+# paragraph ("right doc, wrong chunk", the failure those knobs were written
+# to prevent). Serving the order's curated BLOCK solves that failure outright
+# — every clause of the order is there — so the seats are free again.
+#
+# The rule: take the first RETRIEVE_DOC_BLOCKS distinct orders of the global
+# ranking and serve each one's block; the raw chunks that ranked are appended
+# after them (never dropped — the "V3 only" run lost 15 orders that live only
+# in raw text, and 9 of 82 targets are answered by raw text no curated clause
+# carries). Measured offline on the same targets:
+#
+#   today                                 order 29/82   section 12/82   1,244 words
+#   6 blocks  UNION  the clause index     order 35/82   section 23/82   ~3,300 words
+#
+# 0 = off, and off is the default until the paired re-measure says the
+# ANSWERS move -- the rule every knob in this file ships under.
+RETRIEVE_DOC_BLOCKS = int(os.environ.get("RETRIEVE_DOC_BLOCKS", "0"))
+# How deep into the ranking to look for those distinct orders. The window is
+# 8 chunks and its per-doc caps hide orders that ranked well, so the pool is
+# read from a deeper ranking (the same scorer, no extra model call).
+RETRIEVE_DOC_BLOCKS_POOL = int(os.environ.get("RETRIEVE_DOC_BLOCKS_POOL", "40"))
+
 # "How much / how many / what is the maximum" — the demand, not the topic.
 # Deliberately narrow: "כמה" alone would fire on "כמה שיותר מהר" and on any
 # question that merely contains the word.
@@ -1138,6 +1171,50 @@ def _serve_blocks_by_hits(chunks: list[dict], hits, by_id: dict, route: set[str]
     return _append_new(chunks, picks, None)
 
 
+def doc_blocks_window(question: str, role: str, route: set[str] | None,
+                      doc_ids: list[str]) -> list[dict]:
+    """RETRIEVE_DOC_BLOCKS: the window rebuilt as ORDERS. The first N distinct
+    orders of a deep ranking, each served as its curated block (cut to its
+    best-evidenced clauses when it is huge), then the raw chunks that ranked,
+    appended in rank order. Returns [] when the flag is off, so the caller
+    keeps the historical path byte for byte.
+
+    Clause evidence for the block cut comes from the clause-title index, which
+    is free and already built — a block over RETRIEVE_V2_BLOCK_WORDS is the
+    exception (8 of 287 orders), and without evidence it would be served by
+    document order alone."""
+    if RETRIEVE_DOC_BLOCKS <= 0:
+        return []
+    pool = retrieve(question, n_results=RETRIEVE_DOC_BLOCKS_POOL,
+                    doc_ids=doc_ids, boost_docs=route,
+                    max_per_doc=RETRIEVE_DOC_BLOCKS_POOL,
+                    top_doc_depth=1)
+    if not pool:
+        return []
+    by_id = {d["document_id"]: d for d in _docs_for_role(role) if d.get("document_id")}
+    order: list[str] = []
+    for c in pool:
+        if c["doc_id"] not in order:
+            order.append(c["doc_id"])
+    hits = _clause_index().rank(question, doc_ids=order[:RETRIEVE_DOC_BLOCKS])
+    out: list[dict] = []
+    for doc_id in order[:RETRIEVE_DOC_BLOCKS]:
+        doc = by_id.get(doc_id)
+        if doc is None:
+            continue
+        cl = hits.clause_scores(doc_id)
+        for c in v2_block_chunks(doc, cl):
+            c = dict(c)
+            # the order's own ranking score, so the block sorts where the
+            # order ranked and _sources_from_chunks keeps its order
+            c["score"] = next((x["score"] for x in pool if x["doc_id"] == doc_id), 0.0)
+            out.append(c)
+    # the raw chunks that ranked ride along: 9 of 82 adjudicated targets are
+    # answered by raw text that no curated clause carries, and the "V3 only"
+    # run lost 15 orders by dropping them
+    return _append_new(out, pool, None)
+
+
 def extend_with_clause_embed(chunks: list[dict], question: str, role: str,
                              route: set[str] | None = None) -> list[dict]:
     """RETRIEVE_V3: the blocks of the orders the clause-level embedding index
@@ -1241,6 +1318,8 @@ def retrieve_for_role(question: str, role: str, route: set[str] | None = None,
         # the 12.09 restart, whole: no raw-window ranking at all — the window
         # is what the clause-level index serves (see extend_with_clause_embed)
         chunks: list[dict] = []
+    elif RETRIEVE_DOC_BLOCKS > 0:
+        chunks = doc_blocks_window(search, role, route, doc_ids)
     else:
         chunks = retrieve(search, n_results=MAX_CONTEXT_CHUNKS, doc_ids=doc_ids,
                           boost_docs=route, max_per_doc=RETRIEVE_MAX_PER_DOC,

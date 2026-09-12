@@ -790,3 +790,50 @@ venv\Scripts\python.exe -m night.sectprobe night\out\sect_v3_only.json     # ב�
 
 ⚠ **התקרה שאי אפשר לעקוף:** 28 מ-82 (34%) — הפקודה שעונה אינה בטופ-25 של
 שום תצורה. עבורן החסם הוא הקורפוס והאוצרות, לא האחזור.
+
+---
+
+## ⚡ 12.09 (ז) — `RETRIEVE_DOC_BLOCKS`: החלון נבנה מחדש כ**פקודות**, לא כצ'אנקים
+
+הצעד שהמדידה של (ו) הצביעה עליו, בנוי וכבוי (`tests/test_doc_blocks.py`,
+8 בדיקות בלי מודל).
+
+**מה הוא עושה.** במקום „8 צ'אנקים עם תקרה של 4 למסמך ועומק 4 למוביל":
+N הפקודות הראשונות של דירוג **עמוק** (`RETRIEVE_DOC_BLOCKS_POOL=40`, אותו
+מדרג, בלי קריאת מודל נוספת), כל אחת מוגשת כ**בלוק המאוצר שלה** — ואחריהן
+הצ'אנקים הגולמיים שדורגו, מצורפים ולא נזרקים.
+
+**למה זה נכון דווקא עכשיו.** `top_doc_depth=4` ו-`max_per_doc=4` נכתבו כדי
+למנוע „פקודה נכונה, סעיף לא נכון" — והם עושים זאת בכך שהם מוציאים 4 מ-8
+המושבים על הפקודה המובילה. **הגשת בלוק מבטלת את אותו כשל מעצם הגדרתה**
+(כל סעיפי הפקודה שם), ולכן המושבים משתחררים. הצ'אנקים הגולמיים נשארים כי
+9 מ-82 היעדים נענים מטקסט גולמי שאין לו סעיף מאוצר, והריצה „רק V3" איבדה
+15 פקודות בדיוק בגלל שזרקה אותם.
+
+**הצפי, מהנתונים שכבר נמדדו (night/out/sect_prod.json + הבוררות):**
+
+| | הפקודה שעונה | הסעיף שעונה | מילים |
+|---|---|---|---|
+| היום | 29/82 | 12/82 | 1,244 |
+| 6 בלוקים ∪ אינדקס-הכותרות | 35/82 | 23/82 | ~3,300 |
+
+### ⏰ המדידה החינמית במכונה שלך — שלוש ריצות
+
+```powershell
+git pull --ff-only origin claude/intelligent-hypatia-t8h569
+$env:RETRIEVE_FULL_BLOCKS = "1"
+$env:RETRIEVE_DOC_BLOCKS = "4"
+venv\Scripts\python.exe -m night.sectprobe night\out\sect_blocks4.json
+$env:RETRIEVE_DOC_BLOCKS = "6"
+venv\Scripts\python.exe -m night.sectprobe night\out\sect_blocks6.json
+$env:RETRIEVE_V2 = "2"
+venv\Scripts\python.exe -m night.sectprobe night\out\sect_blocks6_v2.json
+Remove-Item Env:RETRIEVE_DOC_BLOCKS, Env:RETRIEVE_V2
+git add -f night\out\sect_blocks4.json night\out\sect_blocks6.json night\out\sect_blocks6_v2.json
+git commit -m "sectprobe: doc-blocks window, 4 vs 6 vs 6+V2"
+git push origin HEAD:claude/intelligent-hypatia-t8h569
+```
+
+**הקריטריון שנקבע מראש: „הסעיף שעונה בחלון" ≥ 20 מ-82** (היום 12) באחת
+משלוש התצורות, **בלי לאבד פקודות** — ואז זרוע אחת (~$2). פחות מזה: האחזור
+מוצה, והמאמץ עובר לקורפוס (FOI) ולתוכן.
