@@ -924,7 +924,10 @@ components.html(
                 }
                 // launch log (v47): the About screen's placeholder, filled from
                 // the ring the shell's lift() writes (see LAUNCH RECORDER)
-                var ll = document.getElementById("cai-launchlog");
+                // a DIV by CLASS: Streamlit's markdown renderer drops id
+                // attributes and rewrites <pre> into its own element without
+                // ours (the About box stayed "…" on the 12.09 14:48 screenshot)
+                var ll = document.querySelector("div.cai-launchlog");
                 if (ll && !ll.__caiFilled) {
                     ll.__caiFilled = true;
                     try {
@@ -7308,8 +7311,9 @@ def _settings_about():
     # product: it answers where a cold launch's time goes.
     st.markdown("<div class='cai-set-seclabel'>אבחון פתיחות</div>", unsafe_allow_html=True)
     st.markdown(
-        "<div class='cai-lang-card' style='padding:12px'><pre id='cai-launchlog' class='cai-tos-b' "
-        "style='direction:ltr;text-align:left;white-space:pre-wrap;font-size:11px;margin:0'>…</pre></div>",
+        "<div class='cai-lang-card' style='padding:12px'><div class='cai-launchlog cai-tos-b' "
+        "style='direction:ltr;text-align:left;white-space:pre-wrap;font-size:11px;"
+        "font-family:ui-monospace,Menlo,monospace;margin:0'>…</div></div>",
         unsafe_allow_html=True)
     st.markdown(
         "<div class='cai-set-foot'><div class='a'>מחשבון זכאויות · גרסה 2.4</div>"

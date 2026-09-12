@@ -348,8 +348,8 @@ def test_lift_pins_the_composer_itself_and_records_the_launch():
     assert "localStorage.setItem(key, JSON.stringify(arr))" in js and "'cai-launch-log'" in js
     app = (ROOT / "app.py").read_text(encoding="utf-8")
     assert 'window.addEventListener("cai-lift", function () { try { heal(); } catch (e) {} });' in app
-    assert 'document.getElementById("cai-launchlog")' in app
-    assert "id='cai-launchlog'" in app
+    assert 'document.querySelector("div.cai-launchlog")' in app, "a div by class: Streamlit strips ids and rewrites <pre>"
+    assert "class='cai-launchlog cai-tos-b'" in app
 
 
 def test_launch_image_carries_the_logo_again():
