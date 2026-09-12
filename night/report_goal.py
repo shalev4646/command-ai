@@ -175,11 +175,22 @@ def tally(rows: list[dict], verds: dict[str, str], tag: str = "") -> dict:
 
 
 def report(tag: str, verds: dict[str, str] | None = None) -> dict:
-    """Both numbers for one measured arm, plus the rows behind them."""
+    """Both numbers for one measured arm, plus the rows behind them.
+
+    שלב 6 (night/review.py): the flagged rows ride along, and when a manual
+    review file exists the tally is computed a second time over the reviewed
+    rows — `reviewed` — beside the graded one, never instead of it."""
+    from night import review as _review
     rows = C.read_jsonl(C.OUT / f"grades_{tag}.jsonl")
     if not rows:
         raise SystemExit(f"no grades on disk for {tag} — expected {C.OUT / f'grades_{tag}.jsonl'}")
-    return tally(rows, verdicts() if verds is None else verds, tag)
+    verds = verdicts() if verds is None else verds
+    d = tally(rows, verds, tag)
+    d["flagged"] = sorted(_review.flag_rows(rows))
+    rev = _review.load_review(tag)
+    d["reviewed"] = tally(_review.apply_review(rows, rev), verds, tag) if rev else None
+    d["reviewed_rows"] = sorted(rev)
+    return d
 
 
 def _pct(n: int, d: int) -> str:
@@ -204,6 +215,15 @@ def main(tags: list[str]) -> int:
                    + ("   <-- the families are lagging" if d["defaulted"] else ""))
         safe_print(f"         no credit: {len(d['uncredited'])} zero-scoring questions "
                    f"nobody adjudicated (by design)")
+        if d.get("flagged"):
+            safe_print(f"         review: {len(d['flagged'])} answers carry a ruling and scored short "
+                       f"-- read before counting as failures: {', '.join(d['flagged'])}")
+        if d.get("reviewed"):
+            r = d["reviewed"]
+            safe_print(f"         after manual review ({len(d['reviewed_rows'])} rows): "
+                       f"strict {_pct(r['strict'], r['total'])}"
+                       f"   ->  served {_pct(r['served'], r['total'])}"
+                       f"   ->  goal {_pct(r['goal'], r['total'])}")
         safe_print("")
 
 
