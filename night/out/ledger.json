@@ -1,5 +1,5 @@
 {
- "spent": 125.8026,
+ "spent": 127.8491,
  "reserved": 0,
  "entries": [
   {
@@ -4335,6 +4335,12 @@
    "actual": 0.0699
   },
   {
+   "id": "grade-grade-lack3#564-845",
+   "label": "grade-grade-lack3",
+   "estimate": 0.108,
+   "actual": 0.0675
+  },
+  {
    "id": "grade-grade-second4#3360-841",
    "label": "grade-grade-second4",
    "estimate": 0.108,
@@ -4795,6 +4801,12 @@
    "label": "probe-hyde30",
    "estimate": 0.812,
    "actual": 0.8295
+  },
+  {
+   "id": "probe-lack3#564-844",
+   "label": "probe-lack3",
+   "estimate": 1.764,
+   "actual": 1.979
   },
   {
    "id": "probe-newsrc_after#15504-718",
