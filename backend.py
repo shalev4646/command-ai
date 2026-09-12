@@ -16,6 +16,7 @@ from metadata_overrides import apply_overrides
 from storage.vector_store import retrieve
 from storage import glossary as _glossary
 from storage import clause_index as _ci
+from storage import clause_embed as _ce
 
 load_dotenv(Path(__file__).parent / ".env")
 
@@ -297,6 +298,23 @@ RETRIEVE_V2 = int(os.environ.get("RETRIEVE_V2", "0"))
 RETRIEVE_V2_BLOCK_WORDS = int(os.environ.get("RETRIEVE_V2_BLOCK_WORDS", "600"))
 RETRIEVE_V2_TOP_K = int(os.environ.get("RETRIEVE_V2_TOP_K", "6"))
 RETRIEVE_V2_ROUTE_BONUS = float(os.environ.get("RETRIEVE_V2_ROUTE_BONUS", "0.05"))
+
+# ── The clause-level embedding index (RETRIEVE_V3) — the 12.09 restart ───────
+# Two arms and one free instrument said the same thing: in 45 of 82 measured
+# questions the answering ORDER never reaches the model, and every knob on
+# top of the current index moves that by 5-8. storage/clause_embed.py changes
+# what is underneath: one vector per curated clause and per anchor, nothing
+# from raw text, and an embedder chosen by RETRIEVE_V3_MODEL (`minilm` = the
+# production stack, so the first pre-screen isolates the clean index from the
+# better model; `e5-base` etc. are stronger multilingual exports). The best
+# RETRIEVE_V3 orders are served as blocks, appended like V2 — or, with
+# RETRIEVE_V3_ONLY=1, INSTEAD of the raw window (no chunk retrieval at all).
+# Off in code; measured free by night/sectprobe.py on the user's machine
+# (huggingface.co is blocked in the session). A second model in production
+# would be a memory question for Fly — measurement first.
+RETRIEVE_V3 = int(os.environ.get("RETRIEVE_V3", "0"))
+RETRIEVE_V3_MODEL = os.environ.get("RETRIEVE_V3_MODEL", "minilm")
+RETRIEVE_V3_ONLY = os.environ.get("RETRIEVE_V3_ONLY", "0") == "1"
 
 # "How much / how many / what is the maximum" — the demand, not the topic.
 # Deliberately narrow: "כמה" alone would fire on "כמה שיותר מהר" and on any
@@ -1082,6 +1100,60 @@ def v2_block_chunks(doc: dict, clause_scores: dict, block_words: int | None = No
     return [c for _, _, c in top]
 
 
+_v3_index: tuple[tuple, "_ce.ClauseEmbedIndex"] | None = None
+_v3_lock = threading.Lock()
+
+
+def _clause_embed_index() -> "_ce.ClauseEmbedIndex":
+    """The clause-level embedding index, built once per corpus and model."""
+    global _v3_index
+    docs = load_documents()
+    key = (_docs_cache[0] if _docs_cache else None, id(docs), len(docs), RETRIEVE_V3_MODEL)
+    if _v3_index is None or _v3_index[0] != key:
+        with _v3_lock:
+            if _v3_index is None or _v3_index[0] != key:
+                _v3_index = (key, _ce.ClauseEmbedIndex(docs, _ce.make_embedder(RETRIEVE_V3_MODEL)))
+    return _v3_index[1]
+
+
+def _serve_blocks_by_hits(chunks: list[dict], hits, by_id: dict, route: set[str] | None,
+                          n_docs: int, bonus: float) -> list[dict]:
+    """The V2/V3 serving rule: the `n_docs` best orders by the index's document
+    score (router shortlist as a bonus), each as a block via v2_block_chunks,
+    appended and deduplicated."""
+    scores = {d: s for s, d in hits.docs}
+    if route and bonus > 0:
+        for d in route:
+            if d in by_id:
+                scores[d] = scores.get(d, 0.0) + bonus
+    if not scores:
+        return chunks
+    picks: list[dict] = []
+    for d in sorted(scores, key=lambda x: -scores[x])[:n_docs]:
+        cl = hits.clause_scores(d)
+        for c in v2_block_chunks(by_id[d], cl):
+            c = dict(c)
+            c["score"] = round(cl.get((c["section"], c["clause"]), 0.0), 3)
+            picks.append(c)
+    return _append_new(chunks, picks, None)
+
+
+def extend_with_clause_embed(chunks: list[dict], question: str, role: str,
+                             route: set[str] | None = None) -> list[dict]:
+    """RETRIEVE_V3: the blocks of the orders the clause-level embedding index
+    ranks best. Same scope and serving rule as the title index."""
+    if RETRIEVE_V3 <= 0 or not (question or "").strip():
+        return chunks
+    docs = _docs_for_role(role)
+    if RETRIEVE_CURATED_ONLY:
+        docs = [d for d in docs if _has_key_facts(d)]
+    by_id = {d["document_id"]: d for d in docs if d.get("document_id")}
+    if not by_id:
+        return chunks
+    hits = _clause_embed_index().rank(question, doc_ids=by_id.keys())
+    return _serve_blocks_by_hits(chunks, hits, by_id, route, RETRIEVE_V3, RETRIEVE_V2_ROUTE_BONUS)
+
+
 def extend_with_clause_index(chunks: list[dict], question: str, role: str,
                              route: set[str] | None = None) -> list[dict]:
     """שלב 1.1 + 1.2: the blocks of the RETRIEVE_V2 orders the clause-title
@@ -1119,15 +1191,17 @@ def extend_with_clause_index(chunks: list[dict], question: str, role: str,
 
 def widen_context(chunks: list[dict], question: str, role: str,
                   route: set[str] | None) -> list[dict]:
-    """The five appended extensions, in the order they were measured to
+    """The six appended extensions, in the order they were measured to
     stack: hypothetical, router seats, full blocks, the clause-title path
-    (RETRIEVE_V2), amount-bearing clauses. Each is a no-op when its flag is
+    (RETRIEVE_V2), the clause-embedding path (RETRIEVE_V3), amount-bearing
+    clauses. Each is a no-op when its flag is
     off, so production with all flags off is byte-identical to the
     pre-extension pipeline."""
     out = extend_with_hypothetical(chunks, question, role, route)
     out = extend_with_router_slots(out, question, role, route)
     out = extend_with_full_blocks(out, role)
     out = extend_with_clause_index(out, question, role, route)
+    out = extend_with_clause_embed(out, question, role, route)
     return extend_with_quantity_clauses(out, question, role)
 
 
@@ -1163,9 +1237,14 @@ def retrieve_for_role(question: str, role: str, route: set[str] | None = None,
     # extensions: the hypothetical is cached by question, and the router has
     # already seen it.
     search = _glossary.expand(question) if _glossary.RETRIEVE_GLOSSARY and expand_terms else question
-    chunks = retrieve(search, n_results=MAX_CONTEXT_CHUNKS, doc_ids=doc_ids,
-                      boost_docs=route, max_per_doc=RETRIEVE_MAX_PER_DOC,
-                      top_doc_depth=RETRIEVE_TOP_DOC_DEPTH)
+    if RETRIEVE_V3_ONLY and RETRIEVE_V3 > 0:
+        # the 12.09 restart, whole: no raw-window ranking at all — the window
+        # is what the clause-level index serves (see extend_with_clause_embed)
+        chunks: list[dict] = []
+    else:
+        chunks = retrieve(search, n_results=MAX_CONTEXT_CHUNKS, doc_ids=doc_ids,
+                          boost_docs=route, max_per_doc=RETRIEVE_MAX_PER_DOC,
+                          top_doc_depth=RETRIEVE_TOP_DOC_DEPTH)
     return widen_context(chunks, question, role, route) if widen else chunks
 
 
