@@ -330,7 +330,7 @@ _HISTORY_DROP = 6   # messages (3 exchanges) dropped per trim
 
 _COMMON_RULES = """חוקים מוחלטים:
 1. ענה אך ורק על בסיס הקטעים שסופקו לך בהקשר.
-2. אם אין בקטעים כלל שחל ישירות על המצב שנשאל — פתח באמירה המדויקת: "המידע לא קיים בפקודות שסופקו." מותר להוסיף אחריה מה כן קיים בקטעים (כלל שחל רק על הקשר אחר או צר יותר), תוך ציון מפורש שההקשר שונה.
+2. אם אין בקטעים כלל שחל ישירות על המצב שנשאל — פתח באמירה המדויקת: "המידע לא קיים בפקודות שסופקו." {REFUSAL_FOLLOWUP}
    אם יש כלל שחל ישירות על המצב אך אינו נוקב בערך המדויק שנשאל (שעה, סכום, מספר ימים) — אל תסתפק בסירוב: הצג את הכלל כלשונו, הסבר מה נובע ממנו לשאלה, וציין במפורש מה הפקודות לא קובעות.
 2ב. **לפני שאתה מסיים — פרק את השאלה לחלקים שלה וּודא שכל חלק קיבל מענה או הוכרז כחסר.**
    שאלה של חייל מכילה לרוב יותר מדבר אחד ("תוך כמה זמן, ומי מאשר"), והכשל השכיח כאן אינו
@@ -356,6 +356,28 @@ _COMMON_RULES = """חוקים מוחלטים:
 
 כלל תמציתיות (חל על כל תשובה): ציטוט מהפקודה מביא רק את המשפט האופרטיבי הנחוץ להכרעה — לא פסקאות שלמות. כל תנאי ועובדה מופיעים בתשובה פעם אחת בלבד: מה שפורט ברשימת התנאים לא חוזר בגוף ולא בסיכום. "מה הפקודות לא קובעות" — משפט אחד לכל היותר, ורק כשהוא משנה משהו לשואל. המלצת הסיום — משפט אחד. בלי פתיחים ("חשוב לציין", "שים לב") ובלי משפטי מעבר; עדיף שורת רשימה קצרה על פסקה. היעד: תשובה שלמה בעובדות וחסכונית במילים — כל משפט שאינו מוסיף עובדה, תנאי או מקור נמחק."""
 
+# ── ANSWER_V2 — the refusal's length (night/PLAN_ROUND4.md, שלב 1.3) ─────────
+# The 11.09 screen: on a unit-routine question the refusal ran twelve lines —
+# two bullets on orders the answer itself called irrelevant, then a sentence
+# saying none of them applies — before the one line that mattered. Rule 2
+# invites that: "מותר להוסיף אחריה מה כן קיים". ANSWER_V2 replaces the
+# invitation with a cap: one sentence, same topic only, and no tour of the
+# passages that do not apply. Off = the historical sentence, byte for byte;
+# measured in the same arm as RETRIEVE_V2 (1.c), never deployed alone.
+ANSWER_V2 = os.environ.get("ANSWER_V2", "0") == "1"
+_REFUSAL_FOLLOWUP_V1 = ("מותר להוסיף אחריה מה כן קיים בקטעים (כלל שחל רק על הקשר אחר או "
+                        "צר יותר), תוך ציון מפורש שההקשר שונה.")
+_REFUSAL_FOLLOWUP_V2 = ("אחריה — לכל היותר משפט אחד על מה שכן קיים בקטעים, ורק אם הוא "
+                        "באותו נושא של השאלה. אל תמנה קטעים שעוסקים בנושאים אחרים ואל "
+                        "תסביר מדוע כל קטע אינו חל: משפט הפתיחה, לכל היותר משפט אחד "
+                        "כזה, ושורת כלל 2א — ולא יותר.")
+
+
+def refusal_followup(v2: bool) -> str:
+    """What rule 2 allows after the refusal sentence — see ANSWER_V2."""
+    return _REFUSAL_FOLLOWUP_V2 if v2 else _REFUSAL_FOLLOWUP_V1
+
+
 # Rule 2א's placeholders are substituted here, not by an f-string: _COMMON_RULES
 # is interpolated INTO the persona f-strings, and f-string interpolation does not
 # recurse into the inserted value — `{MARK_OUT}` would reach the model verbatim.
@@ -365,8 +387,10 @@ _COMMON_RULES = (
     .replace("{MARK_OUT}", scope_routes.MARK_OUT_OF_SCOPE)
     .replace("{MARK_MISS}", scope_routes.MARK_MISSING)
     .replace("{ROUTE_BLOCK}", scope_routes.prompt_block())
+    .replace("{REFUSAL_FOLLOWUP}", refusal_followup(ANSWER_V2))
 )
 assert "{MARK_OUT}" not in _COMMON_RULES and "{ROUTE_BLOCK}" not in _COMMON_RULES
+assert "{REFUSAL_FOLLOWUP}" not in _COMMON_RULES
 
 # The two-sided ruling template rides inside every persona's structure
 # block: the model obeys the מבנה-תשובה templates more reliably than prose

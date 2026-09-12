@@ -25,8 +25,10 @@
 """
 from __future__ import annotations
 
+import os
+
 # מפתח -> {label: איך המסגרת נקראת בתשובה, where: לאן פונים, basis: על מה זה נשען}
-ROUTES: dict[str, dict] = {
+_BASE_ROUTES: dict[str, dict] = {
     "national_insurance": {
         "label": "המוסד לביטוח לאומי",
         "where": "המוסד לביטוח לאומי — תגמולי מילואים משולמים על ידו, לא על ידי היחידה",
@@ -84,9 +86,46 @@ ROUTES: dict[str, dict] = {
     },
 }
 
+# ── המסגרת היחידתית, מאחורי דגל (night/PLAN_ROUND4.md, שלב 3.3) ─────────────
+# החריג המדוד לכלל „אין להוסיף כאן מסגרות שבתוך הצבא". על הסט האמיתי (10.09)
+# 19 מ-97 חלקים הם סדר-יום שהפקודות מוסרות במפורש לפקודות הקבע של היחידה,
+# והמודל כותב עליהם היום „טרם במאגר" — הבטחה שהכלל יתווסף, כשהוא לא יתווסף
+# לעולם. עם המסגרת ברשימה הוא יכול לכתוב את האמת: „לא נקבע בפקודות מטכ"ל:
+# פקודות הקבע של היחידה". ⚠ הלקח של רשומת „welfare" (10.08) חל כאן במלואו:
+# מסגרת ברשימה עלולה לזלוג להמלצת-הסיום של תשובות שהוכרעו. לכן כבוי בקוד,
+# נדלק רק בזרוע המכריעה (SCOPE_UNIT_ROUTE=1 לצד RETRIEVE_V2 ו-ANSWER_V2),
+# והמדד שמכריע הוא הזליגה: כמה תשובות מלאות הזכירו את המסגרת בלי שכלל 2א
+# הופעל. יותר מאפס — נשאר כבוי.
+SCOPE_UNIT_ROUTE = os.environ.get("SCOPE_UNIT_ROUTE", "0") == "1"
+
+_UNIT_ROUTE: dict = {
+    "label": "פקודות הקבע של היחידה",
+    "where": 'המפקד הישיר או השליש — לראות את הסעיף בפקודות הקבע של היחידה '
+             '(פק"ל שגרת המחנה)',
+    "basis": 'הקורפוס עצמו: „במועד שייקבע בפקודות הקבע של היחידה, לאחר שעת '
+             'ההשכמה" (פ"מ 33.0401); „בשעות פעילותה הקבועות בפקודות הקבע של '
+             'היחידה" (פ"מ 61.0104); „ייקבע ויוסדר בפק"ל שגרת המחנה" (פ"מ 21.0113).',
+    "covers": "סדר היום של הבסיס — שעות יציאה וחזרה, השכמה, תורנויות, סדרי "
+              "השער, שימוש בטלפון בתוך הבסיס",
+}
+
+
+def build_routes(unit_route: bool = SCOPE_UNIT_ROUTE) -> dict[str, dict]:
+    """The frameworks table, with the unit route inserted before `no_source`
+    when the flag is on. Pure, so the two shapes are testable side by side."""
+    items = list(_BASE_ROUTES.items())
+    if unit_route:
+        at = next((i for i, (k, _) in enumerate(items) if k == "no_source"), len(items))
+        items.insert(at, ("unit_standing_orders", _UNIT_ROUTE))
+    return dict(items)
+
+
+ROUTES: dict[str, dict] = build_routes()
+
+
 # הבלוק שנכנס לפרומפט המערכת. נשמר קצר בכוונה — הוא רוכב על ה-cache של הפרומפט
 # ולכן עלותו אפסית אחרי הבקשה הראשונה, אבל הוא כן נספר בכל בקשה ראשונה בשיחה.
-def prompt_block() -> str:
+def prompt_block(routes: dict[str, dict] | None = None) -> str:
     """The allowed-frameworks list as the model sees it.
 
     Deliberately keyless. The first live run (10.08.2026) emitted
@@ -97,7 +136,7 @@ def prompt_block() -> str:
     routes from the table instead of composing a plausible-sounding referral.
     """
     lines = []
-    for v in ROUTES.values():
+    for v in (ROUTES if routes is None else routes).values():
         where = f" · לאן פונים: {v['where']}" if v["where"] else ""
         lines.append(f"- {v['label']} — {v['covers']}{where}")
     return "\n".join(lines)
