@@ -44,6 +44,9 @@ ANSWER = ("**פסיקה:** מותר בתנאים\n"
 def _run(sources):
     at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=120)
     at.session_state["role"] = "commander"
+    # the entry flow asks for consent before the chat exists (2026-09-12);
+    # a device that reached the chat has it in its profile cookie
+    at.session_state["consent_given"] = True
     at.session_state["conversation_history"] = []
     at.session_state["messages"] = [
         {"role": "user", "content": "מה הכללים להובלת מטען חורג"},

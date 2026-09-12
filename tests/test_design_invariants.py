@@ -188,7 +188,12 @@ def test_disabled_state_exists():
 # ── M7/M8: touch targets ─────────────────────────────────────────────────────
 
 def test_primary_controls_meet_the_thumb_floor():
-    """44x44 is the floor. The hamburger was 42 and the name input 38."""
+    """44x44 is the floor. The hamburger was 42 and the name input 38.
+
+    The name input moved from the floating gate card to the welcome screen's
+    own card on 2026-09-12 (.st-key-cai_name_card -> .st-key-cai_welcome); the
+    floor it guards did not move.
+    """
     hb = APP.split(".st-key-drawer_open_btn button {{")[1][:220]
     assert "width: 44px" in hb and "height: 44px" in hb
 
@@ -196,7 +201,7 @@ def test_primary_controls_meet_the_thumb_floor():
     # fix (ae353d6) inserted a four-line comment above min-height and pushed it
     # to char ~440, so the window silently stopped covering the thing it guards
     # and this assertion failed while the CSS was correct
-    name = APP.split('.st-key-cai_name_card [data-testid="stTextInput"] input {{')[1].split("}}")[0]
+    name = APP.split('.st-key-cai_welcome [data-testid="stTextInput"] input {{')[1].split("}}")[0]
     assert "min-height: 44px" in name
 
 
