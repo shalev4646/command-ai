@@ -348,6 +348,17 @@ RETRIEVE_DOC_BLOCKS = int(os.environ.get("RETRIEVE_DOC_BLOCKS", "0"))
 # 8 chunks and its per-doc caps hide orders that ranked well, so the pool is
 # read from a deeper ranking (the same scorer, no extra model call).
 RETRIEVE_DOC_BLOCKS_POOL = int(os.environ.get("RETRIEVE_DOC_BLOCKS_POOL", "40"))
+# How many of the ranked RAW chunks ride along after the blocks.
+#
+# ⛔ The number this exists for, measured 2026-09-12 with the tail uncapped
+# (the whole 40-chunk pool appended): the window reached the answering ORDER
+# in 58 of 82 against 29 today — and of those 29 newly-reached orders only
+# THREE brought the answering section with them. A single raw chunk of the
+# right order is the wrong paragraph; that is the failure this whole file
+# keeps rediscovering. The tail cost 3,500 words a question and bought three
+# answers. So it is capped: the raw chunks are here for the 9 of 82 targets
+# whose answer lives in text no curated clause carries, not for coverage.
+RETRIEVE_DOC_BLOCKS_RAW = int(os.environ.get("RETRIEVE_DOC_BLOCKS_RAW", "4"))
 
 # "How much / how many / what is the maximum" — the demand, not the topic.
 # Deliberately narrow: "כמה" alone would fire on "כמה שיותר מהר" and on any
@@ -841,7 +852,14 @@ def _chunk_key(c: dict) -> tuple:
 
 def _append_new(chunks: list[dict], extras, limit: int | None) -> list[dict]:
     """Append chunks not already present, up to `limit` new ones. Never
-    reorders what is there — every extension in this file relies on that."""
+    reorders what is there — every extension in this file relies on that.
+
+    `limit=0` appends nothing. The guard is explicit because the loop below
+    tests the cap AFTER appending, so a 0 would otherwise let exactly one
+    chunk through — harmless while every caller gated its flag on `> 0`, and
+    a real bug the moment one did not (RETRIEVE_DOC_BLOCKS_RAW=0)."""
+    if limit is not None and limit <= 0:
+        return list(chunks)
     seen = {_chunk_key(c) for c in chunks}
     out = list(chunks)
     added = 0
@@ -1209,10 +1227,11 @@ def doc_blocks_window(question: str, role: str, route: set[str] | None,
             # order ranked and _sources_from_chunks keeps its order
             c["score"] = next((x["score"] for x in pool if x["doc_id"] == doc_id), 0.0)
             out.append(c)
-    # the raw chunks that ranked ride along: 9 of 82 adjudicated targets are
-    # answered by raw text that no curated clause carries, and the "V3 only"
-    # run lost 15 orders by dropping them
-    return _append_new(out, pool, None)
+    # the raw chunks that ranked ride along, capped: 9 of 82 adjudicated
+    # targets are answered by raw text that no curated clause carries, and the
+    # "V3 only" run lost 15 orders by dropping them — but an uncapped tail
+    # bought 29 orders and only 3 sections (see RETRIEVE_DOC_BLOCKS_RAW)
+    return _append_new(out, pool, max(0, RETRIEVE_DOC_BLOCKS_RAW))
 
 
 def extend_with_clause_embed(chunks: list[dict], question: str, role: str,

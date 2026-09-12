@@ -44,8 +44,8 @@ def _ranked():
 @contextmanager
 def _with(n, docs, pool=None, ranked=None, **knobs):
     old = {k: getattr(backend, k) for k in
-           ("RETRIEVE_DOC_BLOCKS", "RETRIEVE_DOC_BLOCKS_POOL", "RETRIEVE_V2_BLOCK_WORDS",
-            "RETRIEVE_V2_TOP_K", "RETRIEVE_V3", "RETRIEVE_V3_ONLY")}
+           ("RETRIEVE_DOC_BLOCKS", "RETRIEVE_DOC_BLOCKS_POOL", "RETRIEVE_DOC_BLOCKS_RAW",
+            "RETRIEVE_V2_BLOCK_WORDS", "RETRIEVE_V2_TOP_K", "RETRIEVE_V3", "RETRIEVE_V3_ONLY")}
     old_load, old_idx, old_ret = backend.load_documents, backend._v2_index, backend.retrieve
     backend.RETRIEVE_DOC_BLOCKS = n
     if pool is not None:
@@ -87,10 +87,27 @@ def test_the_first_n_orders_are_served_as_whole_blocks():
 def test_the_raw_chunks_that_ranked_are_never_dropped():
     """9 of 82 adjudicated targets are answered by raw text no curated clause
     carries, and the V3-only run lost 15 orders by dropping them."""
-    with _with(1, [DOC_A, DOC_B], ranked=_ranked()):
+    with _with(1, [DOC_A, DOC_B], ranked=_ranked(), RETRIEVE_DOC_BLOCKS_RAW=4):
         out = backend.doc_blocks_window(Q, "soldier", set(), ["A.1", "B.2"])
     assert any(c["section"] == "chunk3" for c in out), "the raw chunk must survive"
     assert any(c["doc_id"] == "A.1" for c in out), "an order below the block cap still rides as a chunk"
+
+
+def test_the_raw_tail_is_capped():
+    """Measured 12.09: uncapped, the tail bought 29 orders and 3 sections for
+    3,500 words a question. It is here for the raw-only answers, not for
+    coverage."""
+    many = [dict(RAW, section=f"chunk{i}", clause=str(i), score=0.5 - i / 100) for i in range(3, 20)]
+    with _with(1, [DOC_A, DOC_B], ranked=many, RETRIEVE_DOC_BLOCKS_RAW=2):
+        out = backend.doc_blocks_window(Q, "soldier", set(), ["A.1", "B.2"])
+    raw = [c for c in out if c["section"] != "key-facts"]
+    assert [c["section"] for c in raw] == ["chunk3", "chunk4"], [c["section"] for c in raw]
+    with _with(1, [DOC_A, DOC_B], ranked=many, RETRIEVE_DOC_BLOCKS_RAW=0):
+        # the pool holds only B.2 raw chunks here, so blocks-only is B.2's block
+        out = backend.doc_blocks_window(Q, "soldier", set(), ["A.1", "B.2"])
+    assert all(c["section"] == "key-facts" for c in out), [c["section"] for c in out]
+    assert backend._append_new([], [{"doc_id": "x", "section": "s", "clause": "c"}], 0) == [], \
+        "limit 0 appends nothing (the loop caps after appending)"
 
 
 def test_nothing_is_served_twice():
