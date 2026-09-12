@@ -3600,10 +3600,29 @@ components.html(
             ".st-key-settings_back button": "חזרה",
             ".st-key-drawer_open_btn button": "תפריט",
             ".st-key-drawer_backdrop button": "סגירת התפריט",
-            ".st-key-settings_backdrop button": "סגירת הגדרות"
+            ".st-key-settings_backdrop button": "סגירת הגדרות",
+            // Streamlit's own send button ships the English name "Send
+            // message" — measured 2026-09-12 as the ONE visible control in
+            // the app whose accessible name was not Hebrew, and it is the
+            // control a soldier presses on every question.
+            '[data-testid="stChatInputSubmitButton"]': "שליחת השאלה"
         };
         var nameCtrls = function () {
             try {
+                // <html lang> is where VoiceOver and TalkBack pick the voice
+                // and the phonemes. Streamlit ships lang="en" and every word
+                // in this app is Hebrew, so the whole interface was being
+                // pronounced by an English synthesiser (measured 2026-09-12:
+                // "en" on the role gate, home, drawer and settings).
+                // Written here, on the same tick as the names above, rather
+                // than in the boot shell's index patch: lang carries no
+                // geometry, so it costs nothing to set late, and it keeps the
+                // splash file out of a change that has nothing to do with it.
+                // dir is deliberately NOT touched — the app sets direction per
+                // container and its logical properties (padding-inline-start
+                // on the tool rows) were tuned against an LTR root.
+                if (doc.documentElement.lang !== "he")
+                    doc.documentElement.lang = "he";
                 Object.keys(NAMES).forEach(function (sel) {
                     var el = doc.querySelector(sel);
                     if (el && el.getAttribute("aria-label") !== NAMES[sel])

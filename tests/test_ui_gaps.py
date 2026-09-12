@@ -3,6 +3,13 @@
 c1 -- the knowledge-base order rows (`.cai-order-link`, 168 of them) measured
       33px tall on device: under the 44px touch target, so a thumb lands on
       the neighbouring order. The rule must declare the target explicitly.
+c3 -- the document declared lang="en" while every word in it is Hebrew, and
+      the composer's send button was the one visible control whose accessible
+      name was English ("Send message"), measured across four screens. The
+      zoom half of that tracker item is NOT a defect: app.py documents the
+      lock as the user's own request ("no pinch-zoom at all"), and the app
+      ships its own text-size setting instead.
+
 c2 -- six secondary texts sat at 10.5-11px: the order's date badge, the role
       line in the drawer identity block, the entitlement disclaimer, the
       pay-map clause label and disclaimer, and the reserve tag. 12px is the
@@ -18,7 +25,9 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 SRC = (ROOT / "app.py").read_text(encoding="utf-8")
+
 
 SMALL_TEXT_SELECTORS = [
     ".cai-ident .rl",
@@ -64,6 +73,27 @@ def test_secondary_text_is_at_least_12px():
 def test_secondary_text_follows_the_text_size_setting():
     missing = [sel for sel in SMALL_TEXT_SELECTORS if "var(--cai-fs" not in _rule(sel)]
     assert not missing, "not scaled by --cai-fs: %s" % missing
+
+
+def test_document_language_is_hebrew():
+    """VoiceOver picks its voice from <html lang>; Streamlit ships "en".
+
+    Set from app.py's accessible-name script, which already runs on every
+    rerun, rather than from the boot shell's index patch: lang carries no
+    geometry, and the splash file stays out of it.
+    """
+    assert 'doc.documentElement.lang = "he"' in SRC, "the document is not declared Hebrew"
+    assert "doc.documentElement.lang !== " in SRC, "unconditional write on every tick"
+
+
+def test_send_button_has_a_hebrew_name():
+    """The most-used control in the app answered VoiceOver in English."""
+    m = re.search(r"var NAMES = \{(.*?)\};", SRC, re.S)
+    assert m, "the accessible-name map is gone"
+    body = m.group(1)
+    assert "stChatInputSubmitButton" in body, "send button not named"
+    row = next(l for l in body.splitlines() if "stChatInputSubmitButton" in l)
+    assert re.search(r"[֐-׿]", row), "send button name is not Hebrew"
 
 
 if __name__ == "__main__":
