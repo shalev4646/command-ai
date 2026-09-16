@@ -7417,17 +7417,21 @@ def _settings_about():
     """8e — about + terms of service (verbatim) + install hint.
 
     The banner above the terms was three lines of hardcoded HTML — a green
-    check over "אישרת את התנאים · בהתקנה הראשונית · גרסה 2.4" — rendered for
-    every user on every visit while NO approval screen existed anywhere in the
-    app. It was false for everyone who ever read it, and it is the worse half
+    check asserting the terms had been approved at first install, stamped with
+    the app's own release number — rendered for every user on every visit
+    while NO approval screen existed anywhere in the app. (The exact wording
+    is pinned in tests/test_compliance_screens.py, which is why it is not
+    quoted here: the test asserts its absence from this file.) It was false for everyone who ever read it, and it is the worse half
     of the defect class tests/test_compliance_screens.py was written for: the
     privacy banner misdescribed what the code did, this one asserted that the
     USER had agreed. It now reads tos_ok, the device's own answer, and says so
     in all three states — approved, approved-an-older-version, and not yet.
 
-    "גרסה 2.4" was the APP version (it still sits in the settings footer),
-    never a version of the terms. TOS_VERSION is the terms' own counter and is
-    what belongs in a sentence about what was approved.
+    That release number was the APP version — it still, correctly, sits in the
+    settings footer below — and never a version of the terms. Tying a record of
+    what a person agreed to to a number that moves on every deploy means the
+    record says nothing about the document. TOS_VERSION is the terms' own
+    counter and is what belongs in a sentence about what was approved.
     """
     _tos = int(st.session_state.get("tos_ok") or 0)
     if _tos >= TOS_VERSION:

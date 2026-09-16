@@ -316,6 +316,82 @@ def test_letter_call_is_bounded():
     )
 
 
+# ── P7: the banner that claimed the user had agreed ────────────────────
+
+def _about() -> str:
+    a = APP.index("def _settings_about(")
+    return APP[a:APP.index("\n\ndef ", a)]
+
+
+def _code_only(text: str) -> str:
+    """Drop whole-line comments.
+
+    Needed because the checks below look for a name being USED, and a comment
+    that merely mentions it satisfies a plain substring test. Found by
+    mutation: emptying the gate's terms loop while leaving the comment above
+    it intact passed the version of this file that skipped this step.
+    """
+    return "\n".join(l for l in text.split("\n") if not l.lstrip().startswith("#"))
+
+
+def test_the_terms_banner_is_not_a_hardcoded_claim():
+    """The worse half of the defect this file exists for.
+
+    Above the terms sat a green check and "אישרת את התנאים · בהתקנה
+    הראשונית · גרסה 2.4" — rendered for every user on every visit while
+    no approval screen existed anywhere in the app. The privacy banner
+    misdescribed what the code did; this one asserted that the USER had
+    agreed, which is a claim made in their name and not ours to make.
+    """
+    assert "בהתקנה הראשונית" not in APP, (
+        "the at-first-install approval claim is back"
+    )
+    about = _about()
+    assert 'st.session_state.get("tos_ok")' in about, (
+        "the אודות banner no longer reads tos_ok -- whatever it says about "
+        "the approval it is saying unconditionally again"
+    )
+    assert "_tos >= TOS_VERSION" in about, (
+        "nothing distinguishes an approved device from one that never was"
+    )
+    assert "טרם אישרת את התנאים" in about, (
+        "there is no not-yet-approved wording, so the screen can only ever "
+        "claim an approval"
+    )
+
+
+def test_the_terms_are_shown_where_they_are_approved():
+    """A tick-box that cites terms the person cannot see is not informed
+    consent, and a box quoting its OWN copy of them is how the copy shown and
+    the copy agreed to drift apart."""
+    gate = APP[APP.index("if _name_gate:"):]
+    gate = gate[:gate.index("_emit_boot_settled()")]
+    assert "for _h, _b in _TOS_SECTIONS" in _code_only(gate), (
+        "the consent card no longer renders the terms; it asks people to "
+        "approve a document that is not on the screen"
+    )
+    assert APP.count("_TOS_SECTIONS = [") == 1, (
+        "the terms are defined twice -- the gate and אודות can now disagree "
+        "about what was approved"
+    )
+
+
+def test_the_terms_version_is_not_the_app_version():
+    """"גרסה 2.4" in the banner was the APP version. Tying a record of what
+    a person agreed to to a number that moves on every release means the
+    record says nothing about the document."""
+    assert "TOS_VERSION = " in APP, "there is no terms version to record"
+    # scoped to the banner, NOT the whole screen: the same release number
+    # legitimately sits in the settings footer at the bottom of this function,
+    # and a test that bans it everywhere bans the app from stating its own
+    # version
+    about = _about()
+    banner = about[:about.index("cai-tos-lead")]
+    assert "גרסה 2.4" not in banner, (
+        "the app version is back in a sentence about what was approved"
+    )
+
+
 if __name__ == "__main__":
     failures = 0
     for name, fn in sorted(globals().items()):
