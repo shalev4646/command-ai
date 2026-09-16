@@ -2078,7 +2078,11 @@ div[data-testid="stButton"] > button:active {{
     background: rgba(8,10,5,.62);
     display: flex; flex-direction: column; align-items: center;
     justify-content: flex-start;
-    padding: calc(var(--cai-sat, 0px) + 15vh) 24px 0;
+    /* 15vh -> 8vh + a scrollable scrim: the card carries the terms box now and
+       can outgrow a short phone. Moving it UP also keeps the iOS keyboard
+       clear of the name field, which is what the 15vh was protecting. */
+    padding: calc(var(--cai-sat, 0px) + 8vh) 24px 24px;
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
 }}
 .st-key-cai_name_card {{
     width: min(320px, 100%); flex: none;
@@ -2106,6 +2110,34 @@ div[data-testid="stButton"] > button:active {{
    cannot jump when it comes and goes. ── */
 [data-testid="stForm"] > div:not([data-testid]) {{ display: none !important; }}
 
+/* ── Terms box + consent checkbox inside the name gate. Deliberately NOT the
+   cai-tos-* classes the אודות screen uses: those live in _DS_CSS, which is
+   markdown'd on the settings and chat paths only — the entry screen st.stop()s
+   long before either, so on THIS screen they do not exist. Capped and
+   scrollable so the card cannot outgrow the phone. ── */
+.cai-gate-toslab {{ font: 600 12.5px Heebo, sans-serif; color: var(--text);
+    text-align: right; margin: 14px 0 7px; }}
+.cai-gate-tos {{
+    max-height: 132px; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    background: rgba(239,240,232,.045);
+    border: 1px solid rgba(239,240,232,.16);
+    border-radius: 14px; padding: 12px 13px; text-align: right;
+}}
+.cai-gt-sec {{ margin-bottom: 12px; }}
+.cai-gt-sec:last-child {{ margin-bottom: 0; }}
+.cai-gt-h {{ font: 700 11.5px Heebo, sans-serif; color: var(--accent-bright); margin-bottom: 3px; }}
+.cai-gt-b {{ font: 400 11px Heebo, sans-serif; color: rgba(239,240,232,.72); line-height: 1.65; }}
+.cai-gate-err {{ font: 500 12px Heebo, sans-serif; color: #E58C7F;
+    text-align: right; margin: 9px 0 0; line-height: 1.5; }}
+.st-key-cai_name_card [data-testid="stCheckbox"] {{ margin: 11px 0 3px; }}
+.st-key-cai_name_card [data-testid="stCheckbox"] label {{
+    gap: 9px !important; align-items: flex-start !important;
+}}
+.st-key-cai_name_card [data-testid="stCheckbox"] label > div:last-child {{
+    font: 400 12px Heebo, sans-serif !important;
+    color: rgba(239,240,232,.82) !important;
+    line-height: 1.5 !important; text-align: right !important;
+}}
 .cai-gate-title {{ font: 600 17px Heebo, sans-serif; color: var(--text); text-align: right; }}
 .cai-gate-sub {{ font: 400 12px Heebo, sans-serif; color: rgba(239,240,232,.5);
     margin: 5px 0 0; text-align: right; line-height: 1.5; }}
@@ -4135,6 +4167,35 @@ if _sync_settled:
         height=0,
     )
 
+# ── Terms of service ── Verbatim, one copy, read by TWO screens: the
+# consent box in the name gate below, and אודות in settings. It lives up
+# here and not beside the other settings text because the entry screen
+# st.stop()s further down this file — a constant defined after that point
+# does not exist yet when the gate renders. A consent box that quotes its
+# own copy of the terms is exactly how the two drift apart, and then the
+# person approves a clause the app no longer shows. ──
+_TOS_SECTIONS = [
+    ("1. הצהרה כללית",
+     "אפליקציה זו (\"האפליקציה\") הינה כלי עזר פרטי שפותח על ידי מפתח עצמאי. האפליקציה אינה "
+     "כלי רשמי של צה\"ל, משרד הביטחון או כל גוף ממלכתי אחר. השימוש באפליקציה הוא על אחריות המשתמש בלבד."),
+    ("2. הגבלת אחריות",
+     "השירות באפליקציה ניתן כמות שהוא (\"As-Is\"). המפתח אינו אחראי לדיוק, לשלמות או לעדכניות המידע "
+     "המוצג באפליקציה. המשתמש מודע לכך שהאפליקציה מבוססת על מודלים של בינה מלאכותית (AI), אשר עלולים "
+     "לספק מידע שגוי, חלקי או לא מדויק (\"הזיות\"). אין להסתמך על מידע זה כייעוץ צבאי, מקצועי או משפטי מחייב."),
+    ("3. איסור הזנת מידע מסווג",
+     "חל איסור מוחלט על המשתמשים להזין, להעלות או לשתף בתוך האפליקציה מידע מסווג, רגיש, או כל מידע "
+     "שחשיפתו מהווה עבירת ביטחון שדה. המפתח אינו נושא באחריות לכל נזק או השלכה משפטית הנובעת מהפרת "
+     "סעיף זה על ידי המשתמש."),
+    ("4. פרטיות ונתונים",
+     "המידע שאתה מזין נשלח לספק בינה מלאכותית חיצוני (Anthropic) לצורך הפקת התשובה, ונרשם בלוג "
+     "שימוש שאפשר לכבות בהגדרות. הפירוט המלא — מה נאסף, למי מועבר, כמה זמן נשמר ואיך מבקשים "
+     "עיון או מחיקה — מופיע ב«מדיניות הפרטיות» שבמסך ההגדרות, והיא חלק מתנאים אלה.<br><br>"
+     "אין אבטחה מוחלטת ברשת, והמשתמש לוקח על עצמו את הסיכון הכרוך בהזנת נתונים במערכת."),
+    ("5. קניין רוחני",
+     "כלל התוכן, העיצוב, הקוד המקור והלוגו של האפליקציה הינם קניינו הרוחני הבלעדי של המפתח. אין להעתיק, "
+     "לשכפל או להשתמש בהם ללא אישור מראש ובכתב."),
+]
+
 # ── Entry / role gate + one-time name gate ──
 # The name gate is deliberately NOT st.dialog (dialog close skips the full
 # rerun — the bug that once left the drawer dead). It's an app-owned
@@ -4192,6 +4253,17 @@ if st.session_state.role is None or _name_gate:
         # (the tap lands on a replaced node — first tap swallowed). The form
         # bundles the field value and the press into ONE event, and Enter
         # submits too.
+        # The consent box starts EMPTY on a device that never approved: a
+        # pre-ticked terms box is not consent, in the GDPR sense and in the
+        # plain one — approval has to be an act the person performs. It starts
+        # ticked only where tos_ok already carries this device's approval, and
+        # there it is not an assumption but the display of a stored fact (the
+        # logout path in _reset_identity keeps tos_ok for exactly this).
+        # Seeded before the widget renders: Streamlit refuses a key written
+        # after its widget was created in the same run.
+        if "gate_tos_w" not in st.session_state:
+            st.session_state.gate_tos_w = (
+                int(st.session_state.get("tos_ok") or 0) >= TOS_VERSION)
         with st.container(key="cai_name_gate"):
             with st.container(key="cai_name_card"):
                 st.markdown(
@@ -4203,20 +4275,43 @@ if st.session_state.role is None or _name_gate:
                     st.text_input("שם פרטי", key="gate_name_w",
                                   label_visibility="collapsed",
                                   placeholder="השם הפרטי שלך", max_chars=20)
+                    # the terms themselves, on screen, above the box that says
+                    # they were read — rendered from _TOS_SECTIONS, the same
+                    # constant אודות renders
+                    st.markdown(
+                        "<div class='cai-gate-toslab'>תנאי שימוש</div>"
+                        "<div class='cai-gate-tos'>" + "".join(
+                            f"<div class='cai-gt-sec'><div class='cai-gt-h'>{_h}</div>"
+                            f"<div class='cai-gt-b'>{_b}</div></div>"
+                            for _h, _b in _TOS_SECTIONS) + "</div>",
+                        unsafe_allow_html=True)
+                    st.checkbox("קראתי ואני מאשר את תנאי השימוש",
+                                key="gate_tos_w")
                     _gc1, _gc2 = st.columns([5, 3], gap="small")
                     _gate_go = _gc1.form_submit_button(
                         "המשך", use_container_width=True, type="primary")
                     _gate_skip = _gc2.form_submit_button(
                         "דלג", use_container_width=True)
                 if _gate_go or _gate_skip:
-                    if _gate_go:
-                        _nm = (st.session_state.get("gate_name_w") or "").strip()
-                        if _nm:
-                            # display-only: feeds the greeting/pill and seeds
-                            # the settings "שם מלא" field; never sent to the API
-                            st.session_state.profile_name = _nm[:40]
-                    st.session_state.name_asked = True
-                    st.rerun()
+                    # דלג skips the NAME. It has never skipped the terms and
+                    # must not start now: the name is a greeting, the terms are
+                    # the agreement the אודות banner reports on.
+                    if not st.session_state.get("gate_tos_w"):
+                        st.markdown(
+                            "<div class='cai-gate-err'>כדי להמשיך יש לקרוא "
+                            "ולאשר את תנאי השימוש.</div>",
+                            unsafe_allow_html=True)
+                    else:
+                        if _gate_go:
+                            _nm = (st.session_state.get("gate_name_w") or "").strip()
+                            if _nm:
+                                # display-only: feeds the greeting/pill and seeds
+                                # the settings "שם מלא" field; never sent to the API
+                                st.session_state.profile_name = _nm[:40]
+                        # the one write that makes the אודות banner true
+                        st.session_state.tos_ok = TOS_VERSION
+                        st.session_state.name_asked = True
+                        st.rerun()
 
     _emit_boot_settled()
     st.stop()
@@ -6753,27 +6848,6 @@ _SERVICE_TRACKS = [
     "אחר / לא רלוונטי",
 ]
 _STATUS_PILLS = ["חייל בודד", "עולה חדש", "הורה לילדים", "נשוי/אה"]
-_TOS_SECTIONS = [
-    ("1. הצהרה כללית",
-     "אפליקציה זו (\"האפליקציה\") הינה כלי עזר פרטי שפותח על ידי מפתח עצמאי. האפליקציה אינה "
-     "כלי רשמי של צה\"ל, משרד הביטחון או כל גוף ממלכתי אחר. השימוש באפליקציה הוא על אחריות המשתמש בלבד."),
-    ("2. הגבלת אחריות",
-     "השירות באפליקציה ניתן כמות שהוא (\"As-Is\"). המפתח אינו אחראי לדיוק, לשלמות או לעדכניות המידע "
-     "המוצג באפליקציה. המשתמש מודע לכך שהאפליקציה מבוססת על מודלים של בינה מלאכותית (AI), אשר עלולים "
-     "לספק מידע שגוי, חלקי או לא מדויק (\"הזיות\"). אין להסתמך על מידע זה כייעוץ צבאי, מקצועי או משפטי מחייב."),
-    ("3. איסור הזנת מידע מסווג",
-     "חל איסור מוחלט על המשתמשים להזין, להעלות או לשתף בתוך האפליקציה מידע מסווג, רגיש, או כל מידע "
-     "שחשיפתו מהווה עבירת ביטחון שדה. המפתח אינו נושא באחריות לכל נזק או השלכה משפטית הנובעת מהפרת "
-     "סעיף זה על ידי המשתמש."),
-    ("4. פרטיות ונתונים",
-     "המידע שאתה מזין נשלח לספק בינה מלאכותית חיצוני (Anthropic) לצורך הפקת התשובה, ונרשם בלוג "
-     "שימוש שאפשר לכבות בהגדרות. הפירוט המלא — מה נאסף, למי מועבר, כמה זמן נשמר ואיך מבקשים "
-     "עיון או מחיקה — מופיע ב«מדיניות הפרטיות» שבמסך ההגדרות, והיא חלק מתנאים אלה.<br><br>"
-     "אין אבטחה מוחלטת ברשת, והמשתמש לוקח על עצמו את הסיכון הכרוך בהזנת נתונים במערכת."),
-    ("5. קניין רוחני",
-     "כלל התוכן, העיצוב, הקוד המקור והלוגו של האפליקציה הינם קניינו הרוחני הבלעדי של המפתח. אין להעתיק, "
-     "לשכפל או להשתמש בהם ללא אישור מראש ובכתב."),
-]
 
 # One address, three screens (policy, accessibility statement, contact) and one
 # mailto. Written literally exactly once — a support channel that is stale in
