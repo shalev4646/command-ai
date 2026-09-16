@@ -6986,13 +6986,23 @@ def _reset_identity():
     name, the status pills, the service track/type, and the two tool profiles
     (`sol_*` carries enlistment and discharge dates, `mil_*` carries a salary).
     A sign-out that leaves a salary behind is not a sign-out.
+
+    `tos_ok` is deliberately NOT cleared, and that is not an oversight to tidy
+    up later. The terms approval belongs to the DEVICE, not to the person
+    signing out: this device did read and accept them, and that stays true
+    after a sign-out. So the card reopens with the box already ticked — it is
+    displaying a stored fact, which is the one case where a pre-ticked consent
+    box is honest. The full wipe is where it goes (see _wipe_all): מחק הכל
+    means a fresh device, and a fresh device has approved nothing.
     """
     st.session_state.profile_saved = []
     st.session_state.profile_customized = False
     st.session_state.profile_name = ""
-    # back to the role picker, and the one-time name prompt asks again on the
-    # next role pick. Without role=None the gate (derived from name_asked)
-    # would pop over the settings screen. cai_wipe_pending lets the sync writer
+    # name_asked=False reopens the name + terms card, which since the 2026-09
+    # flip is the app's FIRST screen — so a sign-out lands there, and the role
+    # picker follows it. role=None is what makes the person choose a role
+    # again rather than inherit the last one.
+    # cai_wipe_pending lets the sync writer
     # render the all-empty payload — its settled-gate otherwise skips empty
     # states (the guard that stops a cold cloud boot from clobbering the
     # store), which would leave the OLD cookie, name and all, on the device.
@@ -7013,7 +7023,12 @@ def _reset_identity():
                "mil_saved", "mil_days_year", "mil_days_3y", "mil_emp", "mil_salary"):
         st.session_state.pop(_k, None)
     # drop the widgets' keys so they reseed from the reset mirrors
+    # gate_tos_w rides this list on purpose: dropping the widget key is what
+    # makes the consent box reseed FROM tos_ok on the next render instead of
+    # carrying whatever it happened to hold. After a sign-out that reseeds to
+    # ticked; after a wipe, which zeroes tos_ok, to empty.
     for _k in ("profile_statuses", "pf_name_w", "pf_type_w", "pf_track_w", "gate_name_w",
+               "gate_tos_w",
                "sol_en_w", "sol_di_w", "sol_tr_w", "sol_sg_w", "sol_mr_w"):
         st.session_state.pop(_k, None)
 
@@ -7029,6 +7044,13 @@ def _wipe_all():
     # is the ONE thing logout does not do — logging out is still the same
     # device, and the pilot's usage numbers depend on that staying true.
     st.session_state.device_id = metrics.new_session_id()
+    # ...and the second thing. The terms approval survives a sign-out on
+    # purpose (see _reset_identity), but מחק הכל promises a device back at
+    # defaults, and a device at defaults has approved nothing. Leaving it
+    # would put "אישרת את התנאים" on the אודות screen of a device the person
+    # just reset — the exact false claim that banner was rewritten to stop
+    # making. The name card then reopens with an empty box and asks again.
+    st.session_state.tos_ok = 0
 
 
 def _settings_hub():
