@@ -6361,7 +6361,9 @@ html.cai-orders-open .cai-kb-card {
 }
 .st-key-cai_tools button, .st-key-cai_recent button {
   background: transparent !important; border: none !important; border-radius: 0 !important;
-  padding: 13px 14px !important; margin: 0 !important; min-height: 0 !important;
+  /* 13px of padding around a 14px line measured 42-43px in the browser, under
+     the 44px thumb floor this file enforces everywhere else. */
+  padding: 14px !important; margin: 0 !important; min-height: 44px !important;
   text-align: right; box-shadow: none !important;
   border-top: 1px solid rgba(236,237,230,.07) !important;
   position: relative; justify-content: flex-start !important;
@@ -6645,7 +6647,9 @@ html.cai-orders-open .cai-kb-card {
 }
 [class*="st-key-cai_pf_fld"] { padding: 12px 13px; }
 [class*="st-key-cai_pf_fld"] + [class*="st-key-cai_pf_fld"] { border-top: 1px solid var(--border); }
-.cai-fld-label { font: 600 11px Heebo; color: rgba(236,237,230,.45); margin: 0 0 7px; }
+/* .45 was 3.82:1 on the card — under AA for 11px body text (browser audit,
+   tools/ui_audit). .55 is 4.99:1 and still clearly a secondary label. */
+.cai-fld-label { font: 600 11px Heebo; color: rgba(236,237,230,.55); margin: 0 0 7px; }
 .cai-lang-note { font: 400 11.5px Heebo; color: rgba(236,237,230,.5); margin: 6px 2px 14px; line-height: 1.55; }
 
 /* language rows */
@@ -6672,8 +6676,13 @@ html.cai-orders-open .cai-kb-card {
 .cai-lang-row { display: flex; align-items: center; gap: 13px; padding: 15px 14px; }
 .cai-lang-row .fl { font-size: 20px; flex: none; }
 .cai-lang-row .nm { flex: 1; font: 600 14.5px Heebo; color: var(--text); }
-.cai-lang-row.dim .nm { color: rgba(236,237,230,.5); font-weight: 500; }
-.cai-lang-row .def { font: 400 11px Heebo; color: rgba(236,237,230,.4); margin-top: 1px; }
+/* the unreleased languages stay visually secondary — that is the point of the
+   dim class — but 4.38:1 was just under AA, and a language name is the one
+   string on this screen a reader cannot guess from context. .55 = 4.99:1,
+   and the בקרוב chip beside it still carries the "not yet" signal. */
+.cai-lang-row.dim .nm { color: rgba(236,237,230,.55); font-weight: 500; }
+/* 3.32:1 -> 4.99:1 */
+.cai-lang-row .def { font: 400 11px Heebo; color: rgba(236,237,230,.55); margin-top: 1px; }
 .cai-lang-row .ok { color: var(--accent); font-size: 18px; font-weight: 700; }
 
 /* ToS */
@@ -6699,9 +6708,11 @@ html.cai-orders-open .cai-kb-card {
    underlined — indistinguishable from body text on the dark card. `display:
    inline-block; direction: ltr` keeps the address on its own LTR run so the
    RTL paragraph does not split it around the "@". */
+/* 181x22 — the smallest target in the app, and the ONLY support channel in it.
+   inline-flex + min-height gives the thumb 44px without moving the text. */
 .cai-contact-mail { color: var(--accent-bright) !important; text-decoration: none !important;
-    font-weight: 600; word-break: break-all; display: inline-block; direction: ltr;
-    margin-top: 6px; }
+    font-weight: 600; word-break: break-all; display: inline-flex; align-items: center;
+    min-height: 44px; direction: ltr; margin-top: 6px; }
 .cai-contact-mail:hover { text-decoration: underline !important; }
 /* The device id is a random string that has to be copied ACCURATELY into an
    email for an access/erasure request, so it gets a monospace face and room to
@@ -6790,7 +6801,8 @@ html.cai-orders-open .cai-kb-card {
 .st-key-cai_analytics [data-testid="stCheckbox"] label { gap: 10px !important; }
 .st-key-share_analytics_w label { font: 500 14px Heebo !important; color: var(--text) !important; }
 .st-key-share_analytics_w [data-baseweb="checkbox"] > div:first-child { background: var(--accent) !important; }
-.cai-analytics-sub { font: 400 11px Heebo; color: rgba(236,237,230,.45); margin: 2px 0 0; }
+/* 3.82:1 -> 4.99:1, same reason as .cai-fld-label */
+.cai-analytics-sub { font: 400 11px Heebo; color: rgba(236,237,230,.55); margin: 2px 0 0; }
 
 /* personal-details native widgets styled to the mockup fields (8b) */
 .st-key-pf_name_w [data-baseweb="input"], .st-key-pf_name_w [data-baseweb="base-input"] {
