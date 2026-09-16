@@ -2125,6 +2125,16 @@ div[data-testid="stButton"] > button:active {{
    markdown'd on the settings and chat paths only — the entry screen st.stop()s
    long before either, so on THIS screen they do not exist. Capped and
    scrollable so the card cannot outgrow the phone. ── */
+/* the card's own wordmark — the entry chrome is not drawn behind it */
+.cai-gate-brand {{ display: flex; align-items: center; justify-content: center;
+    gap: 9px; margin: 0 0 14px; }}
+.cai-gate-chev {{ display: flex; flex-direction: column; align-items: center; }}
+.cai-gate-chev i {{ width: 11px; height: 11px; border-top: 3px solid var(--accent);
+    border-left: 3px solid var(--accent); transform: rotate(45deg); }}
+.cai-gate-chev i + i {{ opacity: .45; margin-top: -4px; }}
+.cai-gate-wm {{ font: 700 17px Georgia, "Suez One", serif; color: var(--text);
+    letter-spacing: .01em; }}
+.cai-gate-wm span {{ color: var(--accent); }}
 .cai-gate-toslab {{ font: 600 12.5px Heebo, sans-serif; color: var(--text);
     text-align: right; margin: 14px 0 7px; }}
 .cai-gate-tos {{
@@ -4214,20 +4224,25 @@ _TOS_SECTIONS = [
 # a session flag so a mid-gate refresh lands back IN the gate (cookie
 # already carries the role) instead of silently dropping the question.
 if st.session_state.role is None or _name_gate:
-    st.markdown(
+    # The entry chrome is the ROLE step's screen. While the name card is up it
+    # renders at y≈49-304 and the card — grown by the terms box and raised to
+    # 8vh — sits exactly on top of it: verified in the browser, every pixel of
+    # the wordmark covered, leaving a card floating on black with no identity
+    # on the app's first screen. Rendering it anyway would also put a second
+    # "CommandAI" in the accessibility tree. The card carries a compact
+    # wordmark of its own instead (see cai-gate-brand below).
+    if not _name_gate:
+        st.markdown(
         "<div class='cai-entry'>"
-        "<div class='cai-entry-classif'>מערכת פקודות · בלמ\"ס</div>"
-        "<div class='cai-entry-chev'><span></span><span></span></div>"
-        "<div class='cai-entry-title'>Command<span class='cai-wm-ai'>AI</span></div>"
-        "<div class='cai-entry-sub'>העוזר החכם לפקודות מטכ\"ל</div>"
-        "<div class='cai-entry-divider'></div>"
-        # "בחר את סוג הכניסה שלך" belongs to the role step. While the name card
-        # is up it would be an instruction for controls that are not on screen.
-        + ("" if _name_gate
-           else "<div class='cai-entry-choose'>בחר את סוג הכניסה שלך</div>")
-        + "</div>",
-        unsafe_allow_html=True,
-    )
+            "<div class='cai-entry-classif'>מערכת פקודות · בלמ\"ס</div>"
+            "<div class='cai-entry-chev'><span></span><span></span></div>"
+            "<div class='cai-entry-title'>Command<span class='cai-wm-ai'>AI</span></div>"
+            "<div class='cai-entry-sub'>העוזר החכם לפקודות מטכ\"ל</div>"
+            "<div class='cai-entry-divider'></div>"
+            "<div class='cai-entry-choose'>בחר את סוג הכניסה שלך</div>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
 
     # The role buttons are the SECOND step now. Rendering them under the gate
     # scrim would leave three controls visible-but-unreachable behind the card,
@@ -4249,7 +4264,12 @@ if st.session_state.role is None or _name_gate:
     # About-screen footer already carried the honest line; this and the two
     # other footers now say the same thing (tests/test_compliance_screens.py
     # pins the wording, which is why the old phrase is not quoted here).
-    st.markdown("<div class='cai-entry-footer'>כלי עזר פרטי · אינו כלי רשמי של צה\"ל</div>", unsafe_allow_html=True)
+    # the footer belongs to the role screen too. With .cai-entry gone under the
+    # card it lost its layout and floated to the TOP of the page, a stray line
+    # above the card (browser, 390x844). Nothing is lost by holding it back:
+    # clause 1 of the terms IN the card says the same thing at more length.
+    if not _name_gate:
+        st.markdown("<div class='cai-entry-footer'>כלי עזר פרטי · אינו כלי רשמי של צה\"ל</div>", unsafe_allow_html=True)
 
     if _name_gate:
         # scrim (outer container) + card (inner) — plain keyed containers, no
@@ -4280,6 +4300,12 @@ if st.session_state.role is None or _name_gate:
         with st.container(key="cai_name_gate"):
             with st.container(key="cai_name_card"):
                 st.markdown(
+                    # the app's identity, on the app's first screen — the full
+                    # entry chrome is not rendered behind this card
+                    "<div class='cai-gate-brand'>"
+                    "<span class='cai-gate-chev'><i></i><i></i></span>"
+                    "<span class='cai-gate-wm'>Command<span>AI</span></span>"
+                    "</div>"
                     "<div class='cai-gate-title'>איך קוראים לך?</div>"
                     "<div class='cai-gate-sub'>לברכה אישית בכניסה · נשמר במכשיר בלבד</div>"
                     # marker for the injected nav-veil: it says "the screen
@@ -7073,6 +7099,17 @@ def _wipe_all():
     st.session_state.tos_ok = 0
 
 
+def _confirm_pending(key: str) -> bool:
+    """True while _confirm_action(key, ...) is showing its question.
+
+    Callers use it to drop anything the confirm card is already saying. The
+    wipe note is the whole body of its own confirm, so with both on screen the
+    same paragraph appeared twice, ten lines apart (caught in the browser, not
+    by any assertion — nothing was wrong, only said twice).
+    """
+    return bool(st.session_state.get(f"cai_confirm_{key}"))
+
+
 def _confirm_action(key: str, opener: str, title: str, body: str,
                     yes: str, no: str = "ביטול") -> bool:
     """One destructive button, behind a question. True only on the run that
@@ -7461,7 +7498,8 @@ def _settings_privacy():
             yes="כן, מחק"):
         _wipe_all()
         st.rerun()
-    st.markdown(f"<div class='cai-wipe-note'>{_WIPE_NOTE}</div>", unsafe_allow_html=True)
+    if not _confirm_pending("wipe"):
+        st.markdown(f"<div class='cai-wipe-note'>{_WIPE_NOTE}</div>", unsafe_allow_html=True)
 
 
 def _settings_about():
