@@ -323,15 +323,11 @@ st.session_state.setdefault("name_asked", bool(_ck.get("asked")))
 # saw. 0 / absent means never approved.
 TOS_VERSION = 1
 st.session_state.setdefault("tos_ok", int(_ck.get("tos") or 0))
-# role_picked_here: the role was chosen by a TAP in THIS session, not restored
-# from the device cookie. The name gate is a first-run prompt that belongs after
-# that tap — a remembered device (role in the cookie, name never answered) used
-# to open the gate over the entry screen on the very first paint, before the
-# user touched anything (2026-07-27 video, t=13). Trade-off, deliberate: a
-# refresh in the middle of the gate now lands in the chat instead of back in the
-# gate. The name is optional and settable in הגדרות, so a dropped prompt costs
-# less than a gate that appears unprompted on every launch.
-st.session_state.setdefault("role_picked_here", False)
+# role_picked_here is gone (2026-09). It existed to hold the name gate back
+# until a role had been TAPPED, because a remembered device would otherwise open
+# the gate over the entry screen on the very first paint, before the user
+# touched anything (2026-07-27 video, t=13). The gate opening first is now the
+# design, so the flag guarded nothing and every reader had to work that out.
 # ── text scale ── The app pins maximum-scale=1 and preventDefaults the iOS
 # gesture events (a deliberate, documented fix for the focus auto-zoom bug),
 # and it sets -webkit-text-size-adjust:100% with every size in fixed px. The
@@ -1126,17 +1122,25 @@ components.html(
             document.addEventListener("click", function (e) {
                 try {
                     if (!e.target || !e.target.closest) return;
-                    // name-gate continue/skip always leads to the chat screen
-                    // (the only buttons inside the gate card are the two submits;
-                    // keyed forms carry no st-key class in 1.58)
-                    if (e.target.closest(".st-key-cai_name_card button")) { veil(); return; }
-                    // a role tap veils ONLY when it goes straight to the chat;
-                    // on a first visit (#cai-gate-pending) it opens the name
-                    // gate, which has no .cai-header — the veil would hang
-                    // opaque until its 4s timeout
+                    // The name card is the FIRST screen now, so its submit
+                    // usually leads to the ROLE PICKER, which has no
+                    // .cai-header — veiling there would hang opaque until the
+                    // 4s timeout. #cai-role-pending marks exactly that case.
+                    // Without it the role is already known (a remembered
+                    // device), the submit really does go straight to the chat,
+                    // and the veil is right. (The only buttons inside the gate
+                    // card are the two submits; keyed forms carry no st-key
+                    // class in 1.58.)
+                    if (e.target.closest(".st-key-cai_name_card button")) {
+                        if (!document.getElementById("cai-role-pending")) veil();
+                        return;
+                    }
+                    // a role tap is now always the last step before the chat,
+                    // which HAS a header — so it always veils. The
+                    // #cai-gate-pending exception it used to carry (role tap
+                    // opens the name gate) cannot happen after the flip.
                     if (e.target.closest(
-                        ".st-key-role_soldier, .st-key-role_commander, .st-key-role_reserve")
-                        && !document.getElementById("cai-gate-pending"))
+                        ".st-key-role_soldier, .st-key-role_commander, .st-key-role_reserve"))
                         veil();
                 } catch (err) {}
             }, true);
@@ -1472,13 +1476,13 @@ SURFACE = "#21261A"
 # chat screen needs room under the fixed header band; entry has no header.
 # --cai-sat is the iOS status-bar inset (measured on the shell doc, pushed
 # into this frame by the PWA script) — the band grew by it, so clear it too.
-# entry-like also covers the name gate (role picked, name not yet asked):
-# the real entry screen keeps rendering under the gate overlay
+# entry-like also covers the name gate, which now comes BEFORE the role picker
+# (2026-09: the name + terms card is the app's first screen, and the role is
+# chosen after it). The entry chrome — classification line, chevrons, wordmark —
+# keeps rendering under the gate overlay; only the role buttons wait their turn.
 # single source of truth for "the name gate is up" — the CSS padding below and
 # the render at the entry gate must never disagree about it
-_name_gate = (bool(st.session_state.get("role_picked_here"))
-              and st.session_state.role is not None
-              and not st.session_state.get("name_asked"))
+_name_gate = not st.session_state.get("name_asked")
 _entry_like = st.session_state.role is None or _name_gate
 MAIN_TOP_PADDING = "12px" if _entry_like else "calc(72px + var(--cai-sat, 0px))"
 
@@ -4211,30 +4215,27 @@ if st.session_state.role is None or _name_gate:
         "<div class='cai-entry-title'>Command<span class='cai-wm-ai'>AI</span></div>"
         "<div class='cai-entry-sub'>העוזר החכם לפקודות מטכ\"ל</div>"
         "<div class='cai-entry-divider'></div>"
-        "<div class='cai-entry-choose'>בחר את סוג הכניסה שלך</div>"
-        # marker for the injected nav-veil: a role tap that leads to the name
-        # gate (first visit) must NOT raise the veil — the gate has no
-        # .cai-header, so the veil would sit opaque until its 4s timeout
-        + ("<span id='cai-gate-pending'></span>"
-           if not st.session_state.get("name_asked") else "")
+        # "בחר את סוג הכניסה שלך" belongs to the role step. While the name card
+        # is up it would be an instruction for controls that are not on screen.
+        + ("" if _name_gate
+           else "<div class='cai-entry-choose'>בחר את סוג הכניסה שלך</div>")
         + "</div>",
         unsafe_allow_html=True,
     )
 
-    # role_picked_here arms the name gate — see the setdefault near the top.
-    # Set it on the tap, never on the cookie restore.
-    if st.button("**כניסת חיילים**  \nחובה / סדיר", key="role_soldier", use_container_width=True):
-        st.session_state.role = "soldier"
-        st.session_state.role_picked_here = True
-        st.rerun()
-    if st.button("**כניסת מפקדים**  \nקבע", key="role_commander", use_container_width=True):
-        st.session_state.role = "commander"
-        st.session_state.role_picked_here = True
-        st.rerun()
-    if st.button("**כניסת מילואים**  \nמערך המילואים", key="role_reserve", use_container_width=True):
-        st.session_state.role = "reserve"
-        st.session_state.role_picked_here = True
-        st.rerun()
+    # The role buttons are the SECOND step now. Rendering them under the gate
+    # scrim would leave three controls visible-but-unreachable behind the card,
+    # and Streamlit would still own their keys — so they simply wait.
+    if not _name_gate:
+        if st.button("**כניסת חיילים**  \nחובה / סדיר", key="role_soldier", use_container_width=True):
+            st.session_state.role = "soldier"
+            st.rerun()
+        if st.button("**כניסת מפקדים**  \nקבע", key="role_commander", use_container_width=True):
+            st.session_state.role = "commander"
+            st.rerun()
+        if st.button("**כניסת מילואים**  \nמערך המילואים", key="role_reserve", use_container_width=True):
+            st.session_state.role = "reserve"
+            st.rerun()
 
     # Until 2026-08-16 this read "בלמ״ס · [internal use only]" — the phrasing of
     # an official IDF document, on the first screen of a public app whose ToS
@@ -4268,7 +4269,12 @@ if st.session_state.role is None or _name_gate:
             with st.container(key="cai_name_card"):
                 st.markdown(
                     "<div class='cai-gate-title'>איך קוראים לך?</div>"
-                    "<div class='cai-gate-sub'>לברכה אישית בכניסה · נשמר במכשיר בלבד</div>",
+                    "<div class='cai-gate-sub'>לברכה אישית בכניסה · נשמר במכשיר בלבד</div>"
+                    # marker for the injected nav-veil: it says "the screen
+                    # after this card is the role picker, which has no header,
+                    # so do not veil". See the click handler up in the engine.
+                    + ("<span id='cai-role-pending'></span>"
+                       if st.session_state.role is None else ""),
                     unsafe_allow_html=True,
                 )
                 with st.form(key="cai_name_form", border=False):
