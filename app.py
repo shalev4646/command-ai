@@ -1481,8 +1481,14 @@ SURFACE = "#21261A"
 # chosen after it). The entry chrome — classification line, chevrons, wordmark —
 # keeps rendering under the gate overlay; only the role buttons wait their turn.
 # single source of truth for "the name gate is up" — the CSS padding below and
-# the render at the entry gate must never disagree about it
-_name_gate = not st.session_state.get("name_asked")
+# the render at the entry gate must never disagree about it.
+# The terms are half of it, and not decoratively: without the tos_ok clause
+# "ביטול אישור התנאים" in הגדרות would zero the approval and let the person
+# keep using the app anyway, and bumping TOS_VERSION would move the אודות
+# banner to "אישרת גרסה קודמת" while never once re-asking. The card is the
+# only place either can be answered, so it is what reopens.
+_name_gate = (not st.session_state.get("name_asked")
+              or int(st.session_state.get("tos_ok") or 0) < TOS_VERSION)
 _entry_like = st.session_state.role is None or _name_gate
 MAIN_TOP_PADDING = "12px" if _entry_like else "calc(72px + var(--cai-sat, 0px))"
 
@@ -4265,6 +4271,12 @@ if st.session_state.role is None or _name_gate:
         if "gate_tos_w" not in st.session_state:
             st.session_state.gate_tos_w = (
                 int(st.session_state.get("tos_ok") or 0) >= TOS_VERSION)
+        # the card reopens for a terms re-approval too (a withdrawn approval, a
+        # bumped TOS_VERSION), and those people already told us their name —
+        # asking for it again as if they were new is how a consent prompt
+        # starts feeling like a punishment
+        if "gate_name_w" not in st.session_state:
+            st.session_state.gate_name_w = st.session_state.get("profile_name") or ""
         with st.container(key="cai_name_gate"):
             with st.container(key="cai_name_card"):
                 st.markdown(
@@ -6734,6 +6746,14 @@ html.cai-orders-open .cai-kb-card {
 }
 [class*="st-key-danger_"] button p { color: #D89189 !important; font-weight: 600 !important; text-align: center !important; }
 @media (hover: hover) { [class*="st-key-danger_"] button:hover { background: rgba(198,120,110,.18) !important; } }
+/* the withdraw-approval confirm. Deliberately a card and not a dialog:
+   st.dialog closes without a full rerun (the bug that once left the drawer
+   dead), and this one has to leave the settings screen for the terms card. */
+.cai-revoke { border-radius: 15px; padding: 13px 15px; margin: 10px 0 9px;
+  background: rgba(198,120,110,.10); border: 1px solid rgba(198,120,110,.34); }
+.cai-revoke .t { font: 700 13.5px Heebo; color: #E0A69E; }
+.cai-revoke .s { font: 400 11.5px Heebo; color: rgba(236,237,230,.72);
+  margin-top: 4px; line-height: 1.55; }
 
 /* privacy banner icon + real analytics toggle */
 .cai-banner .bi { background-image: url("ICON_SHIELD"); }
@@ -7432,6 +7452,38 @@ def _settings_about():
         f"color:{_fg};font-size:18px;font-weight:700'>{_ic}</div>"
         f"<div style='flex:1'><div class='bt' style='font-size:13.5px'>{_bt}</div>"
         f"<div class='bs' style='color:{_sc}'>{_bs}</div></div></div>", unsafe_allow_html=True)
+    # Withdrawing the approval sits directly under the sentence that reports
+    # it — a claim the app makes about the user should be reversible where it
+    # is made, not three screens away. Offered only when there is something to
+    # withdraw. Zeroing tos_ok is all it takes to act: _name_gate reads it, so
+    # the terms card reopens on the very next run and the app is unusable
+    # until it is answered, which is what "אי אפשר להשתמש" below promises.
+    if _tos >= TOS_VERSION:
+        if st.session_state.get("tos_revoke_ask"):
+            st.markdown(
+                "<div class='cai-revoke'><div class='t'>לבטל את אישור התנאים?</div>"
+                "<div class='s'>בלי אישור התנאים אי אפשר להשתמש באפליקציה — "
+                "נחזור למסך האישור ותתבקש לאשר מחדש. השם, ההיסטוריה והפרופיל "
+                "נשמרים.</div></div>", unsafe_allow_html=True)
+            _rv1, _rv2 = st.columns(2, gap="small")
+            if _rv1.button("כן, בטל את האישור", key="danger_tos_revoke_yes",
+                           use_container_width=True):
+                st.session_state.tos_ok = 0
+                # drop the widget key so the box reseeds from the zeroed
+                # tos_ok — the same contract _reset_identity relies on
+                st.session_state.pop("gate_tos_w", None)
+                st.session_state.pop("tos_revoke_ask", None)
+                st.session_state.show_settings = False
+                st.session_state.settings_screen = "hub"
+                st.rerun()
+            if _rv2.button("להשאיר מאושר", key="tos_revoke_no",
+                           use_container_width=True):
+                st.session_state.pop("tos_revoke_ask", None)
+                st.rerun()
+        elif st.button("ביטול אישור התנאים", key="danger_tos_revoke",
+                       use_container_width=True):
+            st.session_state.tos_revoke_ask = True
+            st.rerun()
     st.markdown(
         "<div class='cai-tos-lead'>תנאי שימוש</div><div class='cai-tos-sub'>Terms of Service</div>",
         unsafe_allow_html=True)
