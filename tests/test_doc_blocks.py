@@ -1,11 +1,19 @@
 # -*- coding: utf-8 -*-
-"""RETRIEVE_DOC_BLOCKS — the window rebuilt as ORDERS (12.09).
+"""RETRIEVE_DOC_BLOCKS — the blocks of the first N orders, appended to the window.
 
-Why: measured free on the 82 adjudicated targets, the answering order sits in
-the global ranking's top-25 for 54 of them, and today's window delivers 29.
-The loss is the window's shape — four of eight seats go to the leading order
-so that "right doc, wrong chunk" cannot happen. Serving the order's curated
-block removes that failure by construction, so the seats are free again.
+Why (12.09): measured free on the 82 adjudicated targets, the answering order
+sits in the global ranking's top-25 for 54 of them, and today's window
+delivers 29. The loss is the window's shape — four of eight seats go to the
+leading order so that "right doc, wrong chunk" cannot happen. Serving an
+order's curated block removes that failure by construction.
+
+Shape (16.09): the 12.09 build REPLACED the window with the blocks plus the
+whole 40-chunk ranking pool; measured with the content-aware sectprobe, the
+pool inflated the window to 38 orders and 4,700 words and brought almost no
+sections (verbatim +5) while the blocks brought +18. So the blocks are now an
+EXTENSION like every other one: the production window stays exactly as it
+is, the blocks of the first N distinct orders of a deep ranking are appended
+after it, and the pool is used for ranking only — never served.
 
 Ships OFF; these tests pin what it does when on, and that OFF is
 byte-identical to the historical path.
@@ -29,9 +37,13 @@ from tests.test_clause_index import DOC_A, DOC_B, BIG, Q
 RAW = {"doc_id": "B.2", "title": "הופעה ולבוש", "section": "chunk3", "clause": "3",
        "text": "הופעה ולבוש\nטקסט גולמי על שרוולים שאין לו סעיף מאוצר.", "score": 0.51}
 
+# a raw chunk that only the DEEP pool reaches — it ranks below the window
+DEEP = {"doc_id": "B.2", "title": "הופעה ולבוש", "section": "chunk9", "clause": "9",
+        "text": "טקסט גולמי עמוק בדירוג, מחוץ לחלון של שמונה.", "score": 0.20}
+
 
 def _ranked():
-    """What the deep ranking returns: B.2 leads, then A.1, then B.2's raw."""
+    """What the window ranking returns: B.2 leads, then A.1, then B.2's raw."""
     return [
         {"doc_id": "B.2", "title": "הופעה ולבוש", "section": "key-facts",
          "clause": "מה חובת הגילוח", "text": "חייל יתגלח מדי יום.", "score": 0.62},
@@ -39,6 +51,13 @@ def _ranked():
          "clause": "מתי מתקיים מסדר בוקר", "text": "מסדר הבוקר יתקיים בכל יום.", "score": 0.55},
         RAW,
     ]
+
+
+def _ranked_by_depth(kw):
+    """The deep pool sees one more raw chunk than the window does."""
+    if kw.get("n_results", 0) > backend.MAX_CONTEXT_CHUNKS:
+        return _ranked() + [DEEP]
+    return _ranked()
 
 
 @contextmanager
@@ -56,7 +75,10 @@ def _with(n, docs, pool=None, ranked=None, **knobs):
     backend._v2_index = None
     calls = []
     if ranked is not None:
-        backend.retrieve = lambda *a, **kw: (calls.append(kw), list(ranked))[1]
+        if callable(ranked):
+            backend.retrieve = lambda *a, **kw: (calls.append(kw), list(ranked(kw)))[1]
+        else:
+            backend.retrieve = lambda *a, **kw: (calls.append(kw), list(ranked))[1]
     try:
         yield calls
     finally:
@@ -69,7 +91,7 @@ def test_off_returns_nothing_and_leaves_the_historical_path():
     with _with(0, [DOC_A, DOC_B], ranked=_ranked()) as calls:
         assert backend.doc_blocks_window(Q, "soldier", set(), ["A.1", "B.2"]) == []
         assert not calls, "off must not even rank"
-        out = backend.retrieve_for_role(Q, "soldier", route=set(), widen=False)
+        out = backend.retrieve_for_role(Q, "soldier", route=set(), widen=True)
     assert [c["clause"] for c in out] == [c["clause"] for c in _ranked()], out
 
 
@@ -84,18 +106,34 @@ def test_the_first_n_orders_are_served_as_whole_blocks():
                    c["clause"] == "מתי מתקיים מסדר בוקר" and c["score"] == 0.62 for c in out)
 
 
-def test_the_raw_chunks_that_ranked_are_never_dropped():
-    """9 of 82 adjudicated targets are answered by raw text no curated clause
-    carries, and the V3-only run lost 15 orders by dropping them."""
-    with _with(1, [DOC_A, DOC_B], ranked=_ranked()):
-        out = backend.doc_blocks_window(Q, "soldier", set(), ["A.1", "B.2"])
-    assert any(c["section"] == "chunk3" for c in out), "the raw chunk must survive"
+def test_the_window_stays_and_only_the_blocks_are_appended_never_the_pool():
+    """16.09: the production window is served as it is, the blocks come after
+    it, and a chunk only the deep pool reaches is never served — the pool
+    ranks orders, it does not fill the context (38 orders / 4,700 words when
+    it did)."""
+    with _with(1, [DOC_A, DOC_B], ranked=_ranked_by_depth):
+        out = backend.retrieve_for_role(Q, "soldier", route=set(), widen=True)
+    window = [c["clause"] for c in _ranked()]
+    assert [c["clause"] for c in out[:len(window)]] == window, "the window comes first, untouched"
+    assert any(c["section"] == "chunk3" for c in out), "the window's raw chunk survives"
     assert any(c["doc_id"] == "A.1" for c in out), "an order below the block cap still rides as a chunk"
+    assert any(c["clause"] == "אילו תכשיטים מותר לענוד עם מדים" for c in out), "the block is appended"
+    assert not any(c["section"] == "chunk9" for c in out), "the deep pool is ranking-only, never served"
+
+
+def test_the_blocks_are_not_served_before_widening():
+    """The blocks are an extension: retrieve_for_role(widen=False) is the bare
+    window even when the flag is on, so the rewrite/raw union and the second
+    pass — which truncate to MAX_CONTEXT_CHUNKS — can never slice a block
+    away. widen_context appends them after the union, like every extension."""
+    with _with(1, [DOC_A, DOC_B], ranked=_ranked()):
+        bare = backend.retrieve_for_role(Q, "soldier", route=set(), widen=False)
+    assert [c["clause"] for c in bare] == [c["clause"] for c in _ranked()], bare
 
 
 def test_nothing_is_served_twice():
     with _with(2, [DOC_A, DOC_B], ranked=_ranked()):
-        out = backend.doc_blocks_window(Q, "soldier", set(), ["A.1", "B.2"])
+        out = backend.retrieve_for_role(Q, "soldier", route=set(), widen=True)
     keys = [(c["doc_id"], c["section"], c["clause"]) for c in out]
     assert len(keys) == len(set(keys)), keys
 
@@ -118,16 +156,10 @@ def test_a_huge_block_is_cut_to_its_evidenced_clauses():
     assert "מה עונש המחבוש המרבי לחייל" in kf and len(kf) <= 3, kf
 
 
-def test_retrieve_for_role_uses_the_rule_and_the_extensions_still_stack():
-    with _with(1, [DOC_A, DOC_B], ranked=_ranked()):
-        out = backend.retrieve_for_role(Q, "soldier", route=set(), widen=True)
-    assert any(c["clause"] == "אילו תכשיטים מותר לענוד עם מדים" for c in out), out
-    assert any(c["section"] == "chunk3" for c in out)
-
-
 def test_an_empty_ranking_serves_nothing_rather_than_guessing():
     with _with(2, [DOC_A, DOC_B], ranked=[]):
         assert backend.doc_blocks_window(Q, "soldier", set(), ["A.1", "B.2"]) == []
+        assert backend.retrieve_for_role(Q, "soldier", route=set(), widen=True) == []
 
 
 if __name__ == "__main__":

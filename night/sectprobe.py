@@ -34,6 +34,8 @@ Reported per run, all free (route=set(), no HyDE, no API):
   sect-in-window  answering CONTENT made the served window (rule above)
   doc-rank        best global rank of any chunk of the answering order
   sect-rank       best global rank of a raw chunk containing a full quote
+  sect-content    sect-in-window, OR a served curated clause of the order
+                  carries >= CONTENT_MIN of a quote's content words (16.09)
 Rank distributions are the smooth signal treatments actually move; the
 in-window bits are the product truth they must eventually cash into.
 
@@ -57,6 +59,50 @@ from night import config as C
 # regex-located verbatim quotes; a file that is not on disk is skipped
 ADJ = (C.OUT / "adjudication_pilot150.json", C.OUT / "adjudication_realstyle.json")
 RANK_POOL = 200   # global ranking depth for the rank diagnostics
+
+# ── The content rule (16.09) ─────────────────────────────────────────────────
+# The verbatim rule below cannot see a curated clause that carries the rule in
+# soldier language: the 16.09 attribution found the rule present in 73 of 83
+# curated blocks while the verbatim rule counted 12 of 82 served -- the
+# instrument, not the blocks, was the blind spot. So a served CURATED clause of
+# the answering order also counts when it carries at least CONTENT_MIN of a
+# verified quote's content words (3+ letters, not a stopword, not a number).
+# Calibrated on five hand-verified cases: carriers scored 0.36-0.52,
+# non-carriers 0.13 and 0.20. Raw chunks keep the verbatim rule only -- a
+# neighbouring raw chunk of the same order shares the topic's vocabulary
+# without carrying the rule. Both counts are reported; the verbatim one keeps
+# every historical file comparable.
+CONTENT_MIN = 0.30
+_STOP = frozenset(
+    "של על את עם לא אם או כל גם רק יש אין זה זו הוא היא הם הן אני אתה כי מה מי "
+    "איך מתי אבל אשר כדי לפי בין עד בכל לכל ואת שלא אלא ידי ואם ולא".split())
+_PUNCT = ".,;:!?()[]{}'„“”‘’׳״-–—/|" + chr(34)
+_PUNCT_TABLE = str.maketrans({c: " " for c in _PUNCT})
+
+
+def _content_words(s: str) -> set[str]:
+    out: set[str] = set()
+    for w in (s or "").translate(_PUNCT_TABLE).split():
+        if len(w) >= 3 and w not in _STOP and not w.isdigit():
+            out.add(w)
+    return out
+
+
+def content_overlap(quotes: list[str], text: str) -> float:
+    """The largest share of any single quote's content words that `text`
+    carries. A quote with fewer than three content words vouches for nothing."""
+    tw = _content_words(text)
+    best = 0.0
+    for q in quotes:
+        qw = _content_words(q)
+        if len(qw) < 3:
+            continue
+        best = max(best, len(qw & tw) / len(qw))
+    return best
+
+
+def content_hit(quotes: list[str], text: str) -> bool:
+    return content_overlap(quotes, text) >= CONTENT_MIN
 
 
 def _norm(s: str) -> str:
@@ -140,6 +186,13 @@ def run(out_path: Path | None = None) -> dict:
         served = [_norm(c["text"]) for c in win if c["doc_id"] == t["doc_id"]]
         sect = any(q in s for q in t["quotes"] for s in served) or \
                any(run in s for run in t["runs"] for s in served)
+        # the content rule, on the served CURATED clauses of the answering
+        # order only (raw chunks stay verbatim -- see CONTENT_MIN)
+        curated = [c for c in win
+                   if c["doc_id"] == t["doc_id"] and "key-facts" in (c.get("section") or "")]
+        overlap = max((content_overlap(t["quotes"], (c.get("clause") or "") + " " + c["text"])
+                       for c in curated), default=0.0)
+        sect_content = bool(sect or overlap >= CONTENT_MIN)
 
         ranked = _global_ranking(t["q"], t["role"])
         doc_rank = sect_rank = None
@@ -155,6 +208,7 @@ def run(out_path: Path | None = None) -> dict:
             "id": t["id"], "doc_id": t["doc_id"],
             "doc_in_window": t["doc_id"] in win_docs,
             "sect_in_window": sect,
+            "sect_content": sect_content, "sect_overlap": round(overlap, 2),
             "doc_rank": doc_rank, "sect_rank": sect_rank,
             "window_words": sum(len(c["text"].split()) for c in win),
             "window_docs": len(win_docs),
@@ -165,6 +219,7 @@ def run(out_path: Path | None = None) -> dict:
         "n": n,
         "doc_in_window": sum(p["doc_in_window"] for p in per),
         "sect_in_window": sum(p["sect_in_window"] for p in per),
+        "sect_in_window_content": sum(p["sect_content"] for p in per),
         "sect_rank_top8": sum(1 for p in per if p["sect_rank"] and p["sect_rank"] <= 8),
         "sect_rank_top25": sum(1 for p in per if p["sect_rank"] and p["sect_rank"] <= 25),
         "sect_rank_median": sorted((p["sect_rank"] or RANK_POOL + 1) for p in per)[n // 2],
@@ -172,7 +227,8 @@ def run(out_path: Path | None = None) -> dict:
         "avg_docs": round(sum(p["window_docs"] for p in per) / n, 1),
     }
     safe_print(f"[sectprobe] n={n}  doc-in-window {agg['doc_in_window']}/{n}  "
-               f"sect-in-window {agg['sect_in_window']}/{n}")
+               f"sect-in-window {agg['sect_in_window']}/{n}  "
+               f"(content rule: {agg['sect_in_window_content']}/{n})")
     safe_print(f"[sectprobe] sect-rank: top8 {agg['sect_rank_top8']}  "
                f"top25 {agg['sect_rank_top25']}  median {agg['sect_rank_median']}")
     safe_print(f"[sectprobe] window: {agg['avg_words']} words, {agg['avg_docs']} docs")

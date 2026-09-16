@@ -332,14 +332,20 @@ RETRIEVE_V3_ONLY = os.environ.get("RETRIEVE_V3_ONLY", "0") == "1"
 # to prevent). Serving the order's curated BLOCK solves that failure outright
 # — every clause of the order is there — so the seats are free again.
 #
-# The rule: take the first RETRIEVE_DOC_BLOCKS distinct orders of the global
-# ranking and serve each one's block; the raw chunks that ranked are appended
-# after them (never dropped — the "V3 only" run lost 15 orders that live only
-# in raw text, and 9 of 82 targets are answered by raw text no curated clause
-# carries). Measured offline on the same targets:
+# The rule (16.09): the production window is served exactly as it is, and the
+# blocks of the first RETRIEVE_DOC_BLOCKS distinct orders of a deep ranking are
+# APPENDED after it (extend_with_doc_blocks, in widen_context). The deep pool
+# ranks the orders and is never served: the 12.09 build served it, and the
+# content-aware sectprobe (night/sectprobe.py, CONTENT_MIN) measured what that
+# bought — 38 orders and 4,700 words per question for +5 verbatim sections,
+# while the blocks themselves took the answering section from 16 to 34 of 82
+# with zero losses. The numbers, section-by-content on the 82 targets
+# (HANDOFF 16.09):
 #
-#   today                                 order 29/82   section 12/82   1,244 words
-#   6 blocks  UNION  the clause index     order 35/82   section 23/82   ~3,300 words
+#   today (FULL_BLOCKS=1)                    16/82   1,149 words
+#   4 blocks + the 40-chunk pool (12.09)     34/82   4,690 words
+#   4 blocks appended to the window (16.09)  24/82   2,183 words
+#   6 blocks appended to the window (16.09)  27/82   2,972 words   (+V2: 35/82, 3,718)
 #
 # 0 = off, and off is the default until the paired re-measure says the
 # ANSWERS move -- the rule every knob in this file ships under.
@@ -1173,11 +1179,11 @@ def _serve_blocks_by_hits(chunks: list[dict], hits, by_id: dict, route: set[str]
 
 def doc_blocks_window(question: str, role: str, route: set[str] | None,
                       doc_ids: list[str]) -> list[dict]:
-    """RETRIEVE_DOC_BLOCKS: the window rebuilt as ORDERS. The first N distinct
-    orders of a deep ranking, each served as its curated block (cut to its
-    best-evidenced clauses when it is huge), then the raw chunks that ranked,
-    appended in rank order. Returns [] when the flag is off, so the caller
-    keeps the historical path byte for byte.
+    """RETRIEVE_DOC_BLOCKS: the blocks of the first N distinct orders of a deep
+    ranking, each served as its curated block (cut to its best-evidenced
+    clauses when it is huge), in rank order. Returns [] when the flag is off.
+    The deep pool ranks the orders and is never served (16.09) — the caller,
+    extend_with_doc_blocks, appends these after the untouched window.
 
     Clause evidence for the block cut comes from the clause-title index, which
     is free and already built — a block over RETRIEVE_V2_BLOCK_WORDS is the
@@ -1209,10 +1215,34 @@ def doc_blocks_window(question: str, role: str, route: set[str] | None,
             # order ranked and _sources_from_chunks keeps its order
             c["score"] = next((x["score"] for x in pool if x["doc_id"] == doc_id), 0.0)
             out.append(c)
-    # the raw chunks that ranked ride along: 9 of 82 adjudicated targets are
-    # answered by raw text that no curated clause carries, and the "V3 only"
-    # run lost 15 orders by dropping them
-    return _append_new(out, pool, None)
+    # Only the blocks. The 12.09 build appended the whole pool here; the 16.09
+    # content-aware sectprobe showed that served 38 orders and 4,700 words for
+    # +5 verbatim sections, while the blocks alone brought +18. The raw chunks
+    # that ranked still ride along — as the production window this extension
+    # is appended to (see extend_with_doc_blocks).
+    return out
+
+
+def extend_with_doc_blocks(chunks: list[dict], question: str, role: str,
+                           route: set[str] | None = None) -> list[dict]:
+    """RETRIEVE_DOC_BLOCKS as an extension: the production window stays as it
+    is and the blocks of the first N orders are appended after it. An
+    extension, not a replacement, for two measured reasons (16.09): the
+    rewrite/raw union and the second pass truncate to MAX_CONTEXT_CHUNKS
+    before widen_context runs, so anything served inside retrieve_for_role
+    beyond the window is sliced away in production; and the 40-chunk pool the
+    12.09 build served inflated the window fourfold for almost no sections.
+    Scope and search text mirror retrieve_for_role."""
+    if RETRIEVE_DOC_BLOCKS <= 0 or not (question or "").strip():
+        return chunks
+    docs = _docs_for_role(role)
+    if RETRIEVE_CURATED_ONLY:
+        docs = [d for d in docs if _has_key_facts(d)]
+    doc_ids = [d["document_id"] for d in docs if d.get("document_id")]
+    if not doc_ids:
+        return chunks
+    search = _glossary.expand(question) if _glossary.RETRIEVE_GLOSSARY else question
+    return _append_new(chunks, doc_blocks_window(search, role, route, doc_ids), None)
 
 
 def extend_with_clause_embed(chunks: list[dict], question: str, role: str,
@@ -1268,15 +1298,16 @@ def extend_with_clause_index(chunks: list[dict], question: str, role: str,
 
 def widen_context(chunks: list[dict], question: str, role: str,
                   route: set[str] | None) -> list[dict]:
-    """The six appended extensions, in the order they were measured to
-    stack: hypothetical, router seats, full blocks, the clause-title path
-    (RETRIEVE_V2), the clause-embedding path (RETRIEVE_V3), amount-bearing
-    clauses. Each is a no-op when its flag is
+    """The seven appended extensions, in the order they were measured to
+    stack: hypothetical, router seats, full blocks, the blocks of the first N
+    orders (RETRIEVE_DOC_BLOCKS), the clause-title path (RETRIEVE_V2), the
+    clause-embedding path (RETRIEVE_V3), amount-bearing clauses. Each is a no-op when its flag is
     off, so production with all flags off is byte-identical to the
     pre-extension pipeline."""
     out = extend_with_hypothetical(chunks, question, role, route)
     out = extend_with_router_slots(out, question, role, route)
     out = extend_with_full_blocks(out, role)
+    out = extend_with_doc_blocks(out, question, role, route)
     out = extend_with_clause_index(out, question, role, route)
     out = extend_with_clause_embed(out, question, role, route)
     return extend_with_quantity_clauses(out, question, role)
@@ -1318,8 +1349,6 @@ def retrieve_for_role(question: str, role: str, route: set[str] | None = None,
         # the 12.09 restart, whole: no raw-window ranking at all — the window
         # is what the clause-level index serves (see extend_with_clause_embed)
         chunks: list[dict] = []
-    elif RETRIEVE_DOC_BLOCKS > 0:
-        chunks = doc_blocks_window(search, role, route, doc_ids)
     else:
         chunks = retrieve(search, n_results=MAX_CONTEXT_CHUNKS, doc_ids=doc_ids,
                           boost_docs=route, max_per_doc=RETRIEVE_MAX_PER_DOC,
