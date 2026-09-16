@@ -317,6 +317,12 @@ st.session_state.setdefault("profile_name", str(_ck.get("name") or "")[:40])
 # name_asked: the one-time name prompt (gate) was answered or skipped — never
 # nag again on this device, on any later role switch
 st.session_state.setdefault("name_asked", bool(_ck.get("asked")))
+# tos_ok: which version of the terms THIS DEVICE approved. An int, not a
+# bool, on purpose — if the terms change, bumping TOS_VERSION re-asks
+# instead of silently carrying an approval of a document the person never
+# saw. 0 / absent means never approved.
+TOS_VERSION = 1
+st.session_state.setdefault("tos_ok", int(_ck.get("tos") or 0))
 # role_picked_here: the role was chosen by a TAP in THIS session, not restored
 # from the device cookie. The name gate is a first-run prompt that belongs after
 # that tap — a remembered device (role in the cookie, name never answered) used
@@ -4083,6 +4089,12 @@ _ck_dict = {
     # first role tap, which is always before the first question.
     "did": st.session_state.device_id,
 }
+# the terms approval rides the DEVICE, not the person: a logout clears the
+# name and the role, never this (see _reset_identity). Written only once
+# something was actually approved — like "fs"/"mil"/"sol" below, a device
+# that never approved keeps a payload byte-identical to the pre-terms format.
+if st.session_state.get("tos_ok"):
+    _ck_dict["tos"] = int(st.session_state["tos_ok"])
 # text scale rides the device cookie, and like "mil"/"sol" it is written ONLY
 # when it differs from the default — so the payload of everyone who never
 # touched the setting stays byte-identical to the pre-text-scale format.
