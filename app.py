@@ -7073,6 +7073,46 @@ def _wipe_all():
     st.session_state.tos_ok = 0
 
 
+def _confirm_action(key: str, opener: str, title: str, body: str,
+                    yes: str, no: str = "ביטול") -> bool:
+    """One destructive button, behind a question. True only on the run that
+    confirms it — so the caller reads `if _confirm_action(...): <do it>` and
+    nothing destructive can sit in the opener's branch by construction.
+
+    Shared rather than copied. Two hand-rolled versions of the same two-step
+    flow is how one of them quietly becomes a one-tap action while still
+    LOOKING guarded on screen, which is the same drift the terms text is
+    written once to avoid.
+
+    `key` names the session flag and both button keys, so two flows on one
+    screen cannot collide. The "danger_" prefix on the confirming button is
+    what paints it red — see the [class*="st-key-danger_"] rules in _DS_CSS.
+
+    A card, not st.dialog: closing a dialog skips the full rerun (the bug that
+    once left the drawer dead), and both callers have to leave the screen they
+    are on once the answer is yes.
+    """
+    _ask = f"cai_confirm_{key}"
+    if st.session_state.get(_ask):
+        st.markdown(
+            f"<div class='cai-revoke'><div class='t'>{title}</div>"
+            f"<div class='s'>{body}</div></div>", unsafe_allow_html=True)
+        _c1, _c2 = st.columns(2, gap="small")
+        _yes = _c1.button(yes, key=f"danger_{key}_yes", use_container_width=True)
+        _no = _c2.button(no, key=f"{key}_no", use_container_width=True)
+        if _no:
+            st.session_state.pop(_ask, None)
+            st.rerun()
+        if _yes:
+            st.session_state.pop(_ask, None)
+            return True
+        return False
+    if st.button(opener, key=f"danger_{key}", use_container_width=True):
+        st.session_state[_ask] = True
+        st.rerun()
+    return False
+
+
 def _settings_hub():
     """8a — settings home: profile card + grouped nav + logout."""
     _svc = _service_type_shown()
@@ -7407,7 +7447,18 @@ def _settings_privacy():
     # appended to the Sheet — full question text included — survives it. The
     # label now scopes itself to the device and _WIPE_NOTE says what is left
     # over and where to go for it.
-    if st.button("מחיקת הנתונים מהמכשיר הזה", key="danger_wipe", use_container_width=True):
+    #
+    # Behind the same confirm as the terms withdrawal, and it needed it more:
+    # this one took a name, a profile, every conversation and the tool inputs
+    # on a single tap, with nothing to undo it. The body is _WIPE_NOTE itself —
+    # the sentence under the button already says exactly what goes and what
+    # survives, and a confirm that paraphrases it is a second copy to drift.
+    if _confirm_action(
+            "wipe",
+            opener="מחיקת הנתונים מהמכשיר הזה",
+            title="למחוק את הנתונים מהמכשיר הזה?",
+            body=_WIPE_NOTE + "<br><br><b>לא ניתן לבטל את הפעולה.</b>",
+            yes="כן, מחק"):
         _wipe_all()
         st.rerun()
     st.markdown(f"<div class='cai-wipe-note'>{_WIPE_NOTE}</div>", unsafe_allow_html=True)
@@ -7462,32 +7513,21 @@ def _settings_about():
     # withdraw. Zeroing tos_ok is all it takes to act: _name_gate reads it, so
     # the terms card reopens on the very next run and the app is unusable
     # until it is answered, which is what "אי אפשר להשתמש" below promises.
-    if _tos >= TOS_VERSION:
-        if st.session_state.get("tos_revoke_ask"):
-            st.markdown(
-                "<div class='cai-revoke'><div class='t'>לבטל את אישור התנאים?</div>"
-                "<div class='s'>בלי אישור התנאים אי אפשר להשתמש באפליקציה — "
-                "נחזור למסך האישור ותתבקש לאשר מחדש. השם, ההיסטוריה והפרופיל "
-                "נשמרים.</div></div>", unsafe_allow_html=True)
-            _rv1, _rv2 = st.columns(2, gap="small")
-            if _rv1.button("כן, בטל את האישור", key="danger_tos_revoke_yes",
-                           use_container_width=True):
-                st.session_state.tos_ok = 0
-                # drop the widget key so the box reseeds from the zeroed
-                # tos_ok — the same contract _reset_identity relies on
-                st.session_state.pop("gate_tos_w", None)
-                st.session_state.pop("tos_revoke_ask", None)
-                st.session_state.show_settings = False
-                st.session_state.settings_screen = "hub"
-                st.rerun()
-            if _rv2.button("להשאיר מאושר", key="tos_revoke_no",
-                           use_container_width=True):
-                st.session_state.pop("tos_revoke_ask", None)
-                st.rerun()
-        elif st.button("ביטול אישור התנאים", key="danger_tos_revoke",
-                       use_container_width=True):
-            st.session_state.tos_revoke_ask = True
-            st.rerun()
+    if _tos >= TOS_VERSION and _confirm_action(
+            "tos_revoke",
+            opener="ביטול אישור התנאים",
+            title="לבטל את אישור התנאים?",
+            body="בלי אישור התנאים אי אפשר להשתמש באפליקציה — נחזור למסך "
+                 "האישור ותתבקש לאשר מחדש. השם, ההיסטוריה והפרופיל נשמרים.",
+            yes="כן, בטל את האישור",
+            no="להשאיר מאושר"):
+        st.session_state.tos_ok = 0
+        # drop the widget key so the box reseeds from the zeroed tos_ok — the
+        # same contract _reset_identity relies on
+        st.session_state.pop("gate_tos_w", None)
+        st.session_state.show_settings = False
+        st.session_state.settings_screen = "hub"
+        st.rerun()
     st.markdown(
         "<div class='cai-tos-lead'>תנאי שימוש</div><div class='cai-tos-sub'>Terms of Service</div>",
         unsafe_allow_html=True)

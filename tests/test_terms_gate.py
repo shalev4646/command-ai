@@ -61,6 +61,14 @@ def _func(name: str) -> str:
     return APP[a:a + m.start()]
 
 
+def _code_only(text: str) -> str:
+    """Drop whole-line comments — a comment mentioning a name satisfies a
+    plain substring test, which is how a weaker version of the confirm check
+    below passed a mutation that emptied the branch it was guarding."""
+    return "\n".join(l for l in text.split("\n")
+                     if not l.lstrip().startswith("#"))
+
+
 GATE_SRC = _balanced("_name_gate = ")
 SEED_SRC = _balanced("st.session_state.gate_tos_w = ")
 
@@ -232,32 +240,31 @@ def test_the_gate_cannot_be_passed_without_ticking():
 def test_withdrawing_is_confirmed_before_it_happens():
     """Pins WHERE the withdrawal happens, not merely that a confirm exists.
 
-    Asserting that the string "tos_revoke_ask" appears is not enough: leaving
-    that branch in place while the opening button zeroes tos_ok itself is a
-    one-tap withdrawal with a dead confirm attached, and it reads identically.
-    So this walks the source order -- the zeroing must sit after the
-    confirming button and before the opener that only raises the question.
-    (Verified by mutation: wiring the opener straight to tos_ok = 0 fails
-    here, and passed the presence check it replaced.)
+    Asserting that some confirm string appears is not enough: leaving that
+    branch in place while the opening button withdraws the approval itself is a
+    one-tap withdrawal with a dead confirm attached, and it reads identically
+    on screen. So this pins the shape instead -- the zeroing must sit after the
+    _confirm_action call, and the helper itself must not touch tos_ok.
+    (Verified by mutation: wiring the opener straight to tos_ok = 0 fails here
+    and passed the presence check this replaced.)
     """
-    about = _func("_settings_about")
-    assert about.count("st.session_state.tos_ok = 0") == 1, (
-        "tos_ok is zeroed in more than one place in the אודות screen; at "
-        "least one of them is not behind the confirm"
+    code = _code_only(_func("_settings_about"))
+    assert code.count("st.session_state.tos_ok = 0") == 1, (
+        "tos_ok is zeroed in more than one place in the About screen; at least "
+        "one of them is not behind the confirm"
     )
-    zeroed = about.index("st.session_state.tos_ok = 0")
-    confirmed = about.index('key="danger_tos_revoke_yes"')
-    opener = about.index('key="danger_tos_revoke"')
-    assert confirmed < zeroed, (
-        "the approval is withdrawn before the confirming button -- the "
-        "are-you-sure step is decorative"
+    assert "_confirm_action(" in code, (
+        "the withdrawal no longer goes through the shared confirm"
     )
-    assert zeroed < opener, (
-        "the opening button withdraws the approval itself; it may only raise "
-        "the question"
+    assert code.index("_confirm_action(") < code.index(
+        "st.session_state.tos_ok = 0"), (
+        "the approval is withdrawn before the confirm is asked"
     )
-    assert "לבטל את אישור התנאים?" in about, "the confirm asks nothing"
-    assert "נשמרים" in about, (
+    assert "tos_ok" not in _func("_confirm_action"), (
+        "the confirm helper performs the withdrawal itself; it may only ask"
+    )
+    assert "\u05dc\u05d1\u05d8\u05dc \u05d0\u05ea \u05d0\u05d9\u05e9\u05d5\u05e8 \u05d4\u05ea\u05e0\u05d0\u05d9\u05dd?" in code, "the confirm asks nothing"
+    assert "\u05e0\u05e9\u05de\u05e8\u05d9\u05dd" in code, (
         "the confirm does not say what is KEPT, which makes it read as a wipe"
     )
 

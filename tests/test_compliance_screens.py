@@ -392,6 +392,62 @@ def test_the_terms_version_is_not_the_app_version():
     )
 
 
+def _func(name: str) -> str:
+    a = APP.index("def %s(" % name)
+    return APP[a:APP.index("\n\ndef ", a)]
+
+
+def test_the_device_wipe_is_confirmed_before_it_happens():
+    """It took a name, a profile, every conversation and the tool inputs on a
+    single tap, with nothing to undo it -- a heavier action than the terms
+    withdrawal, which was already guarded. Same shape check: the wipe must sit
+    after the confirm, and the helper must not perform it."""
+    priv = _code_only(_func("_settings_privacy"))
+    assert priv.count("_wipe_all()") == 1, (
+        "the wipe is called from more than one place on the privacy screen; "
+        "at least one of them is not behind the confirm"
+    )
+    assert "_confirm_action(" in priv, "the device wipe is a one-tap action"
+    assert priv.index("_confirm_action(") < priv.index("_wipe_all()"), (
+        "the device is wiped before the confirm is asked"
+    )
+    assert "_wipe_all" not in _func("_confirm_action"), (
+        "the confirm helper performs the wipe itself; it may only ask"
+    )
+
+
+def _call_args(text: str, call: str) -> str:
+    """The argument list of `call` in `text`, by balanced parens.
+
+    A fixed window after the call name is not good enough: _WIPE_NOTE is also
+    rendered just below the button, so a window wide enough to hold the
+    arguments also caught that line and the check passed a confirm that had
+    stopped using it. Found by mutation.
+    """
+    i = text.index(call) + len(call) - 1
+    depth = 0
+    for j in range(i, len(text)):
+        if text[j] == "(":
+            depth += 1
+        elif text[j] == ")":
+            depth -= 1
+            if depth == 0:
+                return text[i:j + 1]
+    raise AssertionError("unbalanced call: " + call)
+
+
+def test_the_wipe_confirm_reuses_the_note_under_the_button():
+    """_WIPE_NOTE already says exactly what goes and what survives in the
+    Sheet. A confirm that paraphrases it is a second copy of a data-handling
+    claim, and the pair drifting is what P1 in this file is about."""
+    priv = _code_only(_func("_settings_privacy"))
+    args = _call_args(priv, "_confirm_action(")
+    assert "_WIPE_NOTE" in args, (
+        "the wipe confirm writes its own version of what gets deleted instead "
+        "of showing the note that already says it"
+    )
+
+
 if __name__ == "__main__":
     failures = 0
     for name, fn in sorted(globals().items()):
