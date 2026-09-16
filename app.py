@@ -7292,14 +7292,44 @@ def _settings_privacy():
 
 
 def _settings_about():
-    """8e — about + terms of service (verbatim) + install hint."""
+    """8e — about + terms of service (verbatim) + install hint.
+
+    The banner above the terms was three lines of hardcoded HTML — a green
+    check over "אישרת את התנאים · בהתקנה הראשונית · גרסה 2.4" — rendered for
+    every user on every visit while NO approval screen existed anywhere in the
+    app. It was false for everyone who ever read it, and it is the worse half
+    of the defect class tests/test_compliance_screens.py was written for: the
+    privacy banner misdescribed what the code did, this one asserted that the
+    USER had agreed. It now reads tos_ok, the device's own answer, and says so
+    in all three states — approved, approved-an-older-version, and not yet.
+
+    "גרסה 2.4" was the APP version (it still sits in the settings footer),
+    never a version of the terms. TOS_VERSION is the terms' own counter and is
+    what belongs in a sentence about what was approved.
+    """
+    _tos = int(st.session_state.get("tos_ok") or 0)
+    if _tos >= TOS_VERSION:
+        _ic, _bt, _bs, _rgb, _fg, _sc = (
+            "✓", "אישרת את התנאים", f"גרסת תנאים {TOS_VERSION}",
+            "var(--accent-rgb)", "var(--accent-bright)", "rgba(196,206,146,.85)")
+    elif _tos:
+        _ic, _bt, _bs, _rgb, _fg, _sc = (
+            "!", "אישרת גרסה קודמת של התנאים",
+            f"אושרה גרסה {_tos} · הנוסח שלהלן הוא גרסה {TOS_VERSION}",
+            "217,164,65", "#E4BC6A", "rgba(236,237,230,.62)")
+    else:
+        _ic, _bt, _bs, _rgb, _fg, _sc = (
+            "!", "טרם אישרת את התנאים", "הנוסח המלא מופיע כאן למטה",
+            "217,164,65", "#E4BC6A", "rgba(236,237,230,.62)")
     st.markdown(
-        "<div class='cai-banner' style='margin-bottom:18px'>"
+        f"<div class='cai-banner' style='margin-bottom:18px;"
+        f"background:linear-gradient(135deg,rgba({_rgb},.16),rgba({_rgb},.04));"
+        f"border-color:rgba({_rgb},.3)'>"
         "<div style='width:34px;height:34px;border-radius:10px;flex:none;display:flex;"
-        "align-items:center;justify-content:center;background:rgba(var(--accent-rgb),.22);"
-        "color:var(--accent-bright);font-size:18px;font-weight:700'>✓</div>"
-        "<div style='flex:1'><div class='bt' style='font-size:13.5px'>אישרת את התנאים</div>"
-        "<div class='bs'>בהתקנה הראשונית · גרסה 2.4</div></div></div>", unsafe_allow_html=True)
+        f"align-items:center;justify-content:center;background:rgba({_rgb},.22);"
+        f"color:{_fg};font-size:18px;font-weight:700'>{_ic}</div>"
+        f"<div style='flex:1'><div class='bt' style='font-size:13.5px'>{_bt}</div>"
+        f"<div class='bs' style='color:{_sc}'>{_bs}</div></div></div>", unsafe_allow_html=True)
     st.markdown(
         "<div class='cai-tos-lead'>תנאי שימוש</div><div class='cai-tos-sub'>Terms of Service</div>",
         unsafe_allow_html=True)
