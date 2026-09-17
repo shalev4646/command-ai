@@ -84,6 +84,21 @@ swap_size_mb = 768
   # answers that declared a gap (a successful answer never re-searches).
   # Turn off with "0" and redeploy - the code needs nothing else.
   RETRIEVE_SECOND_PASS = "4"
+  # The blocks of the first six orders of a deep ranking, appended to the
+  # window (backend.extend_with_doc_blocks). Off in code; on here by the
+  # user's decision of 2026-09-17 after the paired arm on the frozen 72:
+  # full answers 29 -> 35 after the stage-6 review (+7 / -1), strict 41 -> 47
+  # and served 55 -> 61 of 97, zero losses on the free section instrument.
+  # Costs about 2.2x context words per question (median 1,748 -> 3,820), no
+  # extra API call. Turn off with "0" and redeploy.
+  RETRIEVE_DOC_BLOCKS = "6"
+  # The three flags the 2026-09-12 arms measured together with the blocks
+  # arm above (clean3 configuration): the second pass's clause finder, the
+  # second pass never overriding a ruling, and the shorter refusal. The arm
+  # of 2026-09-17 ran with all three on, so they ship as one measured set.
+  RETRIEVE_LACK_CLAUSES = "3"
+  RETRIEVE_SECOND_PASS_KEEP_RULING = "1"
+  ANSWER_V2 = "1"
   # How long backend.load_documents trusts its last freshness scan. Off in
   # code (0 = scan every call), which is what the night pipeline needs since
   # it writes into json_store while the same process reads it. Here it is on:
