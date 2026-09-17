@@ -99,6 +99,16 @@ swap_size_mb = 768
   RETRIEVE_LACK_CLAUSES = "3"
   RETRIEVE_SECOND_PASS_KEEP_RULING = "1"
   ANSWER_V2 = "1"
+  # The system prompt's prompt-cache entry lives an hour instead of five
+  # minutes (backend.SYSTEM_CACHE_TTL). Off in code; on here by the user's
+  # decision of 2026-09-17 after the production metrics showed a two-pass
+  # question paying a 5,316-token cache write ($0.03 of $0.25) whenever no
+  # request shared the prefix in the previous five minutes. A one-hour entry
+  # writes at 2x and reads at 0.1x, so it pays off when questions arrive 5-60
+  # minutes apart and costs about $0.02 more per question when gaps exceed an
+  # hour. A traffic bet, reversible: remove this line (or set "5m") and
+  # redeploy. The history breakpoint stays at five minutes (longer TTL first).
+  SYSTEM_CACHE_TTL = "1h"
   # How long backend.load_documents trusts its last freshness scan. Off in
   # code (0 = scan every call), which is what the night pipeline needs since
   # it writes into json_store while the same process reads it. Here it is on:
