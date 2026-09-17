@@ -152,6 +152,49 @@ def test_a_dead_second_call_keeps_the_first_answer():
     assert not msg.get("error"), "a kept answer must not be flagged as an error"
 
 
+RULED_GAPPED = ("**פסיקה:** אסור בשעת זמן אישי לא-מסווג — כפי שעולה מן הקטעים.\n\n"
+                "**מקור:** 21.0113 — הגבלת שימוש בטלפון אישי, סעיפים 7–8, 16–18.\n\n"
+                + scope_routes.MARK_MISSING
+                + " סמכות מפקד לתפוס טלפון אישי בזמן אישי מחוץ להקשר מסווג.")
+REFUSAL = ("**פסיקה:** המידע לא קיים בפקודות שסופקו — לגבי תפיסת טלפון בזמן אישי.\n\n"
+           + scope_routes.MARK_MISSING + " סמכות מפקד לתפוס טלפון אישי.")
+
+
+def test_the_guard_keeps_a_grounded_ruling_over_a_refusing_retry():
+    """RETRIEVE_SECOND_PASS_KEEP_RULING: rs063 on the realstyle arm — the first
+    answer ruled 'אסור' from 21.0113, the retry said 'המידע לא קיים', and the
+    refusal was what got graded. With the guard on, the first answer is the
+    kept message, with ITS sources and sent-content; the retry was still
+    paid for, so its usage rides on the kept result."""
+    fake, calls = _fake(RULED_GAPPED, second_text=REFUSAL)
+    backend.stream_ai_answer = fake
+    backend.RETRIEVE_SECOND_PASS = 4
+    backend.RETRIEVE_SECOND_PASS_KEEP_RULING = 1
+    try:
+        at = _run("מפקד רוצה לתפוס לי את הטלפון בשעת זמן אישי. חוקי?")
+    finally:
+        backend.RETRIEVE_SECOND_PASS_KEEP_RULING = 0
+    assert len(calls) == 2, f"the gap must still buy the retry, got {len(calls)} calls"
+    msg = _last_assistant(at)
+    assert msg["content"] == RULED_GAPPED, "the grounded first ruling must survive a refusing retry"
+    assert msg["sources"] == SRC1, "sources must be the first answer's"
+    assert not msg.get("error")
+    user = [m for m in at.session_state["messages"] if m["role"] == "user"][-1]
+    assert user.get("api_content") == "api-first"
+
+
+def test_the_guard_off_keeps_the_refusing_retry_as_before():
+    """Production today (flag 0): the retry replaces the first answer even
+    when it refuses — pinned so the guard is a measured change, not a drift."""
+    fake, calls = _fake(RULED_GAPPED, second_text=REFUSAL)
+    backend.stream_ai_answer = fake
+    backend.RETRIEVE_SECOND_PASS = 4
+    backend.RETRIEVE_SECOND_PASS_KEEP_RULING = 0
+    at = _run("מפקד רוצה לתפוס לי את הטלפון בשעת זמן אישי. חוקי?")
+    assert len(calls) == 2
+    assert _last_assistant(at)["content"] == REFUSAL
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_") and callable(fn):

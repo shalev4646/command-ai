@@ -1,5 +1,5 @@
 {
- "spent": 125.8026,
+ "spent": 133.1774,
  "reserved": 0,
  "entries": [
   {
@@ -4329,10 +4329,28 @@
    "actual": 0.0245
   },
   {
+   "id": "grade-grade-blocks6#17508-849",
+   "label": "grade-grade-blocks6",
+   "estimate": 0.108,
+   "actual": 0.0693
+  },
+  {
+   "id": "grade-grade-clean3#20560-847",
+   "label": "grade-grade-clean3",
+   "estimate": 0.108,
+   "actual": 0.0673
+  },
+  {
    "id": "grade-grade-control0#10176-843",
    "label": "grade-grade-control0",
    "estimate": 0.108,
    "actual": 0.0699
+  },
+  {
+   "id": "grade-grade-lack3#564-845",
+   "label": "grade-grade-lack3",
+   "estimate": 0.108,
+   "actual": 0.0675
   },
   {
    "id": "grade-grade-second4#3360-841",
@@ -4659,6 +4677,18 @@
    "actual": 0.9011
   },
   {
+   "id": "probe-blocks6#18496-848",
+   "label": "probe-blocks6",
+   "estimate": 1.764,
+   "actual": 3.4141
+  },
+  {
+   "id": "probe-clean3#20560-846",
+   "label": "probe-clean3",
+   "estimate": 1.764,
+   "actual": 1.7776
+  },
+  {
    "id": "probe-control0#10176-842",
    "label": "probe-control0",
    "estimate": 1.764,
@@ -4795,6 +4825,12 @@
    "label": "probe-hyde30",
    "estimate": 0.812,
    "actual": 0.8295
+  },
+  {
+   "id": "probe-lack3#564-844",
+   "label": "probe-lack3",
+   "estimate": 1.764,
+   "actual": 1.979
   },
   {
    "id": "probe-newsrc_after#15504-718",

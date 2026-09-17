@@ -5,6 +5,7 @@ pinned here: crediting a silence nobody adjudicated, reading a per-question
 verdict as per-part, crediting a fabrication, or counting an answer that names
 a body without sending the soldier to it."""
 import sys
+import re
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -133,10 +134,13 @@ def test_the_strip_is_not_in_the_answer_text():
 
 def test_verdicts_read_only_files_that_carry_ids():
     """adjudication.json (the first pass) is keyed by question prose. If it ever
-    starts contributing, ids collided with prose and the credit is wrong."""
+    starts contributing, ids collided with prose and the credit is wrong.
+
+    Two id schemes are legitimate: the night waves (q00013) and the realstyle
+    set (rs021, adjudicated 2026-09-10). Anything else is prose leaking in."""
     v = G.verdicts()
     assert v, "no adjudication verdicts on disk — the credit rule cannot run"
-    assert all(isinstance(k, str) and k.startswith("q") for k in v), sorted(v)[:5]
+    assert all(isinstance(k, str) and re.fullmatch(r"(?:q|rs)\d+", k) for k in v), sorted(v)[:5]
 
 
 if __name__ == "__main__":

@@ -77,6 +77,83 @@ MEASURED_NEWSRC = {
 }
 
 
+# 10.09.2026 — הסט האמיתי (adjudication_realstyle.json), שלא השתתף בכתיבת אף
+# משפחה, חשף שתי דלתות שגויות; שתיהן NO_SUCH_RULE מבורר, ושתיהן חייבות להישאר
+# בלי דלת ספציפית. q00158 נוספה כשומר: הרחבה שנשקלה לתיקון (`מעביר אות[יוה]`)
+# הייתה שולחת אותה אל קצין השלישות — „מעביר אותו ליום חפצי" הוא שינוי מעמד
+# רפואי, לא הצבה.
+MEASURED_REALSTYLE = {
+    "rs016": ("אמר שאני לא יכול לדבר עם חייל מיחידה אחרת. זה בסדר?", None),
+    # 10.09 this was pinned to None: the only door that reached it then was the
+    # reserve-money one, and that was wrong. 12.09 pay_slip's pattern reaches
+    # it and names the right desk (ת"ש ושלישות מול מרכז התשלומים).
+    "rs065": ("פחתו לי שקל מהמשכורת, מי בודק את זה?", "pay_slip"),
+    "q00158": ("לחייל שלי יש ניתוח מתוכנן ביום כ' ואחרי זה הוא יצטרך שבועות. "
+               "איך אני מעביר אותו ליום חפצי?", None),
+    # 11.09 — NO_SUCH_RULE מבורר, הבוררות כתבה „נקבע ביחידה" על כל אחת
+    "rs044": ("כמה שעות מותר להיות בחוץ בערב?", "unit_routine"),
+    "rs056": ("מותר לי לצאת בשביל דברים אישיים אם אחזור עד הערב?", "unit_routine"),
+    "rs038": ("כמה זמן לפני הכניסה צריך להיות בחזרה?", "unit_routine"),
+    "rs011": ("אם מחרתיים יש מחוב, מותר לי ללכת היום בערב?", "unit_routine"),
+    "rs068": ("צריך לומר לשומר איפה אני הולך?", "unit_routine"),
+    # unit-level in the adjudication too, and deliberately NOT caught: no
+    # hours-or-movement signal in the phrasing, and a pattern cut to one
+    # question is the mirror trap the module warns about
+    "rs061": ("מי קובע מתי משדרים את ההתרעה בבוקר?", None),
+    "rs003": ("איך מדווחים שיש בעיה בתאורה בגדר בשעה 3 בלילה?", None),
+    # 12.09 — שלב 3.2: the silences with an address, all adjudicated
+    "rs043": ("כמה כסף אני אמור לשלוח הביתה?", "family_support_pay"),
+    "rs047": ("למה לא קיבלתי את התוספת של החודש הזה?", "pay_slip"),
+    "rs027": ("האם אפשר לבקש השמטה מהמסדר הסיום?", "training_framework"),
+    "rs022": ("אפשר לבקש כסף עבור ביגוד שקרע?", "quartermaster_issue"),
+    "rs041": ("כמה ימים חופש חולים מגיע לי על שפעת?", "medical_scope"),
+    "rs004": ("אם אני בבסיס איך אני מתקשר עם המשפחה?", "unit_routine"),
+    # still deliberately without a door: reserve money without a reserve word
+    # in the question (rs049) and a civilian school matter (rs053) — the only
+    # patterns that reach them are cut to the one question, the mirror trap
+    "rs049": ("מגיע לי כסף על שעות נוספות או לא?", None),
+    "rs053": ("מותר לי להוציא את הבן שלי מבית ספר לביקור?", None),
+}
+
+# pilot-150 rows (2026-08-25 adjudication) that 12.09 gave a door
+MEASURED_PILOT150 = {
+    "q00071": ("אמרו לי שחייב להשלים קורס רכיבה אבל אני לא רוצה. יש מישהו שאני יכול "
+               "לבקש ממנו להוציא אותי מזה?", "training_framework"),
+    "q00028": ("כמה זמן מינימום צריך להישאר ביחידה שלך לפני שמעבירים אותך לשום מקום?",
+               "placement_transfer"),
+    "q00062": ("קרה לי סיטואציה שחייל שלי מחזיק במסמכים שלו אצלו כי הוא עובר יחידה - "
+               "זה בסדר? למי צריך לחזור?", "placement_transfer"),
+}
+
+# Answered questions that sit next to the 12.09 patterns: each names the door
+# it must NOT get. An order answers every one of them (adjudicated or graded),
+# so a door there is a wrong door.
+NEAR_MISSES = {
+    "q00200": ("שלוש שנים שלא קיבלתי תוספת סיום כמו שאמרו לי בגיוס, זה מגיע לי או לא?", "pay_slip"),
+    "q00318": ("הצעתי לכאבים בשיניים והשלחו אותי לרופא. האם זה יוצא מהמשכורת שלי או הצבא משלם?", "pay_slip"),
+    "q00139": ("המפקד שלי אמר שאני לא זכאי לימי מחלה בחודשיים הסיום שלי. זה לא נכון בטח?", "medical_scope"),
+    "q00122": ("בן שלי התאונן וצריך להוציא אותו מבית הספר. האם זה נחשב חירום מספיק כדי לצאת?", "family_support_pay"),
+    "q00102": ("מה כוללת חבילת השחרור? ביטוח, כסף, קורסים?", "training_framework"),
+    "dress": ("מותר ללבוש ביגוד אזרחי בדרך הביתה מהבסיס?", "quartermaster_issue"),
+}
+
+# Questions an ORDER answers that sound like unit routine. Each is a measured
+# false positive of the 11.09 prototype or its nearest neighbour; the family
+# must stay silent on every one of them — a "your unit settles this" door on a
+# question פ"מ 33.0213 or פ"מ 35.0402 answers is worse than no door.
+UNIT_ROUTINE_NEGATIVES = {
+    "real013": "האם למפקד שלי מותר להעיר אותי בשלוש בבוקר לבצע משימה של 20 דקות ולחזור לישון?",
+    "real014": "מותר למפקד שלי להעיר אותי ב2 בלילה לעשות מסדר?",
+    "q00115": "מצב חירום בבית - הורה חולה ודחוף, כמה זמן אני יכול להיות בחוץ בלי לחזור למחנה?",
+    "rs059": "מי אני צריך לבדוק איתו לפני שאני יוצא?",
+    "q00008": "אני משתחרר בעוד חודש, מה אני צריך לבקש מהמחלקה האדמיניסטרטיבית לפני שאני יוצא?",
+    "rs045": "כמה שעות שינה מגיעות לי בלילה כשיש שמירה?",
+    # the guard is anchored: a leave word ANYWHERE in the question silences
+    # the family, not only before the match
+    "guard": "לפני החופשה כמה שעות מותר להיות בחוץ בערב?",
+}
+
+
 # ⚠ 26.08: `None` in the tables above used to mean "family_of returns None".
 # The last-resort family (`unit_level_default`, added by the user's decision —
 # see tests/test_out_of_scope_default.py) means every question now lands
@@ -89,7 +166,8 @@ LAST_RESORT = "unit_level_default"
 
 
 def test_every_measured_question_lands_where_the_table_says():
-    for qid, (question, expected) in {**MEASURED, **MEASURED_NEWSRC}.items():
+    for qid, (question, expected) in {**MEASURED, **MEASURED_NEWSRC,
+                                      **MEASURED_REALSTYLE, **MEASURED_PILOT150}.items():
         got = OS.family_of(question)
         want = LAST_RESORT if expected is None else expected
         assert got == want, f"{qid}: got {got!r}, expected {want!r}"
@@ -162,6 +240,8 @@ def test_curated_kol_zchut_links_cover_the_measured_families():
         ("lone_soldier_aid", "מענקי_מזון_לחיילים_בודדים"),
         ("reserve_pay", "תשלום_עבור_שירות_מילואים"),
         ("family_distress", 'תשמ"ש'),
+        ("family_support_pay", 'תשמ"ש'),
+        ("unit_routine", "פנייה_לנציב_קבילות_החיילים"),
         ("unit_level_default", "פנייה_לנציב_קבילות_החיילים"),
     ]:
         link = by_name[family]["link"]
@@ -192,6 +272,59 @@ def test_evidence_and_families_stay_in_step():
         assert ids, name
         for qid in ids:
             assert qid not in OS._UNMATCHED, f"{qid} is claimed by {name} and unmatched"
+
+
+def test_the_new_doors_stay_off_their_answered_neighbours():
+    for qid, (q, door) in NEAR_MISSES.items():
+        assert OS.family_of(q) != door, (qid, OS.family_of(q))
+
+
+def test_family_support_pay_cites_the_family_payments_order():
+    d = OS.destination_for(MEASURED_REALSTYLE["rs043"][0])
+    assert d and "35.0210" in d["where"] and "35.0210" in d["why"]
+    assert d["link"] and 'תשמ"ש' in d["link"][1]
+
+
+def test_unit_routine_stays_silent_where_an_order_answers():
+    for qid, q in UNIT_ROUTINE_NEGATIVES.items():
+        assert OS.family_of(q) != "unit_routine", (qid, q)
+
+
+def test_unit_routine_never_claims_a_question_the_arms_answered():
+    """דיוק לפני כיסוי, על הנתונים השמורים: כל שאלה שדורגה כנענתה (חלק אחד
+    לפחות) בזרועות שבריפו — ולא בוררה NO_SUCH_RULE — המשפחה שותקת עליה.
+    11.09: 0 תפיסות על 256 כאלה; הבדיקה מחזיקה את זה כשהדפוס יורחב."""
+    import json
+    out = Path(__file__).resolve().parents[1] / "night" / "out"
+    no_rule = set()
+    for name in ("adjudication_pilot150.json", "adjudication_realstyle.json"):
+        p = out / name
+        if p.exists():
+            no_rule |= {r["question"].strip() for r in json.loads(p.read_text(encoding="utf-8"))
+                        if r.get("verdict") == "NO_SUCH_RULE"}
+    checked = 0
+    for name in ("grades_grade-second4.jsonl", "grades_pilot150.jsonl", "grades_real24.jsonl"):
+        p = out / name
+        if not p.exists():
+            continue
+        for line in p.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            r = json.loads(line)
+            q = (r.get("clean_q") or r.get("q") or "").strip()
+            if not q or q in no_rule or not int((r.get("grade") or {}).get("answered_parts") or 0):
+                continue
+            checked += 1
+            assert OS.family_of(q) != "unit_routine", (r.get("id"), q[:80])
+    assert checked >= 80, f"only {checked} answered questions on disk — the guard has nothing to hold"
+
+
+def test_unit_routine_cites_the_orders_that_delegate_and_rules_nothing():
+    d = OS.destination_for(MEASURED_REALSTYLE["rs044"][0])
+    assert d and d["label"].startswith("נקבע ביחידה שלך")
+    for cite in ("33.0401", "33.0202", "61.0104", "פקודות הקבע של היחידה"):
+        assert cite in d["why"], cite
+    assert "35.0822" in d["where"] and "33.0336" in d["where"]
 
 
 def test_unmatched_ids_reach_no_specific_family():

@@ -74,10 +74,10 @@ def test_backend_bakes_the_markers_into_every_persona():
         assert "{MARK_OUT}" not in p and "{MARK_MISS}" not in p and "{ROUTE_BLOCK}" not in p
 
 
-def _chip(content):
+def _chip(content, question=""):
     """app.py's chip gate, exercised through the real module."""
     import app
-    return app._verdict_chip(content)
+    return app._verdict_chip(content, question)
 
 
 REFUSAL = "המידע לא קיים בפקודות שסופקו."
@@ -93,7 +93,40 @@ def test_out_of_scope_refusal_gets_the_routed_label():
 def test_missing_order_refusal_gets_its_own_label():
     body = f"{REFUSAL}\n\n{scope_routes.MARK_MISSING} מועדי הודעה מוקדמת על צו מילואים."
     chip, _ = _chip(body)
-    assert chip and "טרם במאגר" in chip
+    # 11.09: "טרם במאגר" promised an addition that mostly never comes; the
+    # chip now says what is true in every gap — the rule was not found
+    assert chip and "לא נמצא בפקודות" in chip
+    assert "טרם במאגר" not in chip
+
+
+# rs044 — adjudicated NO_SUCH_RULE on the realstyle set, and the question the
+# verified unit-routine family (out_of_scope) was measured on
+UNIT_Q = "כמה שעות מותר להיות בחוץ בערב?"
+
+
+def test_a_unit_routine_gap_gets_the_unit_chip():
+    """11.09, the user's ask: "not in GHQ orders" and "your unit settles it"
+    must read differently at the top of the answer."""
+    body = f"{REFUSAL}\n\n{scope_routes.MARK_MISSING} שעות היציאה בערב."
+    chip, _ = _chip(body, UNIT_Q)
+    assert chip and "נקבע ביחידה שלך" in chip, chip
+    assert "לא נמצא" not in chip
+    # the out-of-scope marker earns it too — the gap is the gate, not the marker
+    body = f"{REFUSAL}\n\n{scope_routes.MARK_OUT_OF_SCOPE} פקודות הקבע של היחידה."
+    chip, _ = _chip(body, UNIT_Q)
+    assert chip and "נקבע ביחידה שלך" in chip, chip
+
+
+def test_the_unit_chip_needs_both_the_family_and_a_marked_gap():
+    body = f"{REFUSAL}\n\n{scope_routes.MARK_MISSING} מועדי הודעה מוקדמת על צו מילואים."
+    chip, _ = _chip(body, "מתי מודיעים לי על צו מילואים?")
+    assert chip and "לא נמצא בפקודות" in chip and "ביחידה" not in chip
+    # a bare refusal with no marker keeps the old chip even on a unit question
+    chip, _ = _chip(REFUSAL + " אין בקטעים כלל שחל על המקרה.", UNIT_Q)
+    assert chip and "לא נמצא במאגר" in chip and "ביחידה" not in chip
+    # a real ruling on a unit-sounding question is a ruling, not a door
+    chip, _ = _chip("**פסיקה:** מותר בתנאים — עד השעה שנקבעה.\n**מקור:** פ\"מ 33.0220", UNIT_Q)
+    assert chip is None or "ביחידה" not in chip
 
 
 def test_unmarked_refusal_still_falls_back_to_the_old_chip():

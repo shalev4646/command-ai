@@ -267,7 +267,11 @@ def to_html(block: tuple[str, object], *, route_label: bool = True) -> str | Non
         )
 
     if kind in ("route_out", "route_miss"):
-        head = f"<span class='l'>{_inline(label)}</span>" if route_label else ""
+        # 11.09: the model's marker stays "טרם במאגר" (it is the protocol the
+        # prompt dictates), but the reader sees "לא נמצא בפקודות" — same
+        # wording as the chip, and no promise that the rule will be added
+        shown = "לא נמצא בפקודות" if kind == "route_miss" else label
+        head = f"<span class='l'>{_inline(shown)}</span>" if route_label else ""
         return _wrap(
             f"<div class='cai-ans-route'>{_CHEV}<div class='bd'>{head}"
             f"<span class='v'>{_inline(value)}</span></div></div>"

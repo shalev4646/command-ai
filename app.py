@@ -7896,7 +7896,7 @@ def handle_question(question: str):
             # container is invisible wrapping
             first_paint = st.empty()
             with first_paint.container():
-                text = _stream_answer(text_gen, acc, think=stage)
+                text = _stream_answer(text_gen, acc, think=stage, question=question)
             # ── The second search (backend.RETRIEVE_SECOND_PASS). ──
             # When the answer just declared a gap, its own restatement of the
             # missing rule is written in the orders' register — and retrieving
@@ -7928,8 +7928,25 @@ def handle_question(question: str):
                             yield c
 
                     acc2: list[str] = []
-                    text2 = _stream_answer(_swap(result2[0]), acc2, think=stage2)
-                    if text2.strip():
+                    text2 = _stream_answer(_swap(result2[0]), acc2, think=stage2,
+                                           question=question)
+                    if (text2.strip() and backend.RETRIEVE_SECOND_PASS_KEEP_RULING > 0
+                            and backend.second_answer_regressed(text, text2)):
+                        # the retry came back as a refusal while the first
+                        # answer carried a grounded ruling (realstyle arm,
+                        # 2026-09-10: rs063, rs071, rs009). Keep the first —
+                        # on screen, in history, with its own sources and
+                        # sent-content. Both calls were paid, so the retry's
+                        # usage is summed onto the kept result.
+                        stage2.empty()
+                        with first_paint.container():
+                            st.markdown(text)
+                        u2 = result2[3] if len(result2) > 3 else {}
+                        if len(result) > 3 and isinstance(u2, dict):
+                            for k, v in u2.items():
+                                if isinstance(v, (int, float)) and not isinstance(v, bool):
+                                    result[3][k] = result[3].get(k, 0) + v
+                    elif text2.strip():
                         # the kept answer is the second one — exactly what the
                         # measurement graded. Its sources and sent-content go
                         # with it (history must replay the content that
@@ -8386,8 +8403,25 @@ _REFUSAL_SENTENCE = "המידע לא קיים בפקודות שסופקו"  # ma
 _CHIP_WRAP_OVER = 28
 
 
-def _verdict_chip(content: str) -> tuple[str | None, str]:
+def _unit_routine_question(question: str) -> bool:
+    """Does the verified unit-routine family (out_of_scope) recognise the
+    question — evening exit hours, reveille, what to tell the gate guard?
+    getattr/None-guard like every deterministic tool here: a stale cached
+    build without the family simply never relabels."""
+    if _oos is None or not question:
+        return False
+    fn = getattr(_oos, "family_of", None)
+    try:
+        return bool(fn) and fn(question) == "unit_routine"
+    except Exception:
+        return False
+
+
+def _verdict_chip(content: str, question: str = "") -> tuple[str | None, str]:
     """(chip_html, display_body) for an assistant answer.
+
+    `question` is the user turn behind the answer; it decides one label only
+    (see the unit-routine relabel below) and is never rendered.
 
     The system prompt mandates a `**פסיקה:** ...` line on ruling questions;
     when its leading clause opens with a recognized verdict term — bare
@@ -8520,11 +8554,26 @@ def _verdict_chip(content: str) -> tuple[str | None, str]:
         # 12 of 16 unanswered asks had no order behind them at all, and about a
         # third of those no order will ever answer). The bare chip stays as the
         # fallback for an answer that skipped the marker.
+        # 11.09: the MISSING chip read "טרם במאגר" — a promise that the rule
+        # will be added. On the realstyle set most such gaps are matters no
+        # order will ever hold (unit routine), and the rest are retrieval
+        # misses on orders already held; neither is "not yet". "לא נמצא
+        # בפקודות" is true in every case and promises nothing.
         label = "לא נמצא במאגר"
         if _MARK_OOS in content:
             label = "לא נקבע בפקודות"
         elif _MARK_MISS in content:
-            label = "טרם במאגר"
+            label = "לא נמצא בפקודות"
+        # 11.09, the user's ask: tell "no order holds this" from "your unit
+        # settles this". When the answer admitted a gap (either marker) AND
+        # the question is one the verified unit-routine family recognises —
+        # evening exit hours, reveille, the gate guard — the chip says where
+        # the rule lives, and the referral strip below cites the orders that
+        # delegate it (out_of_scope.unit_routine). Family precision was
+        # measured at zero false doors on every answered question on disk;
+        # a bare refusal without a marker never earns the label.
+        if label != "לא נמצא במאגר" and _unit_routine_question(question):
+            label = "נקבע ביחידה שלך"
         return (f'<div class="verdict-solo">'
                 f'<span class="verdict-chip verdict-none">ⓘ {label}</span></div>'), content
     return None, content
@@ -8589,7 +8638,8 @@ def _stage_html(text: str) -> str:
     )
 
 
-def _stream_answer(text_gen, acc: list[str] | None = None, think=None) -> str:
+def _stream_answer(text_gen, acc: list[str] | None = None, think=None,
+                   question: str = "") -> str:
     """Render the live answer chip-first: hold the stream until the first
     line is complete; when it is a recognizable **פסיקה:** line, draw the
     chip immediately and stream only the body under it. Without this the
@@ -8631,7 +8681,7 @@ def _stream_answer(text_gen, acc: list[str] | None = None, think=None) -> str:
     # separator already arrived, or the clause is far beyond the badge cap
     # and both parses reject). A shorter mid-line cut must not chip.
     if "\n" in buf or len(buf) > 400 or ended:
-        chip, lead = _verdict_chip(buf)
+        chip, lead = _verdict_chip(buf, question)
     if chip:
         st.markdown(chip, unsafe_allow_html=True)
     if answer_format is None:
@@ -9323,7 +9373,7 @@ for msg_i, msg in enumerate(st.session_state.messages):
     with st.chat_message(msg["role"]):
         content = msg["content"]
         if msg["role"] == "assistant" and not msg.get("error"):
-            chip, body = _verdict_chip(content)
+            chip, body = _verdict_chip(content, _question_for(msg_i))
             if chip:
                 st.markdown(chip, unsafe_allow_html=True)
             _render_body(body, chip)

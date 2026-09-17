@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import re
 import threading
@@ -14,6 +15,8 @@ from common import ROLES, safe_print
 from metadata_overrides import apply_overrides
 from storage.vector_store import retrieve
 from storage import glossary as _glossary
+from storage import clause_index as _ci
+from storage import clause_embed as _ce
 
 load_dotenv(Path(__file__).parent / ".env")
 
@@ -210,6 +213,30 @@ HYDE_EXTRA_CHUNKS = int(os.environ.get("HYDE_EXTRA_CHUNKS", "1"))
 RETRIEVE_ROUTER_SLOTS = int(os.environ.get("RETRIEVE_ROUTER_SLOTS", "0"))
 RETRIEVE_FULL_BLOCKS = int(os.environ.get("RETRIEVE_FULL_BLOCKS", "0"))
 
+# The second pass's own clause finder. RETRIEVE_SECOND_PASS retrieves on the
+# answer's lack statement with the same embedding that missed the clause the
+# first time. On the realstyle set (adjudicated 2026-09-10) 11 of 45 zeros had
+# the answering ORDER in the window and its answering CLAUSE not — the order
+# sat at seat 2-5 and only its question-shaped chunks were served — and the
+# embedding retry left the clause out again. Scored free against those windows
+# (plus the two block-depth cases): character 4-grams of the lack statement,
+# the night/why_default instrument (AUC 0.758 on its calibration set), rank
+# the answering clause FIRST among the curated clauses of the orders already
+# in the window in 7 of 13, and top-3 in 9 of 13. So when the answer says what
+# it lacked, append the K best-matching curated clauses of the orders it
+# already had. Deterministic, no model call, ~50-100 words a clause, and it
+# only appends — the ranking is untouched. Value = K. OFF until a paired
+# re-measure says the ANSWERS move, same rule as every extension here.
+RETRIEVE_LACK_CLAUSES = int(os.environ.get("RETRIEVE_LACK_CLAUSES", "0"))
+
+# When the retry comes back as a refusal while the first answer carried a
+# ruling, keep the first. On the realstyle arm (2026-09-10) the second answer
+# replaced a grounded ruling with "המידע לא קיים" three times in 72 — rs063
+# "אסור בשעת זמן אישי" (21.0113 §§7-8, 14-18 were in BOTH windows), rs071
+# "מותר בתנאים" (33.0220 §§7-8), rs009 — and the grader scored the refusal.
+# A refusal never carries what the first answer had. OFF until measured.
+RETRIEVE_SECOND_PASS_KEEP_RULING = int(os.environ.get("RETRIEVE_SECOND_PASS_KEEP_RULING", "0"))
+
 # The ceiling clause, for questions that ask for a ceiling.
 #
 # Measured free on 2026-08-23 against the three zeros the arbitration called
@@ -232,6 +259,101 @@ RETRIEVE_FULL_BLOCKS = int(os.environ.get("RETRIEVE_FULL_BLOCKS", "0"))
 # words, and it cannot move a ranking — it only appends, so the retrieval gate
 # is untouched by construction.
 RETRIEVE_QUANTITY_CLAUSES = int(os.environ.get("RETRIEVE_QUANTITY_CLAUSES", "0"))
+
+# ── The clause-title path (RETRIEVE_V2) — night/PLAN_ROUND4.md, שלב 1 ────────
+# Production ranks 10,324 chunks by how much each SOUNDS like the question, and
+# a soldier does not talk like an order. Measured on the adjudicated targets:
+# the answering ORDER reaches the window three times more often than the
+# answering CLAUSE (18/59 vs 5/59, 2026-08-28), and 11 of the 45 realstyle
+# zeros (2026-09-10) are "the order sat at seat 2-5, its answering clause was
+# never served". Two ideas, one flag:
+#
+#   1.1  Match the question to QUESTIONS. Every curated clause carries a
+#        question-shaped title the curator wrote in soldier language
+#        ("אילו תכשיטים מותר לענוד עם מדים?"), and 1,379 anchor questions are
+#        attributed to a clause. storage/clause_index.py scores the question
+#        against those (character 4-grams, IDF — the night/why_default
+#        instrument) and returns clause-level evidence.
+#   1.2  Serve the ORDER, not fragments. For the RETRIEVE_V2 best orders the
+#        whole curated block is appended; a block over RETRIEVE_V2_BLOCK_WORDS
+#        (PM-33.0302 is 7,117 words) is reduced to its RETRIEVE_V2_TOP_K
+#        clauses by the same evidence, in block order. "Right order, wrong
+#        clause" cannot happen to an order served whole.
+#
+# The router's shortlist, when the caller has one, adds RETRIEVE_V2_ROUTE_BONUS
+# to an order's score — a hint on the index's own scale, never a scope, the
+# same rule as _ROUTE_BOOST. Appended after the window and the full-blocks
+# extension, deduplicated, never reordered: OFF is byte-identical to before.
+#
+# Free pre-screen (night/titleprobe.py, 2026-09-11, the 83 adjudicated targets,
+# no router, no embedding): the index's top-2 orders hold the answering order
+# in 20/83 — fewer than the production window's 31/83 — and serve the
+# answering CLAUSE in 16 of the 53 whose clause is known, against the
+# embedding window's historical 5/59. Complementary, not a replacement: that
+# is why this is an appended extension. Price: ~930 words a question at
+# RETRIEVE_V2=2. Value = how many orders' blocks to serve. OFF until the paired
+# measurement of the ANSWERS (night/PLAN_ROUND4.md 1.b, 1.c) says otherwise —
+# the rule every knob here ships under.
+RETRIEVE_V2 = int(os.environ.get("RETRIEVE_V2", "0"))
+RETRIEVE_V2_BLOCK_WORDS = int(os.environ.get("RETRIEVE_V2_BLOCK_WORDS", "600"))
+RETRIEVE_V2_TOP_K = int(os.environ.get("RETRIEVE_V2_TOP_K", "6"))
+RETRIEVE_V2_ROUTE_BONUS = float(os.environ.get("RETRIEVE_V2_ROUTE_BONUS", "0.05"))
+
+# ── The clause-level embedding index (RETRIEVE_V3) — the 12.09 restart ───────
+# Two arms and one free instrument said the same thing: in 45 of 82 measured
+# questions the answering ORDER never reaches the model, and every knob on
+# top of the current index moves that by 5-8. storage/clause_embed.py changes
+# what is underneath: one vector per curated clause and per anchor, nothing
+# from raw text, and an embedder chosen by RETRIEVE_V3_MODEL (`minilm` = the
+# production stack, so the first pre-screen isolates the clean index from the
+# better model; `e5-base` etc. are stronger multilingual exports). The best
+# RETRIEVE_V3 orders are served as blocks, appended like V2 — or, with
+# RETRIEVE_V3_ONLY=1, INSTEAD of the raw window (no chunk retrieval at all).
+# Off in code; measured free by night/sectprobe.py on the user's machine
+# (huggingface.co is blocked in the session). A second model in production
+# would be a memory question for Fly — measurement first.
+RETRIEVE_V3 = int(os.environ.get("RETRIEVE_V3", "0"))
+RETRIEVE_V3_MODEL = os.environ.get("RETRIEVE_V3_MODEL", "minilm")
+RETRIEVE_V3_ONLY = os.environ.get("RETRIEVE_V3_ONLY", "0") == "1"
+
+# ── The window as ORDERS, not chunks (RETRIEVE_DOC_BLOCKS) — 12.09 ───────────
+# The measurement that produced this, free, on the 82 adjudicated targets
+# (night/out/sect_*.json, 2026-09-12):
+#
+#   the answering order sits in the GLOBAL ranking at   top-8   35/82
+#                                                        top-16  43/82
+#                                                        top-25  54/82
+#   ...and today's window delivers                               29/82
+#
+# So the ranking already knows. What loses it is the window's SHAPE:
+# top_doc_depth=4 and max_per_doc=4 spend four of eight seats on the leading
+# order, because a single chunk of the right order is usually the wrong
+# paragraph ("right doc, wrong chunk", the failure those knobs were written
+# to prevent). Serving the order's curated BLOCK solves that failure outright
+# — every clause of the order is there — so the seats are free again.
+#
+# The rule (16.09): the production window is served exactly as it is, and the
+# blocks of the first RETRIEVE_DOC_BLOCKS distinct orders of a deep ranking are
+# APPENDED after it (extend_with_doc_blocks, in widen_context). The deep pool
+# ranks the orders and is never served: the 12.09 build served it, and the
+# content-aware sectprobe (night/sectprobe.py, CONTENT_MIN) measured what that
+# bought — 38 orders and 4,700 words per question for +5 verbatim sections,
+# while the blocks themselves took the answering section from 16 to 34 of 82
+# with zero losses. The numbers, section-by-content on the 82 targets
+# (HANDOFF 16.09):
+#
+#   today (FULL_BLOCKS=1)                    16/82   1,149 words
+#   4 blocks + the 40-chunk pool (12.09)     34/82   4,690 words
+#   4 blocks appended to the window (16.09)  24/82   2,183 words
+#   6 blocks appended to the window (16.09)  27/82   2,972 words   (+V2: 35/82, 3,718)
+#
+# 0 = off, and off is the default until the paired re-measure says the
+# ANSWERS move -- the rule every knob in this file ships under.
+RETRIEVE_DOC_BLOCKS = int(os.environ.get("RETRIEVE_DOC_BLOCKS", "0"))
+# How deep into the ranking to look for those distinct orders. The window is
+# 8 chunks and its per-doc caps hide orders that ranked well, so the pool is
+# read from a deeper ranking (the same scorer, no extra model call).
+RETRIEVE_DOC_BLOCKS_POOL = int(os.environ.get("RETRIEVE_DOC_BLOCKS_POOL", "40"))
 
 # "How much / how many / what is the maximum" — the demand, not the topic.
 # Deliberately narrow: "כמה" alone would fire on "כמה שיותר מהר" and on any
@@ -265,7 +387,7 @@ _HISTORY_DROP = 6   # messages (3 exchanges) dropped per trim
 
 _COMMON_RULES = """חוקים מוחלטים:
 1. ענה אך ורק על בסיס הקטעים שסופקו לך בהקשר.
-2. אם אין בקטעים כלל שחל ישירות על המצב שנשאל — פתח באמירה המדויקת: "המידע לא קיים בפקודות שסופקו." מותר להוסיף אחריה מה כן קיים בקטעים (כלל שחל רק על הקשר אחר או צר יותר), תוך ציון מפורש שההקשר שונה.
+2. אם אין בקטעים כלל שחל ישירות על המצב שנשאל — פתח באמירה המדויקת: "המידע לא קיים בפקודות שסופקו." {REFUSAL_FOLLOWUP}
    אם יש כלל שחל ישירות על המצב אך אינו נוקב בערך המדויק שנשאל (שעה, סכום, מספר ימים) — אל תסתפק בסירוב: הצג את הכלל כלשונו, הסבר מה נובע ממנו לשאלה, וציין במפורש מה הפקודות לא קובעות.
 2ב. **לפני שאתה מסיים — פרק את השאלה לחלקים שלה וּודא שכל חלק קיבל מענה או הוכרז כחסר.**
    שאלה של חייל מכילה לרוב יותר מדבר אחד ("תוך כמה זמן, ומי מאשר"), והכשל השכיח כאן אינו
@@ -291,6 +413,28 @@ _COMMON_RULES = """חוקים מוחלטים:
 
 כלל תמציתיות (חל על כל תשובה): ציטוט מהפקודה מביא רק את המשפט האופרטיבי הנחוץ להכרעה — לא פסקאות שלמות. כל תנאי ועובדה מופיעים בתשובה פעם אחת בלבד: מה שפורט ברשימת התנאים לא חוזר בגוף ולא בסיכום. "מה הפקודות לא קובעות" — משפט אחד לכל היותר, ורק כשהוא משנה משהו לשואל. המלצת הסיום — משפט אחד. בלי פתיחים ("חשוב לציין", "שים לב") ובלי משפטי מעבר; עדיף שורת רשימה קצרה על פסקה. היעד: תשובה שלמה בעובדות וחסכונית במילים — כל משפט שאינו מוסיף עובדה, תנאי או מקור נמחק."""
 
+# ── ANSWER_V2 — the refusal's length (night/PLAN_ROUND4.md, שלב 1.3) ─────────
+# The 11.09 screen: on a unit-routine question the refusal ran twelve lines —
+# two bullets on orders the answer itself called irrelevant, then a sentence
+# saying none of them applies — before the one line that mattered. Rule 2
+# invites that: "מותר להוסיף אחריה מה כן קיים". ANSWER_V2 replaces the
+# invitation with a cap: one sentence, same topic only, and no tour of the
+# passages that do not apply. Off = the historical sentence, byte for byte;
+# measured in the same arm as RETRIEVE_V2 (1.c), never deployed alone.
+ANSWER_V2 = os.environ.get("ANSWER_V2", "0") == "1"
+_REFUSAL_FOLLOWUP_V1 = ("מותר להוסיף אחריה מה כן קיים בקטעים (כלל שחל רק על הקשר אחר או "
+                        "צר יותר), תוך ציון מפורש שההקשר שונה.")
+_REFUSAL_FOLLOWUP_V2 = ("אחריה — לכל היותר משפט אחד על מה שכן קיים בקטעים, ורק אם הוא "
+                        "באותו נושא של השאלה. אל תמנה קטעים שעוסקים בנושאים אחרים ואל "
+                        "תסביר מדוע כל קטע אינו חל: משפט הפתיחה, לכל היותר משפט אחד "
+                        "כזה, ושורת כלל 2א — ולא יותר.")
+
+
+def refusal_followup(v2: bool) -> str:
+    """What rule 2 allows after the refusal sentence — see ANSWER_V2."""
+    return _REFUSAL_FOLLOWUP_V2 if v2 else _REFUSAL_FOLLOWUP_V1
+
+
 # Rule 2א's placeholders are substituted here, not by an f-string: _COMMON_RULES
 # is interpolated INTO the persona f-strings, and f-string interpolation does not
 # recurse into the inserted value — `{MARK_OUT}` would reach the model verbatim.
@@ -300,8 +444,10 @@ _COMMON_RULES = (
     .replace("{MARK_OUT}", scope_routes.MARK_OUT_OF_SCOPE)
     .replace("{MARK_MISS}", scope_routes.MARK_MISSING)
     .replace("{ROUTE_BLOCK}", scope_routes.prompt_block())
+    .replace("{REFUSAL_FOLLOWUP}", refusal_followup(ANSWER_V2))
 )
 assert "{MARK_OUT}" not in _COMMON_RULES and "{ROUTE_BLOCK}" not in _COMMON_RULES
+assert "{REFUSAL_FOLLOWUP}" not in _COMMON_RULES
 
 # The two-sided ruling template rides inside every persona's structure
 # block: the model obeys the מבנה-תשובה templates more reliably than prose
@@ -834,15 +980,336 @@ def extend_with_quantity_clauses(chunks: list[dict], question: str,
     return _append_new(chunks, picks, RETRIEVE_QUANTITY_CLAUSES)
 
 
+# ── The second pass's clause finder (RETRIEVE_LACK_CLAUSES) ──────────────────
+# Character 4-grams over Hebrew letters and spaces, IDF-weighted — the same
+# weighting as night/why_default.py, whose calibration is the reason this
+# exists; tests/test_lack_clauses.py keeps the two normalisations in step.
+_LACK_NGRAM = 4
+_LACK_MIN_IDF = 0.01
+_LACK_MIN_GRAMS = 8
+_LACK_HEB = re.compile(r"[^֐-׿ ]+")
+_lack_idf: tuple[dict, float] | None = None
+_lack_lock = threading.Lock()
+
+
+def _lack_grams(text: str) -> frozenset:
+    t = re.sub(r"\s+", " ", _LACK_HEB.sub(" ", text or "")).strip()
+    return frozenset(t[i:i + _LACK_NGRAM] for i in range(len(t) - _LACK_NGRAM + 1))
+
+
+def _lack_index() -> tuple[dict, float]:
+    """IDF of every 4-gram over the curated clauses of the whole corpus. Built
+    once per process, lazily — the second pass is the only reader."""
+    global _lack_idf
+    if _lack_idf is None:
+        with _lack_lock:
+            if _lack_idf is None:
+                df: dict[str, int] = {}
+                n = 0
+                for d in load_documents():
+                    for cl in _full_block(d):
+                        g = _lack_grams(cl["text"].split("\n", 1)[-1])
+                        if len(g) < _LACK_MIN_GRAMS:
+                            continue
+                        n += 1
+                        for x in g:
+                            df[x] = df.get(x, 0) + 1
+                total = float(n) or 1.0
+                _lack_idf = ({k: max(_LACK_MIN_IDF, math.log(total / (1 + v)))
+                              for k, v in df.items()}, total)
+    return _lack_idf
+
+
+def lack_clause_scores(lacked: str, docs: list[dict]) -> list[tuple[float, dict]]:
+    """Every curated clause of `docs`, scored against the lack statement,
+    best first. Pure: the caller decides how many to serve."""
+    q = _lack_grams(lacked)
+    if not q:
+        return []
+    idf, n = _lack_index()
+    default = math.log(n)
+    qw = {g: idf.get(g, default) for g in q}
+    nq = math.sqrt(sum(v * v for v in qw.values())) or 1.0
+    scored: list[tuple[float, dict]] = []
+    for doc in docs:
+        for cl in _full_block(doc):
+            g = _lack_grams(cl["text"].split("\n", 1)[-1])
+            inter = q & g
+            if not inter:
+                continue
+            s = sum(qw[x] for x in inter) / (nq * math.sqrt(len(g)))
+            if s > 0:
+                scored.append((s, cl))
+    scored.sort(key=lambda x: -x[0])
+    return scored
+
+
+def extend_with_lack_clauses(chunks: list[dict], lacked: str, role: str,
+                             first_window: list[dict] | None = None) -> list[dict]:
+    """For the second pass: the curated clauses of the orders ALREADY in the
+    window that best match the answer's own statement of what it lacked,
+    appended. Reads the FIRST window — that is where the answering order sat
+    in 11 of 45 realstyle zeros, and the reserved-seat swap may just have
+    dropped it. Only orders that already earned a seat are read: this buys
+    the clause the ranking missed inside an order it chose, never an order
+    it rejected. Appends, never reorders."""
+    if RETRIEVE_LACK_CLAUSES <= 0 or not lacked or not chunks:
+        return chunks
+    order: list[str] = []
+    for c in (first_window if first_window is not None else chunks):
+        if c["doc_id"] not in order:
+            order.append(c["doc_id"])
+    by_id = {d["document_id"]: d for d in _docs_for_role(role) if d.get("document_id")}
+    docs = [by_id[d] for d in order if d in by_id]
+    picks = []
+    for s, cl in lack_clause_scores(lacked, docs):
+        cl = dict(cl)
+        cl["score"] = s
+        picks.append(cl)
+    return _append_new(chunks, picks, RETRIEVE_LACK_CLAUSES)
+
+
+# ── The second pass's regression guard (RETRIEVE_SECOND_PASS_KEEP_RULING) ────
+_RULING_LINE = re.compile(r"\*\*פסיקה:\*\*\s*([^\n]*)")
+_REFUSAL_OPENERS = ("המידע לא קיים", "לא נמצא", "לא קיים")
+
+
+def _opening_claim(text: str) -> str:
+    """The answer's first substantive words — past leading markup and a
+    `פסיקה:` / `תשובה:` label. What a reader sees first."""
+    t = (text or "").strip()
+    t = re.sub(r"^[\s*#_>]+", "", t)
+    t = re.sub(r"^(?:פסיקה|תשובה)\s*:\s*\**\s*", "", t)
+    return t.strip("* \n")
+
+
+def second_answer_regressed(first: str, second: str) -> bool:
+    """True when the retry is a refusal and the first answer carried a ruling
+    that was not one. A refusal never carries what the first answer had; the
+    only thing it adds is a gap line, and the first answer already has one —
+    that is what bought the retry."""
+    m = _RULING_LINE.search(first or "")
+    if not m:
+        return False
+    ruling = m.group(1).strip("* ")
+    if not ruling or ruling.startswith(_REFUSAL_OPENERS):
+        return False
+    return _opening_claim(second).startswith(_REFUSAL_OPENERS)
+
+
+
+# ── The clause-title path (RETRIEVE_V2) ──────────────────────────────────────
+_v2_index: tuple[tuple, "_ci.ClauseIndex"] | None = None
+_v2_lock = threading.Lock()
+
+
+def _clause_index() -> "_ci.ClauseIndex":
+    """The clause-title index over the loaded corpus. Built once (~1s for 287
+    orders, 6,600 units) and rebuilt when the corpus changes: the key is the
+    json_store stamp load_documents scans by, plus the identity of the list it
+    handed back, so a test that stubs load_documents gets an index over its
+    own documents."""
+    global _v2_index
+    docs = load_documents()
+    key = (_docs_cache[0] if _docs_cache else None, id(docs), len(docs))
+    if _v2_index is None or _v2_index[0] != key:
+        with _v2_lock:
+            if _v2_index is None or _v2_index[0] != key:
+                _v2_index = (key, _ci.ClauseIndex(docs))
+    return _v2_index[1]
+
+
+def v2_block_chunks(doc: dict, clause_scores: dict, block_words: int | None = None,
+                    top_k: int | None = None) -> list[dict]:
+    """שלב 1.2 — the order's curated block, as chunks shaped like the index's
+    own. Whole when it fits `block_words`; otherwise the `top_k` clauses the
+    clause-title index scored for this question, in BLOCK order — the reading
+    order the curator wrote, not the score order. A clause with no evidence at
+    all is never served from an oversized block: the block was chosen for the
+    order, the clause must earn its own seat."""
+    block = _full_block(doc)
+    limit = RETRIEVE_V2_BLOCK_WORDS if block_words is None else block_words
+    k = RETRIEVE_V2_TOP_K if top_k is None else top_k
+    if sum(len(c["text"].split()) for c in block) <= limit:
+        return block
+    scored = [(clause_scores.get((c["section"], c["clause"]), 0.0), i, c)
+              for i, c in enumerate(block)]
+    top = sorted((x for x in scored if x[0] > 0), key=lambda x: -x[0])[:max(0, k)]
+    top.sort(key=lambda x: x[1])
+    return [c for _, _, c in top]
+
+
+_v3_index: tuple[tuple, "_ce.ClauseEmbedIndex"] | None = None
+_v3_lock = threading.Lock()
+
+
+def _clause_embed_index() -> "_ce.ClauseEmbedIndex":
+    """The clause-level embedding index, built once per corpus and model."""
+    global _v3_index
+    docs = load_documents()
+    key = (_docs_cache[0] if _docs_cache else None, id(docs), len(docs), RETRIEVE_V3_MODEL)
+    if _v3_index is None or _v3_index[0] != key:
+        with _v3_lock:
+            if _v3_index is None or _v3_index[0] != key:
+                _v3_index = (key, _ce.ClauseEmbedIndex(docs, _ce.make_embedder(RETRIEVE_V3_MODEL)))
+    return _v3_index[1]
+
+
+def _serve_blocks_by_hits(chunks: list[dict], hits, by_id: dict, route: set[str] | None,
+                          n_docs: int, bonus: float) -> list[dict]:
+    """The V2/V3 serving rule: the `n_docs` best orders by the index's document
+    score (router shortlist as a bonus), each as a block via v2_block_chunks,
+    appended and deduplicated."""
+    scores = {d: s for s, d in hits.docs}
+    if route and bonus > 0:
+        for d in route:
+            if d in by_id:
+                scores[d] = scores.get(d, 0.0) + bonus
+    if not scores:
+        return chunks
+    picks: list[dict] = []
+    for d in sorted(scores, key=lambda x: -scores[x])[:n_docs]:
+        cl = hits.clause_scores(d)
+        for c in v2_block_chunks(by_id[d], cl):
+            c = dict(c)
+            c["score"] = round(cl.get((c["section"], c["clause"]), 0.0), 3)
+            picks.append(c)
+    return _append_new(chunks, picks, None)
+
+
+def doc_blocks_window(question: str, role: str, route: set[str] | None,
+                      doc_ids: list[str]) -> list[dict]:
+    """RETRIEVE_DOC_BLOCKS: the blocks of the first N distinct orders of a deep
+    ranking, each served as its curated block (cut to its best-evidenced
+    clauses when it is huge), in rank order. Returns [] when the flag is off.
+    The deep pool ranks the orders and is never served (16.09) — the caller,
+    extend_with_doc_blocks, appends these after the untouched window.
+
+    Clause evidence for the block cut comes from the clause-title index, which
+    is free and already built — a block over RETRIEVE_V2_BLOCK_WORDS is the
+    exception (8 of 287 orders), and without evidence it would be served by
+    document order alone."""
+    if RETRIEVE_DOC_BLOCKS <= 0:
+        return []
+    pool = retrieve(question, n_results=RETRIEVE_DOC_BLOCKS_POOL,
+                    doc_ids=doc_ids, boost_docs=route,
+                    max_per_doc=RETRIEVE_DOC_BLOCKS_POOL,
+                    top_doc_depth=1)
+    if not pool:
+        return []
+    by_id = {d["document_id"]: d for d in _docs_for_role(role) if d.get("document_id")}
+    order: list[str] = []
+    for c in pool:
+        if c["doc_id"] not in order:
+            order.append(c["doc_id"])
+    hits = _clause_index().rank(question, doc_ids=order[:RETRIEVE_DOC_BLOCKS])
+    out: list[dict] = []
+    for doc_id in order[:RETRIEVE_DOC_BLOCKS]:
+        doc = by_id.get(doc_id)
+        if doc is None:
+            continue
+        cl = hits.clause_scores(doc_id)
+        for c in v2_block_chunks(doc, cl):
+            c = dict(c)
+            # the order's own ranking score, so the block sorts where the
+            # order ranked and _sources_from_chunks keeps its order
+            c["score"] = next((x["score"] for x in pool if x["doc_id"] == doc_id), 0.0)
+            out.append(c)
+    # Only the blocks. The 12.09 build appended the whole pool here; the 16.09
+    # content-aware sectprobe showed that served 38 orders and 4,700 words for
+    # +5 verbatim sections, while the blocks alone brought +18. The raw chunks
+    # that ranked still ride along — as the production window this extension
+    # is appended to (see extend_with_doc_blocks).
+    return out
+
+
+def extend_with_doc_blocks(chunks: list[dict], question: str, role: str,
+                           route: set[str] | None = None) -> list[dict]:
+    """RETRIEVE_DOC_BLOCKS as an extension: the production window stays as it
+    is and the blocks of the first N orders are appended after it. An
+    extension, not a replacement, for two measured reasons (16.09): the
+    rewrite/raw union and the second pass truncate to MAX_CONTEXT_CHUNKS
+    before widen_context runs, so anything served inside retrieve_for_role
+    beyond the window is sliced away in production; and the 40-chunk pool the
+    12.09 build served inflated the window fourfold for almost no sections.
+    Scope and search text mirror retrieve_for_role."""
+    if RETRIEVE_DOC_BLOCKS <= 0 or not (question or "").strip():
+        return chunks
+    docs = _docs_for_role(role)
+    if RETRIEVE_CURATED_ONLY:
+        docs = [d for d in docs if _has_key_facts(d)]
+    doc_ids = [d["document_id"] for d in docs if d.get("document_id")]
+    if not doc_ids:
+        return chunks
+    search = _glossary.expand(question) if _glossary.RETRIEVE_GLOSSARY else question
+    return _append_new(chunks, doc_blocks_window(search, role, route, doc_ids), None)
+
+
+def extend_with_clause_embed(chunks: list[dict], question: str, role: str,
+                             route: set[str] | None = None) -> list[dict]:
+    """RETRIEVE_V3: the blocks of the orders the clause-level embedding index
+    ranks best. Same scope and serving rule as the title index."""
+    if RETRIEVE_V3 <= 0 or not (question or "").strip():
+        return chunks
+    docs = _docs_for_role(role)
+    if RETRIEVE_CURATED_ONLY:
+        docs = [d for d in docs if _has_key_facts(d)]
+    by_id = {d["document_id"]: d for d in docs if d.get("document_id")}
+    if not by_id:
+        return chunks
+    hits = _clause_embed_index().rank(question, doc_ids=by_id.keys())
+    return _serve_blocks_by_hits(chunks, hits, by_id, route, RETRIEVE_V3, RETRIEVE_V2_ROUTE_BONUS)
+
+
+def extend_with_clause_index(chunks: list[dict], question: str, role: str,
+                             route: set[str] | None = None) -> list[dict]:
+    """שלב 1.1 + 1.2: the blocks of the RETRIEVE_V2 orders the clause-title
+    index ranks best for the question (router shortlist as a bonus), appended
+    after everything already in the window and deduplicated against it. Reads
+    the role's curated orders only — the same scope as ranking
+    (RETRIEVE_CURATED_ONLY), so no order enters through this door that the
+    window could not have served. Appends, never reorders."""
+    if RETRIEVE_V2 <= 0 or not (question or "").strip():
+        return chunks
+    docs = _docs_for_role(role)
+    if RETRIEVE_CURATED_ONLY:
+        docs = [d for d in docs if _has_key_facts(d)]
+    by_id = {d["document_id"]: d for d in docs if d.get("document_id")}
+    if not by_id:
+        return chunks
+    hits = _clause_index().rank(question, doc_ids=by_id.keys())
+    scores = {d: s for s, d in hits.docs}
+    if route and RETRIEVE_V2_ROUTE_BONUS > 0:
+        for d in route:
+            if d in by_id:
+                scores[d] = scores.get(d, 0.0) + RETRIEVE_V2_ROUTE_BONUS
+    if not scores:
+        return chunks
+    picks: list[dict] = []
+    for d in sorted(scores, key=lambda x: -scores[x])[:RETRIEVE_V2]:
+        cl = hits.clause_scores(d)
+        for c in v2_block_chunks(by_id[d], cl):
+            c = dict(c)
+            c["score"] = round(cl.get((c["section"], c["clause"]), 0.0), 3)
+            picks.append(c)
+    return _append_new(chunks, picks, None)
+
+
+
 def widen_context(chunks: list[dict], question: str, role: str,
                   route: set[str] | None) -> list[dict]:
-    """The four appended extensions, in the order they were measured to
-    stack: hypothetical, router seats, full blocks, amount-bearing clauses.
-    Each is a no-op when its flag is off, so production with all flags off is
-    byte-identical to the pre-extension pipeline."""
+    """The seven appended extensions, in the order they were measured to
+    stack: hypothetical, router seats, full blocks, the blocks of the first N
+    orders (RETRIEVE_DOC_BLOCKS), the clause-title path (RETRIEVE_V2), the
+    clause-embedding path (RETRIEVE_V3), amount-bearing clauses. Each is a no-op when its flag is
+    off, so production with all flags off is byte-identical to the
+    pre-extension pipeline."""
     out = extend_with_hypothetical(chunks, question, role, route)
     out = extend_with_router_slots(out, question, role, route)
     out = extend_with_full_blocks(out, role)
+    out = extend_with_doc_blocks(out, question, role, route)
+    out = extend_with_clause_index(out, question, role, route)
+    out = extend_with_clause_embed(out, question, role, route)
     return extend_with_quantity_clauses(out, question, role)
 
 
@@ -878,9 +1345,14 @@ def retrieve_for_role(question: str, role: str, route: set[str] | None = None,
     # extensions: the hypothetical is cached by question, and the router has
     # already seen it.
     search = _glossary.expand(question) if _glossary.RETRIEVE_GLOSSARY and expand_terms else question
-    chunks = retrieve(search, n_results=MAX_CONTEXT_CHUNKS, doc_ids=doc_ids,
-                      boost_docs=route, max_per_doc=RETRIEVE_MAX_PER_DOC,
-                      top_doc_depth=RETRIEVE_TOP_DOC_DEPTH)
+    if RETRIEVE_V3_ONLY and RETRIEVE_V3 > 0:
+        # the 12.09 restart, whole: no raw-window ranking at all — the window
+        # is what the clause-level index serves (see extend_with_clause_embed)
+        chunks: list[dict] = []
+    else:
+        chunks = retrieve(search, n_results=MAX_CONTEXT_CHUNKS, doc_ids=doc_ids,
+                          boost_docs=route, max_per_doc=RETRIEVE_MAX_PER_DOC,
+                          top_doc_depth=RETRIEVE_TOP_DOC_DEPTH)
     return widen_context(chunks, question, role, route) if widen else chunks
 
 
@@ -1373,6 +1845,7 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
     if RETRIEVE_SECOND_PASS > 0 and first_answer:
         lacked = lacked_from(first_answer)
         if lacked:
+            first_window = list(chunks)
             seen = {(c["doc_id"], c.get("section"), c.get("clause")) for c in chunks}
             extra = [
                 c for c in retrieve_for_role(lacked, role, route=route, widen=False)
@@ -1385,6 +1858,11 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
                 # that was already working.
                 keep = min(RETRIEVE_SECOND_PASS, max(0, MAX_CONTEXT_CHUNKS - 2))
                 chunks = chunks[:MAX_CONTEXT_CHUNKS - keep] + extra[:keep]
+            # the clause finder reads the FIRST window (see
+            # extend_with_lack_clauses): the answering order was already there
+            # in 11 of 45 realstyle zeros, and the swap above may have dropped
+            # it. No-op while RETRIEVE_LACK_CLAUSES is 0.
+            chunks = extend_with_lack_clauses(chunks, lacked, role, first_window=first_window)
 
     # after the union, never inside it: the union truncates to
     # MAX_CONTEXT_CHUNKS and would drop an appended chunk that was paid for
