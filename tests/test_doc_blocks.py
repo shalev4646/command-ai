@@ -63,8 +63,8 @@ def _ranked_by_depth(kw):
 @contextmanager
 def _with(n, docs, pool=None, ranked=None, **knobs):
     old = {k: getattr(backend, k) for k in
-           ("RETRIEVE_DOC_BLOCKS", "RETRIEVE_DOC_BLOCKS_POOL", "RETRIEVE_V2_BLOCK_WORDS",
-            "RETRIEVE_V2_TOP_K", "RETRIEVE_V3", "RETRIEVE_V3_ONLY")}
+           ("RETRIEVE_DOC_BLOCKS", "RETRIEVE_DOC_BLOCKS_POOL",
+            "RETRIEVE_V2_BLOCK_WORDS", "RETRIEVE_V2_TOP_K", "RETRIEVE_V3", "RETRIEVE_V3_ONLY")}
     old_load, old_idx, old_ret = backend.load_documents, backend._v2_index, backend.retrieve
     backend.RETRIEVE_DOC_BLOCKS = n
     if pool is not None:
@@ -131,6 +131,11 @@ def test_the_blocks_are_not_served_before_widening():
     assert [c["clause"] for c in bare] == [c["clause"] for c in _ranked()], bare
 
 
+def test_append_new_with_zero_limit_appends_nothing():
+    """The loop in _append_new caps AFTER appending, so limit=0 needs its own
+    guard (12.09, parallel session) — kept although no caller passes 0 today."""
+    assert backend._append_new([], [{"doc_id": "x", "section": "s", "clause": "c"}], 0) == [], \
+        "limit 0 appends nothing"
 def test_nothing_is_served_twice():
     with _with(2, [DOC_A, DOC_B], ranked=_ranked()):
         out = backend.retrieve_for_role(Q, "soldier", route=set(), widen=True)

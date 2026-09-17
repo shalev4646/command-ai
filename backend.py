@@ -354,6 +354,9 @@ RETRIEVE_DOC_BLOCKS = int(os.environ.get("RETRIEVE_DOC_BLOCKS", "0"))
 # 8 chunks and its per-doc caps hide orders that ranked well, so the pool is
 # read from a deeper ranking (the same scorer, no extra model call).
 RETRIEVE_DOC_BLOCKS_POOL = int(os.environ.get("RETRIEVE_DOC_BLOCKS_POOL", "40"))
+# (12.09 night, parallel session: a RETRIEVE_DOC_BLOCKS_RAW=4 cap on the served
+# raw tail was built and measured verbatim, 12 -> 24 sections. Superseded 16.09:
+# the raw pool is ranking-only and never served — see extend_with_doc_blocks.)
 
 # "How much / how many / what is the maximum" — the demand, not the topic.
 # Deliberately narrow: "כמה" alone would fire on "כמה שיותר מהר" and on any
@@ -847,7 +850,14 @@ def _chunk_key(c: dict) -> tuple:
 
 def _append_new(chunks: list[dict], extras, limit: int | None) -> list[dict]:
     """Append chunks not already present, up to `limit` new ones. Never
-    reorders what is there — every extension in this file relies on that."""
+    reorders what is there — every extension in this file relies on that.
+
+    `limit=0` appends nothing. The guard is explicit because the loop below
+    tests the cap AFTER appending, so a 0 would otherwise let exactly one
+    chunk through — harmless while every caller gated its flag on `> 0`, and
+    a real bug the moment one did not (a caller passing 0)."""
+    if limit is not None and limit <= 0:
+        return list(chunks)
     seen = {_chunk_key(c) for c in chunks}
     out = list(chunks)
     added = 0
