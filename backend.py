@@ -425,6 +425,32 @@ _COMMON_RULES = """חוקים מוחלטים:
 # passages that do not apply. Off = the historical sentence, byte for byte;
 # measured in the same arm as RETRIEVE_V2 (1.c), never deployed alone.
 ANSWER_V2 = os.environ.get("ANSWER_V2", "0") == "1"
+
+# ── SYSTEM_CACHE_TTL — how long the system prompt's cache entry lives ────────
+# Measured on production 2026-09-17: a two-pass question pays a 5,316-token
+# cache WRITE of the system prompt on its first pass ($0.03 of $0.25) whenever
+# no request shared the prefix in the previous five minutes; the second pass
+# reads it at 0.1x. A one-hour entry costs 2x to write and 0.1x to read, so it
+# pays off when questions arrive 5-60 minutes apart, breaks even under denser
+# traffic (both TTLs read) and costs more when gaps exceed an hour. That is a
+# traffic bet, not a quality change, so it ships OFF (5-minute default, the
+# request byte-identical to before) and fly.toml turns it on. Only "5m" and
+# "1h" exist on the API; anything else falls back to the default rather than
+# 400 every answer. The history breakpoint never carries a TTL: an entry with
+# the longer TTL must precede shorter ones, and history comes after the
+# system prompt.
+SYSTEM_CACHE_TTL = os.environ.get("SYSTEM_CACHE_TTL", "").strip()
+
+
+def _system_cache_control() -> dict:
+    cc = {"type": "ephemeral"}
+    if SYSTEM_CACHE_TTL in ("5m", "1h"):
+        cc["ttl"] = SYSTEM_CACHE_TTL
+    return cc
+
+
+def _history_cache_control() -> dict:
+    return {"type": "ephemeral"}
 _REFUSAL_FOLLOWUP_V1 = ("מותר להוסיף אחריה מה כן קיים בקטעים (כלל שחל רק על הקשר אחר או "
                         "צר יותר), תוך ציון מפורש שההקשר שונה.")
 _REFUSAL_FOLLOWUP_V2 = ("אחריה — לכל היותר משפט אחד על מה שכן קיים בקטעים, ורק אם הוא "
@@ -1903,7 +1929,7 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
     system_blocks = [{
         "type": "text",
         "text": system_prompt,
-        "cache_control": {"type": "ephemeral"},
+        "cache_control": _system_cache_control(),   # SYSTEM_CACHE_TTL
     }]
     if past:
         past[-1] = {
@@ -1911,7 +1937,7 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
             "content": [{
                 "type": "text",
                 "text": str(past[-1]["content"]),
-                "cache_control": {"type": "ephemeral"},
+                "cache_control": _history_cache_control(),
             }],
         }
     messages = past + [{"role": "user", "content": user_content}]
