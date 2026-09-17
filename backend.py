@@ -388,6 +388,43 @@ _CONTEXT_HEADER = "קטעים רלוונטיים מהפקודות:"
 _HISTORY_MAX = 12   # messages (6 exchanges) before a trim
 _HISTORY_DROP = 6   # messages (3 exchanges) dropped per trim
 
+
+def _replay_history(history: list[dict] | None) -> list[dict]:
+    """The turns a conversation replays to the model.
+
+    Trimmed in whole-exchange jumps (a rolling per-turn cap would move the
+    cached prefix every turn), then guarded to open with a user turn: the
+    fixed-size cut assumes strict user/assistant pairs, any history-shape
+    drift can land it on an assistant message, and the API rejects
+    assistant-first history — every later question then 400s and the session
+    is bricked (bug-sweep 2026-07-27).
+
+    Since 2026-09-17 every user turn but the MOST RECENT is replayed as the
+    bare question, its retrieved excerpts stripped at the header
+    _compose_user_content wrote them under. Measured on production that day:
+    the third question of a conversation cost $0.31 because the two earlier
+    turns carried ~11K tokens of excerpts each (the blocks doubled them), and
+    six exchanges would have replayed 60K+ tokens — a $0.40 cache write after
+    any five-minute gap. The last exchange keeps its excerpts because a
+    follow-up usually points at them; older answers already carry their own
+    citations, and the follow-up's retrieval brings the order again. A bare
+    turn never changes between requests, so the cached prefix over older
+    history stays byte-stable — the reason the app replays sent_user_content
+    verbatim still holds for the exchange that matters."""
+    past = [{"role": m["role"], "content": m["content"]} for m in (history or [])]
+    while len(past) > _HISTORY_MAX:
+        past = past[_HISTORY_DROP:]
+    while past and past[0]["role"] != "user":
+        past = past[1:]
+    last_user = max((i for i, m in enumerate(past) if m["role"] == "user"), default=None)
+    marker = f"\n\n{_CONTEXT_HEADER}"
+    for i, m in enumerate(past):
+        if m["role"] == "user" and i != last_user:
+            content = str(m["content"])
+            if marker in content:
+                m["content"] = content.split(marker, 1)[0]
+    return past
+
 _COMMON_RULES = """חוקים מוחלטים:
 1. ענה אך ורק על בסיס הקטעים שסופקו לך בהקשר.
 2. אם אין בקטעים כלל שחל ישירות על המצב שנשאל — פתח באמירה המדויקת: "המידע לא קיים בפקודות שסופקו." {REFUSAL_FOLLOWUP}
@@ -1906,18 +1943,7 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
     context = _context_from_chunks(chunks)
     system_prompt = SYSTEM_PROMPTS.get(role, SYSTEM_PROMPT_SOLDIER)
 
-    past = [
-        {"role": m["role"], "content": m["content"]}
-        for m in (history or [])
-    ]
-    while len(past) > _HISTORY_MAX:
-        past = past[_HISTORY_DROP:]
-    # the fixed-size cut assumes strict user/assistant pairs; any history-shape
-    # drift (e.g. an orphaned turn) can land it on an assistant message, and the
-    # API rejects assistant-first history — every later question then 400s and
-    # the session is bricked (bug-sweep 2026-07-27). Trim forward to a user turn.
-    while past and past[0]["role"] != "user":
-        past = past[1:]
+    past = _replay_history(history)   # older turns bare, last exchange whole
 
     user_content = _compose_user_content(question, context, profile)
 
