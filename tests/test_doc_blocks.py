@@ -136,6 +136,8 @@ def test_append_new_with_zero_limit_appends_nothing():
     guard (12.09, parallel session) — kept although no caller passes 0 today."""
     assert backend._append_new([], [{"doc_id": "x", "section": "s", "clause": "c"}], 0) == [], \
         "limit 0 appends nothing"
+
+
 def test_nothing_is_served_twice():
     with _with(2, [DOC_A, DOC_B], ranked=_ranked()):
         out = backend.retrieve_for_role(Q, "soldier", route=set(), widen=True)
