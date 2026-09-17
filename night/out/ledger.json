@@ -1,5 +1,5 @@
 {
- "spent": 133.1774,
+ "spent": 134.7851,
  "reserved": 0,
  "entries": [
   {
@@ -4359,6 +4359,12 @@
    "actual": 0.0724
   },
   {
+   "id": "grade-grade-sonnet6#2496-851",
+   "label": "grade-grade-sonnet6",
+   "estimate": 0.108,
+   "actual": 0.0708
+  },
+  {
    "id": "grade-grade-win16#4440-839",
    "label": "grade-grade-win16",
    "estimate": 0.108,
@@ -4903,6 +4909,12 @@
    "label": "probe-second4",
    "estimate": 1.764,
    "actual": 1.393
+  },
+  {
+   "id": "probe-sonnet6#2496-850",
+   "label": "probe-sonnet6",
+   "estimate": 1.764,
+   "actual": 1.5369
   },
   {
    "id": "probe-win16#10940-837",
