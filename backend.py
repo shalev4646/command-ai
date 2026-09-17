@@ -22,7 +22,12 @@ load_dotenv(Path(__file__).parent / ".env")
 
 client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", "").strip())
 
-MODEL = "claude-opus-4-8"
+# The answering model. Production is Opus 4.8; ANSWER_MODEL exists so a paired
+# arm can run another model in its own process without touching the default
+# (17.09: Sonnet 5 at $2/$10 per MTok against $5/$25 is the one lever that
+# changes a question's price by an order of magnitude, and nobody had measured
+# what it loses on the frozen ruler). Unset = Opus, byte for byte.
+MODEL = os.environ.get("ANSWER_MODEL", "").strip() or "claude-opus-4-8"
 # Ceiling for thinking + answer combined. Adaptive thinking spends a few
 # thousand tokens on table/legal reasoning before the ~1K-token structured
 # answer; streaming means the large cap carries no HTTP-timeout risk.

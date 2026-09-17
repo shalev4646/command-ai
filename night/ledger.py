@@ -21,7 +21,14 @@ from pathlib import Path
 #   ~$2   re-measure the saved 54 questions for a paired before/after
 #   ~$7   curate wave 1 (85 orders) once the PDFs are downloaded
 #   ~$0.5 grow the gate by 3 probes per new order
-CEILING_USD = 135.00
+CEILING_USD = 145.00
+# Raised 135 -> 145 on 2026-09-17, approved by the user in chat ("תעלה את
+# התקרה ב-10 דולר"), to buy the Sonnet 5 arm: the blocks6 arm passed
+# (+7/-1 after review) and was deployed, the measured price is $0.20-0.25 a
+# question with 75% of it input, and the model is the only lever left that
+# changes that by an order of magnitude. The arm itself is cheap because
+# Sonnet is: ~$0.7 in batch by the ledger's estimate, ~$1.5 by the doubling
+# rule, plus $0.11 of grading.
 # Raised 120 -> 135 on 2026-08-27, approved by the user in chat, to buy the one
 # answer-side hypothesis still standing: RETRIEVE_FULL_BLOCKS 1 -> 2. The
 # mechanism is measured, not guessed — on the 13 questions that got the right
@@ -90,6 +97,10 @@ PLANNED_USD = 43.00
 PRICES = {
     "claude-opus-4-8": (5.00, 25.00),
     "claude-opus-5": (5.00, 25.00),
+    # Sonnet 5 as listed by the claude-api reference cached 2026-06-24; the
+    # project's older note says $3/$15 after an intro window that ended
+    # 2026-08-31 — if the invoice disagrees, this row is the one to fix.
+    "claude-sonnet-5": (2.00, 10.00),
     "claude-haiku-4-5": (1.00, 5.00),
     "claude-haiku-4-5-20251001": (1.00, 5.00),
 }
