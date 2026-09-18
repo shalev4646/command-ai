@@ -359,8 +359,13 @@ TOS_VERSION = 1
 
 
 def _tos_version_from(v) -> int:
-    """A stored terms version, or 0. Cookie values are user-writable."""
-    return v if isinstance(v, int) and not isinstance(v, bool) and v > 0 else 0
+    """A stored terms version, or 0. Cookie values are user-writable, so a
+    version from the future is clamped: taken at its word it would carry a
+    device past every later TOS_VERSION bump, and אודות would tell it that it
+    approved a text nobody ever showed it."""
+    if not isinstance(v, int) or isinstance(v, bool) or v <= 0:
+        return 0
+    return min(v, TOS_VERSION)
 
 
 def _tos_date_from(v) -> str:
@@ -1315,6 +1320,10 @@ if not st.session_state.get("cai_probe_done") and not _ck:
             if (not (st.session_state.get("profile_name") or "").strip()
                     and _pd.get("name")):
                 st.session_state.profile_name = str(_pd["name"])[:40]
+                # the welcome screen's fields were seeded a run ago, before
+                # this name existed here — let them seed once more (see the
+                # gate below)
+                st.session_state.cai_gate_reseed = True
             if _pd.get("asked"):
                 st.session_state.name_asked = True
             # the approval comes back with the name: without this a device
@@ -1323,6 +1332,8 @@ if not st.session_state.get("cai_probe_done") and not _ck:
             if not st.session_state.get("tos_ok"):
                 st.session_state.tos_ok = _tos_version_from(_pd.get("tos"))
                 st.session_state.tos_date = _tos_date_from(_pd.get("tosd"))
+                if st.session_state.tos_ok:
+                    st.session_state.cai_gate_reseed = True
 
 # ── Conversation restore — once per session, before anything renders the chat.
 # Gated on a session flag rather than on `messages` being empty: after the user
@@ -4393,6 +4404,12 @@ if st.session_state.get("tos_ok"):
     _ck_dict["tos"] = int(st.session_state["tos_ok"])
     if st.session_state.get("tos_date"):
         _ck_dict["tosd"] = st.session_state["tos_date"]
+# The pre-2026-09-17 key, still written and never read again: it is the bridge
+# back. This payload is rebuilt from scratch every run, so shipping without it
+# erases "ok" from every device — and a rollback would then find no consent
+# anywhere and ask the entire user base a second time. Drop it once the
+# release has stood for a while.
+_ck_dict["ok"] = bool(st.session_state.get("tos_ok"))
 # "ch" — does this device hold a saved chat? Read on the NEXT load to decide
 # whether the restore probe is worth a round trip (see the restore block).
 # Conditional like "mil"/"sol": absent for anyone who never asked anything, so
@@ -4483,14 +4500,19 @@ if _welcome_gate or st.session_state.role is None:
         # tos_ok already records this device's approval — after a logout — and
         # there it displays a stored fact. Seeded before the widget renders:
         # Streamlit refuses a key written after its widget exists in the run.
-        if "gate_consent" not in st.session_state:
+        # The device-profile probe answers a run late (Community Cloud strips
+        # the cookie, iOS drops it), so on that path these seeds ran before the
+        # stored name and approval existed here. cai_gate_reseed, set where the
+        # payload lands, is what lets them run once more.
+        _gate_reseed = bool(st.session_state.pop("cai_gate_reseed", False))
+        if "gate_consent" not in st.session_state or _gate_reseed:
             st.session_state.gate_consent = (
                 int(st.session_state.get("tos_ok") or 0) >= TOS_VERSION)
         # A withdrawal or a TOS_VERSION bump reopens this screen for people who
         # already told us their name; asking again as if they were new makes a
         # consent prompt feel like a punishment. After a logout the name is ""
         # and so is the field.
-        if "gate_name_w" not in st.session_state:
+        if "gate_name_w" not in st.session_state or _gate_reseed:
             st.session_state.gate_name_w = st.session_state.get("profile_name") or ""
         with st.container(key="cai_entry_head"):
             st.markdown(
@@ -4514,9 +4536,13 @@ if _welcome_gate or st.session_state.role is None:
         # enforced on submit instead, and said out loud when it is not met.
         with st.container(key="cai_welcome"):
             with st.form(key="cai_welcome_form", border=False):
+                # 40, like the cookie and like "שם מלא" in הגדרות: this field
+                # is seeded from a name that may already be longer than it,
+                # and the browser reports the field back on submit — a tighter
+                # limit here rewrites a stored name to its first 20 characters
                 st.text_input("שם פרטי", key="gate_name_w",
                               label_visibility="collapsed",
-                              placeholder="השם הפרטי שלך", max_chars=20)
+                              placeholder="השם הפרטי שלך", max_chars=40)
                 st.markdown(
                     "<div class='cai-gate-sub'>לברכה אישית · נשמר במכשיר בלבד, "
                     "לא נשלח לשום מקום</div>",
@@ -4558,7 +4584,13 @@ if _welcome_gate or st.session_state.role is None:
                         _nm = (st.session_state.get("gate_name_w") or "").strip()
                         if _nm:
                             st.session_state.profile_name = _nm[:40]
-                    _record_terms_approval()
+                    # only a genuinely new approval is recorded. After a logout
+                    # the tick shows what this DEVICE already approved, and
+                    # pressing past a tick nobody touched is not an approval —
+                    # re-stamping tos_date there would date the record to the
+                    # day a different person walked through the screen.
+                    if int(st.session_state.get("tos_ok") or 0) < TOS_VERSION:
+                        _record_terms_approval()
                     st.session_state.name_asked = True
                     st.rerun()
                 else:

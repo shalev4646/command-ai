@@ -254,7 +254,11 @@ def test_cookie_values_are_validated_before_use():
     exec(_func("_tos_version_from"), ns)
     exec("import datetime as _dt\n" + _func("_tos_date_from"), ns)  # app.py's own alias
     v, d = ns["_tos_version_from"], ns["_tos_date_from"]
-    assert v(1) == 1 and v(3) == 3
+    assert v(1) == 1
+    assert v(999999) == 1, (
+        "a cookie claiming a version that does not exist yet is taken at its "
+        "word — that device would sail through every future TOS_VERSION bump "
+        "and be told it approved a text it was never shown")
     for bad in (None, "1", True, -2, 1.5, [1]):
         assert v(bad) == 0, "accepted %r as a terms version" % (bad,)
     assert d("2026-09-17") == "2026-09-17"
@@ -282,8 +286,13 @@ def test_the_approval_rides_the_device_cookie():
     code = _code_only(APP)
     assert '_ck_dict["tos"] = ' in code and '_ck_dict["tosd"] = ' in code, (
         "the approval is not written to the cookie")
-    assert '"ok"' not in APP.split("_ck_dict = {")[1].split("}")[0], (
-        "the legacy consent flag is still written")
+    # the pre-2026-09-17 key is still WRITTEN, from tos_ok, and never read:
+    # without it a rollback of this release finds no "ok" on any device and
+    # asks the whole user base to consent a second time
+    assert '_ck_dict["ok"] = bool(st.session_state.get("tos_ok"))' in code, (
+        "the rollback bridge is gone")
+    assert 'st.session_state.get("consent_given")' not in code and '_ck.get("ok")' not in code, (
+        "the old flag is being read again")
     assert 'st.session_state.setdefault("tos_ok", _tos_version_from(_ck.get("tos")))' in code
     assert 'st.session_state.setdefault("tos_date", _tos_date_from(_ck.get("tosd")))' in code
     # located in the raw text (the end marker is a comment), judged without comments

@@ -18,8 +18,11 @@ order:
     "מחיקת הנתונים מהמכשיר הזה".
 """
 import ast
+import contextlib
 import datetime as _dt
+import json
 import sys
+import urllib.parse
 import zoneinfo
 from pathlib import Path
 
@@ -60,6 +63,31 @@ SECTIONS = _const("_TOS_SECTIONS", [])
 OLD_CHAT = {"title": "שאלה ישנה", "role": "soldier",
             "messages": [{"role": "user", "content": "שאלה ישנה"}]}
 WIPE_NOTE_PART = "בקשת מחיקה"
+
+
+@contextlib.contextmanager
+def _probe_answers(payload):
+    """The device-profile probe as it really behaves: nothing on the first
+    render, the stored payload on the next (a component round trip). AppTest
+    hands custom components their default, so the timing has to be faked."""
+    import streamlit.components.v1 as components
+    real = components.declare_component
+    calls = {"n": 0}                       # shared across runs, like the client
+
+    def fake(name, *a, **kw):
+        if name != "cai_profile_probe":
+            return real(name, *a, **kw)
+
+        def probe(*args, default=None, **kwargs):
+            calls["n"] += 1
+            return default if calls["n"] == 1 else payload
+        return probe
+
+    components.declare_component = fake
+    try:
+        yield
+    finally:
+        components.declare_component = real
 
 
 def _signed_in(screen=None, **extra):
@@ -188,6 +216,50 @@ def test_logout_lands_on_the_welcome_with_the_tick_set_and_no_name():
         "the tick is empty after logout; this device did approve")
     assert _widget(at, "text_input", "gate_name_w").value == "", (
         "the previous person's name is offered to the next")
+
+
+def test_a_long_name_survives_the_screen_it_is_shown_on():
+    """The field is max_chars=20; הגדרות ← פרטים אישיים has no limit and the
+    cookie keeps 40. A device that saved a longer name meets this screen once,
+    on this deploy — and the browser reports the field back on submit, so a
+    tighter limit here silently rewrites the name that was already stored."""
+    long_name = "אלכסנדר בן-ציון רוזנברג"          # 23 characters
+    at = _fresh(**_signed_in(tos_ok=0, profile_name=long_name))
+    assert _on_welcome(at), "the terms were not re-asked"
+    assert _widget(at, "text_input", "gate_name_w").value == long_name
+    _widget(at, "checkbox", "gate_consent").check().run()
+    _label(at, "המשך").click().run()
+    assert _ss(at, "profile_name") == long_name, "the screen truncated a saved name"
+
+
+def test_passing_a_tick_nobody_touched_does_not_restamp_the_day():
+    """After a logout the tick shows the approval this DEVICE already holds.
+    Pressing past it is not a new approval, and the date must keep saying when
+    the terms were actually approved."""
+    at = _fresh(**_signed_in(name_asked=False, profile_name="", tos_date="2026-09-01"))
+    assert _on_welcome(at)
+    assert _widget(at, "checkbox", "gate_consent").value is True
+    _widget(at, "text_input", "gate_name_w").set_value("דנה")
+    _label(at, "המשך").click().run()
+    assert _ss(at, "tos_ok") == TOS
+    assert _ss(at, "tos_date") == "2026-09-01", (
+        "an untouched tick re-stamped the approval with today's date")
+
+
+def test_a_name_restored_from_the_browser_store_reaches_the_field():
+    """No cookie (Community Cloud, or iOS dropping it): the probe answers on
+    the run AFTER the first paint, so the field was seeded empty before the
+    name arrived and kept its empty value."""
+    payload = urllib.parse.quote(json.dumps(
+        {"role": "soldier", "name": "דנה", "asked": True}))
+    with _probe_answers(payload):
+        at = _fresh()
+        at.run()                      # the payload lands on the second run
+        assert not at.exception, at.exception
+        assert _ss(at, "profile_name") == "דנה", "the probe did not restore the name"
+        assert _on_welcome(at), "the terms were not asked"
+        assert _widget(at, "text_input", "gate_name_w").value == "דנה", (
+            "the restored name never reached the field")
 
 
 def test_an_unanswered_question_does_not_wait_for_the_next_visit():
