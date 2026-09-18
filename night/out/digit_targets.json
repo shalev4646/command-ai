@@ -1,0 +1,1442 @@
+{
+ "35.0314": {
+  "named": 2,
+  "cited": 1,
+  "served": 5,
+  "broken": true,
+  "kf": true,
+  "chars": 7499
+ },
+ "33.0336": {
+  "named": 2,
+  "cited": 0,
+  "served": 3,
+  "broken": true,
+  "kf": true,
+  "chars": 9886
+ },
+ "32.0101": {
+  "named": 2,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 12147
+ },
+ "3.0501": {
+  "named": 1,
+  "cited": 2,
+  "served": 9,
+  "broken": true,
+  "kf": true,
+  "chars": 43665
+ },
+ "33.0144": {
+  "named": 1,
+  "cited": 1,
+  "served": 5,
+  "broken": true,
+  "kf": true,
+  "chars": 7950
+ },
+ "31.0507": {
+  "named": 1,
+  "cited": 1,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 9228
+ },
+ "35.0814": {
+  "named": 1,
+  "cited": 0,
+  "served": 4,
+  "broken": true,
+  "kf": true,
+  "chars": 7605
+ },
+ "35.0502": {
+  "named": 1,
+  "cited": 0,
+  "served": 2,
+  "broken": true,
+  "kf": true,
+  "chars": 15968
+ },
+ "35.0233": {
+  "named": 1,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 3709
+ },
+ "31.0606": {
+  "named": 1,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 4237
+ },
+ "36.0301": {
+  "named": 1,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": false,
+  "chars": 9171
+ },
+ "35.0115": {
+  "named": 1,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 5737
+ },
+ "32.0402": {
+  "named": 1,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 14374
+ },
+ "31.0603": {
+  "named": 1,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 11184
+ },
+ "31.0308": {
+  "named": 1,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 5157
+ },
+ "3.0502": {
+  "named": 1,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": false,
+  "chars": 11087
+ },
+ "PM-33.0352": {
+  "named": 0,
+  "cited": 6,
+  "served": 19,
+  "broken": true,
+  "kf": true,
+  "chars": 7054
+ },
+ "35.0221": {
+  "named": 0,
+  "cited": 3,
+  "served": 10,
+  "broken": true,
+  "kf": true,
+  "chars": 12798
+ },
+ "61.0109": {
+  "named": 0,
+  "cited": 3,
+  "served": 5,
+  "broken": true,
+  "kf": true,
+  "chars": 12178
+ },
+ "33.0914": {
+  "named": 0,
+  "cited": 2,
+  "served": 7,
+  "broken": true,
+  "kf": true,
+  "chars": 4112
+ },
+ "PM-21.0203": {
+  "named": 0,
+  "cited": 2,
+  "served": 5,
+  "broken": true,
+  "kf": true,
+  "chars": 11250
+ },
+ "33.0501": {
+  "named": 0,
+  "cited": 2,
+  "served": 4,
+  "broken": true,
+  "kf": true,
+  "chars": 1593
+ },
+ "31.0608": {
+  "named": 0,
+  "cited": 2,
+  "served": 2,
+  "broken": true,
+  "kf": true,
+  "chars": 12139
+ },
+ "35.0306": {
+  "named": 0,
+  "cited": 1,
+  "served": 9,
+  "broken": true,
+  "kf": true,
+  "chars": 14719
+ },
+ "31.0823": {
+  "named": 0,
+  "cited": 1,
+  "served": 8,
+  "broken": true,
+  "kf": true,
+  "chars": 9272
+ },
+ "33.0913": {
+  "named": 0,
+  "cited": 1,
+  "served": 7,
+  "broken": true,
+  "kf": true,
+  "chars": 5682
+ },
+ "35.0111": {
+  "named": 0,
+  "cited": 1,
+  "served": 5,
+  "broken": true,
+  "kf": true,
+  "chars": 13376
+ },
+ "30.0117": {
+  "named": 0,
+  "cited": 1,
+  "served": 4,
+  "broken": true,
+  "kf": true,
+  "chars": 18389
+ },
+ "21.0106": {
+  "named": 0,
+  "cited": 1,
+  "served": 4,
+  "broken": true,
+  "kf": true,
+  "chars": 20377
+ },
+ "38.0115": {
+  "named": 0,
+  "cited": 1,
+  "served": 3,
+  "broken": true,
+  "kf": true,
+  "chars": 10531
+ },
+ "35.0504": {
+  "named": 0,
+  "cited": 1,
+  "served": 3,
+  "broken": true,
+  "kf": true,
+  "chars": 5108
+ },
+ "35.0201": {
+  "named": 0,
+  "cited": 1,
+  "served": 3,
+  "broken": true,
+  "kf": true,
+  "chars": 5006
+ },
+ "36.0504": {
+  "named": 0,
+  "cited": 1,
+  "served": 2,
+  "broken": true,
+  "kf": true,
+  "chars": 3877
+ },
+ "35.0210": {
+  "named": 0,
+  "cited": 1,
+  "served": 2,
+  "broken": true,
+  "kf": true,
+  "chars": 34636
+ },
+ "31.0521": {
+  "named": 0,
+  "cited": 1,
+  "served": 2,
+  "broken": true,
+  "kf": true,
+  "chars": 8815
+ },
+ "30.0401": {
+  "named": 0,
+  "cited": 1,
+  "served": 2,
+  "broken": true,
+  "kf": true,
+  "chars": 11054
+ },
+ "50.0405": {
+  "named": 0,
+  "cited": 0,
+  "served": 6,
+  "broken": true,
+  "kf": true,
+  "chars": 18436
+ },
+ "33.0160": {
+  "named": 0,
+  "cited": 0,
+  "served": 5,
+  "broken": true,
+  "kf": true,
+  "chars": 5506
+ },
+ "61.0105": {
+  "named": 0,
+  "cited": 0,
+  "served": 4,
+  "broken": true,
+  "kf": true,
+  "chars": 4057
+ },
+ "32.0221": {
+  "named": 0,
+  "cited": 0,
+  "served": 4,
+  "broken": true,
+  "kf": true,
+  "chars": 7217
+ },
+ "31.1014": {
+  "named": 0,
+  "cited": 0,
+  "served": 4,
+  "broken": true,
+  "kf": true,
+  "chars": 12034
+ },
+ "31.1012": {
+  "named": 0,
+  "cited": 0,
+  "served": 4,
+  "broken": true,
+  "kf": true,
+  "chars": 2428
+ },
+ "PM-33.0332": {
+  "named": 0,
+  "cited": 0,
+  "served": 3,
+  "broken": true,
+  "kf": true,
+  "chars": 5458
+ },
+ "PM-33.0119": {
+  "named": 0,
+  "cited": 0,
+  "served": 3,
+  "broken": true,
+  "kf": true,
+  "chars": 6014
+ },
+ "38.0121": {
+  "named": 0,
+  "cited": 0,
+  "served": 3,
+  "broken": true,
+  "kf": true,
+  "chars": 3822
+ },
+ "35.0809": {
+  "named": 0,
+  "cited": 0,
+  "served": 3,
+  "broken": true,
+  "kf": true,
+  "chars": 4866
+ },
+ "35.0218": {
+  "named": 0,
+  "cited": 0,
+  "served": 3,
+  "broken": true,
+  "kf": true,
+  "chars": 5200
+ },
+ "33.0808": {
+  "named": 0,
+  "cited": 0,
+  "served": 3,
+  "broken": true,
+  "kf": true,
+  "chars": 12699
+ },
+ "32.0250": {
+  "named": 0,
+  "cited": 0,
+  "served": 3,
+  "broken": true,
+  "kf": true,
+  "chars": 1449
+ },
+ "31.1001": {
+  "named": 0,
+  "cited": 0,
+  "served": 3,
+  "broken": true,
+  "kf": true,
+  "chars": 6792
+ },
+ "31.0601": {
+  "named": 0,
+  "cited": 0,
+  "served": 3,
+  "broken": true,
+  "kf": true,
+  "chars": 6878
+ },
+ "31.0402": {
+  "named": 0,
+  "cited": 0,
+  "served": 3,
+  "broken": true,
+  "kf": true,
+  "chars": 13645
+ },
+ "21.0123": {
+  "named": 0,
+  "cited": 0,
+  "served": 3,
+  "broken": true,
+  "kf": true,
+  "chars": 4315
+ },
+ "50.0302": {
+  "named": 0,
+  "cited": 0,
+  "served": 2,
+  "broken": true,
+  "kf": true,
+  "chars": 1263
+ },
+ "35.0232": {
+  "named": 0,
+  "cited": 0,
+  "served": 2,
+  "broken": true,
+  "kf": true,
+  "chars": 930
+ },
+ "33.0350": {
+  "named": 0,
+  "cited": 0,
+  "served": 2,
+  "broken": true,
+  "kf": true,
+  "chars": 13593
+ },
+ "33.0334": {
+  "named": 0,
+  "cited": 0,
+  "served": 2,
+  "broken": true,
+  "kf": true,
+  "chars": 1762
+ },
+ "33.0126": {
+  "named": 0,
+  "cited": 0,
+  "served": 2,
+  "broken": true,
+  "kf": true,
+  "chars": 2867
+ },
+ "33.0114": {
+  "named": 0,
+  "cited": 0,
+  "served": 2,
+  "broken": true,
+  "kf": true,
+  "chars": 1108
+ },
+ "31.0508": {
+  "named": 0,
+  "cited": 0,
+  "served": 2,
+  "broken": true,
+  "kf": true,
+  "chars": 5832
+ },
+ "31.0404": {
+  "named": 0,
+  "cited": 0,
+  "served": 2,
+  "broken": true,
+  "kf": true,
+  "chars": 1021
+ },
+ "30.0403": {
+  "named": 0,
+  "cited": 0,
+  "served": 2,
+  "broken": true,
+  "kf": true,
+  "chars": 2388
+ },
+ "PM-33.0917": {
+  "named": 0,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 1973
+ },
+ "PM-33.0207": {
+  "named": 0,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 18362
+ },
+ "PM-33.0137": {
+  "named": 0,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 4966
+ },
+ "PM-32.0213": {
+  "named": 0,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 3642
+ },
+ "61.0117": {
+  "named": 0,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 12941
+ },
+ "61.0108": {
+  "named": 0,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 3277
+ },
+ "61.0106": {
+  "named": 0,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 1013
+ },
+ "58.0217": {
+  "named": 0,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 15561
+ },
+ "58.0214": {
+  "named": 0,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 22348
+ },
+ "38.0108": {
+  "named": 0,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 12571
+ },
+ "38.0105": {
+  "named": 0,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 21985
+ },
+ "36.0507": {
+  "named": 0,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 7351
+ },
+ "35.0808": {
+  "named": 0,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 5946
+ },
+ "35.0804": {
+  "named": 0,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 1795
+ },
+ "35.0501": {
+  "named": 0,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 1706
+ },
+ "35.0219": {
+  "named": 0,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 1994
+ },
+ "33.0911": {
+  "named": 0,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 3495
+ },
+ "33.0807": {
+  "named": 0,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 14299
+ },
+ "33.0321": {
+  "named": 0,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 1938
+ },
+ "33.0145": {
+  "named": 0,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 39864
+ },
+ "33.0117": {
+  "named": 0,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 1723
+ },
+ "32.0315": {
+  "named": 0,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 8452
+ },
+ "32.0312": {
+  "named": 0,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 1982
+ },
+ "31.0703": {
+  "named": 0,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 13540
+ },
+ "31.0206": {
+  "named": 0,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 17168
+ },
+ "30.0408": {
+  "named": 0,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 7320
+ },
+ "3.0110": {
+  "named": 0,
+  "cited": 0,
+  "served": 1,
+  "broken": true,
+  "kf": true,
+  "chars": 3925
+ },
+ "זכויות-עבודה-מילואים": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 2720
+ },
+ "PM-33.0901": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 10595
+ },
+ "PM-33.0401": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 10611
+ },
+ "PM-33.0342": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": false,
+  "chars": 1681
+ },
+ "PM-33.0316": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 1300
+ },
+ "PM-33.0309": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 28673
+ },
+ "PM-33.0109": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": false,
+  "chars": 1160
+ },
+ "61.0118": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 4429
+ },
+ "61.0110": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 1163
+ },
+ "58.0209": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 4678
+ },
+ "50.0303": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 14653
+ },
+ "50.0204": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 2708
+ },
+ "38.0120": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 2346
+ },
+ "38.0112": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 9424
+ },
+ "38.0109": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 10006
+ },
+ "37.0102": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 16484
+ },
+ "36.0525": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 2234
+ },
+ "36.0521": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 14209
+ },
+ "36.0520": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 5804
+ },
+ "36.0515": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 1473
+ },
+ "36.0511": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 4567
+ },
+ "36.0505": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 43992
+ },
+ "36.0322": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 2655
+ },
+ "36.0320": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 5819
+ },
+ "36.0319": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 9685
+ },
+ "36.0313": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": false,
+  "chars": 1184
+ },
+ "36.0309": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 8136
+ },
+ "36.0308": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 3128
+ },
+ "36.0306": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 2062
+ },
+ "36.0303": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 4431
+ },
+ "36.0302": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 6066
+ },
+ "36.0218": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 7652
+ },
+ "36.0204": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 4909
+ },
+ "36.0113": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 5025
+ },
+ "36.0110": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 1201
+ },
+ "36.0109": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 3711
+ },
+ "36.0105": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 6697
+ },
+ "36.0104": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 9443
+ },
+ "36.0103": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 8930
+ },
+ "35.0810": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 1898
+ },
+ "35.0802": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 912
+ },
+ "35.0313": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 7844
+ },
+ "35.0310": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 6141
+ },
+ "35.0228": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 3592
+ },
+ "35.0217": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 3274
+ },
+ "35.0211": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 6755
+ },
+ "35.0203": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 6261
+ },
+ "35.0202": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 1735
+ },
+ "35.0123": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 3282
+ },
+ "35.0102": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 6769
+ },
+ "33.1125": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 13415
+ },
+ "33.1112": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 7452
+ },
+ "33.1104": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 14146
+ },
+ "33.1010": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": false,
+  "chars": 17213
+ },
+ "33.1001": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 10189
+ },
+ "33.0909": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 12677
+ },
+ "33.0325": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 3273
+ },
+ "33.0314": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 16095
+ },
+ "33.0306": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 13124
+ },
+ "33.0133": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 1753
+ },
+ "32.0509": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 11439
+ },
+ "32.0501": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 23388
+ },
+ "32.0422": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 6651
+ },
+ "32.0408": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 4819
+ },
+ "32.0316": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 2921
+ },
+ "32.0314": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 15307
+ },
+ "32.0307": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 4333
+ },
+ "32.0222": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 11402
+ },
+ "32.0207": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 6765
+ },
+ "32.0202": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 28040
+ },
+ "32.0201": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 13192
+ },
+ "31.0831": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 3455
+ },
+ "31.0830": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 2644
+ },
+ "31.0818": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 5797
+ },
+ "31.0519": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 5437
+ },
+ "31.0515": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 17394
+ },
+ "31.0504": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 5733
+ },
+ "31.0409": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 1693
+ },
+ "31.0407": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 3234
+ },
+ "31.0317": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 5834
+ },
+ "31.0252": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": false,
+  "chars": 9126
+ },
+ "31.0214": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 59236
+ },
+ "31.0207": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 7947
+ },
+ "31.0205": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 16619
+ },
+ "31.0202": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 12751
+ },
+ "30.0413": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 4718
+ },
+ "30.0118": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 10883
+ },
+ "21.0305": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 4007
+ },
+ "21.0211": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 4155
+ },
+ "21.0201": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 2103
+ },
+ "21.0120": {
+  "named": 0,
+  "cited": 0,
+  "served": 0,
+  "broken": true,
+  "kf": true,
+  "chars": 5216
+ }
+}
