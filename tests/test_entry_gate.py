@@ -52,6 +52,10 @@ metrics.log_question = lambda **kw: None
 from streamlit.testing.v1 import AppTest  # noqa: E402
 
 APP = (ROOT / "app.py").read_text(encoding="utf-8")
+# 2026-09-17: the tick approves the terms, recorded as a version (tos_ok);
+# a device past the welcome also has name_asked
+TOS_VERSION = int(re.search(r"^TOS_VERSION = (\d+)", APP, re.M).group(1))
+APPROVED = dict(tos_ok=TOS_VERSION, name_asked=True)
 
 CONSENT_KEY = "gate_consent"
 GO = "המשך"
@@ -159,18 +163,23 @@ def test_the_name_typed_here_greets_on_the_role_screen():
 
 # ── asked once, remembered ───────────────────────────────────────────────
 def test_a_device_that_already_consented_starts_at_the_role_screen():
-    at = _fresh(consent_given=True)
+    at = _fresh(**APPROVED)
     assert _consent(at) is None, "consent was asked a second time"
     assert _has_roles(at), "a consenting device must land on the role picker"
 
 
+def test_the_pre_terms_consent_flag_is_asked_once_more():
+    """consent_given (2026-09-12) ticked a sentence about Anthropic; the terms
+    were on no screen. Those devices meet the welcome again, terms included."""
+    at = _fresh(consent_given=True, name_asked=True)
+    assert _consent(at) is not None, "the old flag was taken as a terms approval"
+
+
 def test_the_consent_rides_the_device_cookie():
     """Recorded where role and name already live, so it survives a restart."""
-    block = APP.split("_ck_dict = {")[1].split("}")[0]
-    assert '"ok"' in block, "the consent is not written to the profile cookie"
-    assert "consent_given" in block
-    assert 'st.session_state.setdefault("consent_given"' in APP, (
-        "the consent is never seeded back from the cookie"
+    assert '_ck_dict["tos"] = ' in APP, "the approval is not written to the profile cookie"
+    assert 'st.session_state.setdefault("tos_ok"' in APP, (
+        "the approval is never seeded back from the cookie"
     )
 
 
@@ -181,7 +190,7 @@ def test_the_floating_name_card_is_gone():
 
 
 def test_the_role_screen_has_nothing_floating_over_it():
-    at = _fresh(consent_given=True)
+    at = _fresh(**APPROVED)
     assert _btn(at, GO) is None and _btn(at, SKIP) is None, (
         "the welcome controls are still rendered over the role screen"
     )

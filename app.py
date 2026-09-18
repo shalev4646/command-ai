@@ -335,15 +335,68 @@ if "device_id" not in st.session_state:
 # (profile_customized), so an untouched user's API turn stays byte-identical to
 # the pre-profile format (backend._compose_user_content). ──
 st.session_state.setdefault("profile_name", str(_ck.get("name") or "")[:40])
-# name_asked: the one-time name prompt (gate) was answered or skipped — never
-# nag again on this device, on any later role switch
+# name_asked: the welcome screen was answered (with a name or without one).
+# Half of the welcome gate below: a logout clears it, so the next person meets
+# the welcome screen and its name field, not a role picker that has none.
 st.session_state.setdefault("name_asked", bool(_ck.get("asked")))
-# consent_given: Apple 5.1.2(i) wants explicit, informed agreement BEFORE a
-# user's content reaches a third party, and every question in this app is sent
-# to Anthropic. It rides the device cookie exactly like the role and the name,
-# so it is asked once per install and never again -- and, like them, a wipe
-# clears it and the screen comes back.
-st.session_state.setdefault("consent_given", bool(_ck.get("ok")))
+
+# ── The terms approval ──
+# tos_ok: which version of the terms THIS DEVICE approved (0 = none), and
+# tos_date: the day it did (ISO, Israel time). Apple 5.1.2(i) wants explicit,
+# informed agreement before a user's content reaches a third party, and every
+# question here goes to Anthropic.
+#
+# This replaced consent_given (2026-09-12 to 2026-09-17), a tick on a sentence
+# about Anthropic. The terms themselves were on no screen, while אודות showed
+# every visitor a hardcoded green "approved at first install, version 2.4" —
+# so that tick is NOT carried over as an approval: those devices are asked
+# once more, with the terms in front of them. An int rather than a bool so a
+# change to the terms can re-ask (bump TOS_VERSION), and a date because an
+# approval with no day is half a record. Both ride the device cookie ("tos",
+# "tosd"): a logout keeps them — the device did approve — and a wipe clears
+# them, because a device at defaults has approved nothing.
+TOS_VERSION = 1
+
+
+def _tos_version_from(v) -> int:
+    """A stored terms version, or 0. Cookie values are user-writable, so a
+    version from the future is clamped: taken at its word it would carry a
+    device past every later TOS_VERSION bump, and אודות would tell it that it
+    approved a text nobody ever showed it."""
+    if not isinstance(v, int) or isinstance(v, bool) or v <= 0:
+        return 0
+    return min(v, TOS_VERSION)
+
+
+def _tos_date_from(v) -> str:
+    """A stored approval day (YYYY-MM-DD), or "". It is rendered into HTML on
+    the אודות screen, so only a real calendar date gets through."""
+    if not isinstance(v, str) or len(v) != 10:
+        return ""
+    try:
+        return _dt.date.fromisoformat(v).isoformat()
+    except ValueError:
+        return ""
+
+
+def _today_il() -> str:
+    try:
+        from zoneinfo import ZoneInfo
+        _tz = ZoneInfo("Asia/Jerusalem")
+    except Exception:  # no tz database: Israel is UTC+2/+3, +3 errs to "later"
+        _tz = _dt.timezone(_dt.timedelta(hours=3))
+    return _dt.datetime.now(_tz).date().isoformat()
+
+
+def _record_terms_approval():
+    """The one write that makes the אודות banner true. Called only behind the
+    welcome screen's tick."""
+    st.session_state.tos_ok = TOS_VERSION
+    st.session_state.tos_date = _today_il()
+
+
+st.session_state.setdefault("tos_ok", _tos_version_from(_ck.get("tos")))
+st.session_state.setdefault("tos_date", _tos_date_from(_ck.get("tosd")))
 # role_picked_here: the role was chosen by a TAP in THIS session, not restored
 # from the device cookie. The name gate is a first-run prompt that belongs after
 # that tap — a remembered device (role in the cookie, name never answered) used
@@ -1267,8 +1320,20 @@ if not st.session_state.get("cai_probe_done") and not _ck:
             if (not (st.session_state.get("profile_name") or "").strip()
                     and _pd.get("name")):
                 st.session_state.profile_name = str(_pd["name"])[:40]
+                # the welcome screen's fields were seeded a run ago, before
+                # this name existed here — let them seed once more (see the
+                # gate below)
+                st.session_state.cai_gate_reseed = True
             if _pd.get("asked"):
                 st.session_state.name_asked = True
+            # the approval comes back with the name: without this a device
+            # whose cookie was lost would be greeted by name and still be
+            # asked to approve terms it already approved
+            if not st.session_state.get("tos_ok"):
+                st.session_state.tos_ok = _tos_version_from(_pd.get("tos"))
+                st.session_state.tos_date = _tos_date_from(_pd.get("tosd"))
+                if st.session_state.tos_ok:
+                    st.session_state.cai_gate_reseed = True
 
 # ── Conversation restore — once per session, before anything renders the chat.
 # Gated on a session flag rather than on `messages` being empty: after the user
@@ -1582,11 +1647,15 @@ SURFACE = "#21261A"
 # chat screen needs room under the fixed header band; entry has no header.
 # --cai-sat is the iOS status-bar inset (measured on the shell doc, pushed
 # into this frame by the PWA script) — the band grew by it, so clear it too.
-# entry-like also covers the name gate (role picked, name not yet asked):
-# the real entry screen keeps rendering under the gate overlay
-# single source of truth for "the name gate is up" — the CSS padding below and
-# the render at the entry gate must never disagree about it
-_welcome_gate = not st.session_state.get("consent_given")
+# entry-like also covers the welcome screen, which comes before the role.
+# _welcome_gate is the single source of truth for "the welcome screen is up" —
+# the CSS padding below and the render at the entry gate must never disagree.
+# It opens for either half: the name was never answered on this device (a new
+# device, or a logout), or the terms approved here are not the current ones (a
+# new device, a wipe, a withdrawal, a TOS_VERSION bump). Without the second
+# half "ביטול אישור התנאים" would zero the approval and leave the app usable.
+_welcome_gate = (not st.session_state.get("name_asked")
+                 or int(st.session_state.get("tos_ok") or 0) < TOS_VERSION)
 _entry_like = _welcome_gate or st.session_state.role is None
 MAIN_TOP_PADDING = "12px" if _entry_like else "calc(72px + var(--cai-sat, 0px))"
 
@@ -2247,8 +2316,29 @@ div[data-testid="stButton"] > button:active {{
 .st-key-cai_welcome [data-testid="stMarkdownContainer"] {{ margin-bottom: 0 !important; }}
 .cai-consent-t {{ font: 400 calc(12px * var(--cai-fs, 1)) Heebo, sans-serif;
     color: var(--text); line-height: 1.55; text-align: right; }}
+/* .5 measured 4.11:1 on the card (tools/ui_audit) — under AA for 12px */
 .cai-consent-more {{ font: 400 calc(12px * var(--cai-fs, 1)) Heebo, sans-serif;
-    color: rgba(239,240,232,.5); line-height: 1.5; text-align: right; margin-top: 6px; }}
+    color: rgba(239,240,232,.62); line-height: 1.5; text-align: right; margin-top: 6px; }}
+/* the full terms, one tap away inside the consent card: the tick below says
+   they were read, so they must be on this screen. A <details> needs no rerun
+   and no script, and the closed card still fits a phone without scrolling
+   (a scroll box of the terms pushed "אפשר גם בלי שם" to y=949 of 844). */
+.cai-tos-x {{ margin: 8px 0 0; text-align: right; }}
+.cai-tos-x summary {{ list-style: none; cursor: pointer; display: flex;
+    align-items: center; gap: 7px; min-height: 44px;
+    font: 600 calc(12.5px * var(--cai-fs, 1)) Heebo, sans-serif;
+    color: var(--accent-bright); }}
+.cai-tos-x summary::-webkit-details-marker {{ display: none; }}
+.cai-tos-x summary::before {{ content: ""; flex: none; width: 7px; height: 7px;
+    border-left: 2px solid currentColor; border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg); margin-top: -3px; }}
+.cai-tos-x[open] summary::before {{ transform: rotate(135deg); margin-top: 3px; }}
+.cai-tos-x .bd {{ border-top: 1px solid rgba(239,240,232,.12); padding: 8px 2px 2px; }}
+.cai-tos-x .sec {{ margin: 0 0 10px; }}
+.cai-tos-x .h {{ font: 700 calc(11.5px * var(--cai-fs, 1)) Heebo, sans-serif;
+    color: var(--accent-bright); margin-bottom: 3px; }}
+.cai-tos-x .b {{ font: 400 calc(11.5px * var(--cai-fs, 1)) Heebo, sans-serif;
+    color: rgba(239,240,232,.78); line-height: 1.65; }}
 .st-key-cai_welcome [data-testid="stCheckbox"] {{ margin: 9px 0 0; }}
 .st-key-cai_welcome [data-testid="stCheckbox"] label {{ align-items: center; }}
 .st-key-cai_welcome [data-testid="stCheckbox"] label span {{
@@ -3844,6 +3934,24 @@ components.html(
         // wins the race against any later canvas writer (a rerun re-mounting
         // components) because every such write churns the DOM and lands back
         // here. rAF-debounced: one querySelector per frame at worst.
+        // A settings screen opens at its TOP. The sheet is one scroller that
+        // outlives the screens inside it, so a row tapped low in the hub
+        // opened the next screen at the hub's offset — the accessibility
+        // statement arrived 37px down, its title and back button under the
+        // sheet's top fade (tools/ui_audit, 2026-09-17). Keyed on the title,
+        // which changes exactly when the screen does; a sheet that just
+        // appeared starts at the top anyway, so the first sighting only records.
+        var lastSetTitle = null;
+        var settingsTop = function () {
+            try {
+                var sheet = doc.querySelector(".st-key-cai_settings");
+                var t = sheet && sheet.querySelector(".cai-set-title");
+                var k = t ? t.textContent : null;
+                if (sheet && k !== null && lastSetTitle !== null && k !== lastSetTitle)
+                    sheet.scrollTop = 0;
+                lastSetTitle = k;
+            } catch (e) {}
+        };
         var syncQueued = false;
         var queueSync = function () {
             if (syncQueued) return;
@@ -3855,7 +3963,7 @@ components.html(
             var ran = false;
             var done = function () {
                 if (ran) return;
-                ran = true; syncQueued = false; syncCanvas();
+                ran = true; syncQueued = false; syncCanvas(); settingsTop();
             };
             requestAnimationFrame(done);
             setTimeout(done, 150);
@@ -4275,7 +4383,7 @@ if _pwa:
 _sync_settled = (
     st.session_state.role is not None
     or st.session_state.get("name_asked")
-    or st.session_state.get("consent_given")
+    or st.session_state.get("tos_ok")
     or bool((st.session_state.get("profile_name") or "").strip())
     or st.session_state.get("cai_wipe_pending")
 )
@@ -4284,13 +4392,24 @@ _ck_dict = {
     "role": st.session_state.role,
     "name": (st.session_state.get("profile_name") or "")[:40],
     "asked": bool(st.session_state.get("name_asked")),
-    # the consent, next to the role and the name it belongs with
-    "ok": bool(st.session_state.get("consent_given")),
     # unconditional, unlike "mil" below: the id is worthless if it only
     # survives for users who filled a form. Written on the same run as the
     # first role tap, which is always before the first question.
     "did": st.session_state.device_id,
 }
+# the terms approval, version and day. It belongs to the DEVICE: a logout
+# keeps it, a wipe zeroes it and this drops the keys. The pre-2026-09-17 "ok"
+# flag is no longer written (see TOS_VERSION for why it is not an approval).
+if st.session_state.get("tos_ok"):
+    _ck_dict["tos"] = int(st.session_state["tos_ok"])
+    if st.session_state.get("tos_date"):
+        _ck_dict["tosd"] = st.session_state["tos_date"]
+# The pre-2026-09-17 key, still written and never read again: it is the bridge
+# back. This payload is rebuilt from scratch every run, so shipping without it
+# erases "ok" from every device — and a rollback would then find no consent
+# anywhere and ask the entire user base a second time. Drop it once the
+# release has stood for a while.
+_ck_dict["ok"] = bool(st.session_state.get("tos_ok"))
 # "ch" — does this device hold a saved chat? Read on the NEXT load to decide
 # whether the restore probe is worth a round trip (see the restore block).
 # Conditional like "mil"/"sol": absent for anyone who never asked anything, so
@@ -4340,16 +4459,61 @@ if _sync_settled:
         height=0,
     )
 
-# ── Entry / role gate + one-time name gate ──
-# The name gate is deliberately NOT st.dialog (dialog close skips the full
-# rerun — the bug that once left the drawer dead). It's an app-owned
-# overlay: the real entry screen keeps rendering underneath, and a fixed
-# scrim + card sit above it. The gate derives from name_asked rather than
-# a session flag so a mid-gate refresh lands back IN the gate (cookie
-# already carries the role) instead of silently dropping the question.
+# ── Terms of service ── Verbatim, one copy, read by TWO screens: the full
+# terms on the welcome screen, and אודות in settings. Defined up here, not
+# beside the other settings text, because the entry screen st.stop()s below:
+# a constant defined after that point does not exist yet when the welcome
+# renders. A consent screen quoting its own copy of the terms is how the two
+# drift apart, and then a person approves a clause the app no longer shows. ──
+_TOS_SECTIONS = [
+    ("1. הצהרה כללית",
+     "אפליקציה זו (\"האפליקציה\") הינה כלי עזר פרטי שפותח על ידי מפתח עצמאי. האפליקציה אינה "
+     "כלי רשמי של צה\"ל, משרד הביטחון או כל גוף ממלכתי אחר. השימוש באפליקציה הוא על אחריות המשתמש בלבד."),
+    ("2. הגבלת אחריות",
+     "השירות באפליקציה ניתן כמות שהוא (\"As-Is\"). המפתח אינו אחראי לדיוק, לשלמות או לעדכניות המידע "
+     "המוצג באפליקציה. המשתמש מודע לכך שהאפליקציה מבוססת על מודלים של בינה מלאכותית (AI), אשר עלולים "
+     "לספק מידע שגוי, חלקי או לא מדויק (\"הזיות\"). אין להסתמך על מידע זה כייעוץ צבאי, מקצועי או משפטי מחייב."),
+    ("3. איסור הזנת מידע מסווג",
+     "חל איסור מוחלט על המשתמשים להזין, להעלות או לשתף בתוך האפליקציה מידע מסווג, רגיש, או כל מידע "
+     "שחשיפתו מהווה עבירת ביטחון שדה. המפתח אינו נושא באחריות לכל נזק או השלכה משפטית הנובעת מהפרת "
+     "סעיף זה על ידי המשתמש."),
+    ("4. פרטיות ונתונים",
+     "המידע שאתה מזין נשלח לספק בינה מלאכותית חיצוני (Anthropic) לצורך הפקת התשובה, ונרשם בלוג "
+     "שימוש שאפשר לכבות בהגדרות. הפירוט המלא — מה נאסף, למי מועבר, כמה זמן נשמר ואיך מבקשים "
+     "עיון או מחיקה — מופיע ב«מדיניות הפרטיות» שבמסך ההגדרות, והיא חלק מתנאים אלה.<br><br>"
+     "אין אבטחה מוחלטת ברשת, והמשתמש לוקח על עצמו את הסיכון הכרוך בהזנת נתונים במערכת."),
+    ("5. קניין רוחני",
+     "כלל התוכן, העיצוב, הקוד המקור והלוגו של האפליקציה הינם קניינו הרוחני הבלעדי של המפתח. אין להעתיק, "
+     "לשכפל או להשתמש בהם ללא אישור מראש ובכתב."),
+]
+
+# ── Entry: the welcome screen, then the role ──
+# Real screens, not st.dialog (a dialog close skips the full rerun — the bug
+# that once left the drawer dead) and not an overlay. The welcome derives from
+# stored state (_welcome_gate), never from a session flag, so a refresh in the
+# middle of it lands back in it.
 if _welcome_gate or st.session_state.role is None:
-    # ── SCREEN 1 · welcome: what this is, the name, the consent ──
+    # ── SCREEN 1 · welcome: what this is, the name, the terms ──
     if _welcome_gate:
+        # The tick starts EMPTY on a device that has not approved the current
+        # terms: a pre-ticked box is not consent. It starts ticked only where
+        # tos_ok already records this device's approval — after a logout — and
+        # there it displays a stored fact. Seeded before the widget renders:
+        # Streamlit refuses a key written after its widget exists in the run.
+        # The device-profile probe answers a run late (Community Cloud strips
+        # the cookie, iOS drops it), so on that path these seeds ran before the
+        # stored name and approval existed here. cai_gate_reseed, set where the
+        # payload lands, is what lets them run once more.
+        _gate_reseed = bool(st.session_state.pop("cai_gate_reseed", False))
+        if "gate_consent" not in st.session_state or _gate_reseed:
+            st.session_state.gate_consent = (
+                int(st.session_state.get("tos_ok") or 0) >= TOS_VERSION)
+        # A withdrawal or a TOS_VERSION bump reopens this screen for people who
+        # already told us their name; asking again as if they were new makes a
+        # consent prompt feel like a punishment. After a logout the name is ""
+        # and so is the field.
+        if "gate_name_w" not in st.session_state or _gate_reseed:
+            st.session_state.gate_name_w = st.session_state.get("profile_name") or ""
         with st.container(key="cai_entry_head"):
             st.markdown(
                 "<div class='cai-entry'>"
@@ -4372,9 +4536,13 @@ if _welcome_gate or st.session_state.role is None:
         # enforced on submit instead, and said out loud when it is not met.
         with st.container(key="cai_welcome"):
             with st.form(key="cai_welcome_form", border=False):
+                # 40, like the cookie and like "שם מלא" in הגדרות: this field
+                # is seeded from a name that may already be longer than it,
+                # and the browser reports the field back on submit — a tighter
+                # limit here rewrites a stored name to its first 20 characters
                 st.text_input("שם פרטי", key="gate_name_w",
                               label_visibility="collapsed",
-                              placeholder="השם הפרטי שלך", max_chars=20)
+                              placeholder="השם הפרטי שלך", max_chars=40)
                 st.markdown(
                     "<div class='cai-gate-sub'>לברכה אישית · נשמר במכשיר בלבד, "
                     "לא נשלח לשום מקום</div>",
@@ -4386,20 +4554,29 @@ if _welcome_gate or st.session_state.role is None:
                 # widget — the browser closes the div at the end of the first
                 # block and the tick lands OUTSIDE the card (seen 2026-09-12).
                 with st.container(key="cai_consent"):
+                    # the two things nobody may miss stay in plain view; the
+                    # full terms the tick approves are one tap below them,
+                    # rendered from _TOS_SECTIONS — the copy אודות shows
                     st.markdown(
                         "<div class='cai-consent-t'>השאלות שלך נשלחות לספק בינה "
                         "מלאכותית חיצוני (Anthropic) כדי להפיק את התשובה. אין להזין "
                         "מידע מסווג.</div>"
                         "<div class='cai-consent-more'>הפירוט המלא — מה נאסף, למי "
-                        "מועבר וכמה זמן נשמר — במדיניות הפרטיות שבמסך ההגדרות.</div>",
+                        "מועבר וכמה זמן נשמר — במדיניות הפרטיות שבמסך ההגדרות.</div>"
+                        "<details class='cai-tos-x'><summary>תנאי השימוש המלאים</summary>"
+                        "<div class='bd'>" + "".join(
+                            f"<div class='sec'><div class='h'>{_h}</div>"
+                            f"<div class='b'>{_b}</div></div>"
+                            for _h, _b in _TOS_SECTIONS) + "</div></details>",
                         unsafe_allow_html=True,
                     )
-                    st.checkbox("קראתי ואני מאשר", key="gate_consent")
+                    st.checkbox("קראתי ואני מאשר את תנאי השימוש", key="gate_consent")
                 _w_go = st.form_submit_button(
                     "המשך", use_container_width=True, type="primary")
                 _w_skip = st.form_submit_button(
                     "אפשר גם בלי שם", use_container_width=True)
             if _w_go or _w_skip:
+                # the skip gives up the greeting, never the approval
                 if st.session_state.get("gate_consent"):
                     if _w_go:
                         # display-only: feeds the greeting/pill and seeds the
@@ -4407,7 +4584,13 @@ if _welcome_gate or st.session_state.role is None:
                         _nm = (st.session_state.get("gate_name_w") or "").strip()
                         if _nm:
                             st.session_state.profile_name = _nm[:40]
-                    st.session_state.consent_given = True
+                    # only a genuinely new approval is recorded. After a logout
+                    # the tick shows what this DEVICE already approved, and
+                    # pressing past a tick nobody touched is not an approval —
+                    # re-stamping tos_date there would date the record to the
+                    # day a different person walked through the screen.
+                    if int(st.session_state.get("tos_ok") or 0) < TOS_VERSION:
+                        _record_terms_approval()
                     st.session_state.name_asked = True
                     st.rerun()
                 else:
@@ -5124,8 +5307,9 @@ div[data-testid="stDialog"] [data-testid="InputInstructions"] { display: none !i
     border: 1.5px solid var(--accent); border-radius: 3px; transform: rotate(45deg); }
 .cai-pa-note { margin: 4px 8px 0 0; padding-right: 18px; }
 .cai-pa-note li { font: 400 12px/1.6 Heebo, sans-serif; color: var(--text-dim); margin-bottom: 6px; }
+/* .4 measured 3.42:1 on the dialog (tools/ui_audit, 2026-09-17) */
 .cai-pa-disc { direction: rtl; text-align: right; font: 400 calc(12px * var(--cai-fs, 1)) Heebo, sans-serif; line-height: 1.55;
-    color: rgba(236,237,230,.4); border-top: 1px solid rgba(236,237,230,.08);
+    color: rgba(236,237,230,.55); border-top: 1px solid rgba(236,237,230,.08);
     padding-top: 12px; margin-top: 16px; }
 
 /* ---- Source-clause modal (📄 סעיף המקור) — the in-app clause preview ---- */
@@ -6749,7 +6933,8 @@ html.cai-orders-open .cai-kb-card {
 }
 [class*="st-key-cai_pf_fld"] { padding: 12px 13px; }
 [class*="st-key-cai_pf_fld"] + [class*="st-key-cai_pf_fld"] { border-top: 1px solid var(--border); }
-.cai-fld-label { font: 600 11px Heebo; color: rgba(236,237,230,.45); margin: 0 0 7px; }
+/* .45 was 3.82:1 on the card, under AA for 11px (tools/ui_audit) */
+.cai-fld-label { font: 600 11px Heebo; color: rgba(236,237,230,.55); margin: 0 0 7px; }
 .cai-lang-note { font: 400 11.5px Heebo; color: rgba(236,237,230,.5); margin: 6px 2px 14px; line-height: 1.55; }
 
 /* language rows */
@@ -6776,19 +6961,25 @@ html.cai-orders-open .cai-kb-card {
 .cai-lang-row { display: flex; align-items: center; gap: 13px; padding: 15px 14px; }
 .cai-lang-row .fl { font-size: 20px; flex: none; }
 .cai-lang-row .nm { flex: 1; font: 600 14.5px Heebo; color: var(--text); }
-.cai-lang-row.dim .nm { color: rgba(236,237,230,.5); font-weight: 500; }
-.cai-lang-row .def { font: 400 11px Heebo; color: rgba(236,237,230,.4); margin-top: 1px; }
+/* the unreleased languages stay secondary — the בקרוב chip carries the
+   "not yet" — but 4.38:1 was under AA, and 3.32:1 for .def */
+.cai-lang-row.dim .nm { color: rgba(236,237,230,.55); font-weight: 500; }
+.cai-lang-row .def { font: 400 11px Heebo; color: rgba(236,237,230,.55); margin-top: 1px; }
 .cai-lang-row .ok { color: var(--accent); font-size: 18px; font-weight: 700; }
 
 /* ToS */
 .cai-tos-lead { font: 400 21px 'Suez One', serif; color: var(--text); margin-bottom: 4px; }
-.cai-tos-sub { font: 500 12px Heebo; color: rgba(236,237,230,.4); margin-bottom: 20px; }
+/* tools/ui_audit measured these under AA on the settings sheet (a ramp, so the old
+   checker skipped them); .55 = 5.37:1 on its lighter stop, the same --text-faint
+   the rest of the secondary text uses */
+.cai-tos-sub { font: 500 12px Heebo; color: rgba(236,237,230,.55); margin-bottom: 20px; }
 .cai-tos-h { font: 700 14.5px Heebo; color: var(--accent-bright); margin-bottom: 6px; }
 .cai-tos-b { font: 400 13px Heebo; color: rgba(236,237,230,.78); line-height: 1.7; }
 .cai-tos-sec { margin-bottom: 20px; }
 .cai-set-foot { text-align: center; margin-top: 22px; padding-top: 16px; border-top: 1px solid rgba(236,237,230,.09); }
-.cai-set-foot .a { font: 600 9px ui-monospace, Menlo, monospace; letter-spacing: 2px; color: rgba(236,237,230,.35); }
-.cai-set-foot .b { font: 400 10.5px Heebo; color: rgba(236,237,230,.3); margin-top: 8px; line-height: 1.5; }
+/* 2.88:1 and 2.43:1 before — see .cai-tos-sub */
+.cai-set-foot .a { font: 600 9px ui-monospace, Menlo, monospace; letter-spacing: 2px; color: rgba(236,237,230,.55); }
+.cai-set-foot .b { font: 400 10.5px Heebo; color: rgba(236,237,230,.55); margin-top: 8px; line-height: 1.5; }
 
 /* ── compliance screens (policy / accessibility / contact) ────────────────── */
 /* The caveat under the wipe button. Sits directly beneath a destructive
@@ -6803,9 +6994,11 @@ html.cai-orders-open .cai-kb-card {
    underlined — indistinguishable from body text on the dark card. `display:
    inline-block; direction: ltr` keeps the address on its own LTR run so the
    RTL paragraph does not split it around the "@". */
+/* 191x22 — the smallest target in the app and its only support channel.
+   inline-flex + min-height gives the thumb 44px without moving the text. */
 .cai-contact-mail { color: var(--accent-bright) !important; text-decoration: none !important;
-    font-weight: 600; word-break: break-all; display: inline-block; direction: ltr;
-    margin-top: 6px; }
+    font-weight: 600; word-break: break-all; display: inline-flex; align-items: center;
+    min-height: 44px; direction: ltr; margin-top: 6px; }
 .cai-contact-mail:hover { text-decoration: underline !important; }
 /* The device id is a random string that has to be copied ACCURATELY into an
    email for an access/erasure request, so it gets a monospace face and room to
@@ -6852,7 +7045,8 @@ html.cai-orders-open .cai-kb-card {
    the last field hides behind it */
 .st-key-cai_pf_form { padding-bottom: calc(env(safe-area-inset-bottom,0px) + 112px); }
 .cai-pf-savenote { text-align: center; margin-bottom: 8px; font: 500 11px Heebo; min-height: 15px; }
-.cai-pf-savenote .clean { color: rgba(236,237,230,.4); }
+/* 3.41:1 over the bar's ramp -> .55 (see .cai-tos-sub) */
+.cai-pf-savenote .clean { color: rgba(236,237,230,.55); }
 .cai-pf-savenote .changed { color: var(--accent-bright); display: none; }
 .st-key-cai_pf_save.dirty .cai-pf-savenote .clean { display: none; }
 .st-key-cai_pf_save.dirty .cai-pf-savenote .changed { display: inline; }
@@ -6876,6 +7070,15 @@ html.cai-orders-open .cai-kb-card {
 }
 [class*="st-key-danger_"] button p { color: #D89189 !important; font-weight: 600 !important; text-align: center !important; }
 @media (hover: hover) { [class*="st-key-danger_"] button:hover { background: rgba(198,120,110,.18) !important; } }
+/* the question before a destructive action (_confirm_ask). A card, not a
+   dialog — see there. Inside its button row the danger rule's margin-top
+   is zeroed: it set the red button 11px below its pair. */
+.cai-confirm { border-radius: 15px; padding: 13px 15px; margin: 10px 0 9px;
+  background: rgba(198,120,110,.10); border: 1px solid rgba(198,120,110,.34); }
+.cai-confirm .t { font: 700 13.5px Heebo; color: #E0A69E; }
+.cai-confirm .s { font: 400 11.5px Heebo; color: rgba(236,237,230,.72);
+  margin-top: 4px; line-height: 1.55; }
+[class*="st-key-cai_cfrow_"] [class*="st-key-danger_"] button { margin-top: 0 !important; }
 
 /* privacy banner icon + real analytics toggle */
 .cai-banner .bi { background-image: url("ICON_SHIELD"); }
@@ -6886,7 +7089,8 @@ html.cai-orders-open .cai-kb-card {
 .st-key-cai_analytics [data-testid="stCheckbox"] label { gap: 10px !important; }
 .st-key-share_analytics_w label { font: 500 14px Heebo !important; color: var(--text) !important; }
 .st-key-share_analytics_w [data-baseweb="checkbox"] > div:first-child { background: var(--accent) !important; }
-.cai-analytics-sub { font: 400 11px Heebo; color: rgba(236,237,230,.45); margin: 2px 0 0; }
+/* 3.82:1 -> .55, same reason as .cai-fld-label */
+.cai-analytics-sub { font: 400 11px Heebo; color: rgba(236,237,230,.55); margin: 2px 0 0; }
 
 /* personal-details native widgets styled to the mockup fields (8b) */
 .st-key-pf_name_w [data-baseweb="input"], .st-key-pf_name_w [data-baseweb="base-input"] {
@@ -6996,27 +7200,6 @@ _SERVICE_TRACKS = [
     "אחר / לא רלוונטי",
 ]
 _STATUS_PILLS = ["חייל בודד", "עולה חדש", "הורה לילדים", "נשוי/אה"]
-_TOS_SECTIONS = [
-    ("1. הצהרה כללית",
-     "אפליקציה זו (\"האפליקציה\") הינה כלי עזר פרטי שפותח על ידי מפתח עצמאי. האפליקציה אינה "
-     "כלי רשמי של צה\"ל, משרד הביטחון או כל גוף ממלכתי אחר. השימוש באפליקציה הוא על אחריות המשתמש בלבד."),
-    ("2. הגבלת אחריות",
-     "השירות באפליקציה ניתן כמות שהוא (\"As-Is\"). המפתח אינו אחראי לדיוק, לשלמות או לעדכניות המידע "
-     "המוצג באפליקציה. המשתמש מודע לכך שהאפליקציה מבוססת על מודלים של בינה מלאכותית (AI), אשר עלולים "
-     "לספק מידע שגוי, חלקי או לא מדויק (\"הזיות\"). אין להסתמך על מידע זה כייעוץ צבאי, מקצועי או משפטי מחייב."),
-    ("3. איסור הזנת מידע מסווג",
-     "חל איסור מוחלט על המשתמשים להזין, להעלות או לשתף בתוך האפליקציה מידע מסווג, רגיש, או כל מידע "
-     "שחשיפתו מהווה עבירת ביטחון שדה. המפתח אינו נושא באחריות לכל נזק או השלכה משפטית הנובעת מהפרת "
-     "סעיף זה על ידי המשתמש."),
-    ("4. פרטיות ונתונים",
-     "המידע שאתה מזין נשלח לספק בינה מלאכותית חיצוני (Anthropic) לצורך הפקת התשובה, ונרשם בלוג "
-     "שימוש שאפשר לכבות בהגדרות. הפירוט המלא — מה נאסף, למי מועבר, כמה זמן נשמר ואיך מבקשים "
-     "עיון או מחיקה — מופיע ב«מדיניות הפרטיות» שבמסך ההגדרות, והיא חלק מתנאים אלה.<br><br>"
-     "אין אבטחה מוחלטת ברשת, והמשתמש לוקח על עצמו את הסיכון הכרוך בהזנת נתונים במערכת."),
-    ("5. קניין רוחני",
-     "כלל התוכן, העיצוב, הקוד המקור והלוגו של האפליקציה הינם קניינו הרוחני הבלעדי של המפתח. אין להעתיק, "
-     "לשכפל או להשתמש בהם ללא אישור מראש ובכתב."),
-]
 
 # One address, three screens (policy, accessibility statement, contact) and one
 # mailto. Written literally exactly once — a support channel that is stale in
@@ -7156,13 +7339,21 @@ def _reset_identity():
     name, the status pills, the service track/type, and the two tool profiles
     (`sol_*` carries enlistment and discharge dates, `mil_*` carries a salary).
     A sign-out that leaves a salary behind is not a sign-out.
+
+    The terms approval (tos_ok, tos_date) is deliberately NOT cleared: it
+    belongs to the DEVICE, which did approve them and still has. So the
+    welcome screen reopens with the tick already set — displaying a stored
+    fact, the one case where a pre-ticked consent box is honest. The full wipe
+    is where it goes (see _wipe_all).
     """
     st.session_state.profile_saved = []
     st.session_state.profile_customized = False
     st.session_state.profile_name = ""
-    # back to the role picker, and the one-time name prompt asks again on the
-    # next role pick. Without role=None the gate (derived from name_asked)
-    # would pop over the settings screen. cai_wipe_pending lets the sync writer
+    # name_asked=False reopens the welcome screen — the person signing in next
+    # gets the name field, and role=None then asks for a role instead of
+    # inheriting the last one. (Until 2026-09-17 the welcome read only the old
+    # consent flag, which a logout kept, so a sign-out landed on the role
+    # picker with no name field at all.) cai_wipe_pending lets the sync writer
     # render the all-empty payload — its settled-gate otherwise skips empty
     # states (the guard that stops a cold cloud boot from clobbering the
     # store), which would leave the OLD cookie, name and all, on the device.
@@ -7182,8 +7373,10 @@ def _reset_identity():
                "sol_single", "sol_married",
                "mil_saved", "mil_days_year", "mil_days_3y", "mil_emp", "mil_salary"):
         st.session_state.pop(_k, None)
-    # drop the widgets' keys so they reseed from the reset mirrors
-    for _k in ("profile_statuses", "pf_name_w", "pf_type_w", "pf_track_w", "gate_name_w",
+    # drop the widgets' keys so they reseed from the reset mirrors — for the
+    # welcome's tick and name field that means from tos_ok and profile_name
+    for _k in ("profile_statuses", "pf_name_w", "pf_type_w", "pf_track_w",
+               "gate_name_w", "gate_consent",
                "sol_en_w", "sol_di_w", "sol_tr_w", "sol_sg_w", "sol_mr_w"):
         st.session_state.pop(_k, None)
 
@@ -7196,9 +7389,92 @@ def _wipe_all():
     # מחק הכל stays joinable to everything they did before the wipe. Rotated
     # rather than deleted: the key must exist for the log call sites, and the
     # sync writer below persists the new value with the emptied payload. This
-    # is the ONE thing logout does not do — logging out is still the same
-    # device, and the pilot's usage numbers depend on that staying true.
+    # is one of the two things logout does not do — logging out is still the
+    # same device, and the pilot's usage numbers depend on that staying true.
     st.session_state.device_id = metrics.new_session_id()
+    # ...and the other: the terms approval. A logout keeps it on purpose (see
+    # _reset_identity), but מחק הכל promises a device back at defaults, and a
+    # device at defaults has approved nothing. Until 2026-09-17 the wipe kept
+    # the old consent flag, so a reset device went straight to the role picker.
+    st.session_state.tos_ok = 0
+    st.session_state.tos_date = ""
+
+
+# one wording for both "נקה היסטוריית שיחות" rows (the hub and privacy)
+_CLEAR_Q = "למחוק את כל השיחות?"
+_CLEAR_BODY = ("כל השיחות יימחקו מהמכשיר הזה, כולל השיחה הפתוחה. השם, הפרופיל "
+               "ואישור התנאים נשארים.<br><br><b>לא ניתן לבטל את הפעולה.</b>")
+
+
+def _confirm_pending(key: str) -> bool:
+    """True while the confirm for `key` is showing its question — so a caller
+    can drop anything the question already says (the wipe note is the whole
+    body of its own confirm; with both up it read twice, ten lines apart)."""
+    return bool(st.session_state.get(f"cai_confirm_{key}"))
+
+
+def _confirm_open(key: str, opener: str, button_key: str) -> None:
+    """The button that ASKS. It only raises the question: nothing destructive
+    can sit behind it, because it returns nothing to act on."""
+    if st.button(opener, key=button_key, use_container_width=True):
+        st.session_state[f"cai_confirm_{key}"] = True
+        st.rerun()
+
+
+def _confirm_ask(key: str, title: str, body: str, yes: str, no: str = "ביטול") -> bool:
+    """The question card for `key`, while it is pending. True only on the run
+    that confirms — so callers read `if _confirm_ask(...): <do it>`.
+
+    A card, not st.dialog: closing a dialog skips the full rerun (the bug that
+    once left the drawer dead), and several callers leave the screen once the
+    answer is yes. The "danger_" prefix on the confirming button is what paints
+    it red (see [class*="st-key-danger_"]); the row container zeroes the
+    margin that rule adds, which set the red button 11px below its pair.
+    """
+    _ask = f"cai_confirm_{key}"
+    if not st.session_state.get(_ask):
+        return False
+    st.markdown(
+        f"<div class='cai-confirm'><div class='t'>{title}</div>"
+        f"<div class='s'>{body}</div></div>", unsafe_allow_html=True)
+    with st.container(key=f"cai_cfrow_{key}"):
+        _c1, _c2 = st.columns(2, gap="small")
+        _yes = _c1.button(yes, key=f"danger_{key}_yes", use_container_width=True)
+        _no = _c2.button(no, key=f"{key}_no", use_container_width=True)
+    if _no:
+        st.session_state.pop(_ask, None)
+        st.rerun()
+    if _yes:
+        st.session_state.pop(_ask, None)
+        return True
+    return False
+
+
+def _confirm_action(key: str, opener: str, title: str, body: str, yes: str,
+                    no: str = "ביטול", button_key: str = "") -> bool:
+    """One destructive button behind a question, in one place: the opener
+    while idle, the card in its stead while asking. Shared rather than copied —
+    two hand-rolled versions of a two-step flow is how one quietly becomes a
+    one-tap action while still LOOKING guarded. Where the card cannot sit next
+    to its opener (a row inside a grouped list, whose button styling it would
+    inherit), call _confirm_open and _confirm_ask separately."""
+    if _confirm_pending(key):
+        return _confirm_ask(key, title, body, yes, no)
+    _confirm_open(key, opener, button_key or f"danger_{key}")
+    return False
+
+
+def _settle_confirms(where) -> None:
+    """A question belongs to the screen it was asked on. Leaving that screen —
+    for another one, or closing settings (where=None) — withdraws it; the flag
+    lives in session_state, so otherwise it waited, already open, for the next
+    visit (a logout question left unanswered greeted the next trip to הגדרות)."""
+    if st.session_state.get("cai_confirm_on") == where:
+        return
+    for _k in [k for k in st.session_state.keys() if str(k).startswith("cai_confirm_")]:
+        del st.session_state[_k]
+    if where is not None:
+        st.session_state["cai_confirm_on"] = where
 
 
 def _settings_hub():
@@ -7249,12 +7525,17 @@ def _settings_hub():
 
     st.markdown("<div class='cai-set-seclabel'>פרטיות ונתונים</div>", unsafe_allow_html=True)
     with st.container(key="cai_sgrp_priv"):
-        if st.button("נקה היסטוריית שיחות", key="nav_clearhist", use_container_width=True):
-            _clear_history()
-            st.rerun()
+        # since conversation restore the chats live on the device, so this
+        # erases them for good — one tap did it until 2026-09-17
+        _confirm_open("clearhist", "נקה היסטוריית שיחות", "nav_clearhist")
         if st.button("פרטיות ואבטחה", key="nav_privacy", use_container_width=True):
             st.session_state.settings_screen = "privacy"
             st.rerun()
+    # the question sits under the group, not inside it: in the list its two
+    # buttons took the rows' chevrons and borders
+    if _confirm_ask("clearhist", _CLEAR_Q, _CLEAR_BODY, "כן, מחק"):
+        _clear_history()
+        st.rerun()
 
     st.markdown("<div class='cai-set-seclabel'>אודות</div>", unsafe_allow_html=True)
     with st.container(key="cai_sgrp_about"):
@@ -7276,10 +7557,16 @@ def _settings_hub():
     # logout = sign the person out, not just switch role (no real auth). It
     # used to clear `role` alone, which left the name in the device cookie and
     # greeted the next user as the last one; _reset_identity is the whole set.
-    # Chats go too: the app returns to the role picker, and leaving the
-    # previous user's conversations one tap inside "שיחות אחרונות" is not what
-    # "התנתקות" says. They are session-state only, so nothing durable is lost.
-    if st.button("התנתקות", key="danger_logout", use_container_width=True):
+    # Chats go too: leaving the previous user's conversations one tap inside
+    # "שיחות אחרונות" is not what "התנתקות" says. Since conversation restore
+    # they are kept on the device, so this is no longer "nothing durable" —
+    # hence the question first. It lands on the welcome screen, tick set.
+    if _confirm_action(
+            "logout", opener="התנתקות", button_key="danger_logout",
+            title="להתנתק?",
+            body="השם, הפרופיל, נתוני הכלים וכל השיחות יימחקו מהמכשיר הזה. "
+                 "אישור תנאי השימוש נשאר.<br><br><b>לא ניתן לבטל את הפעולה.</b>",
+            yes="כן, התנתק"):
         _clear_history()
         _reset_identity()
         st.rerun()
@@ -7526,30 +7813,94 @@ def _settings_privacy():
         st.session_state.share_analytics = _share
         st.markdown("<div class='cai-analytics-sub'>לשיפור המענה</div>", unsafe_allow_html=True)
     with st.container(key="cai_sgrp_data"):
-        if st.button("נקה היסטוריית שיחות", key="nav_clearhist2", use_container_width=True):
-            _clear_history()
-            st.rerun()
+        _confirm_open("clearhist2", "נקה היסטוריית שיחות", "nav_clearhist2")
+    if _confirm_ask("clearhist2", _CLEAR_Q, _CLEAR_BODY, "כן, מחק"):
+        _clear_history()
+        st.rerun()
 
     # "מחיקת כל הנתונים" was a promise the function cannot keep: _wipe_all
     # clears session_state and rotates the analytics id, and every row already
     # appended to the Sheet — full question text included — survives it. The
     # label now scopes itself to the device and _WIPE_NOTE says what is left
     # over and where to go for it.
-    if st.button("מחיקת הנתונים מהמכשיר הזה", key="danger_wipe", use_container_width=True):
+    #
+    # Behind a question since 2026-09-17: it took the name, the profile, every
+    # conversation, the tool inputs and the terms approval on a single tap. The
+    # question's body IS _WIPE_NOTE — a confirm that paraphrases it is a second
+    # copy of a data-handling claim to drift — so the note under the button
+    # steps aside while the question is up.
+    if _confirm_action(
+            "wipe", opener="מחיקת הנתונים מהמכשיר הזה",
+            title="למחוק את הנתונים מהמכשיר הזה?",
+            body=_WIPE_NOTE + "<br><br><b>לא ניתן לבטל את הפעולה.</b>",
+            yes="כן, מחק"):
         _wipe_all()
         st.rerun()
-    st.markdown(f"<div class='cai-wipe-note'>{_WIPE_NOTE}</div>", unsafe_allow_html=True)
+    if not _confirm_pending("wipe"):
+        st.markdown(f"<div class='cai-wipe-note'>{_WIPE_NOTE}</div>", unsafe_allow_html=True)
+
+
+def _tos_banner(tos: int, date_iso: str) -> dict:
+    """What the אודות banner says about THIS device's approval — read from
+    tos_ok / tos_date, never asserted. The version is TOS_VERSION, the terms'
+    own counter: the app's release number once stood here, and a record of
+    what someone agreed to that moves on every deploy says nothing about the
+    document. date_iso has been through _tos_date_from, so it is digits only."""
+    if tos >= TOS_VERSION:
+        sub = f"גרסה {TOS_VERSION}"
+        if date_iso:
+            sub += f" · אושרו ב-{date_iso[8:10]}.{date_iso[5:7]}.{date_iso[:4]}"
+        return {"approved": True, "icon": "✓", "title": "אישרת את התנאים", "sub": sub}
+    if tos:
+        return {"approved": False, "icon": "!", "title": "אישרת גרסה קודמת של התנאים",
+                "sub": f"אושרה גרסה {tos} · הנוסח שלהלן הוא גרסה {TOS_VERSION}"}
+    return {"approved": False, "icon": "!", "title": "טרם אישרת את התנאים",
+            "sub": "הנוסח המלא מופיע כאן למטה"}
 
 
 def _settings_about():
-    """8e — about + terms of service (verbatim) + install hint."""
+    """8e — about + terms of service (verbatim) + install hint.
+
+    Until 2026-09-17 the banner above the terms was hardcoded: a green check
+    saying the terms had been approved at first install, stamped with the
+    app's release number, shown to every visitor while no screen in the app
+    showed the terms at all (tests/test_compliance_screens.py pins the old
+    wording's absence). It now reports the device's own record, and the
+    approval can be withdrawn right under the sentence that reports it.
+    """
+    _b = _tos_banner(int(st.session_state.get("tos_ok") or 0),
+                     st.session_state.get("tos_date") or "")
+    _rgb, _fg, _sc = (
+        ("var(--accent-rgb)", "var(--accent-bright)", "rgba(196,206,146,.85)")
+        if _b["approved"] else ("217,164,65", "#E4BC6A", "rgba(236,237,230,.62)"))
     st.markdown(
-        "<div class='cai-banner' style='margin-bottom:18px'>"
+        f"<div class='cai-banner' style='margin-bottom:12px;"
+        f"background:linear-gradient(135deg,rgba({_rgb},.16),rgba({_rgb},.04));"
+        f"border-color:rgba({_rgb},.3)'>"
         "<div style='width:34px;height:34px;border-radius:10px;flex:none;display:flex;"
-        "align-items:center;justify-content:center;background:rgba(var(--accent-rgb),.22);"
-        "color:var(--accent-bright);font-size:18px;font-weight:700'>✓</div>"
-        "<div style='flex:1'><div class='bt' style='font-size:13.5px'>אישרת את התנאים</div>"
-        "<div class='bs'>בהתקנה הראשונית · גרסה 2.4</div></div></div>", unsafe_allow_html=True)
+        f"align-items:center;justify-content:center;background:rgba({_rgb},.22);"
+        f"color:{_fg};font-size:18px;font-weight:700'>{_b['icon']}</div>"
+        f"<div style='flex:1'><div class='bt' style='font-size:13.5px'>{_b['title']}</div>"
+        f"<div class='bs' style='color:{_sc}'>{_b['sub']}</div></div></div>",
+        unsafe_allow_html=True)
+    # Zeroing tos_ok is all the withdrawal takes: _welcome_gate reads it, so the
+    # welcome screen reopens on the next run and the app waits for an answer —
+    # which is what "אי אפשר להשתמש" below promises. Offered only when there is
+    # an approval to withdraw.
+    if _b["approved"] and _confirm_action(
+            "tos_revoke", opener="ביטול אישור התנאים",
+            title="לבטל את אישור התנאים?",
+            body="בלי אישור התנאים אי אפשר להשתמש באפליקציה — נחזור למסך הפתיחה "
+                 "ותתבקש לאשר מחדש. השם, ההיסטוריה והפרופיל נשמרים.",
+            yes="כן, בטל את האישור", no="להשאיר מאושר"):
+        st.session_state.tos_ok = 0
+        st.session_state.tos_date = ""
+        # the welcome's widgets reseed from the record: an empty tick, the name
+        st.session_state.pop("gate_consent", None)
+        st.session_state.pop("gate_name_w", None)
+        st.session_state.show_settings = False
+        st.session_state.settings_screen = "hub"
+        st.rerun()
     st.markdown(
         "<div class='cai-tos-lead'>תנאי שימוש</div><div class='cai-tos-sub'>Terms of Service</div>",
         unsafe_allow_html=True)
@@ -7723,6 +8074,7 @@ def _render_settings():
         st.session_state.show_settings = False
         st.rerun()
     screen = st.session_state.get("settings_screen", "hub")
+    _settle_confirms(screen)
     titles = {"hub": "הגדרות", "personal": "פרטים אישיים", "language": "שפה",
               "access": "גודל טקסט",
               "privacy": "פרטיות ואבטחה", "about": "תנאי שימוש",
@@ -8359,6 +8711,8 @@ with st.container(key="cai_drawer"):
 # leaves the drawer open underneath so closing returns there.
 if st.session_state.get("show_settings"):
     _render_settings()
+else:
+    _settle_confirms(None)
 
 # ── Header: wordmark + identity cluster (boxless, user pick 2026-08-03 —
 # "variant 1": name over role as two quiet lines, no pill chrome; with no

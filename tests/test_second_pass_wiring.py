@@ -17,11 +17,14 @@ stream_ai_answer and assert the wiring end to end:
 
     venv\\Scripts\\python.exe tests\\test_second_pass_wiring.py
 """
+import re
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+_TOS_VERSION = int(re.search(r"^TOS_VERSION = (\d+)",
+                             (ROOT / "app.py").read_text(encoding="utf-8"), re.M).group(1))
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -86,9 +89,11 @@ def _fake(first_text, second_text=SECOND, second_raises=False):
 def _run(question="מגיע לי חופשה כשקרוב משפחה מאושפז?"):
     at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=120)
     at.session_state["role"] = "soldier"
-    # the entry flow asks for consent before the chat exists (2026-09-12);
-    # a device that reached the chat has it in its profile cookie
-    at.session_state["consent_given"] = True
+    # the welcome screen comes before the chat: a device that reached the chat
+    # answered it and approved the current terms (tos_ok replaced the
+    # 2026-09-12 consent_given flag on 2026-09-17)
+    at.session_state["name_asked"] = True
+    at.session_state["tos_ok"] = _TOS_VERSION
     at.session_state["conversation_history"] = []
     at.session_state["messages"] = []
     at.session_state["pending_question"] = question
