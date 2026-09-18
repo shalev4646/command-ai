@@ -1131,7 +1131,10 @@ components.html(
             // instantly raises an opaque cover in the HOME background color,
             // and it lifts once the chat header exists — the swap happens
             // under it, and the tap gets immediate visual feedback.
-            var veil = function () {
+            // ready(): what the cover waits for before lifting, and limit:
+            // how long it waits regardless. Defaults are the home's (below).
+            // A tool dialog uses its own pair — same cover, different target.
+            var veil = function (ready, limit) {
                 try {
                     if (document.getElementById("cai-nav-veil")) return;
                     var v = document.createElement("div");
@@ -1158,14 +1161,19 @@ components.html(
                     // timeout grew 4s->8s to fit a full 3G home rerun; the
                     // veil is the home background, so the wait reads as load,
                     // not as breakage.
+                    var homeReady = function () {
+                        return document.querySelector(".cai-header") &&
+                               document.querySelector(".cai-greet");
+                    };
+                    var isReady = ready || homeReady;
+                    var cap = limit || 8000;
                     var poll = setInterval(function () {
                         var app = document.querySelector(".stApp");
                         var running = app &&
                             app.getAttribute("data-test-script-state") === "running";
-                        if (document.querySelector(".cai-header") &&
-                            document.querySelector(".cai-greet") && !running) {
+                        if (isReady() && !running) {
                             clearInterval(poll); setTimeout(lift, 120);
-                        } else if (Date.now() - t0 > 8000) { clearInterval(poll); lift(); }
+                        } else if (Date.now() - t0 > cap) { clearInterval(poll); lift(); }
                     }, 80);
                 } catch (e) {}
             };
@@ -1209,6 +1217,20 @@ components.html(
                     // timeout (2026-09-12). Entry-to-entry moves are fast and
                     // need no cover.
                     if (e.target.closest(".st-key-cai_welcome button")) return;
+                    // A tool is a server round trip away: the drawer closes
+                    // under the finger, the chat shows through the wait, and
+                    // the dialog then assembles in two steps — an empty card
+                    // first, its content a beat later ("it takes time and
+                    // comes up strangely", device video 2026-09-18; measured
+                    // 0.5s here, ~1.5-2s on the phone). Same cover as the role
+                    // tap, lifted on a dialog that actually has content in it.
+                    if (e.target.closest(".st-key-cai_tools button")) {
+                        veil(function () {
+                            var d = document.querySelector('[data-testid="stDialog"]');
+                            return d && (d.innerText || "").trim().length > 40;
+                        }, 4000);
+                        return;
+                    }
                     // a role tap now ALWAYS goes straight to the chat, which has
                     // the header the veil waits for
                     if (e.target.closest(
@@ -1658,6 +1680,15 @@ _welcome_gate = (not st.session_state.get("name_asked")
                  or int(st.session_state.get("tos_ok") or 0) < TOS_VERSION)
 _entry_like = _welcome_gate or st.session_state.role is None
 MAIN_TOP_PADDING = "12px" if _entry_like else "calc(72px + var(--cai-sat, 0px))"
+# 7rem of bottom padding is the room the chat composer needs. The entry
+# screens have no composer, so it was 112px of empty page under the footer —
+# and the welcome screen (content ending at 896 in an 844 viewport) could be
+# dragged down into it: "you can just scroll to the bottom and it smears"
+# (device video, 2026-09-18; measured: 156px scrollable, 112 of it padding).
+# Without it the welcome fits with room to spare and there is nothing to drag;
+# with the terms expanded the screen still scrolls, because it is long.
+MAIN_BOTTOM_PADDING = "16px" if _entry_like else "7rem"
+MAIN_OVERSCROLL = "none" if _entry_like else "auto"
 
 # entry elements stagger in around the boot splash curtain lift (delay 1.15s
 # + .65s travel). 1.35s meant nothing STARTED fading until the lift was 30%
@@ -1945,6 +1976,14 @@ html {{ -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }}
 [data-testid="stMain"]::-webkit-scrollbar,
 [data-testid="stAppScrollToBottomContainer"]::-webkit-scrollbar,
 body::-webkit-scrollbar {{ display: none !important; width: 0 !important; }}
+/* The entry screens do not bounce. iOS rubber-band drags the whole column
+   away from the page's fixed gradient underlay and snaps it back — the
+   "you can scroll to the bottom and it smears" of the 2026-09-18 device
+   video. The chat keeps its bounce: there the give at the end of a long
+   answer is the scroll telling you it ended. */
+[data-testid="stMain"], [data-testid="stAppViewContainer"] {{
+    overscroll-behavior-y: {MAIN_OVERSCROLL};
+}}
 /* hide Streamlit Cloud viewer badges — the crown "hosted with Streamlit"
    pill and the creator-avatar bubble injected at the bottom corner (their
    class hashes vary by build, so match every known naming scheme).
@@ -2117,7 +2156,7 @@ header {{ visibility: hidden; }}
        an in-browser tab is rotated (see the .cai-header note) */
     padding: {MAIN_TOP_PADDING}
              max(22px, env(safe-area-inset-right, 0px))
-             7rem
+             {MAIN_BOTTOM_PADDING}
              max(22px, env(safe-area-inset-left, 0px)) !important;
     margin: 0 auto;
 }}
@@ -3599,6 +3638,10 @@ components.html(
         var doc = document, root = doc.documentElement;
         var EDGE = 30;   // px of right edge that arms the open gesture
         var EDGE_BACK = 44;  // ditto for "back" while an overlay is up
+        // a back-drag follows the finger for BACK_FREE of the panel and then
+        // resists. BACK_FREE sits at/above the commit threshold at every phone
+        // width (min(90, .3w)), so the damping never moves the commit point.
+        var BACK_FREE = 0.30, BACK_DAMP = 0.10;
         var SLOP = 12;   // px before the gesture commits to an axis
 
         var drawer = function () { return doc.querySelector(".st-key-cai_drawer"); };
@@ -3752,13 +3795,22 @@ components.html(
                     g.guard = setTimeout(function () {
                         if (g === stuck) { g = null; backReset(stuck.panel); }
                     }, 4000);
+                    // the uncovered strip wears the sheet's own background for
+                    // as long as the drag lives — cleared in backReset()
+                    root.classList.add("cai-back-drag");
                 }
                 else { root.classList.add("cai-drawer-drag"); }
             }
             if (g.mode === "back") {
-                // rubber-banded: the panel is allowed to leave, but a finger
-                // that keeps going does not drag it a screen and a half
-                g.travel = Math.max(0, Math.min(-dx, g.w));
+                // Rubber-banded for real. The old min(-dx, w) was a CLAMP: a
+                // committed swipe dragged the sheet the whole width, and what it
+                // uncovered is the settings scrim — rgba(9,11,7,.85), near-black.
+                // The sheet looked like it was being pulled off into a void, and
+                // then sprang back (device video 2026-09-18, ~2:25 "יוצא מוזר").
+                // Nothing ever slides ONTO that strip (see finish()), so the drag
+                // only has to acknowledge the finger: 30% free, then resistance.
+                var raw = Math.max(0, -dx), free = g.w * BACK_FREE;
+                g.travel = raw <= free ? raw : free + (raw - free) * BACK_DAMP;
                 g.panel.style.transform = "translateX(" + (-g.travel) + "px)";
                 g.panel.style.opacity = String(1 - (g.travel / g.w) * 0.35);
                 e.preventDefault();
@@ -3780,6 +3832,7 @@ components.html(
         // stranded mid-transform is the one failure this gesture could leave
         // behind, and it would look exactly like the app had died.
         var backReset = function (panel) {
+            root.classList.remove("cai-back-drag");
             if (!panel) return;
             panel.style.transition = "";
             panel.style.transform = "";
@@ -3795,36 +3848,76 @@ components.html(
             var commit = cur.travel > Math.min(90, cur.w * 0.3);
             if (cur.mode === "back") {
                 var panel = cur.panel;
-                panel.style.transition = "transform .19s cubic-bezier(.4,0,.2,1), opacity .19s ease";
-                if (!commit) { panel.style.transform = ""; panel.style.opacity = ""; return; }
-                // ⚠ The panel must NOT leave the screen. Sliding it fully out
-                // and pressing the button looked right locally and was wrong on
-                // the device: the server owns the screen underneath, and a real
-                // rerun takes longer than the slide — so the phone showed ~270ms
-                // of EMPTY BLACK between the panel going and the previous screen
-                // arriving (device video 2026-08-10, "יוצא מוזר"). There is
-                // nothing to slide onto, so nothing slides off.
+                panel.style.transition = "transform .2s cubic-bezier(.32,.72,0,1), opacity .2s ease";
+                if (!commit) {
+                    panel.style.transform = ""; panel.style.opacity = "";
+                    // the strip is still visible for the length of the ease —
+                    // backReset (which un-paints it) waits for the panel to
+                    // land. A second swipe that starts inside that window owns
+                    // the paint by then; its own end clears it.
+                    setTimeout(function () { if (!g) backReset(panel); }, 210);
+                    return;
+                }
+                // The screen LEAVES, the way the finger sent it.
                 //
-                // Instead it eases back to rest and dims while the answer is in
-                // flight, and the new content arrives inside the same panel —
-                // which is what the user is looking at the whole time.
-                panel.style.transform = "translateX(0)";
-                panel.style.opacity = ".55";
+                // 2026-08-10 forbade that, and was right at the time: the panel
+                // slid off onto EMPTY BLACK for the ~270ms the server took, so
+                // it was pinned in place and dimmed instead. But easing the old
+                // screen BACK to rest and then swapping it reads as "the gesture
+                // failed, and then the screen changed anyway" — the 2026-09-18
+                // report ("עדיין לא חוזר כמו שצריך"). What makes leaving safe now
+                // is the painted strip: while cai-back-drag is up, the scrim
+                // behind the sheet IS the sheet's background, so the content
+                // slides off a background that never moves. No black, no bounce.
+                // The new screen fades up in place when it lands (done()).
+                panel.style.transform = "translateX(-" + Math.round(cur.w) + "px)";
+                panel.style.opacity = "0";
+                // What counts as "the new screen is here" is the title, not the
+                // first sign of life. Streamlit paints a settings screen over
+                // several mutations, and the old code came back on the first one
+                // — mid-swap, half the old screen and half the new, the flicker
+                // in the 2026-09-18 video. Now the panel is invisible until the
+                // screen behind it is whole.
+                // The title is the one node that changes exactly when the screen
+                // does (settingsTop() keys on it for the same reason); a panel
+                // that left the document counts as changed. A dialog has no
+                // title — there the first mutation is still the signal.
+                var ttl = panel.querySelector(".cai-set-title");
+                var was = ttl ? ttl.textContent : null;
                 cur.btn.click();
-                // Clear on whichever comes first: the new screen landing (the
-                // panel's subtree changes) or a 1.4s backstop for a rerun that
-                // never arrives. Without the observer a fast rerun would leave
-                // the panel dimmed for the rest of the timeout.
                 var settled = false;
-                var done = function () {
+                var done = function (recs) {
                     if (settled) return;
+                    if (was !== null && recs) {
+                        var now = panel.querySelector(".cai-set-title");
+                        if (now && now.textContent === was && doc.contains(panel)) return;
+                    }
                     settled = true;
                     try { mo.disconnect(); } catch (e) {}
-                    backReset(panel);
+                    // home again while still invisible, then up in place. The
+                    // paint stays until the fade ends — it is the background the
+                    // new screen fades onto.
+                    panel.style.transition = "none";
+                    panel.style.transform = "";
+                    // rAF for frame-sync, timeout for a web view where rAF is
+                    // starved (the app can be backgrounded mid-gesture) —
+                    // whichever runs first raises it, the loser is a no-op.
+                    // On rAF alone a starved frame would leave the sheet at
+                    // opacity 0 with its scrim untappable: a dead app.
+                    var up = false;
+                    var raise = function () {
+                        if (up) return;
+                        up = true;
+                        panel.style.transition = "opacity .16s ease";
+                        panel.style.opacity = "1";
+                        setTimeout(function () { if (!g) backReset(panel); }, 220);
+                    };
+                    requestAnimationFrame(raise);
+                    setTimeout(raise, 120);
                 };
                 var mo = new MutationObserver(done);
                 try { mo.observe(panel, { childList: true, subtree: true }); } catch (e) {}
-                setTimeout(done, 1400);
+                setTimeout(function () { done(); }, 1400);   // rerun never arrived
                 return;
             }
             settle(cur.mode === "open" ? commit : !commit);
@@ -6467,8 +6560,14 @@ html.cai-drawer-drag .st-key-drawer_backdrop { pointer-events: none !important; 
    assembled a third of a second AFTER the close — the last piece of the
    "background reloads" read (device video 2026-09-02, logo absent at 12.5s).
    .14s starts the fade just after the wordmark area is clear and finishes
-   right as the panel exits. */
-.cai-header > * { transition: opacity .18s ease .14s; }
+   right as the panel exits.
+   2026-09-18 — and it still read as a reload on the device, twice reported.
+   Traced in the browser: the drawer class clears, then the wordmark holds at
+   opacity 0 for 146ms and only reaches 1 at t+326ms, with the panel long
+   gone. The delay was there to keep the wordmark from surfacing UNDER the
+   exiting panel; the panel clears the centred wordmark at ~40% of its travel
+   (~80ms), so a straight .12s fade still lands behind it. */
+.cai-header > * { transition: opacity .12s ease 0s; }
 html.cai-drawer-open .cai-header > *, html.cai-drawer-drag .cai-header > * {
   opacity: 0; transition: opacity .18s ease 0s;
 }
@@ -6741,6 +6840,17 @@ html.cai-orders-open .cai-kb-card {
   width: 100% !important; height: 100% !important; min-height: 100% !important;
   background: rgba(9,11,7,.85) !important; border: none !important;
   border-radius: 0 !important; box-shadow: none !important;
+}
+/* While a back-drag is live the sheet slides left and uncovers this scrim.
+   Near-black there reads as "the screen went away" (device video 2026-09-18),
+   so for the length of the drag the strip wears the sheet's own background —
+   the sheet gives way instead of being pulled off into a hole. */
+html.cai-back-drag .st-key-settings_backdrop button {
+  background: linear-gradient(180deg,#141710 0%,#0E1007 100%) !important;
+  /* the sheet's content is off-screen for the length of the round trip, so
+     this scrim — a button that CLOSES settings — is bare to a stray thumb.
+     It is scenery until the new screen is up. */
+  pointer-events: none !important;
 }
 /* sr-only rather than display:none — this scrim covers the whole screen and
    "סגירת הגדרות" is its only accessible name (see the drawer backdrop note) */
