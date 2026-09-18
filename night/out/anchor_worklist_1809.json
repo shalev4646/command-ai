@@ -1,0 +1,422 @@
+[
+ {
+  "id": "q00119",
+  "doc": "PM-35.0402",
+  "pos": 15,
+  "routed": false,
+  "rs": false,
+  "clause": "חייל צריך להיעדר מפעילות בגלל סיבה אישית — צריך אישור מהמטכ\"ל או יש מי אחר?",
+  "overlap": 0.73,
+  "n_anchors": 1
+ },
+ {
+  "id": "q00152",
+  "doc": "PM-35.0402",
+  "pos": 2,
+  "routed": false,
+  "rs": false,
+  "clause": "חייל צריך להיעדר מפעילות בגלל סיבה אישית — צריך אישור מהמטכ\"ל או יש מי אחר?",
+  "overlap": 0.73,
+  "n_anchors": 1
+ },
+ {
+  "id": "q00172",
+  "doc": "31.0605",
+  "pos": 63,
+  "routed": false,
+  "rs": false,
+  "clause": "איך מגישים בקשה לוועדה",
+  "overlap": 0.63,
+  "n_anchors": 2
+ },
+ {
+  "id": "q00250",
+  "doc": "PM-35.0402",
+  "pos": 15,
+  "routed": false,
+  "rs": false,
+  "clause": "חייל שלי מבקש ללכת לביקור משפחה דחוף — מה הדרך הנכונה?",
+  "overlap": 0.44,
+  "n_anchors": 1
+ },
+ {
+  "id": "q00014",
+  "doc": "31.0103",
+  "pos": 7,
+  "routed": false,
+  "rs": false,
+  "clause": "נשאר לי ציוד צבאי שלא החזרתי- מה קורה בשחרור?",
+  "overlap": 0.55,
+  "n_anchors": 2
+ },
+ {
+  "id": "q00039",
+  "doc": "61.0104",
+  "pos": 5,
+  "routed": true,
+  "rs": false,
+  "clause": "יום ב ויום ג — הגדרות",
+  "overlap": 0.63,
+  "n_anchors": 3
+ },
+ {
+  "id": "q00251",
+  "doc": "PM-35.0402",
+  "pos": 32,
+  "routed": false,
+  "rs": false,
+  "clause": "חייל שלי מבקש ללכת לביקור משפחה דחוף — מה הדרך הנכונה?",
+  "overlap": 0.41,
+  "n_anchors": 1
+ },
+ {
+  "id": "q00015",
+  "doc": "PM-35.0402",
+  "pos": 20,
+  "routed": false,
+  "rs": false,
+  "clause": "חייל צריך להיעדר מפעילות בגלל סיבה אישית — צריך אישור מהמטכ\"ל או יש מי אחר?",
+  "overlap": 0.8,
+  "n_anchors": 1
+ },
+ {
+  "id": "q00040",
+  "doc": "PM-35.0402",
+  "pos": 65,
+  "routed": false,
+  "rs": false,
+  "clause": "הורה חולה או מאושפז — חופשה מיוחדת מטעמים רפואיים ומי מוסמך לאשרה",
+  "overlap": 0.52,
+  "n_anchors": 1
+ },
+ {
+  "id": "q00060",
+  "doc": "31.0507",
+  "pos": 100,
+  "routed": false,
+  "rs": false,
+  "clause": "שיבוץ מחדש אחרי שחרור מהכלא",
+  "overlap": 0.55,
+  "n_anchors": 3
+ },
+ {
+  "id": "q00252",
+  "doc": "32.0101",
+  "pos": 22,
+  "routed": false,
+  "rs": false,
+  "clause": "כמה זמן צריך מפקד מעריך להכיר את המוערך לפני מילוי חוות דעת",
+  "overlap": 0.21,
+  "n_anchors": 1
+ },
+ {
+  "id": "q00097",
+  "doc": "33.0115",
+  "pos": 29,
+  "routed": true,
+  "rs": false,
+  "clause": "עבודה אזרחית בזמן השירות — אסורה בלי היתר, גם בחופשה וגם אחרי שעות הפעילות",
+  "overlap": 0.5,
+  "n_anchors": 3
+ },
+ {
+  "id": "q00194",
+  "doc": "35.0822",
+  "pos": 115,
+  "routed": false,
+  "rs": false,
+  "clause": "לפני השחרור — למי פונים ביחידה עם שאלה על זכויות, לאילו גופים מותר לפנות ישירות, ומה זה ראיון שחרור?",
+  "overlap": 0.7,
+  "n_anchors": 3
+ },
+ {
+  "id": "q00195",
+  "doc": "CHOK-SHIPUT-1955",
+  "pos": 49,
+  "routed": false,
+  "rs": false,
+  "clause": "יש צו שאומר משהו אחד ופקודת המפקד אומרת ההפך — מה גובר?",
+  "overlap": 0.73,
+  "n_anchors": 0
+ },
+ {
+  "id": "q00109",
+  "doc": "HKA-31-08-01",
+  "pos": 7,
+  "routed": false,
+  "rs": false,
+  "clause": "באיזו שעה מתייצבים ומתי חייבים לשחרר אותי",
+  "overlap": 0.4,
+  "n_anchors": 0
+ },
+ {
+  "id": "q00160",
+  "doc": "PM-33.0302",
+  "pos": 8,
+  "routed": false,
+  "rs": false,
+  "clause": "מפקד שיש לו יסוד סביר להניח שפקוד עבר עבירה — מי מוסמך להגיש תלונה",
+  "overlap": 0.48,
+  "n_anchors": 3
+ },
+ {
+  "id": "q00046",
+  "doc": "61.0104",
+  "pos": 2,
+  "routed": true,
+  "rs": false,
+  "clause": "מה חובות החייל לגבי קבלת טיפול, בדיקות והתייצבות במתקן רפואי?",
+  "overlap": 0.35,
+  "n_anchors": 3
+ },
+ {
+  "id": "q00088",
+  "doc": "PM-35.0402",
+  "pos": 28,
+  "routed": false,
+  "rs": false,
+  "clause": "חייל שלי מבקש ללכת לביקור משפחה דחוף — מה הדרך הנכונה?",
+  "overlap": 0.74,
+  "n_anchors": 1
+ },
+ {
+  "id": "q00110",
+  "doc": "33.0336",
+  "pos": 79,
+  "routed": true,
+  "rs": false,
+  "clause": "על מה ניתן לקבול",
+  "overlap": 0.54,
+  "n_anchors": 3
+ },
+ {
+  "id": "q00135",
+  "doc": "35.0314",
+  "pos": 20,
+  "routed": false,
+  "rs": false,
+  "clause": "מתי אני זכאי לקבל תשלום שלא קיבלתי במועד",
+  "overlap": 0.41,
+  "n_anchors": 3
+ },
+ {
+  "id": "q00198",
+  "doc": "35.0822",
+  "pos": 21,
+  "routed": false,
+  "rs": false,
+  "clause": "לפני השחרור — למי פונים ביחידה עם שאלה על זכויות, לאילו גופים מותר לפנות ישירות, ומה זה ראיון שחרור?",
+  "overlap": 0.67,
+  "n_anchors": 3
+ },
+ {
+  "id": "q00032",
+  "doc": "PM-35.0402",
+  "pos": 17,
+  "routed": false,
+  "rs": false,
+  "clause": "הורה חולה או מאושפז — חופשה מיוחדת מטעמים רפואיים ומי מוסמך לאשרה",
+  "overlap": 0.46,
+  "n_anchors": 1
+ },
+ {
+  "id": "q00137",
+  "doc": "HKA-31-08-01",
+  "pos": 86,
+  "routed": false,
+  "rs": false,
+  "clause": "כמה ימי מילואים אפשר לחייב אותי בשנה ובתלת-שנתי",
+  "overlap": 0.36,
+  "n_anchors": 0
+ },
+ {
+  "id": "q00184",
+  "doc": "HKA-31-08-01",
+  "pos": 47,
+  "routed": false,
+  "rs": false,
+  "clause": "אני במצוקה חריגה או דחופה בזמן השמ\"פ - האם אפשר לשחרר אותי",
+  "overlap": 0.8,
+  "n_anchors": 0
+ },
+ {
+  "id": "q00035",
+  "doc": "36.0528",
+  "pos": null,
+  "routed": false,
+  "rs": false,
+  "clause": "מה סוגי ההלוואות והמשכנתאות הקיימים?",
+  "overlap": 0.15,
+  "n_anchors": 1
+ },
+ {
+  "id": "q00201",
+  "doc": "36.0401",
+  "pos": null,
+  "routed": false,
+  "rs": false,
+  "clause": "מגיע לי כסף על ימי חופשה שלא ניצלתי — איך זה עובד?",
+  "overlap": 0.88,
+  "n_anchors": 1
+ },
+ {
+  "id": "q00053",
+  "doc": "33.0146",
+  "pos": 30,
+  "routed": true,
+  "rs": false,
+  "clause": "מתי הרשעה נמחקת ולא מעבירים עליה מידע",
+  "overlap": 0.72,
+  "n_anchors": 3
+ },
+ {
+  "id": "q00092",
+  "doc": "CHOK-SHIPUT-1955",
+  "pos": 130,
+  "routed": false,
+  "rs": false,
+  "clause": "מה נחשב עריקה או היעדרות מן השירות ומה העונש",
+  "overlap": 0.82,
+  "n_anchors": 0
+ },
+ {
+  "id": "q00116",
+  "doc": "31.0513",
+  "pos": 2,
+  "routed": true,
+  "rs": false,
+  "clause": "חזרת נפקד ליחידה — תלונה ודין",
+  "overlap": 0.6,
+  "n_anchors": 2
+ },
+ {
+  "id": "q00093",
+  "doc": "31.0513",
+  "pos": 36,
+  "routed": false,
+  "rs": false,
+  "clause": "גילוי היעדרות — פעולות ראשונות",
+  "overlap": 0.53,
+  "n_anchors": 2
+ },
+ {
+  "id": "q00117",
+  "doc": "PM-35.0402",
+  "pos": 51,
+  "routed": false,
+  "rs": false,
+  "clause": "חייל שלי מבקש ללכת לביקור משפחה דחוף — מה הדרך הנכונה?",
+  "overlap": 0.68,
+  "n_anchors": 1
+ },
+ {
+  "id": "q00186",
+  "doc": "36.0401",
+  "pos": null,
+  "routed": false,
+  "rs": false,
+  "clause": "מכסת חופשה שנתית לפי ותק",
+  "overlap": 0.4,
+  "n_anchors": 1
+ },
+ {
+  "id": "q00188",
+  "doc": "61.0104",
+  "pos": 7,
+  "routed": false,
+  "rs": false,
+  "clause": "איסור שינוי מועד בדיקה על ידי מפקד",
+  "overlap": 0.44,
+  "n_anchors": 3
+ },
+ {
+  "id": "q00200",
+  "doc": "35.0205",
+  "pos": 59,
+  "routed": true,
+  "rs": false,
+  "clause": "מאילו רכיבים מורכב התשלום שאני מקבל בשחרור",
+  "overlap": 0.92,
+  "n_anchors": 1
+ },
+ {
+  "id": "rs054",
+  "doc": "35.0807",
+  "pos": 3,
+  "routed": false,
+  "rs": true,
+  "clause": "האם מי שזכאי להת\"ש יכול לבצע תעסוקה מבצעית",
+  "overlap": 0.36,
+  "n_anchors": 0
+ },
+ {
+  "id": "rs018",
+  "doc": "CHOK-SHIPUT-1955",
+  "pos": 122,
+  "routed": false,
+  "rs": true,
+  "clause": "מה נחשב עריקה או היעדרות מן השירות ומה העונש",
+  "overlap": 0.82,
+  "n_anchors": 0
+ },
+ {
+  "id": "rs010",
+  "doc": "CHOK-SHIPUT-1955",
+  "pos": 41,
+  "routed": false,
+  "rs": true,
+  "clause": "מה דין זיוף מסמכים צבאיים, מסירת ידיעות כוזבות והאשמת שוא",
+  "overlap": 0.41,
+  "n_anchors": 0
+ },
+ {
+  "id": "rs000",
+  "doc": "33.0115",
+  "pos": 18,
+  "routed": true,
+  "rs": true,
+  "clause": "עבודה אזרחית בזמן השירות — אסורה בלי היתר, גם בחופשה וגם אחרי שעות הפעילות",
+  "overlap": 0.36,
+  "n_anchors": 3
+ },
+ {
+  "id": "rs012",
+  "doc": "PM-33.0302",
+  "pos": 28,
+  "routed": true,
+  "rs": true,
+  "clause": "מתי עבירה שנעברה בזמן שמירה כבר אינה נדונה אצל קצין שיפוט",
+  "overlap": 0.63,
+  "n_anchors": 3
+ },
+ {
+  "id": "rs059",
+  "doc": "HKA-31-08-01",
+  "pos": 127,
+  "routed": false,
+  "rs": true,
+  "clause": "כמה ימי חופשה מגיעים לי בזמן שמ\"פ ומתי מגיעה חופשת אבל",
+  "overlap": 0.6,
+  "n_anchors": 0
+ },
+ {
+  "id": "rs007",
+  "doc": "35.0206",
+  "pos": null,
+  "routed": false,
+  "rs": true,
+  "clause": "מי משלם את התגמול על ימי המילואים",
+  "overlap": 0.62,
+  "n_anchors": 2
+ },
+ {
+  "id": "rs014",
+  "doc": "33-05-01",
+  "pos": 37,
+  "routed": true,
+  "rs": true,
+  "clause": "מה הכללים לגבי שיער ותספורת לחייל שמינו זכר?",
+  "overlap": 0.52,
+  "n_anchors": 3
+ }
+]
