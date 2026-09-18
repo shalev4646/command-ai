@@ -1,5 +1,5 @@
 {
- "spent": 136.20940000000002,
+ "spent": 136.7512,
  "reserved": 0,
  "entries": [
   {
@@ -4167,6 +4167,1008 @@
    "actual": 0.0934
   },
   {
+   "id": "digitfix:3.0501#s0#11680-944",
+   "label": "digitfix:3.0501#s0",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:3.0501#s0#3564-859",
+   "label": "digitfix:3.0501#s0",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:3.0501#s1#11680-945",
+   "label": "digitfix:3.0501#s1",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:3.0501#s1#3564-860",
+   "label": "digitfix:3.0501#s1",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:3.0501#s10#11680-954",
+   "label": "digitfix:3.0501#s10",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:3.0501#s10#3564-869",
+   "label": "digitfix:3.0501#s10",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:3.0501#s11#11680-955",
+   "label": "digitfix:3.0501#s11",
+   "estimate": 0.02,
+   "actual": 0.0023
+  },
+  {
+   "id": "digitfix:3.0501#s11#3564-870",
+   "label": "digitfix:3.0501#s11",
+   "estimate": 0.02,
+   "actual": 0.0023
+  },
+  {
+   "id": "digitfix:3.0501#s2#11680-946",
+   "label": "digitfix:3.0501#s2",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:3.0501#s2#3564-861",
+   "label": "digitfix:3.0501#s2",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:3.0501#s3#11680-947",
+   "label": "digitfix:3.0501#s3",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:3.0501#s3#3564-862",
+   "label": "digitfix:3.0501#s3",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:3.0501#s4#11680-948",
+   "label": "digitfix:3.0501#s4",
+   "estimate": 0.02,
+   "actual": 0.0037
+  },
+  {
+   "id": "digitfix:3.0501#s4#3564-863",
+   "label": "digitfix:3.0501#s4",
+   "estimate": 0.02,
+   "actual": 0.0037
+  },
+  {
+   "id": "digitfix:3.0501#s5#11680-949",
+   "label": "digitfix:3.0501#s5",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:3.0501#s5#3564-864",
+   "label": "digitfix:3.0501#s5",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:3.0501#s6#11680-950",
+   "label": "digitfix:3.0501#s6",
+   "estimate": 0.02,
+   "actual": 0.0035
+  },
+  {
+   "id": "digitfix:3.0501#s6#3564-865",
+   "label": "digitfix:3.0501#s6",
+   "estimate": 0.02,
+   "actual": 0.0035
+  },
+  {
+   "id": "digitfix:3.0501#s7#11680-951",
+   "label": "digitfix:3.0501#s7",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:3.0501#s7#3564-866",
+   "label": "digitfix:3.0501#s7",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:3.0501#s8#11680-952",
+   "label": "digitfix:3.0501#s8",
+   "estimate": 0.02,
+   "actual": 0.0037
+  },
+  {
+   "id": "digitfix:3.0501#s8#3564-867",
+   "label": "digitfix:3.0501#s8",
+   "estimate": 0.02,
+   "actual": 0.0037
+  },
+  {
+   "id": "digitfix:3.0501#s9#11680-953",
+   "label": "digitfix:3.0501#s9",
+   "estimate": 0.02,
+   "actual": 0.0035
+  },
+  {
+   "id": "digitfix:3.0501#s9#3564-868",
+   "label": "digitfix:3.0501#s9",
+   "estimate": 0.02,
+   "actual": 0.0035
+  },
+  {
+   "id": "digitfix:3.0502#s0#11680-956",
+   "label": "digitfix:3.0502#s0",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:3.0502#s0#3564-871",
+   "label": "digitfix:3.0502#s0",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:3.0502#s1#11680-957",
+   "label": "digitfix:3.0502#s1",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:3.0502#s1#3564-872",
+   "label": "digitfix:3.0502#s1",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:3.0502#s2#11680-958",
+   "label": "digitfix:3.0502#s2",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:3.0502#s2#3564-873",
+   "label": "digitfix:3.0502#s2",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:3.0502#s3#11680-959",
+   "label": "digitfix:3.0502#s3",
+   "estimate": 0.02,
+   "actual": 0.0033
+  },
+  {
+   "id": "digitfix:3.0502#s3#3564-874",
+   "label": "digitfix:3.0502#s3",
+   "estimate": 0.02,
+   "actual": 0.0033
+  },
+  {
+   "id": "digitfix:3.0502#s4#11680-960",
+   "label": "digitfix:3.0502#s4",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:3.0502#s4#3564-875",
+   "label": "digitfix:3.0502#s4",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:3.0502#s5#11680-961",
+   "label": "digitfix:3.0502#s5",
+   "estimate": 0.02,
+   "actual": 0.0013
+  },
+  {
+   "id": "digitfix:3.0502#s5#3564-876",
+   "label": "digitfix:3.0502#s5",
+   "estimate": 0.02,
+   "actual": 0.0013
+  },
+  {
+   "id": "digitfix:31.0252#s0#11680-1008",
+   "label": "digitfix:31.0252#s0",
+   "estimate": 0.02,
+   "actual": 0.0037
+  },
+  {
+   "id": "digitfix:31.0252#s0#3564-926",
+   "label": "digitfix:31.0252#s0",
+   "estimate": 0.02,
+   "actual": 0.0037
+  },
+  {
+   "id": "digitfix:31.0252#s1#11680-1009",
+   "label": "digitfix:31.0252#s1",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:31.0252#s1#3564-927",
+   "label": "digitfix:31.0252#s1",
+   "estimate": 0.02,
+   "actual": 0.0033
+  },
+  {
+   "id": "digitfix:31.0252#s2#11680-1010",
+   "label": "digitfix:31.0252#s2",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:31.0252#s2#3564-928",
+   "label": "digitfix:31.0252#s2",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:31.0252#s3#11680-1011",
+   "label": "digitfix:31.0252#s3",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:31.0252#s3#3564-929",
+   "label": "digitfix:31.0252#s3",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:31.0252#s4#11680-1012",
+   "label": "digitfix:31.0252#s4",
+   "estimate": 0.02,
+   "actual": 0.0028
+  },
+  {
+   "id": "digitfix:31.0252#s4#3564-930",
+   "label": "digitfix:31.0252#s4",
+   "estimate": 0.02,
+   "actual": 0.0028
+  },
+  {
+   "id": "digitfix:31.0308#s0#3564-877",
+   "label": "digitfix:31.0308#s0",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:31.0308#s1#3564-878",
+   "label": "digitfix:31.0308#s1",
+   "estimate": 0.02,
+   "actual": 0.0037
+  },
+  {
+   "id": "digitfix:31.0308#s2#3564-879",
+   "label": "digitfix:31.0308#s2",
+   "estimate": 0.02,
+   "actual": 0.0008
+  },
+  {
+   "id": "digitfix:31.0507#s0#11680-962",
+   "label": "digitfix:31.0507#s0",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:31.0507#s0#3564-880",
+   "label": "digitfix:31.0507#s0",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:31.0507#s1#11680-963",
+   "label": "digitfix:31.0507#s1",
+   "estimate": 0.02,
+   "actual": 0.0037
+  },
+  {
+   "id": "digitfix:31.0507#s1#3564-881",
+   "label": "digitfix:31.0507#s1",
+   "estimate": 0.02,
+   "actual": 0.0037
+  },
+  {
+   "id": "digitfix:31.0507#s2#11680-964",
+   "label": "digitfix:31.0507#s2",
+   "estimate": 0.02,
+   "actual": 0.0032
+  },
+  {
+   "id": "digitfix:31.0507#s2#3564-882",
+   "label": "digitfix:31.0507#s2",
+   "estimate": 0.02,
+   "actual": 0.0032
+  },
+  {
+   "id": "digitfix:31.0603#s0#11680-965",
+   "label": "digitfix:31.0603#s0",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:31.0603#s0#3564-883",
+   "label": "digitfix:31.0603#s0",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:31.0603#s1#11680-966",
+   "label": "digitfix:31.0603#s1",
+   "estimate": 0.02,
+   "actual": 0.0037
+  },
+  {
+   "id": "digitfix:31.0603#s1#3564-884",
+   "label": "digitfix:31.0603#s1",
+   "estimate": 0.02,
+   "actual": 0.0037
+  },
+  {
+   "id": "digitfix:31.0603#s2#11680-967",
+   "label": "digitfix:31.0603#s2",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:31.0603#s2#3564-885",
+   "label": "digitfix:31.0603#s2",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:31.0603#s3#11680-968",
+   "label": "digitfix:31.0603#s3",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:31.0603#s3#3564-886",
+   "label": "digitfix:31.0603#s3",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:31.0603#s4#11680-969",
+   "label": "digitfix:31.0603#s4",
+   "estimate": 0.02,
+   "actual": 0.0037
+  },
+  {
+   "id": "digitfix:31.0603#s4#3564-887",
+   "label": "digitfix:31.0603#s4",
+   "estimate": 0.02,
+   "actual": 0.0037
+  },
+  {
+   "id": "digitfix:31.0603#s5#11680-970",
+   "label": "digitfix:31.0603#s5",
+   "estimate": 0.02,
+   "actual": 0.001
+  },
+  {
+   "id": "digitfix:31.0603#s5#3564-888",
+   "label": "digitfix:31.0603#s5",
+   "estimate": 0.02,
+   "actual": 0.001
+  },
+  {
+   "id": "digitfix:31.0606#s0#11680-971",
+   "label": "digitfix:31.0606#s0",
+   "estimate": 0.02,
+   "actual": 0.0037
+  },
+  {
+   "id": "digitfix:31.0606#s0#3564-889",
+   "label": "digitfix:31.0606#s0",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:31.0606#s1#11680-972",
+   "label": "digitfix:31.0606#s1",
+   "estimate": 0.02,
+   "actual": 0.0032
+  },
+  {
+   "id": "digitfix:31.0606#s1#3564-890",
+   "label": "digitfix:31.0606#s1",
+   "estimate": 0.02,
+   "actual": 0.0032
+  },
+  {
+   "id": "digitfix:32.0101#s0#11680-973",
+   "label": "digitfix:32.0101#s0",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:32.0101#s0#3564-891",
+   "label": "digitfix:32.0101#s0",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:32.0101#s1#11680-974",
+   "label": "digitfix:32.0101#s1",
+   "estimate": 0.02,
+   "actual": 0.0033
+  },
+  {
+   "id": "digitfix:32.0101#s1#3564-892",
+   "label": "digitfix:32.0101#s1",
+   "estimate": 0.02,
+   "actual": 0.0033
+  },
+  {
+   "id": "digitfix:32.0101#s2#11680-975",
+   "label": "digitfix:32.0101#s2",
+   "estimate": 0.02,
+   "actual": 0.0033
+  },
+  {
+   "id": "digitfix:32.0101#s2#3564-893",
+   "label": "digitfix:32.0101#s2",
+   "estimate": 0.02,
+   "actual": 0.0032
+  },
+  {
+   "id": "digitfix:32.0101#s3#11680-976",
+   "label": "digitfix:32.0101#s3",
+   "estimate": 0.02,
+   "actual": 0.0033
+  },
+  {
+   "id": "digitfix:32.0101#s3#3564-894",
+   "label": "digitfix:32.0101#s3",
+   "estimate": 0.02,
+   "actual": 0.0032
+  },
+  {
+   "id": "digitfix:32.0101#s4#11680-977",
+   "label": "digitfix:32.0101#s4",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:32.0101#s4#3564-895",
+   "label": "digitfix:32.0101#s4",
+   "estimate": 0.02,
+   "actual": 0.0033
+  },
+  {
+   "id": "digitfix:32.0101#s5#11680-978",
+   "label": "digitfix:32.0101#s5",
+   "estimate": 0.02,
+   "actual": 0.0035
+  },
+  {
+   "id": "digitfix:32.0101#s5#3564-896",
+   "label": "digitfix:32.0101#s5",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:32.0101#s6#11680-979",
+   "label": "digitfix:32.0101#s6",
+   "estimate": 0.02,
+   "actual": 0.0007
+  },
+  {
+   "id": "digitfix:32.0101#s6#3564-897",
+   "label": "digitfix:32.0101#s6",
+   "estimate": 0.02,
+   "actual": 0.0007
+  },
+  {
+   "id": "digitfix:32.0402#s0#11680-980",
+   "label": "digitfix:32.0402#s0",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:32.0402#s0#3564-898",
+   "label": "digitfix:32.0402#s0",
+   "estimate": 0.02,
+   "actual": 0.0037
+  },
+  {
+   "id": "digitfix:32.0402#s1#11680-981",
+   "label": "digitfix:32.0402#s1",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:32.0402#s1#3564-899",
+   "label": "digitfix:32.0402#s1",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:32.0402#s2#11680-982",
+   "label": "digitfix:32.0402#s2",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:32.0402#s2#3564-900",
+   "label": "digitfix:32.0402#s2",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:32.0402#s3#11680-983",
+   "label": "digitfix:32.0402#s3",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:32.0402#s3#3564-901",
+   "label": "digitfix:32.0402#s3",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:32.0402#s4#11680-984",
+   "label": "digitfix:32.0402#s4",
+   "estimate": 0.02,
+   "actual": 0.0008
+  },
+  {
+   "id": "digitfix:32.0402#s4#3564-902",
+   "label": "digitfix:32.0402#s4",
+   "estimate": 0.02,
+   "actual": 0.0008
+  },
+  {
+   "id": "digitfix:33.0144#s0#11680-985",
+   "label": "digitfix:33.0144#s0",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:33.0144#s0#3564-903",
+   "label": "digitfix:33.0144#s0",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:33.0144#s1#11680-986",
+   "label": "digitfix:33.0144#s1",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:33.0144#s1#3564-904",
+   "label": "digitfix:33.0144#s1",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:33.0144#s2#11680-987",
+   "label": "digitfix:33.0144#s2",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:33.0144#s2#3564-905",
+   "label": "digitfix:33.0144#s2",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:33.0144#s3#11680-988",
+   "label": "digitfix:33.0144#s3",
+   "estimate": 0.02,
+   "actual": 0.002
+  },
+  {
+   "id": "digitfix:33.0144#s3#3564-906",
+   "label": "digitfix:33.0144#s3",
+   "estimate": 0.02,
+   "actual": 0.002
+  },
+  {
+   "id": "digitfix:33.0336#s0#11680-989",
+   "label": "digitfix:33.0336#s0",
+   "estimate": 0.02,
+   "actual": 0.0037
+  },
+  {
+   "id": "digitfix:33.0336#s0#3564-907",
+   "label": "digitfix:33.0336#s0",
+   "estimate": 0.02,
+   "actual": 0.0037
+  },
+  {
+   "id": "digitfix:33.0336#s1#11680-990",
+   "label": "digitfix:33.0336#s1",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:33.0336#s1#3564-908",
+   "label": "digitfix:33.0336#s1",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:33.0336#s2#11680-991",
+   "label": "digitfix:33.0336#s2",
+   "estimate": 0.02,
+   "actual": 0.0021
+  },
+  {
+   "id": "digitfix:33.0336#s2#3564-909",
+   "label": "digitfix:33.0336#s2",
+   "estimate": 0.02,
+   "actual": 0.0021
+  },
+  {
+   "id": "digitfix:33.1010#s0#11680-1013",
+   "label": "digitfix:33.1010#s0",
+   "estimate": 0.02,
+   "actual": 0.0037
+  },
+  {
+   "id": "digitfix:33.1010#s0#3564-931",
+   "label": "digitfix:33.1010#s0",
+   "estimate": 0.02,
+   "actual": 0.0037
+  },
+  {
+   "id": "digitfix:33.1010#s1#11680-1014",
+   "label": "digitfix:33.1010#s1",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:33.1010#s1#3564-932",
+   "label": "digitfix:33.1010#s1",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:33.1010#s2#11680-1015",
+   "label": "digitfix:33.1010#s2",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:33.1010#s2#3564-933",
+   "label": "digitfix:33.1010#s2",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:33.1010#s3#11680-1016",
+   "label": "digitfix:33.1010#s3",
+   "estimate": 0.02,
+   "actual": 0.0037
+  },
+  {
+   "id": "digitfix:33.1010#s3#3564-934",
+   "label": "digitfix:33.1010#s3",
+   "estimate": 0.02,
+   "actual": 0.0037
+  },
+  {
+   "id": "digitfix:33.1010#s4#11680-1017",
+   "label": "digitfix:33.1010#s4",
+   "estimate": 0.02,
+   "actual": 0.0006
+  },
+  {
+   "id": "digitfix:33.1010#s4#3564-935",
+   "label": "digitfix:33.1010#s4",
+   "estimate": 0.02,
+   "actual": 0.0006
+  },
+  {
+   "id": "digitfix:35.0115#s0#11680-992",
+   "label": "digitfix:35.0115#s0",
+   "estimate": 0.02,
+   "actual": 0.0037
+  },
+  {
+   "id": "digitfix:35.0115#s0#3564-910",
+   "label": "digitfix:35.0115#s0",
+   "estimate": 0.02,
+   "actual": 0.0037
+  },
+  {
+   "id": "digitfix:35.0115#s1#11680-993",
+   "label": "digitfix:35.0115#s1",
+   "estimate": 0.02,
+   "actual": 0.003
+  },
+  {
+   "id": "digitfix:35.0115#s1#3564-911",
+   "label": "digitfix:35.0115#s1",
+   "estimate": 0.02,
+   "actual": 0.003
+  },
+  {
+   "id": "digitfix:35.0233#s0#11680-994",
+   "label": "digitfix:35.0233#s0",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:35.0233#s0#3564-912",
+   "label": "digitfix:35.0233#s0",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:35.0233#s1#11680-995",
+   "label": "digitfix:35.0233#s1",
+   "estimate": 0.02,
+   "actual": 0.0008
+  },
+  {
+   "id": "digitfix:35.0233#s1#3564-913",
+   "label": "digitfix:35.0233#s1",
+   "estimate": 0.02,
+   "actual": 0.0008
+  },
+  {
+   "id": "digitfix:35.0314#s0#11680-941",
+   "label": "digitfix:35.0314#s0",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:35.0314#s0#3564-856",
+   "label": "digitfix:35.0314#s0",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:35.0314#s1#11680-942",
+   "label": "digitfix:35.0314#s1",
+   "estimate": 0.02,
+   "actual": 0.0039
+  },
+  {
+   "id": "digitfix:35.0314#s1#3564-857",
+   "label": "digitfix:35.0314#s1",
+   "estimate": 0.02,
+   "actual": 0.0039
+  },
+  {
+   "id": "digitfix:35.0314#s2#11680-943",
+   "label": "digitfix:35.0314#s2",
+   "estimate": 0.02,
+   "actual": 0.0015
+  },
+  {
+   "id": "digitfix:35.0314#s2#3564-858",
+   "label": "digitfix:35.0314#s2",
+   "estimate": 0.02,
+   "actual": 0.0015
+  },
+  {
+   "id": "digitfix:35.0502#s0#11680-996",
+   "label": "digitfix:35.0502#s0",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:35.0502#s0#3564-914",
+   "label": "digitfix:35.0502#s0",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:35.0502#s1#11680-997",
+   "label": "digitfix:35.0502#s1",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:35.0502#s1#3564-915",
+   "label": "digitfix:35.0502#s1",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:35.0502#s2#11680-998",
+   "label": "digitfix:35.0502#s2",
+   "estimate": 0.02,
+   "actual": 0.0037
+  },
+  {
+   "id": "digitfix:35.0502#s2#3564-916",
+   "label": "digitfix:35.0502#s2",
+   "estimate": 0.02,
+   "actual": 0.0037
+  },
+  {
+   "id": "digitfix:35.0502#s3#11680-999",
+   "label": "digitfix:35.0502#s3",
+   "estimate": 0.02,
+   "actual": 0.0031
+  },
+  {
+   "id": "digitfix:35.0502#s3#3564-917",
+   "label": "digitfix:35.0502#s3",
+   "estimate": 0.02,
+   "actual": 0.0031
+  },
+  {
+   "id": "digitfix:35.0814#s0#11680-1000",
+   "label": "digitfix:35.0814#s0",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:35.0814#s0#3564-918",
+   "label": "digitfix:35.0814#s0",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:35.0814#s1#11680-1001",
+   "label": "digitfix:35.0814#s1",
+   "estimate": 0.02,
+   "actual": 0.0033
+  },
+  {
+   "id": "digitfix:35.0814#s1#3564-919",
+   "label": "digitfix:35.0814#s1",
+   "estimate": 0.02,
+   "actual": 0.0033
+  },
+  {
+   "id": "digitfix:35.0814#s2#11680-1002",
+   "label": "digitfix:35.0814#s2",
+   "estimate": 0.02,
+   "actual": 0.0033
+  },
+  {
+   "id": "digitfix:35.0814#s2#3564-920",
+   "label": "digitfix:35.0814#s2",
+   "estimate": 0.02,
+   "actual": 0.0033
+  },
+  {
+   "id": "digitfix:35.0814#s3#11680-1003",
+   "label": "digitfix:35.0814#s3",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:35.0814#s3#3564-921",
+   "label": "digitfix:35.0814#s3",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:35.0814#s4#11680-1004",
+   "label": "digitfix:35.0814#s4",
+   "estimate": 0.02,
+   "actual": 0.0027
+  },
+  {
+   "id": "digitfix:35.0814#s4#3564-922",
+   "label": "digitfix:35.0814#s4",
+   "estimate": 0.02,
+   "actual": 0.0027
+  },
+  {
+   "id": "digitfix:36.0301#s0#11680-1005",
+   "label": "digitfix:36.0301#s0",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:36.0301#s0#3564-923",
+   "label": "digitfix:36.0301#s0",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:36.0301#s1#11680-1006",
+   "label": "digitfix:36.0301#s1",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:36.0301#s1#3564-924",
+   "label": "digitfix:36.0301#s1",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:36.0301#s2#11680-1007",
+   "label": "digitfix:36.0301#s2",
+   "estimate": 0.02,
+   "actual": 0.002
+  },
+  {
+   "id": "digitfix:36.0301#s2#3564-925",
+   "label": "digitfix:36.0301#s2",
+   "estimate": 0.02,
+   "actual": 0.002
+  },
+  {
+   "id": "digitfix:36.0313#s0#11680-1018",
+   "label": "digitfix:36.0313#s0",
+   "estimate": 0.02,
+   "actual": 0.0024
+  },
+  {
+   "id": "digitfix:36.0313#s0#3564-936",
+   "label": "digitfix:36.0313#s0",
+   "estimate": 0.02,
+   "actual": 0.0024
+  },
+  {
+   "id": "digitfix:PM-33.0109#s0#11680-1019",
+   "label": "digitfix:PM-33.0109#s0",
+   "estimate": 0.02,
+   "actual": 0.0016
+  },
+  {
+   "id": "digitfix:PM-33.0109#s0#3564-937",
+   "label": "digitfix:PM-33.0109#s0",
+   "estimate": 0.02,
+   "actual": 0.0016
+  },
+  {
+   "id": "digitfix:PM-33.0342#s0#11680-1020",
+   "label": "digitfix:PM-33.0342#s0",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:PM-33.0342#s0#3564-938",
+   "label": "digitfix:PM-33.0342#s0",
+   "estimate": 0.02,
+   "actual": 0.0035
+  },
+  {
+   "id": "digitfix:PM-33.0342#s1#11680-1021",
+   "label": "digitfix:PM-33.0342#s1",
+   "estimate": 0.02,
+   "actual": 0.0035
+  },
+  {
+   "id": "digitfix:PM-33.0342#s1#3564-939",
+   "label": "digitfix:PM-33.0342#s1",
+   "estimate": 0.02,
+   "actual": 0.0034
+  },
+  {
+   "id": "digitfix:PM-33.0342#s2#11680-1022",
+   "label": "digitfix:PM-33.0342#s2",
+   "estimate": 0.02,
+   "actual": 0.0008
+  },
+  {
+   "id": "digitfix:PM-33.0342#s2#3564-940",
+   "label": "digitfix:PM-33.0342#s2",
+   "estimate": 0.02,
+   "actual": 0.0008
+  },
+  {
    "id": "evidence:route#16648-316",
    "label": "evidence:route",
    "estimate": 0.04,
@@ -4951,6 +5953,18 @@
    "label": "prompt-ab-13",
    "estimate": 2.1834,
    "actual": 2.1334
+  },
+  {
+   "id": "readback:35.0314#p0#10020-854",
+   "label": "readback:35.0314#p0",
+   "estimate": 0.02,
+   "actual": 0.0093
+  },
+  {
+   "id": "readback:35.0314#p1#10020-855",
+   "label": "readback:35.0314#p1",
+   "estimate": 0.02,
+   "actual": 0.0101
   },
   {
    "id": "route-cache-gate#15248-729",
