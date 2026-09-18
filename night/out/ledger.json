@@ -1,5 +1,5 @@
 {
- "spent": 134.7851,
+ "spent": 136.20940000000002,
  "reserved": 0,
  "entries": [
   {
@@ -769,6 +769,12 @@
    "label": "carried-forward",
    "estimate": 18.12,
    "actual": 18.12
+  },
+  {
+   "id": "clauseroute-82#4464-853",
+   "label": "clauseroute-82",
+   "estimate": 2.5,
+   "actual": 0.7485
   },
   {
    "id": "curate:130.13#3",
@@ -4963,6 +4969,12 @@
    "label": "route-probe-pilot150",
    "estimate": 0.13,
    "actual": 0.125
+  },
+  {
+   "id": "routeprobe-82#12436-852",
+   "label": "routeprobe-82",
+   "estimate": 0.3,
+   "actual": 0.6758
   },
   {
    "id": "router-experiments#10492-741",
