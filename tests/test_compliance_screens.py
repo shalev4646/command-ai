@@ -339,6 +339,157 @@ def test_the_thumbs_carry_accessible_names():
     )
 
 
+# ── P7: the banner that claimed the user had agreed (2026-09-17) ────────────
+# Above the terms sat a green check and "approved at first install, version
+# 2.4" -- rendered for every visitor while no screen in the app showed the
+# terms. The privacy banner (P1) misdescribed what the code did; this one
+# asserted that the USER had agreed, a claim made in their name.
+
+import ast  # noqa: E402
+
+_TREE = ast.parse(APP)
+
+
+def _fn(name: str):
+    for n in _TREE.body:
+        if isinstance(n, ast.FunctionDef) and n.name == name:
+            return n
+    raise AssertionError("app.py has no top-level def " + name)
+
+
+def _src(node) -> str:
+    return ast.get_source_segment(APP, node)
+
+
+_CONFIRMS = ("_confirm_ask", "_confirm_action")
+
+
+def _is_confirm_test(test) -> bool:
+    """Does this `if` test only pass once a confirm was answered?
+
+    Not "does it mention a confirm": `st.button(...) or _confirm_action(...)`
+    mentions one and fires on the first tap. An `and` guards when any operand
+    does; an `or` only when every operand does.
+    """
+    if isinstance(test, ast.Call):
+        return isinstance(test.func, ast.Name) and test.func.id in _CONFIRMS
+    if isinstance(test, ast.BoolOp):
+        parts = [_is_confirm_test(v) for v in test.values]
+        return any(parts) if isinstance(test.op, ast.And) else all(parts)
+    return False
+
+
+def _unguarded(fn_name: str, is_target) -> list:
+    """Every destructive statement in `fn_name` that no confirm guards.
+
+    A statement is guarded when an enclosing `if` tests a confirm call. The
+    shape, not an order of substrings: an opener that performs the action
+    itself, next to a confirm that is now dead, reads identically on screen
+    and passed the text-order version of this check (branch history).
+    """
+    fn = _fn(fn_name)
+    parent = {c: p for p in ast.walk(fn) for c in ast.iter_child_nodes(p)}
+    bad, seen = [], 0
+    for node in ast.walk(fn):
+        if not is_target(node):
+            continue
+        seen += 1
+        up, ok = node, False
+        while up in parent:
+            up = parent[up]
+            if isinstance(up, ast.If) and _is_confirm_test(up.test):
+                ok = True
+                break
+        if not ok:
+            bad.append(_src(node))
+    assert seen, "nothing destructive found in %s -- the check is looking at nothing" % fn_name
+    return bad
+
+
+def _call_to(name):
+    return lambda n: (isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+                      and n.func.id == name)
+
+
+def test_the_terms_banner_is_not_a_hardcoded_claim():
+    assert "בהתקנה הראשונית" not in APP, "the at-first-install approval claim is back"
+    about = _src(_fn("_settings_about"))
+    assert "_tos_banner(" in about and 'st.session_state.get("tos_ok")' in about, (
+        "the אודות banner no longer reads the device's own record")
+    assert "טרם אישרת את התנאים" in _src(_fn("_tos_banner")), (
+        "there is no not-yet-approved wording, so the banner can only ever claim")
+
+
+def test_the_terms_are_shown_where_they_are_approved():
+    """A tick that cites terms the person cannot see is not informed consent,
+    and a screen quoting its OWN copy of them is how shown and agreed drift."""
+    gate = APP[APP.index("if _welcome_gate:"):]
+    gate = gate[:gate.index("_emit_boot_settled()")]
+    code = "\n".join(l for l in gate.split("\n") if not l.lstrip().startswith("#"))
+    assert "for _h, _b in _TOS_SECTIONS" in code, (
+        "the welcome screen asks to approve terms it does not show")
+    assert "תנאי השימוש" in code.split('st.checkbox("')[1].split('"')[0], (
+        "the tick does not say what it approves")
+    assert APP.count("_TOS_SECTIONS = [") == 1, "the terms are defined twice"
+
+
+def test_the_terms_version_is_not_the_app_version():
+    """"גרסה 2.4" was the APP's release number; a record of what someone
+    agreed to that moves on every deploy says nothing about the document."""
+    assert re.search(r"^TOS_VERSION = \d+$", APP, re.M), "no terms version to record"
+    about = _src(_fn("_settings_about"))
+    banner = about[:about.index("cai-tos-lead")]
+    for text in (banner, _src(_fn("_tos_banner"))):
+        assert "2.4" not in text, "the app version is back in the approval record"
+
+
+def test_the_device_wipe_is_confirmed_before_it_happens():
+    assert not _unguarded("_settings_privacy", _call_to("_wipe_all")), (
+        "the device wipe runs without the question")
+
+
+def test_the_wipe_confirm_reuses_the_note_under_the_button():
+    """_WIPE_NOTE already says what goes and what survives in the Sheet; a
+    confirm that paraphrases it is a second copy of a data-handling claim."""
+    calls = [n for n in ast.walk(_fn("_settings_privacy"))
+             if _call_to("_confirm_action")(n) and n.args
+             and isinstance(n.args[0], ast.Constant) and n.args[0].value == "wipe"]
+    assert len(calls) == 1, "the wipe is not behind exactly one confirm"
+    assert "_WIPE_NOTE" in _src(calls[0]), (
+        "the wipe confirm writes its own version of what gets deleted")
+
+
+def test_clearing_the_history_is_confirmed_in_both_places():
+    """Since conversation restore the chats live on the device, so either
+    "נקה היסטוריית שיחות" row erases them for good -- on one tap, until
+    2026-09-17."""
+    for where in ("_settings_hub", "_settings_privacy"):
+        assert not _unguarded(where, _call_to("_clear_history")), (
+            "%s clears the history without the question" % where)
+
+
+def test_logout_is_confirmed_before_it_happens():
+    """Logout erases the name, the profile, the tool inputs and every chat."""
+    assert not _unguarded("_settings_hub", _call_to("_reset_identity")), (
+        "logout runs without the question")
+
+
+def test_withdrawing_the_approval_is_confirmed():
+    def zeroes_tos(n):
+        return (isinstance(n, ast.Assign)
+                and any(_src(t) == "st.session_state.tos_ok" for t in n.targets))
+    assert not _unguarded("_settings_about", zeroes_tos), (
+        "the approval is withdrawn without the question")
+
+
+def test_the_question_asks_and_nothing_more():
+    """The helpers only ask; the action belongs to the caller's `if`."""
+    for helper in ("_confirm_open", "_confirm_ask", "_confirm_action"):
+        body = _src(_fn(helper))
+        for act in ("_wipe_all(", "_clear_history(", "_reset_identity(", "tos_ok"):
+            assert act not in body, "%s performs %s itself" % (helper, act)
+
+
 if __name__ == "__main__":
     failures = 0
     for name, fn in sorted(globals().items()):

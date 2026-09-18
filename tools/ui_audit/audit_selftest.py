@@ -139,6 +139,14 @@ BAITS = [
               '<div class="ul2" style="background:#14170E">'
               '<div style="color:rgb(131,131,131);font-size:14px">'
               'BAIT-buried רקע בהיר שמתחת לכרטיס כהה</div></div>'),
+    # a collapsed st.expander is a closed <details>: Chromium still gives the
+    # hidden content a box, and its text is empty — the button below must
+    # produce nothing at all (matched by its class: it has no text to match)
+    dict(id="nothing-inside-a-closed-details", expect=None, not_kind="*", by="what",
+         marker="cai-bait-folded",
+         html=f'<details><summary style="{LIGHT}">BAIT-summary כותרת מקופלת</summary>'
+              '<button class="cai-bait-folded" style="height:20px;width:140px;'
+              'background:#444;color:#fff;border:0">BAIT-folded</button></details>'),
     # scope: the sweep audits only the open layer on drawer/settings screens
     dict(id="scope-judges-only-its-layer", expect="contrast", scope="#cai-audit-layer",
          absent="BAIT-outside",
@@ -168,6 +176,9 @@ MUTANTS = [
      "      const s = getComputedStyle(n), r = n.getBoundingClientRect();\n",
      "      const s = getComputedStyle(n), r = n.getBoundingClientRect();\n"
      "      if (r.width <= 2 || r.height <= 2) return true;\n"),
+    ("hidden: closed <details> content shown",
+     "      if (n.tagName === 'DETAILS' && !n.open && prev && prev.tagName !== 'SUMMARY') return true;",
+     "      ;"),
     ("hidden: opacity ignored",
      "      if (+s.opacity < .05) return true;",
      "      ;"),
@@ -271,7 +282,9 @@ def judge(bt, new, base_kinds):
     if leaked:
         return False, [f"reported outside its scope: {leaked[0]}"]
     if bt["expect"] is None:
-        bad = [f for f in new if f["k"] == bt["not_kind"] and marker in (f.get("t") or "")]
+        field = "what" if bt["by"] == "what" else "t"
+        bad = [f for f in new if bt["not_kind"] in ("*", f["k"])
+               and marker in (f.get(field) or "")]
         return not bad, bad
     kind = bt["expect"]
     if bt["by"] == "kind":

@@ -15,9 +15,13 @@
     // marked every element on every screen hidden — and this file reported a
     // clean sweep of 13 screens while blind to two defects already found by
     // eye. Ancestors are only consulted for things that really do inherit.
-    for (let n = e; n && n.nodeType === 1; n = n.parentElement) {
+    for (let n = e, prev = null; n && n.nodeType === 1; prev = n, n = n.parentElement) {
       const s = getComputedStyle(n), r = n.getBoundingClientRect();
       if (s.display === 'none' || s.visibility === 'hidden') return true;
+      // a closed <details> draws only its <summary>, yet Chromium lays the
+      // rest out when asked: a collapsed st.expander read as 328x43 buttons,
+      // one of them "unnamed" because its text was never drawn (2026-09-17)
+      if (n.tagName === 'DETAILS' && !n.open && prev && prev.tagName !== 'SUMMARY') return true;
       if (+s.opacity < .05) return true;
       if (s.clipPath && s.clipPath !== 'none' && /inset\(\s*(100|50)/.test(s.clipPath)) return true;
       // a panel parked wholly outside the viewport (the closed drawer) is not

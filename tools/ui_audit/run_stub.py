@@ -54,7 +54,42 @@ b.get_suggested_questions = lambda *a, **k: [
     "האם מפקד רשאי למנוע ממני יציאה לחופשה?",
 ]
 b.get_pdf_bytes = lambda *a, **k: None
-b.stream_ai_answer = lambda *a, **k: iter(())
+
+# Canned answers, one per shape the answer screen draws, picked by a word in
+# the question (sweep.py asks one of each). The real 4-tuple contract:
+# (text deltas, sources, the user content sent, a usage dict filled at the end).
+_SRC = {"doc_id": "35.0402", "title": "חופשות לחיילים בשירות חובה",
+        "civil_source": False, "civil_label": "", "source_file": "", "clause": None,
+        "highlight": "", "superseded": False, "superseded_note": ""}
+_CANNED = {
+    "חופשה": ("**פסיקה:** זכאי\n**מקור:** פ\"מ 35.0402 — חופשות\n\n"
+              "חייל בשירות חובה זכאי לחופשה מיוחדת של עד שבעה ימים כשקרוב משפחה "
+              "מדרגה ראשונה מאושפז.\n\n- הבקשה מוגשת למפקד הישיר\n"
+              "- נדרש אישור רפואי על האשפוז", [_SRC]),
+    "מלגה": ("**פסיקה:** לא נמצא\n\nבפקודות שסופקו אין מענה לשאלה הזו.\n\n"
+             "**טרם במאגר:** זכאות חייל למלגת לימודים במהלך השירות.\n\n"
+             "מה שנובע עבורך: לפנות למשקית ת\"ש ביחידה.", [dict(_SRC, doc_id="33.0352",
+                                                               title="מניעת חופשה")]),
+    "מטען": ("**פסיקה:** מותר בתנאים\n**מקור:** פ\"מ 58.0301 — הובלת מטען חורג\n\n"
+             "מטען החורג מרוחב הרכב טעון אישור בכתב.",
+             [dict(_SRC, doc_id="58.0301", title="הובלת מטען חורג", superseded=True,
+                   superseded_note="הפקודה בוטלה ב-2024")]),
+}
+
+
+def _stream(question, *a, **k):
+    text, sources = next((v for w, v in _CANNED.items() if w in (question or "")),
+                         _CANNED["חופשה"])
+    usage = {}
+
+    def gen():
+        for part in text.split("\n\n"):
+            yield part + "\n\n"
+        usage.update({"input_tokens": 10, "output_tokens": 20, "truncated": False})
+    return gen(), sources, "stub", usage
+
+
+b.stream_ai_answer = _stream
 b._compose_user_content = lambda *a, **k: ""
 b.lacked_from = lambda *a, **k: []
 b.render_clause_image = lambda *a, **k: None
