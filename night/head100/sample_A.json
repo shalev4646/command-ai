@@ -1,0 +1,685 @@
+[
+ {
+  "id": "hA1bb",
+  "topic_id": "A1b",
+  "topic": "גילוח בשבת",
+  "split": "held",
+  "question": "אני סוגר שבת והרס\"ר דורש שאתגלח גם בשבת בבוקר לפני המסדר. מותר לו?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "33-05-01",
+  "verified_quotes": [
+   "אין לכפות על חייל גילוח בשבת"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hA2a",
+  "topic_id": "A2",
+  "topic": "תספורת — מדרגה",
+  "split": "held",
+  "question": "מותר לעשות תספורת עם מדרגה?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "33-05-01",
+  "verified_quotes": [
+   "אסורה תספורת עם מדרגה בשיער"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hA3a",
+  "topic_id": "A3",
+  "topic": "תכשיטים לחייל",
+  "split": "held",
+  "question": "מותר לבן ללכת עם עגיל על מדים?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "33-05-01",
+  "verified_quotes": [
+   "חייל שמינו זכר רשאי לענוד רק טבעת נישואין ושרשרת אחת ממתכת"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hC1b",
+  "topic_id": "C1",
+  "topic": "קבילה לנציב — איך ומתי",
+  "split": "held",
+  "question": "המפקד שלי מתנכל לי כבר חודשים ואף אחד בפלוגה לא עוזר. איך פונים לנקחל ועד מתי אפשר?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "33.0336",
+  "verified_quotes": [
+   "הקבילה תוגש בכתב בדואר, בדואר אלקטרוני אזרחי או צבאי, או בפקס",
+   "תקופת ההתיישנות להגשת קבילה היא שנה"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hC2ba",
+  "topic_id": "C2b",
+  "topic": "גורמי סיוע בפגיעה מינית",
+  "split": "held",
+  "question": "עברתי הטרדה מינית בבסיס, למי פונים?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "33.0145",
+  "verified_quotes": [
+   "יוכלו לפנות לאחד הגורמים המפורטים לשם קבלת סיוע, טיפול וליווי"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hCmd4a",
+  "topic_id": "Cmd4",
+  "topic": "מפקד — דיווח על הטרדה מינית",
+  "split": "held",
+  "question": "חיילת דיווחה לי על הטרדה מינית, מותר לי לברר את זה בעצמי?",
+  "role": "commander",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "33.0145",
+  "verified_quotes": [
+   "אסור למפקד לערוך בירור, חקירה, תחקיר או שיחה בנוגע לאירוע אלא באישור יוהלם או הפרקליטות"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hCmd5b",
+  "topic_id": "Cmd5",
+  "topic": "מפקד — הוראות רפואיות",
+  "split": "held",
+  "question": "חייל שלי קיבל פטור מריצה ואני צריך אותו לבוחן מחר. אני יכול להחליט שהוא רץ בכל זאת?",
+  "role": "commander",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "61.0104",
+  "verified_quotes": [
+   "המפקד מחויב לקבל את ההוראות הרפואיות שנתן הגורם הרפואי המטפל"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hD11b",
+  "topic_id": "D11",
+  "topic": "שתיית אלכוהול",
+  "split": "held",
+  "question": "יצאתי אפטר עם הנשק וישבנו בפאב. מותר לי לשתות משהו או שעם נשק זה אסור?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "33.0220",
+  "verified_quotes": [
+   "אסורה שתיית משקה משכר בהיות החייל בתפקיד, כשהוא נושא נשק צבאי, בעודו לבוש מדים"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hD1b",
+  "topic_id": "D1",
+  "topic": "תקרת ריתוק אצל קצין שיפוט זוטר",
+  "split": "held",
+  "question": "הסגן שלי שפט אותי ונתן 10 ימי ריתוק. יש לו בכלל סמכות לעונש כזה?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "PM-33.0302",
+  "verified_quotes": [
+   "ריתוק: קצין שיפוט זוטר בדרגת סגן עד סרן"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hD3a",
+  "topic_id": "D3",
+  "topic": "זכויות הנידון לפני הדיון",
+  "split": "held",
+  "question": "מותר לי להביא עדים למשפט אצל המפ?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "PM-33.0302",
+  "verified_quotes": [
+   "זכותו לבקש להביא עדים ולהציג ראיות מטעמו"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hD5ca",
+  "topic_id": "D5c",
+  "topic": "תרגול נוסף לכל הקבוצה",
+  "split": "held",
+  "question": "חייל אחד איחר והמכ נתן לכל הכיתה תרגול נוסף. מותר?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "33.0351",
+  "verified_quotes": [
+   "אין לתרגל קבוצת חיילים כאשר התרגול נדרש לשיפור תפקודו של אחד או אחדים בלבד מתוך הקבוצה"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hD6b",
+  "topic_id": "D6",
+  "topic": "מנפקד לעריק",
+  "split": "held",
+  "question": "חבר שלי לא חזר לבסיס כבר שבועיים. מתי זה הופך מנפקדות לעריקות?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "31.0513",
+  "verified_quotes": [
+   "חייל הנעדר מהשירות 21 ימים רצופים או יותר מוגדר עריק"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hD8b",
+  "topic_id": "D8",
+  "topic": "ניכוי קנס מהשכר",
+  "split": "held",
+  "question": "נתנו לי קנס של 800 שקל. ייקחו לי את כל המשכורת בבת אחת או שזה מתחלק על כמה חודשים?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "35.0221",
+  "verified_quotes": [
+   "מחייל בשירות חובה מנוכים 50 אחוז מהשכר מדי חודש עד כיסוי הקנס"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hL1b",
+  "topic_id": "L1",
+  "topic": "מכסת חופשה שנתית",
+  "split": "held",
+  "question": "אני כבר שנה בצבא ולא יצאתי לרגילה אפילו פעם אחת. כמה ימים בעצם מגיעים לי?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "PM-35.0402",
+  "verified_quotes": [
+   "חייל בשירות חובה זכאי ל-18 ימי חופשה שנתית"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hL2a",
+  "topic_id": "L2",
+  "topic": "חופשה מיוחדת מול המכסה השנתית",
+  "split": "held",
+  "question": "מיוחדת יורדת לי מהימי חופשה של הרגילה?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "PM-35.0402",
+  "verified_quotes": [
+   "שנועדה לענות על צרכים אישיים חריגים של החייל מבלי שתיגרע ממכסת ימי החופשה השנתית שלו"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hL3ba",
+  "topic_id": "L3b",
+  "topic": "סוף שבוע ארוך",
+  "split": "held",
+  "question": "כל כמה זמן מגיע לי סופש ארוך?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "PM-35.0402",
+  "verified_quotes": [
+   "הניתנת לחייל ברמת פעילות ב ומעלה אחת לחודש"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hL6ca",
+  "topic_id": "L6c",
+  "topic": "מועד ההודעה על מניעת חופשה",
+  "split": "held",
+  "question": "כמה זמן מראש חייבים להודיע לי שהורידו לי שבת?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "PM-33.0352",
+  "verified_quotes": [
+   "ישוחרר החייל לחופשתו במועדה"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hL8a",
+  "topic_id": "L8",
+  "topic": "חייל בודד — הטבות דיור",
+  "split": "held",
+  "question": "איזה עזרה בדיור מגיעה לחייל בודד?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "35.0808",
+  "verified_quotes": [
+   "חייל בודד זכאי להטבת דיור שהיא אחת מאלה"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hM2a",
+  "topic_id": "M2",
+  "topic": "גימלים — מי נותן ואיפה",
+  "split": "held",
+  "question": "קיבלתי גימלים, המפקד יכול להכריח אותי להישאר בבסיס?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "61.0104",
+  "verified_quotes": [
+   "המפקד עצמו אינו נותן ימי ב או ג",
+   "ימי המנוחה (ימי ג) יבוצעו ביחידה, בבית החייל או במקום אחר"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hM2bb",
+  "topic_id": "M2b",
+  "topic": "יום ד' מהמפקד",
+  "split": "held",
+  "question": "אני מרגיש רע ואין רופא בבסיס עד מחר. המפקד יכול לשחרר אותי לנוח בלי אישור רפואי?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "61.0104",
+  "verified_quotes": [
+   "המפקד רשאי לאשר לפקודו יום ד בהתאם לצורך"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hM3b",
+  "topic_id": "M3",
+  "topic": "אי-הפניה לוועדה רפואית",
+  "split": "held",
+  "question": "יש לי בעיה בברך כבר חצי שנה ואני רוצה הורדת פרופיל, אבל הרופא ביחידה מסרב לשלוח אותי לוועדה. למי פונים מעליו?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "32.0402",
+  "verified_quotes": [
+   "הסבור שקופח על ידי הרופא הצבאי בשל החלטה של אי הפניה לוועדה רפואית, רשאי לפנות למפקד יחידתו"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hM3ba",
+  "topic_id": "M3b",
+  "topic": "ערעור על פרופיל",
+  "split": "held",
+  "question": "אפשר לערער על פרופיל שקבעו לי?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "32.0402",
+  "verified_quotes": [
+   "הוועדה חייבת גם להסביר לך שאתה זכאי לערער על ההחלטה"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hM4ba",
+  "topic_id": "M4b",
+  "topic": "פנייה לקב\"ן",
+  "split": "held",
+  "question": "אני רוצה לדבר עם קבן, איך מבקשים?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "33.0219",
+  "verified_quotes": [
+   "חייל הסבור שהוא זקוק לבדיקת גורם ברהן"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hR1db",
+  "topic_id": "R1d",
+  "topic": "שעת ט\"ש",
+  "split": "held",
+  "question": "המפקד מבטל לנו את שעת הת\"ש כמעט כל ערב בשביל שיחות ותדריכים. מותר לו?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "PM-33.0213",
+  "verified_quotes": [
+   "זכאי כל חייל לשעת טרום השינה (שעת טש)"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hR1ea",
+  "topic_id": "R1e",
+  "topic": "שינה לפני יציאה הביתה",
+  "split": "held",
+  "question": "חייבים לתת לישון בלילה שלפני שיוצאים הביתה?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "PM-33.0213",
+  "verified_quotes": [
+   "בלילה שלפני יציאת חייל מבסיס צבאי לחופשה תינתן לו הזכות לשינה סדורה"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hR4b",
+  "topic_id": "R4",
+  "topic": "תמונה במדים ברשתות",
+  "split": "held",
+  "question": "העליתי סטורי מהבסיס עם המדים ותג היחידה. זה מותר או שכדאי לי למחוק?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "PM-33.0161",
+  "verified_quotes": [
+   "כולל פרסום תמונתם במדים ושיוך לצהל, ללא ציון מספר יחידה"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hR4ba",
+  "topic_id": "R4b",
+  "topic": "התבטאות פוליטית ברשת",
+  "split": "held",
+  "question": "מותר לי לכתוב בפייסבוק דעה פוליטית כשאני חייל?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "PM-33.0161",
+  "verified_quotes": [
+   "חייל לא יתבטא במרחב הרשתי, בעל-פה או בכתב, בכל עניין מפלגתי"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hR8a",
+  "topic_id": "R8",
+  "topic": "נסיעה חינם בלבוש אזרחי",
+  "split": "held",
+  "question": "מותר לנסוע באוטובוס חינם כשאני על אזרחי?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "33.0120",
+  "verified_quotes": [
+   "הנסיעה מותרת בלבוש צבאי מלא בלבד"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hRes1a",
+  "topic_id": "Res1",
+  "topic": "מי משלם תגמול מילואים",
+  "split": "held",
+  "question": "מי משלם לי על המילואים, הצבא או ביטוח לאומי?",
+  "role": "reserve",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "35.0206",
+  "verified_quotes": [
+   "התגמול על ימי מילואים משולם על ידי המוסד לביטוח לאומי"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hRes3ba",
+  "topic_id": "Res3b",
+  "topic": "ימי חופשה על חשבון מילואים",
+  "split": "held",
+  "question": "המעסיק יכול להוריד לי ימי חופש על ימי המילואים?",
+  "role": "reserve",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "זכויות-עבודה-מילואים",
+  "verified_quotes": [
+   "אסור לחייב עובד לנצל ימי חופשה שנתית על תקופת השירות"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hRes5a",
+  "topic_id": "Res5",
+  "topic": "התראה לפני צו",
+  "split": "held",
+  "question": "כמה זמן מראש חייבים לשלוח לי צו מילואים?",
+  "role": "reserve",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "HKA-31-08-01",
+  "verified_quotes": [
+   "מחייבת התראה של 60 ימים לפחות"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hRes6b",
+  "topic_id": "Res6",
+  "topic": "מילואים סביב חתונה",
+  "split": "held",
+  "question": "קיבלתי צו למילואים שנופל שבוע לפני החתונה שלי. אני חייב להתייצב?",
+  "role": "reserve",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "HKA-31-08-01",
+  "verified_quotes": [
+   "אין קריאה מעשרה ימים לפני החתונה"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hS2b",
+  "topic_id": "S2",
+  "topic": "אחים באותה יחידה",
+  "split": "held",
+  "question": "אחי הגדול בגולני ואני רוצה להגיע לאותו גדוד. הצבא מאשר דבר כזה?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "31.0104",
+  "verified_quotes": [
+   "חיילים בני משפחה אחת לא ישרתו ביחידה אחת"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hS5a",
+  "topic_id": "S5",
+  "topic": "לימודים בזמן השירות",
+  "split": "held",
+  "question": "מותר ללמוד באוניברסיטה הפתוחה בזמן השירות?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "35.0502",
+  "verified_quotes": [
+   "רשאי ללמוד ללא מימון הצבא ורק לאחר שעות הפעילות המקובלות ביחידה"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hS6b",
+  "topic_id": "S6",
+  "topic": "מסדר בוקר — מי חייב",
+  "split": "held",
+  "question": "הייתי בתורנות מטבח מ-4 בבוקר והרסר דורש שאגיע גם למסדר בוקר. אני חייב?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "PM-33.0202",
+  "verified_quotes": [
+   "חובת הנוכחות במסדר הבוקר חלה על כל החוגרים בשירות חובה עד דרגת סמר"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hW1ba",
+  "topic_id": "W1b",
+  "topic": "עבודה בלי היתר",
+  "split": "held",
+  "question": "מותר לי לעשות משלוחים בוולט ביציאות בלי אישור?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "33.0115",
+  "verified_quotes": [
+   "לא יעסוק בשום עבודה פרטית, בין בשעה שהוא בתפקיד ובין בשעה שאינו בתפקיד"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hW2b",
+  "topic_id": "W2",
+  "topic": "השתתפות בשכר דירה",
+  "split": "held",
+  "question": "התחתנתי לפני חודש ואנחנו שוכרים דירה. הצבא משתתף בשכירות לחייל בחובה?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "35.0307",
+  "verified_quotes": [
+   "הכרה כחייל בודד לפי פמ 35.0808 לצורך סיוע בשכד, או שהחייל נשוי"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hW3a",
+  "topic_id": "W3",
+  "topic": "תשלומי משפחה — הגשה",
+  "split": "held",
+  "question": "איך מגישים בקשה לתשמש?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "35.0210",
+  "verified_quotes": [
+   "יגיש את בקשתו ביחידתו, באמצעות רכז תנאי השירות ובסיועו, על גבי טופס 60"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hW8bb",
+  "topic_id": "W8b",
+  "topic": "פיקדון — שימושים",
+  "split": "held",
+  "question": "רוצה להשתמש בפיקדון בשביל הטיול הגדול אחרי צבא. אפשר או שזה רק ללימודים?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "חוק-קליטת-חיילים",
+  "verified_quotes": [
+   "בחמש השנים הראשונות מותר להשתמש בו רק ללימודים, הכשרה מקצועית, הקמת עסק"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hW9a",
+  "topic_id": "W9",
+  "topic": "פיצוי על ציוד פרטי",
+  "split": "held",
+  "question": "נשבר לי הטלפון באימון, הצבא מפצה?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "35.0223",
+  "verified_quotes": [
+   "החייל ממלא טופס הצהרה בתוך 30 יום מהאירוע",
+   "צהל אינו אחראי לציוד פרטי של חייל"
+  ],
+  "note": ""
+ },
+ {
+  "id": "hG10a",
+  "topic_id": "G10",
+  "topic": "אורך משמרת שמירה",
+  "split": "held",
+  "question": "כמה שעות שמירה ברצף מותר לתת?",
+  "role": "soldier",
+  "verdict": "NOT_IN_CORPUS",
+  "doc_id": null,
+  "verified_quotes": [],
+  "note": "PM-33.0213 מכסה רק קיצוץ שינה לצורך שמירה; אין כלל על אורך משמרת ביום"
+ },
+ {
+  "id": "hG12b",
+  "topic_id": "G12",
+  "topic": "טרמפים",
+  "split": "held",
+  "question": "עצרתי טרמפ מהצומת הביתה ומ\"צ רשמו לי דוח. מה העונש על טרמפים?",
+  "role": "soldier",
+  "verdict": "NOT_IN_CORPUS",
+  "doc_id": null,
+  "verified_quotes": [],
+  "note": "PM-33.0302 מזכירה שיפוט מהיר על טרמפים בטקסט הגולמי בלבד; אין סעיף מאוצר; PM-33.0119 עוסקת בתחנות הסעה"
+ },
+ {
+  "id": "hG1a",
+  "topic_id": "G1",
+  "topic": "קעקועים",
+  "split": "held",
+  "question": "מותר לעשות קעקוע בזמן השירות?",
+  "role": "soldier",
+  "verdict": "NO_ORDER_IN_CORPUS",
+  "doc_id": null,
+  "verified_quotes": [],
+  "note": "אפס אזכורים בקורפוס; הופעה ולבוש (33-05-01) אינה מזכירה קעקועים"
+ },
+ {
+  "id": "hG2b",
+  "topic_id": "G2",
+  "topic": "יחס משפיל מצד מפקד",
+  "split": "held",
+  "question": "המכ צועק עליי 'אפס' ו'חתיכת כלום' כל יום מול המחלקה. יש פקודה נגד התנהגות כזאת?",
+  "role": "soldier",
+  "verdict": "NO_ORDER_IN_CORPUS",
+  "doc_id": null,
+  "verified_quotes": [],
+  "note": "אין פקודה ייעודית בקורפוס; מסלול התלונה קיים (33.0336, 35.0822)"
+ },
+ {
+  "id": "hG3a",
+  "topic_id": "G3",
+  "topic": "מזון טבעוני",
+  "split": "held",
+  "question": "אני טבעוני, הצבא חייב לספק לי אוכל מתאים?",
+  "role": "soldier",
+  "verdict": "NO_ORDER_IN_CORPUS",
+  "doc_id": null,
+  "verified_quotes": [],
+  "note": "אין בקורפוס; דמי כלכלה (56.0131) אינה עוסקת בתזונה מיוחדת"
+ },
+ {
+  "id": "hG4b",
+  "topic_id": "G4",
+  "topic": "החרמת טלפון כעונש",
+  "split": "held",
+  "question": "המפ לקח לכל המחלקה את הפלאפונים לשבוע כי מישהו צילם בחדר. זה חוקי?",
+  "role": "soldier",
+  "verdict": "NO_ORDER_IN_CORPUS",
+  "doc_id": null,
+  "verified_quotes": [],
+  "note": "21.0113 עוסקת בביטחון מידע, לא בהחרמה כעונש"
+ },
+ {
+  "id": "hG5a",
+  "topic_id": "G5",
+  "topic": "גובה המשכורת",
+  "split": "held",
+  "question": "כמה משכורת מקבל לוחם בחודש?",
+  "role": "soldier",
+  "verdict": "NOT_IN_CORPUS",
+  "doc_id": null,
+  "verified_quotes": [],
+  "note": "35.0201 אומרת במפורש שהסכום אינו קבוע בפקודה; 36.0301 (רמות פעילות) בלי בלוק מאוצר"
+ },
+ {
+  "id": "hG6b",
+  "topic_id": "G6",
+  "topic": "תדירות יציאות הביתה",
+  "split": "held",
+  "question": "אנחנו סוגרים כבר 28 יום ברצף. יש מקסימום ימים שמותר להחזיק חייל בבסיס בלי יציאה?",
+  "role": "soldier",
+  "verdict": "NOT_IN_CORPUS",
+  "doc_id": null,
+  "verified_quotes": [],
+  "note": "בקורפוס רק סוף שבוע ארוך אחת לחודש; סבבי יציאות (17-4, 11-3) אינם בפקודה"
+ },
+ {
+  "id": "hG7a",
+  "topic_id": "G7",
+  "topic": "חלוקת תורנויות מטבח",
+  "split": "held",
+  "question": "כמה תורנויות מטבח מותר לתת לי בחודש?",
+  "role": "soldier",
+  "verdict": "NO_ORDER_IN_CORPUS",
+  "doc_id": null,
+  "verified_quotes": [],
+  "note": "עניין יחידתי"
+ },
+ {
+  "id": "hG8b",
+  "topic_id": "G8",
+  "topic": "בן יחיד בקרבי",
+  "split": "held",
+  "question": "ההורים שלי לא רוצים לחתום לי על קרבי ואני בן יחיד. אפשר לשרת בקרבי בלי החתימה שלהם?",
+  "role": "soldier",
+  "verdict": "NOT_IN_CORPUS",
+  "doc_id": null,
+  "verified_quotes": [],
+  "note": "רק אזכורים אגביים בקורפוס; ההסדר בהוראת אכ\"א"
+ }
+]
