@@ -1,0 +1,740 @@
+[
+ {
+  "id": "q00119",
+  "doc": "PM-35.0402",
+  "pos": 15,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 111
+ },
+ {
+  "id": "q00152",
+  "doc": "PM-35.0402",
+  "pos": 2,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 115
+ },
+ {
+  "id": "q00172",
+  "doc": "31.0605",
+  "pos": 63,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 112
+ },
+ {
+  "id": "q00250",
+  "doc": "PM-35.0402",
+  "pos": 15,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 106
+ },
+ {
+  "id": "q00014",
+  "doc": "31.0103",
+  "pos": 7,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 142
+ },
+ {
+  "id": "q00039",
+  "doc": "61.0104",
+  "pos": 5,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 61
+ },
+ {
+  "id": "q00120",
+  "doc": "31.0606",
+  "pos": 42,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 121
+ },
+ {
+  "id": "q00153",
+  "doc": "36.0401",
+  "pos": 1,
+  "block_has": true,
+  "served": true,
+  "rs": false,
+  "n_orders": 94
+ },
+ {
+  "id": "q00189",
+  "doc": "31.0603",
+  "pos": 13,
+  "block_has": false,
+  "served": false,
+  "rs": false,
+  "n_orders": 129
+ },
+ {
+  "id": "q00251",
+  "doc": "PM-35.0402",
+  "pos": 32,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 130
+ },
+ {
+  "id": "q00015",
+  "doc": "PM-35.0402",
+  "pos": 20,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 138
+ },
+ {
+  "id": "q00040",
+  "doc": "PM-35.0402",
+  "pos": 65,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 116
+ },
+ {
+  "id": "q00060",
+  "doc": "31.0507",
+  "pos": 100,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 140
+ },
+ {
+  "id": "q00096",
+  "doc": "35.0209",
+  "pos": 18,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 135
+ },
+ {
+  "id": "q00154",
+  "doc": "PM-35.0402",
+  "pos": 2,
+  "block_has": true,
+  "served": true,
+  "rs": false,
+  "n_orders": 133
+ },
+ {
+  "id": "q00177",
+  "doc": "36.0301",
+  "pos": null,
+  "block_has": false,
+  "served": false,
+  "rs": false,
+  "n_orders": 137
+ },
+ {
+  "id": "q00252",
+  "doc": "32.0101",
+  "pos": 22,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 174
+ },
+ {
+  "id": "q00042",
+  "doc": "PM-35.0402",
+  "pos": 22,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 97
+ },
+ {
+  "id": "q00075",
+  "doc": "33.0336",
+  "pos": 9,
+  "block_has": false,
+  "served": false,
+  "rs": false,
+  "n_orders": 138
+ },
+ {
+  "id": "q00097",
+  "doc": "33.0115",
+  "pos": 29,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 108
+ },
+ {
+  "id": "q00158",
+  "doc": "61.0104",
+  "pos": 1,
+  "block_has": true,
+  "served": true,
+  "rs": false,
+  "n_orders": 105
+ },
+ {
+  "id": "q00194",
+  "doc": "35.0822",
+  "pos": 115,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 151
+ },
+ {
+  "id": "q00099",
+  "doc": "35.0206",
+  "pos": 22,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 87
+ },
+ {
+  "id": "q00159",
+  "doc": "36.0401",
+  "pos": 1,
+  "block_has": true,
+  "served": true,
+  "rs": false,
+  "n_orders": 159
+ },
+ {
+  "id": "q00179",
+  "doc": "56.0131",
+  "pos": 15,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 131
+ },
+ {
+  "id": "q00195",
+  "doc": "CHOK-SHIPUT-1955",
+  "pos": 49,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 104
+ },
+ {
+  "id": "q00030",
+  "doc": "PM-35.0402",
+  "pos": 1,
+  "block_has": true,
+  "served": true,
+  "rs": false,
+  "n_orders": 163
+ },
+ {
+  "id": "q00044",
+  "doc": "61.0104",
+  "pos": 6,
+  "block_has": true,
+  "served": true,
+  "rs": false,
+  "n_orders": 178
+ },
+ {
+  "id": "q00064",
+  "doc": "PM-35.0402",
+  "pos": 4,
+  "block_has": true,
+  "served": true,
+  "rs": false,
+  "n_orders": 118
+ },
+ {
+  "id": "q00087",
+  "doc": "21.0401",
+  "pos": 1,
+  "block_has": true,
+  "served": true,
+  "rs": false,
+  "n_orders": 112
+ },
+ {
+  "id": "q00109",
+  "doc": "HKA-31-08-01",
+  "pos": 7,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 73
+ },
+ {
+  "id": "q00160",
+  "doc": "PM-33.0302",
+  "pos": 8,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 120
+ },
+ {
+  "id": "q00197",
+  "doc": "31.0308",
+  "pos": 53,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 199
+ },
+ {
+  "id": "q00255",
+  "doc": "3.0501",
+  "pos": 16,
+  "block_has": false,
+  "served": false,
+  "rs": false,
+  "n_orders": 146
+ },
+ {
+  "id": "q00046",
+  "doc": "61.0104",
+  "pos": 2,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 111
+ },
+ {
+  "id": "q00065",
+  "doc": "PM-35.0402",
+  "pos": 2,
+  "block_has": true,
+  "served": true,
+  "rs": false,
+  "n_orders": 78
+ },
+ {
+  "id": "q00088",
+  "doc": "PM-35.0402",
+  "pos": 28,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 192
+ },
+ {
+  "id": "q00110",
+  "doc": "33.0336",
+  "pos": 79,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 153
+ },
+ {
+  "id": "q00135",
+  "doc": "35.0314",
+  "pos": 20,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 170
+ },
+ {
+  "id": "q00198",
+  "doc": "35.0822",
+  "pos": 21,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 106
+ },
+ {
+  "id": "q00032",
+  "doc": "PM-35.0402",
+  "pos": 17,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 153
+ },
+ {
+  "id": "q00112",
+  "doc": "PM-35.0402",
+  "pos": 6,
+  "block_has": true,
+  "served": true,
+  "rs": false,
+  "n_orders": 147
+ },
+ {
+  "id": "q00137",
+  "doc": "HKA-31-08-01",
+  "pos": 86,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 134
+ },
+ {
+  "id": "q00184",
+  "doc": "HKA-31-08-01",
+  "pos": 47,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 125
+ },
+ {
+  "id": "q00267",
+  "doc": "31.0513",
+  "pos": 2,
+  "block_has": true,
+  "served": true,
+  "rs": false,
+  "n_orders": 127
+ },
+ {
+  "id": "q00033",
+  "doc": "61.0104",
+  "pos": 2,
+  "block_has": true,
+  "served": true,
+  "rs": false,
+  "n_orders": 113
+ },
+ {
+  "id": "q00139",
+  "doc": "61.0104",
+  "pos": 1,
+  "block_has": true,
+  "served": true,
+  "rs": false,
+  "n_orders": 106
+ },
+ {
+  "id": "q00067",
+  "doc": "PM-35.0402",
+  "pos": 11,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 127
+ },
+ {
+  "id": "q00115",
+  "doc": "PM-35.0402",
+  "pos": 1,
+  "block_has": true,
+  "served": true,
+  "rs": false,
+  "n_orders": 100
+ },
+ {
+  "id": "q00035",
+  "doc": "36.0528",
+  "pos": null,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 108
+ },
+ {
+  "id": "q00201",
+  "doc": "36.0401",
+  "pos": null,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 104
+ },
+ {
+  "id": "q00053",
+  "doc": "33.0146",
+  "pos": 30,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 74
+ },
+ {
+  "id": "q00092",
+  "doc": "CHOK-SHIPUT-1955",
+  "pos": 130,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 151
+ },
+ {
+  "id": "q00116",
+  "doc": "31.0513",
+  "pos": 2,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 163
+ },
+ {
+  "id": "q00093",
+  "doc": "31.0513",
+  "pos": 36,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 94
+ },
+ {
+  "id": "q00117",
+  "doc": "PM-35.0402",
+  "pos": 51,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 92
+ },
+ {
+  "id": "q00248",
+  "doc": "32.0220",
+  "pos": 1,
+  "block_has": true,
+  "served": true,
+  "rs": false,
+  "n_orders": 120
+ },
+ {
+  "id": "q00146",
+  "doc": "61.0104",
+  "pos": 18,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 104
+ },
+ {
+  "id": "q00164",
+  "doc": "35.0822",
+  "pos": 2,
+  "block_has": true,
+  "served": true,
+  "rs": false,
+  "n_orders": 101
+ },
+ {
+  "id": "q00186",
+  "doc": "36.0401",
+  "pos": null,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 120
+ },
+ {
+  "id": "q00188",
+  "doc": "61.0104",
+  "pos": 7,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 78
+ },
+ {
+  "id": "q00200",
+  "doc": "35.0205",
+  "pos": 59,
+  "block_has": true,
+  "served": false,
+  "rs": false,
+  "n_orders": 155
+ },
+ {
+  "id": "rs005",
+  "doc": "31.0513",
+  "pos": 1,
+  "block_has": true,
+  "served": true,
+  "rs": true,
+  "n_orders": 142
+ },
+ {
+  "id": "rs054",
+  "doc": "35.0807",
+  "pos": 3,
+  "block_has": true,
+  "served": false,
+  "rs": true,
+  "n_orders": 89
+ },
+ {
+  "id": "rs024",
+  "doc": "33-05-01",
+  "pos": 6,
+  "block_has": false,
+  "served": false,
+  "rs": true,
+  "n_orders": 78
+ },
+ {
+  "id": "rs018",
+  "doc": "CHOK-SHIPUT-1955",
+  "pos": 122,
+  "block_has": true,
+  "served": false,
+  "rs": true,
+  "n_orders": 135
+ },
+ {
+  "id": "rs060",
+  "doc": "35.0223",
+  "pos": 6,
+  "block_has": true,
+  "served": true,
+  "rs": true,
+  "n_orders": 86
+ },
+ {
+  "id": "rs033",
+  "doc": "33-05-01",
+  "pos": 2,
+  "block_has": true,
+  "served": true,
+  "rs": true,
+  "n_orders": 146
+ },
+ {
+  "id": "rs063",
+  "doc": "21.0113",
+  "pos": 1,
+  "block_has": true,
+  "served": true,
+  "rs": true,
+  "n_orders": 85
+ },
+ {
+  "id": "rs010",
+  "doc": "CHOK-SHIPUT-1955",
+  "pos": 41,
+  "block_has": true,
+  "served": false,
+  "rs": true,
+  "n_orders": 111
+ },
+ {
+  "id": "rs000",
+  "doc": "33.0115",
+  "pos": 18,
+  "block_has": true,
+  "served": false,
+  "rs": true,
+  "n_orders": 134
+ },
+ {
+  "id": "rs012",
+  "doc": "PM-33.0302",
+  "pos": 28,
+  "block_has": true,
+  "served": false,
+  "rs": true,
+  "n_orders": 152
+ },
+ {
+  "id": "rs059",
+  "doc": "HKA-31-08-01",
+  "pos": 127,
+  "block_has": true,
+  "served": false,
+  "rs": true,
+  "n_orders": 144
+ },
+ {
+  "id": "rs045",
+  "doc": "PM-33.0213",
+  "pos": 1,
+  "block_has": true,
+  "served": true,
+  "rs": true,
+  "n_orders": 78
+ },
+ {
+  "id": "rs007",
+  "doc": "35.0206",
+  "pos": null,
+  "block_has": true,
+  "served": false,
+  "rs": true,
+  "n_orders": 147
+ },
+ {
+  "id": "rs039",
+  "doc": "HKA-31-08-01",
+  "pos": 3,
+  "block_has": true,
+  "served": true,
+  "rs": true,
+  "n_orders": 78
+ },
+ {
+  "id": "rs070",
+  "doc": "CHOK-SHIPUT-1955",
+  "pos": 3,
+  "block_has": true,
+  "served": true,
+  "rs": true,
+  "n_orders": 149
+ },
+ {
+  "id": "rs014",
+  "doc": "33-05-01",
+  "pos": 37,
+  "block_has": true,
+  "served": false,
+  "rs": true,
+  "n_orders": 73
+ },
+ {
+  "id": "rs067",
+  "doc": "31.0103",
+  "pos": 4,
+  "block_has": true,
+  "served": true,
+  "rs": true,
+  "n_orders": 94
+ },
+ {
+  "id": "rs009",
+  "doc": "35.0107",
+  "pos": 2,
+  "block_has": true,
+  "served": true,
+  "rs": true,
+  "n_orders": 92
+ },
+ {
+  "id": "rs048",
+  "doc": "36.0401",
+  "pos": 4,
+  "block_has": true,
+  "served": true,
+  "rs": true,
+  "n_orders": 139
+ },
+ {
+  "id": "rs071",
+  "doc": "33.0220",
+  "pos": 1,
+  "block_has": true,
+  "served": true,
+  "rs": true,
+  "n_orders": 137
+ }
+]

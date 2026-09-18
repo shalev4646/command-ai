@@ -359,6 +359,25 @@ RETRIEVE_DOC_BLOCKS = int(os.environ.get("RETRIEVE_DOC_BLOCKS", "0"))
 # 8 chunks and its per-doc caps hide orders that ranked well, so the pool is
 # read from a deeper ranking (the same scorer, no extra model call).
 RETRIEVE_DOC_BLOCKS_POOL = int(os.environ.get("RETRIEVE_DOC_BLOCKS_POOL", "40"))
+
+# ── The router's picks as BLOCKS (RETRIEVE_ROUTER_BLOCKS) — 18.09 ────────────
+# A reranker over the embedding ranking was the plan, and the free ceiling
+# analysis killed it before it was built: for the targets the deployed window
+# (6 blocks) does not serve, the answering order sits at distinct-order
+# position 7-25 for 18, 26-40 for 7, beyond 40 or absent for 20 — and of the
+# real-style ones only ONE sits in 7-25. No reranker of the top 25 can reach
+# what the ranking never surfaced.
+#
+# The document router can: it reads every order TITLE, so rank is no obstacle,
+# and it is already paid for on every question. Probed on the 82 targets
+# (18.09, $0.68): it names the answering order for 34 (9 of 20 real-style),
+# and for 18 of the 55 unserved targets the order it names carries the rule in
+# its curated block — 4 of them beyond position 40, 3 real-style. Today a
+# routed order gets +0.05 and one seat (RETRIEVE_ROUTER_SLOTS): one clause,
+# usually the wrong one — the same "right order, wrong clause" failure the
+# doc blocks closed. This serves the routed orders' blocks instead, cut like
+# every block. 0 = off, the default until the paired arm says the answers move.
+RETRIEVE_ROUTER_BLOCKS = int(os.environ.get("RETRIEVE_ROUTER_BLOCKS", "0"))
 # (12.09 night, parallel session: a RETRIEVE_DOC_BLOCKS_RAW=4 cap on the served
 # raw tail was built and measured verbatim, 12 -> 24 sections. Superseded 16.09:
 # the raw pool is ranking-only and never served — see extend_with_doc_blocks.)
@@ -1323,6 +1342,33 @@ def extend_with_doc_blocks(chunks: list[dict], question: str, role: str,
     return _append_new(chunks, doc_blocks_window(search, role, route, doc_ids), None)
 
 
+def extend_with_router_blocks(chunks: list[dict], question: str, role: str,
+                              route: set[str] | None = None) -> list[dict]:
+    """RETRIEVE_ROUTER_BLOCKS: the curated blocks of the orders the document
+    router named, appended after the window (and after the doc blocks, which
+    already cover the orders the ranking itself surfaced). Same scope and the
+    same cut as every block; a routed order outside the role's curated scope
+    is skipped. The blocks carry score 0.0 — the router's opinion is not a
+    ranking score, and the sources list should keep the ranked orders first."""
+    if RETRIEVE_ROUTER_BLOCKS <= 0 or not route or not (question or "").strip():
+        return chunks
+    docs = _docs_for_role(role)
+    if RETRIEVE_CURATED_ONLY:
+        docs = [d for d in docs if _has_key_facts(d)]
+    by_id = {d["document_id"]: d for d in docs if d.get("document_id")}
+    routed = sorted(r for r in route if r in by_id)
+    if not routed:
+        return chunks
+    hits = _clause_index().rank(question, doc_ids=routed)
+    out: list[dict] = []
+    for doc_id in routed:
+        for c in v2_block_chunks(by_id[doc_id], hits.clause_scores(doc_id)):
+            c = dict(c)
+            c["score"] = 0.0
+            out.append(c)
+    return _append_new(chunks, out, None)
+
+
 def extend_with_clause_embed(chunks: list[dict], question: str, role: str,
                              route: set[str] | None = None) -> list[dict]:
     """RETRIEVE_V3: the blocks of the orders the clause-level embedding index
@@ -1376,9 +1422,10 @@ def extend_with_clause_index(chunks: list[dict], question: str, role: str,
 
 def widen_context(chunks: list[dict], question: str, role: str,
                   route: set[str] | None) -> list[dict]:
-    """The seven appended extensions, in the order they were measured to
+    """The eight appended extensions, in the order they were measured to
     stack: hypothetical, router seats, full blocks, the blocks of the first N
-    orders (RETRIEVE_DOC_BLOCKS), the clause-title path (RETRIEVE_V2), the
+    orders (RETRIEVE_DOC_BLOCKS), the router's picks as blocks
+    (RETRIEVE_ROUTER_BLOCKS), the clause-title path (RETRIEVE_V2), the
     clause-embedding path (RETRIEVE_V3), amount-bearing clauses. Each is a no-op when its flag is
     off, so production with all flags off is byte-identical to the
     pre-extension pipeline."""
@@ -1386,6 +1433,7 @@ def widen_context(chunks: list[dict], question: str, role: str,
     out = extend_with_router_slots(out, question, role, route)
     out = extend_with_full_blocks(out, role)
     out = extend_with_doc_blocks(out, question, role, route)
+    out = extend_with_router_blocks(out, question, role, route)
     out = extend_with_clause_index(out, question, role, route)
     out = extend_with_clause_embed(out, question, role, route)
     return extend_with_quantity_clauses(out, question, role)
