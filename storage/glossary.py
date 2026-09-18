@@ -94,6 +94,69 @@ GLOSSARY: dict[str, str] = {
     'ולתם': 'ועדה לתיאום מילואים',
     'קלב': 'קרוב לבית העברה',
     'שק"ם': 'קנטינה',
+    # ── 2026-09-18 batch — soldier words with ZERO (or near-zero) occurrences
+    # in the index, each expanded to a phrase that lives almost entirely in
+    # the answering order (counts: night/head100/out/glossary_counts.txt;
+    # criterion written before measuring: night/head100/GLOSSARY_CRITERION.md).
+    # work permit: soldiers say "אישור עבודה" (0 chunks); the order says
+    # "היתר עבודה פרטית" (33.0115 carries 44 of the 61 "עבודה פרטית" chunks)
+    'אישור עבודה': 'היתר עבודה פרטית',
+    # "טרטור" (0 chunks) is the soldiers' word for what 33.0351 calls
+    # "תרגול נוסף" (36 of 39 chunks)
+    'טרטור': 'תרגול נוסף',
+    'טרטורים': 'תרגול נוסף',
+    'טירטור': 'תרגול נוסף',
+    'טירטורים': 'תרגול נוסף',
+    'לטרטר': 'תרגול נוסף',
+    'מטרטר': 'תרגול נוסף',
+    'מטרטרים': 'תרגול נוסף',
+    # a weekend taken away as a response to conduct is "מניעת חופשה"
+    # (PM-33.0352: 58 of 68 chunks). Only the PUNITIVE phrasings: "סוגר שבת"
+    # is also the routine rotation and stays out on purpose.
+    'הוריד לי שבת': 'מניעת חופשה',
+    'הורידו לי שבת': 'מניעת חופשה',
+    'הורידו לו שבת': 'מניעת חופשה',
+    'להוריד שבת': 'מניעת חופשה',
+    'שבת עונש': 'מניעת חופשה',
+    'עונש קולקטיבי': 'מניעת חופשה באופן קולקטיבי',
+    'ענישה קולקטיבית': 'מניעת חופשה באופן קולקטיבי',
+    # discharge leave
+    'חפשש': 'חופשת שחרור',
+    'חפש"ש': 'חופשת שחרור',
+    # a neutral synonym only — a phone question may be about restrictions
+    # (21.0113) or about compensation for a broken one (35.0223), so the
+    # expansion must not pick the order
+    'פלאפון': 'טלפון',
+    'פלאפונים': 'טלפון',
+    'סמארטפון': 'טלפון',
+    'סמארטפונים': 'טלפון',
+    # the orders' own נקח"ל sits mostly in 30.0408 (archive files); the
+    # full name lives only in 33.0336 (66 chunks)
+    'נקחל': 'נציב קבילות החיילים',
+    'נקח"ל': 'נציב קבילות החיילים',
+    # how a soldier talks about a friend (or himself) in danger — none of
+    # these phrases exists in the index; 33.0219 writes "מצוקה נפשית" and
+    # "אובדני" (13 chunks, all there)
+    'נמאס לו מהחיים': 'מצוקה נפשית אובדני',
+    'נמאס לי מהחיים': 'מצוקה נפשית אובדני',
+    'נמאס לה מהחיים': 'מצוקה נפשית אובדני',
+    'לא רוצה לחיות': 'מצוקה נפשית אובדני',
+    'לפגוע בעצמי': 'מצוקה נפשית אובדני',
+    # sexual harassment is rarely named by the person it happened to
+    'נגע בי': 'פגיעה על רקע מיני הטרדה מינית',
+    'נגע בה': 'פגיעה על רקע מיני הטרדה מינית',
+    'נגעו בי': 'פגיעה על רקע מיני הטרדה מינית',
+    'הערות מיניות': 'פגיעה על רקע מיני הטרדה מינית',
+    'הצעות מיניות': 'פגיעה על רקע מיני הטרדה מינית',
+    # release money
+    'כסף של השחרור': 'מענק שחרור פיקדון',
+    'כסף מהשחרור': 'מענק שחרור פיקדון',
+    # appearance
+    'לק': 'לק לציפורניים',
+    # "רגילה" alone is also an adjective (52 chunks) — only the noun forms
+    'ימי רגילה': 'חופשה שנתית',
+    'לרגילה': 'חופשה שנתית',
+    'ברגילה': 'חופשה שנתית',
 }
 
 _QUOTES = str.maketrans({"״": '"', "”": '"', "“": '"', "׳": "'", "’": "'"})
@@ -125,9 +188,13 @@ def expansions(query: str) -> list[str]:
     seen: set[str] = set()
     joined = " ".join(_norm(t) for t in toks)
     # two-word entries first (e.g. 'צו 8', 'חדר מיון'): match against the
-    # normalised text, then single tokens
+    # normalised text, then single tokens. Up to two prefix letters may
+    # precede the first word — a soldier writes "הקפיצו אותי בצו 8" and
+    # "אמר שנמאס לו מהחיים", and single tokens already get the same
+    # treatment in _candidates (2026-09-18, measured as gl2)
     for term, exp in GLOSSARY.items():
-        if " " in term and re.search(rf"(?<![א-ת]){re.escape(term)}(?![א-ת])", joined):
+        if " " in term and re.search(
+                rf"(?<![א-ת])[{_PREFIXES}]{{0,2}}{re.escape(term)}(?![א-ת])", joined):
             if exp not in seen:
                 found.append(exp); seen.add(exp)
     for tok in toks:

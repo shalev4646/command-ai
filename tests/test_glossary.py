@@ -53,6 +53,45 @@ def test_flag_off_by_default_in_code():
         assert G.RETRIEVE_GLOSSARY is False
 
 
+# ── the 2026-09-18 batch (night/head100/GLOSSARY_CRITERION.md) ──────────────
+
+def test_multiword_entry_accepts_hebrew_prefixes():
+    # a reservist writes "בצו 8" at least as often as "צו 8"; before 18.09 only
+    # the bare form fired, while single tokens already had their prefixes stripped
+    assert G.expansions("הקפיצו אותי בצו 8 ויש לי בעיה בבית") == G.expansions("קיבלתי צו 8")
+    assert G.expansions("פינו אותו לחדר מיון בלילה") == G.expansions("חדר מיון")
+    # the prefix rule must not reach into another word or a bare number
+    assert G.expansions("יש לי 8 ימי חופשה") == []
+    assert G.expansions("חרצו 8 חריצים בקיר") == []
+
+
+def test_only_the_punitive_weekend_phrasings_expand():
+    ex = G.expansions('המ"פ הוריד לי שבת בלי לשמוע אותי')
+    assert "מניעת חופשה" in ex
+    # "סוגר שבת" is also the routine rotation — pointing it at the
+    # leave-prevention order would mislead a question about a normal weekend on base
+    assert "מניעת חופשה" not in G.expansions("אני סוגר שבת השבוע, מגיע לי יום חופש במקום?")
+
+
+def test_phone_slang_expands_to_the_neutral_word_only():
+    # a phone question may be about restrictions (21.0113) or about compensation
+    # for a broken one (35.0223): the expansion must not choose the order
+    assert G.expansions("נשבר לי הפלאפון באימון") == ["טלפון"]
+
+
+def test_distress_euphemisms_reach_the_distress_order_vocabulary():
+    for q in ("חבר מהמחלקה אמר לי שנמאס לו מהחיים, מה עושים?",
+              "הוא אמר שהוא לא רוצה לחיות יותר"):
+        ex = G.expansions(q)
+        assert ex and "אובדני" in ex[0], q
+
+
+def test_noun_forms_of_regila_expand_but_the_adjective_does_not():
+    assert G.expansions("רוצה לטוס לחול ברגילה") == ["חופשה שנתית"]
+    assert G.expansions("כמה ימי רגילה מגיע לי בשנה?") == ["חופשה שנתית"]
+    assert G.expansions("זו פעילות רגילה של היחידה") == []
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_") and callable(fn):
