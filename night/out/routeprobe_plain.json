@@ -1,0 +1,1228 @@
+[
+ {
+  "id": "q00119",
+  "doc": "PM-35.0402",
+  "picks": [
+   "31.0513",
+   "31.0701",
+   "PM-33.0352"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 15,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00152",
+  "doc": "PM-35.0402",
+  "picks": [
+   "PM-33.0352",
+   "36.0406",
+   "35.0408"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 2,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00172",
+  "doc": "31.0605",
+  "picks": [
+   "35.0822",
+   "33.0219",
+   "38.0102"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 63,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00250",
+  "doc": "PM-35.0402",
+  "picks": [],
+  "hit": false,
+  "first": false,
+  "pos": 15,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00014",
+  "doc": "31.0103",
+  "picks": [
+   "35.0221",
+   "35.0222",
+   "35.0227"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 7,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00039",
+  "doc": "61.0104",
+  "picks": [
+   "32.0408",
+   "61.0104",
+   "32.0402"
+  ],
+  "hit": true,
+  "first": false,
+  "pos": 5,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00120",
+  "doc": "31.0606",
+  "picks": [
+   "31.0606",
+   "35.0822",
+   "33.0336"
+  ],
+  "hit": true,
+  "first": true,
+  "pos": 42,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00153",
+  "doc": "36.0401",
+  "picks": [
+   "36.0401",
+   "35.0408",
+   "PM-35.0402"
+  ],
+  "hit": true,
+  "first": true,
+  "pos": 1,
+  "block_has": true,
+  "served": true,
+  "rs": false
+ },
+ {
+  "id": "q00189",
+  "doc": "31.0603",
+  "picks": [
+   "33.0115",
+   "31.0202",
+   "31.0603"
+  ],
+  "hit": true,
+  "first": false,
+  "pos": 13,
+  "block_has": false,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00251",
+  "doc": "PM-35.0402",
+  "picks": [
+   "31.0116",
+   "35.0822",
+   "33.0350"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 32,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00015",
+  "doc": "PM-35.0402",
+  "picks": [
+   "31.0103",
+   "33.0914",
+   "35.0205"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 20,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00040",
+  "doc": "PM-35.0402",
+  "picks": [
+   "38.0123",
+   "38.0102",
+   "35.0306"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 65,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00060",
+  "doc": "31.0507",
+  "picks": [
+   "31.0205",
+   "31.0201",
+   "32.0215"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 100,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00096",
+  "doc": "35.0209",
+  "picks": [
+   "חוק-קליטת-חיילים",
+   "3.0110",
+   "35.0209"
+  ],
+  "hit": true,
+  "first": false,
+  "pos": 18,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00154",
+  "doc": "PM-35.0402",
+  "picks": [
+   "31.0701",
+   "PM-33.0352",
+   "35.0807"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 2,
+  "block_has": true,
+  "served": true,
+  "rs": false
+ },
+ {
+  "id": "q00177",
+  "doc": "36.0301",
+  "picks": [
+   "35.0222",
+   "35.0314",
+   "35.0201"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": null,
+  "block_has": false,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00252",
+  "doc": "32.0101",
+  "picks": [
+   "32.0221",
+   "32.0207",
+   "32.0214"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 22,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00042",
+  "doc": "PM-35.0402",
+  "picks": [
+   "36.0406",
+   "35.0805",
+   "PM-35.0402"
+  ],
+  "hit": true,
+  "first": false,
+  "pos": 22,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00075",
+  "doc": "33.0336",
+  "picks": [
+   "33.0145",
+   "33.0336",
+   "PM-33.0302"
+  ],
+  "hit": true,
+  "first": false,
+  "pos": 9,
+  "block_has": false,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00097",
+  "doc": "33.0115",
+  "picks": [
+   "33.0115",
+   "35.0306",
+   "31.0202"
+  ],
+  "hit": true,
+  "first": true,
+  "pos": 29,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00158",
+  "doc": "61.0104",
+  "picks": [
+   "36.0413",
+   "31.0513",
+   "38.0122"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 1,
+  "block_has": true,
+  "served": true,
+  "rs": false
+ },
+ {
+  "id": "q00194",
+  "doc": "35.0822",
+  "picks": [
+   "32.0241",
+   "32.0202",
+   "32.0214"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 115,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00099",
+  "doc": "35.0206",
+  "picks": [
+   "35.0209",
+   "35.0206",
+   "35.0228"
+  ],
+  "hit": true,
+  "first": false,
+  "pos": 22,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00159",
+  "doc": "36.0401",
+  "picks": [
+   "33.0352",
+   "36.0401",
+   "31.0308"
+  ],
+  "hit": true,
+  "first": false,
+  "pos": 1,
+  "block_has": true,
+  "served": true,
+  "rs": false
+ },
+ {
+  "id": "q00179",
+  "doc": "56.0131",
+  "picks": [
+   "56.0131",
+   "35.0201",
+   "35.0307"
+  ],
+  "hit": true,
+  "first": true,
+  "pos": 15,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00195",
+  "doc": "CHOK-SHIPUT-1955",
+  "picks": [
+   "32.0201",
+   "32.0202",
+   "PM-33.0202"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 49,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00030",
+  "doc": "PM-35.0402",
+  "picks": [
+   "36.0401",
+   "35.0407",
+   "PM-35.0402"
+  ],
+  "hit": true,
+  "first": false,
+  "pos": 1,
+  "block_has": true,
+  "served": true,
+  "rs": false
+ },
+ {
+  "id": "q00044",
+  "doc": "61.0104",
+  "picks": [
+   "61.0104",
+   "32.0402",
+   "32.0408"
+  ],
+  "hit": true,
+  "first": true,
+  "pos": 6,
+  "block_has": true,
+  "served": true,
+  "rs": false
+ },
+ {
+  "id": "q00064",
+  "doc": "PM-35.0402",
+  "picks": [
+   "PM-33.0352",
+   "35.0408",
+   "33.0201"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 4,
+  "block_has": true,
+  "served": true,
+  "rs": false
+ },
+ {
+  "id": "q00087",
+  "doc": "21.0401",
+  "picks": [
+   "33.0146",
+   "30.0408",
+   "33.0321"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 1,
+  "block_has": true,
+  "served": true,
+  "rs": false
+ },
+ {
+  "id": "q00109",
+  "doc": "HKA-31-08-01",
+  "picks": [
+   "32.0402",
+   "32.0401",
+   "61.0104"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 7,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00160",
+  "doc": "PM-33.0302",
+  "picks": [
+   "PM-33.0119",
+   "PM-33.0109",
+   "33.0336"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 8,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00197",
+  "doc": "31.0308",
+  "picks": [
+   "31.0308",
+   "32.0222",
+   "33.0314"
+  ],
+  "hit": true,
+  "first": true,
+  "pos": 53,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00255",
+  "doc": "3.0501",
+  "picks": [
+   "31.0103",
+   "35.0205",
+   "31.0202"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 16,
+  "block_has": false,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00046",
+  "doc": "61.0104",
+  "picks": [
+   "32.0408",
+   "61.0104",
+   "32.0401"
+  ],
+  "hit": true,
+  "first": false,
+  "pos": 2,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00065",
+  "doc": "PM-35.0402",
+  "picks": [
+   "PM-35.0402",
+   "35.0807",
+   "33.0351"
+  ],
+  "hit": true,
+  "first": true,
+  "pos": 2,
+  "block_has": true,
+  "served": true,
+  "rs": false
+ },
+ {
+  "id": "q00088",
+  "doc": "PM-35.0402",
+  "picks": [
+   "31.0116",
+   "35.0822",
+   "33.0350"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 28,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00110",
+  "doc": "33.0336",
+  "picks": [
+   "33.0336",
+   "8.0101",
+   "35.0822"
+  ],
+  "hit": true,
+  "first": true,
+  "pos": 79,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00135",
+  "doc": "35.0314",
+  "picks": [
+   "33.0334",
+   "35.0221",
+   "35.0222"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 20,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00198",
+  "doc": "35.0822",
+  "picks": [
+   "31.0116",
+   "31.0308",
+   "61.0104"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 21,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00032",
+  "doc": "PM-35.0402",
+  "picks": [
+   "31.0306",
+   "35.0822",
+   "PM-33.0352"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 17,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00112",
+  "doc": "PM-35.0402",
+  "picks": [
+   "31.1001",
+   "PM-33.0352",
+   "35.0408"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 6,
+  "block_has": true,
+  "served": true,
+  "rs": false
+ },
+ {
+  "id": "q00137",
+  "doc": "HKA-31-08-01",
+  "picks": [
+   "31.0202",
+   "31.0203",
+   "PM-31.0251"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 86,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00184",
+  "doc": "HKA-31-08-01",
+  "picks": [
+   "21.0203",
+   "PM-33.0209",
+   "31.0308"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 47,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00267",
+  "doc": "31.0513",
+  "picks": [
+   "31.0513",
+   "33.0111",
+   "PM-33.0309"
+  ],
+  "hit": true,
+  "first": true,
+  "pos": 2,
+  "block_has": true,
+  "served": true,
+  "rs": false
+ },
+ {
+  "id": "q00033",
+  "doc": "61.0104",
+  "picks": [
+   "61.0104",
+   "38.0102",
+   "35.0822"
+  ],
+  "hit": true,
+  "first": true,
+  "pos": 2,
+  "block_has": true,
+  "served": true,
+  "rs": false
+ },
+ {
+  "id": "q00139",
+  "doc": "61.0104",
+  "picks": [
+   "35.0306",
+   "35.0822",
+   "32.0402"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 1,
+  "block_has": true,
+  "served": true,
+  "rs": false
+ },
+ {
+  "id": "q00067",
+  "doc": "PM-35.0402",
+  "picks": [
+   "PM-35.0402",
+   "PM-33.0352",
+   "35.0408"
+  ],
+  "hit": true,
+  "first": true,
+  "pos": 11,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00115",
+  "doc": "PM-35.0402",
+  "picks": [
+   "35.0402",
+   "33.0350",
+   "31.0513"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 1,
+  "block_has": true,
+  "served": true,
+  "rs": false
+ },
+ {
+  "id": "q00035",
+  "doc": "36.0528",
+  "picks": [
+   "36.0406",
+   "35.0307",
+   "31.0206"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": null,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00201",
+  "doc": "36.0401",
+  "picks": [
+   "35.0402",
+   "35.0205",
+   "35.0314"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": null,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00053",
+  "doc": "33.0146",
+  "picks": [
+   "33.0146",
+   "33.0314",
+   "33.1001"
+  ],
+  "hit": true,
+  "first": true,
+  "pos": 30,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00092",
+  "doc": "CHOK-SHIPUT-1955",
+  "picks": [
+   "31.0606",
+   "35.0822",
+   "33.0111"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 130,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00116",
+  "doc": "31.0513",
+  "picks": [
+   "31.0513",
+   "33.0111",
+   "PM-33.0119"
+  ],
+  "hit": true,
+  "first": true,
+  "pos": 2,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00093",
+  "doc": "31.0513",
+  "picks": [
+   "33.0350",
+   "38.0105",
+   "PM-33.0136"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 36,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00117",
+  "doc": "PM-35.0402",
+  "picks": [
+   "36.0406",
+   "35.0502",
+   "31.0206"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 51,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00248",
+  "doc": "32.0220",
+  "picks": [
+   "32.0422",
+   "32.0201",
+   "32.0207"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 1,
+  "block_has": true,
+  "served": true,
+  "rs": false
+ },
+ {
+  "id": "q00146",
+  "doc": "61.0104",
+  "picks": [
+   "61.0104",
+   "32.0408",
+   "32.0402"
+  ],
+  "hit": true,
+  "first": true,
+  "pos": 18,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00164",
+  "doc": "35.0822",
+  "picks": [
+   "35.0822",
+   "33.0336",
+   "33.0145"
+  ],
+  "hit": true,
+  "first": true,
+  "pos": 2,
+  "block_has": true,
+  "served": true,
+  "rs": false
+ },
+ {
+  "id": "q00186",
+  "doc": "36.0401",
+  "picks": [
+   "31.0202",
+   "35.0211",
+   "זכויות-סטודנטים-מילואים"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": null,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00188",
+  "doc": "61.0104",
+  "picks": [
+   "30.0413",
+   "61.0113",
+   "30.0403"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 7,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "q00200",
+  "doc": "35.0205",
+  "picks": [
+   "35.0201",
+   "35.0205",
+   "35.0314"
+  ],
+  "hit": true,
+  "first": false,
+  "pos": 59,
+  "block_has": true,
+  "served": false,
+  "rs": false
+ },
+ {
+  "id": "rs005",
+  "doc": "31.0513",
+  "picks": [
+   "PM-33.0119",
+   "PM-33.0352",
+   "33.0111"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 1,
+  "block_has": true,
+  "served": true,
+  "rs": true
+ },
+ {
+  "id": "rs054",
+  "doc": "35.0807",
+  "picks": [
+   "PM-33.0213",
+   "35.0408",
+   "31.0513"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 3,
+  "block_has": true,
+  "served": false,
+  "rs": true
+ },
+ {
+  "id": "rs024",
+  "doc": "33-05-01",
+  "picks": [
+   "33-05-01",
+   "PM-33.0201",
+   "PM-33.0137"
+  ],
+  "hit": true,
+  "first": true,
+  "pos": 6,
+  "block_has": false,
+  "served": false,
+  "rs": true
+ },
+ {
+  "id": "rs018",
+  "doc": "CHOK-SHIPUT-1955",
+  "picks": [
+   "PM-33.0209",
+   "31.0701",
+   "33.0120"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 122,
+  "block_has": true,
+  "served": false,
+  "rs": true
+ },
+ {
+  "id": "rs060",
+  "doc": "35.0223",
+  "picks": [
+   "33.0144",
+   "35.0221",
+   "35.0222"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 6,
+  "block_has": true,
+  "served": true,
+  "rs": true
+ },
+ {
+  "id": "rs033",
+  "doc": "33-05-01",
+  "picks": [
+   "33-05-01",
+   "33.0501",
+   "PM-33.0119"
+  ],
+  "hit": true,
+  "first": true,
+  "pos": 2,
+  "block_has": true,
+  "served": true,
+  "rs": true
+ },
+ {
+  "id": "rs063",
+  "doc": "21.0113",
+  "picks": [
+   "21.0113",
+   "PM-33.0316",
+   "33.0350"
+  ],
+  "hit": true,
+  "first": true,
+  "pos": 1,
+  "block_has": true,
+  "served": true,
+  "rs": true
+ },
+ {
+  "id": "rs010",
+  "doc": "CHOK-SHIPUT-1955",
+  "picks": [
+   "33.0111",
+   "33.0321",
+   "PM-33.0302"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 41,
+  "block_has": true,
+  "served": false,
+  "rs": true
+ },
+ {
+  "id": "rs000",
+  "doc": "33.0115",
+  "picks": [
+   "33.0115",
+   "33.0126",
+   "PM-33.0143"
+  ],
+  "hit": true,
+  "first": true,
+  "pos": 18,
+  "block_has": true,
+  "served": false,
+  "rs": true
+ },
+ {
+  "id": "rs012",
+  "doc": "PM-33.0302",
+  "picks": [
+   "33.0111",
+   "PM-33.0302",
+   "33.0144"
+  ],
+  "hit": true,
+  "first": false,
+  "pos": 28,
+  "block_has": true,
+  "served": false,
+  "rs": true
+ },
+ {
+  "id": "rs059",
+  "doc": "HKA-31-08-01",
+  "picks": [
+   "PM-33.0119",
+   "PM-33.0209",
+   "33.0201"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 127,
+  "block_has": true,
+  "served": false,
+  "rs": true
+ },
+ {
+  "id": "rs045",
+  "doc": "PM-33.0213",
+  "picks": [
+   "PM-33.0213",
+   "33.0201",
+   "61.0105"
+  ],
+  "hit": true,
+  "first": true,
+  "pos": 1,
+  "block_has": true,
+  "served": true,
+  "rs": true
+ },
+ {
+  "id": "rs007",
+  "doc": "35.0206",
+  "picks": [
+   "35.0205",
+   "35.0234",
+   "חוק-קליטת-חיילים"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": null,
+  "block_has": true,
+  "served": false,
+  "rs": true
+ },
+ {
+  "id": "rs039",
+  "doc": "HKA-31-08-01",
+  "picks": [
+   "35.0408",
+   "35.0209",
+   "31.0605"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 3,
+  "block_has": true,
+  "served": true,
+  "rs": true
+ },
+ {
+  "id": "rs070",
+  "doc": "CHOK-SHIPUT-1955",
+  "picks": [
+   "33.0119",
+   "33.0109",
+   "PM-33.0302"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 3,
+  "block_has": true,
+  "served": true,
+  "rs": true
+ },
+ {
+  "id": "rs014",
+  "doc": "33-05-01",
+  "picks": [
+   "33-05-01",
+   "33.0501",
+   "PM-33.0119"
+  ],
+  "hit": true,
+  "first": true,
+  "pos": 37,
+  "block_has": true,
+  "served": false,
+  "rs": true
+ },
+ {
+  "id": "rs067",
+  "doc": "31.0103",
+  "picks": [
+   "33.0914",
+   "30.0117",
+   "35.0205"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 4,
+  "block_has": true,
+  "served": true,
+  "rs": true
+ },
+ {
+  "id": "rs009",
+  "doc": "35.0107",
+  "picks": [
+   "35.0107",
+   "33.0111",
+   "35.0221"
+  ],
+  "hit": true,
+  "first": true,
+  "pos": 2,
+  "block_has": true,
+  "served": true,
+  "rs": true
+ },
+ {
+  "id": "rs048",
+  "doc": "36.0401",
+  "picks": [
+   "36.0401",
+   "36.0413",
+   "35.0205"
+  ],
+  "hit": true,
+  "first": true,
+  "pos": 4,
+  "block_has": true,
+  "served": true,
+  "rs": true
+ },
+ {
+  "id": "rs071",
+  "doc": "33.0220",
+  "picks": [
+   "33.0219",
+   "35.0822",
+   "61.0104"
+  ],
+  "hit": false,
+  "first": false,
+  "pos": 1,
+  "block_has": true,
+  "served": true,
+  "rs": true
+ }
+]

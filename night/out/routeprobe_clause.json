@@ -1,0 +1,1039 @@
+[
+ {
+  "id": "q00152",
+  "doc": "PM-35.0402",
+  "role": "commander",
+  "picks": [
+   "35.0352",
+   "PM-35.0402",
+   "31.0606"
+  ],
+  "hit": true,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00250",
+  "doc": "PM-35.0402",
+  "role": "commander",
+  "picks": [
+   "# חופשה לאירוע משפחתי בחו\"ל",
+   "השאלה שלך נוגעת לשתי פקודות שונות שעלולות להיות בעלות עדי"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00153",
+  "doc": "36.0401",
+  "role": "commander",
+  "picks": [
+   "בהתאם לשאלתך",
+   "הפקודות הרלוונטיות הן:",
+   "**35.0402",
+   "35.0807",
+   "35.0808**",
+   "אלו הן הפקודות העו"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00251",
+  "doc": "PM-35.0402",
+  "role": "commander",
+  "picks": [
+   "# תשובה לשאלתך",
+   "בהתאם לפקודות הרלוונטיות",
+   "הנושא של **העברה קרוב לבית (קל\"ב)** מסיבות"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00060",
+  "doc": "31.0507",
+  "role": "commander",
+  "picks": [
+   "31.0318",
+   "31.0201",
+   "32.0201"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00154",
+  "doc": "PM-35.0402",
+  "role": "commander",
+  "picks": [
+   "בהתאם לפקודות צה\"ל",
+   "הנושא הזה מטופל בפקודה **31.0701 — יציאה לחוץ לארץ בזמן חופשה"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00252",
+  "doc": "32.0101",
+  "role": "commander",
+  "picks": [
+   "בהתאם לשאלתך על דירוגים שנים וקובץ חדש",
+   "הפקודות הרלוונטיות הן:",
+   "**32.0101",
+   "32.0201",
+   "32"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00158",
+  "doc": "61.0104",
+  "role": "commander",
+  "picks": [
+   "# תשובה",
+   "בהתאם לפקודות צה\"ל",
+   "הנושא של העברת חייל ליום חפצי (יום שבת) בשל ניתוח מתוכנ"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00194",
+  "doc": "35.0822",
+  "role": "commander",
+  "picks": [
+   "בהתאם לשאלתך",
+   "הנושאים הרלוונטיים ביותר הם:",
+   "32.0202",
+   "32.0314",
+   "32.0215"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00159",
+  "doc": "36.0401",
+  "role": "commander",
+  "picks": [
+   "36.0401"
+  ],
+  "hit": true,
+  "first": true,
+  "rs": false
+ },
+ {
+  "id": "q00195",
+  "doc": "CHOK-SHIPUT-1955",
+  "role": "commander",
+  "picks": [
+   "# סכסוך בין צו לפקודה",
+   "זה שאלה חשובה על היררכיית הוראות בצה\"ל. הנושא מטופל בפקודה:",
+   "**33"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00030",
+  "doc": "PM-35.0402",
+  "role": "commander",
+  "picks": [
+   "# תשובה לשאלתך",
+   "בהתאם לפקודות צה\"ל",
+   "**ימי חופשה שלא ניצלתם מהמסגרת הקודמת עובר"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00197",
+  "doc": "31.0308",
+  "role": "commander",
+  "picks": [
+   "# ערעור על שיבוץ בתפקיד",
+   "31.0308",
+   "31.0317",
+   "32.0201",
+   "**תשובה קצרה:**",
+   "כן",
+   "אתה יכול להגיש בק"
+  ],
+  "hit": true,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00255",
+  "doc": "3.0501",
+  "role": "commander",
+  "picks": [
+   "# הוצאה מהשירות לאחר 3.5 שנים",
+   "השאלה שלך כנראה קשורה לאחד מהנושאים הבאים:",
+   "## 1. **"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00088",
+  "doc": "PM-35.0402",
+  "role": "commander",
+  "picks": [
+   "# פרוצדורה לצאת למשפחה במצב דחוף",
+   "בהתאם לפקודות צה\"ל",
+   "כמפקד שיש לך מצב דחוף במש"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00135",
+  "doc": "35.0314",
+  "role": "commander",
+  "picks": [
+   "35.0814"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00198",
+  "doc": "35.0822",
+  "role": "commander",
+  "picks": [
+   "בהתאם לשאלתך",
+   "הנושאים הרלוונטיים הם:",
+   "**61.0104",
+   "35.0807",
+   "31.0116**",
+   "הסברים קצרים:",
+   "- **"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00267",
+  "doc": "31.0513",
+  "role": "commander",
+  "picks": [
+   "בהתאם לפקודות צה\"ל",
+   "הנה הפקודות הרלוונטיות:",
+   "**33.0302 — דין משמעתי**",
+   "- עבירת \"העדר מ"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00092",
+  "doc": "CHOK-SHIPUT-1955",
+  "role": "commander",
+  "picks": [
+   "# השמטה בשעת חירום",
+   "זה תלוי בנסיבות. הנה מה שחשוב לדעת:",
+   "## מתי זה **לא** השמטה",
+   "אם י"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00093",
+  "doc": "31.0513",
+  "role": "commander",
+  "picks": [
+   "# הבדל בין טיול בהחלטה עצמאית ליציאה לחירום",
+   "## הפקודות הרלוונטיות",
+   "**35.0408** — פעילויות גי"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00248",
+  "doc": "32.0220",
+  "role": "commander",
+  "picks": [
+   "# תשובה",
+   "השאלה שלך נוגעת לשיבוץ חייל בתפקיד שאינו תואם את השכלתו המקצועית. הנה הפקוד"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "rs018",
+  "doc": "CHOK-SHIPUT-1955",
+  "role": "commander",
+  "picks": [
+   "# אישור יציאה לעיר",
+   "בהתאם לפקודות צה\"ל",
+   "**לא תמיד** צריך אישור מהמפקד ליציאה לעיר. ז"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": true
+ },
+ {
+  "id": "rs048",
+  "doc": "36.0401",
+  "role": "commander",
+  "picks": [
+   "21.0123",
+   "35.0401",
+   "36.0413"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": true
+ },
+ {
+  "id": "q00172",
+  "doc": "31.0605",
+  "role": "reserve",
+  "picks": [
+   "בהתאם לשאלתך",
+   "הנושאים הרלוונטיים הם:",
+   "35.0822",
+   "31.0606",
+   "35.0814"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00120",
+  "doc": "31.0606",
+  "role": "reserve",
+  "picks": [
+   "31.0606"
+  ],
+  "hit": true,
+  "first": true,
+  "rs": false
+ },
+ {
+  "id": "q00189",
+  "doc": "31.0603",
+  "role": "reserve",
+  "picks": [
+   "33.0115"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00096",
+  "doc": "35.0209",
+  "role": "reserve",
+  "picks": [
+   "35.0219",
+   "35.0206",
+   "חוק-קליטת-חיילים"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00097",
+  "doc": "33.0115",
+  "role": "reserve",
+  "picks": [
+   "21.0106",
+   "33.0115"
+  ],
+  "hit": true,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00099",
+  "doc": "35.0206",
+  "role": "reserve",
+  "picks": [
+   "35.0206"
+  ],
+  "hit": true,
+  "first": true,
+  "rs": false
+ },
+ {
+  "id": "q00087",
+  "doc": "21.0401",
+  "role": "reserve",
+  "picks": [
+   "21.0401"
+  ],
+  "hit": true,
+  "first": true,
+  "rs": false
+ },
+ {
+  "id": "q00109",
+  "doc": "HKA-31-08-01",
+  "role": "reserve",
+  "picks": [
+   "35.0122",
+   "38.0122",
+   "32.0402"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00110",
+  "doc": "33.0336",
+  "role": "reserve",
+  "picks": [
+   "33.0822",
+   "35.0814",
+   "8.0101"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00137",
+  "doc": "HKA-31-08-01",
+  "role": "reserve",
+  "picks": [
+   "31.0202",
+   "32.0316",
+   "PM-31.0251"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00184",
+  "doc": "HKA-31-08-01",
+  "role": "reserve",
+  "picks": [
+   "31.0822"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00139",
+  "doc": "61.0104",
+  "role": "reserve",
+  "picks": [
+   "# תשובה",
+   "**זה תלוי בסוג השירות שלך:**",
+   "## שירות סדיר (חובה או קבע)",
+   "אתה **כן זכאי** לימי מחל"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00186",
+  "doc": "36.0401",
+  "role": "reserve",
+  "picks": [
+   "31.0401",
+   "35.0408",
+   "36.0320"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00188",
+  "doc": "61.0104",
+  "role": "reserve",
+  "picks": [
+   "61.0104",
+   "30.0413",
+   "36.0218"
+  ],
+  "hit": true,
+  "first": true,
+  "rs": false
+ },
+ {
+  "id": "rs059",
+  "doc": "HKA-31-08-01",
+  "role": "reserve",
+  "picks": [
+   "35.0822",
+   "38.0104",
+   "33.0822"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": true
+ },
+ {
+  "id": "rs039",
+  "doc": "HKA-31-08-01",
+  "role": "reserve",
+  "picks": [
+   "35.0205",
+   "35.0206",
+   "35.0211"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": true
+ },
+ {
+  "id": "rs009",
+  "doc": "35.0107",
+  "role": "reserve",
+  "picks": [
+   "35.0107"
+  ],
+  "hit": true,
+  "first": true,
+  "rs": true
+ },
+ {
+  "id": "q00119",
+  "doc": "PM-35.0402",
+  "role": "soldier",
+  "picks": [
+   "35.0408",
+   "35.0306",
+   "PM-35.0402"
+  ],
+  "hit": true,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00014",
+  "doc": "31.0103",
+  "role": "soldier",
+  "picks": [
+   "31.0103"
+  ],
+  "hit": true,
+  "first": true,
+  "rs": false
+ },
+ {
+  "id": "q00039",
+  "doc": "61.0104",
+  "role": "soldier",
+  "picks": [
+   "61.0104",
+   "35.0807",
+   "38.0122"
+  ],
+  "hit": true,
+  "first": true,
+  "rs": false
+ },
+ {
+  "id": "q00015",
+  "doc": "PM-35.0402",
+  "role": "soldier",
+  "picks": [
+   "31.0103",
+   "35.0205",
+   "30.0401"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00040",
+  "doc": "PM-35.0402",
+  "role": "soldier",
+  "picks": [
+   "35.0402",
+   "38.0123",
+   "61.0104"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00177",
+  "doc": "36.0301",
+  "role": "soldier",
+  "picks": [
+   "35.0307",
+   "35.0201",
+   "35.0210"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00042",
+  "doc": "PM-35.0402",
+  "role": "soldier",
+  "picks": [
+   "35.0402"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00075",
+  "doc": "33.0336",
+  "role": "soldier",
+  "picks": [
+   "33.0336",
+   "33.0302",
+   "35.0822"
+  ],
+  "hit": true,
+  "first": true,
+  "rs": false
+ },
+ {
+  "id": "q00179",
+  "doc": "56.0131",
+  "role": "soldier",
+  "picks": [
+   "21.0123",
+   "35.0201",
+   "35.0307"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00044",
+  "doc": "61.0104",
+  "role": "soldier",
+  "picks": [
+   "61.0104",
+   "35.0822",
+   "38.0102"
+  ],
+  "hit": true,
+  "first": true,
+  "rs": false
+ },
+ {
+  "id": "q00064",
+  "doc": "PM-35.0402",
+  "role": "soldier",
+  "picks": [
+   "35.0408",
+   "35.0306",
+   "PM-35.0402"
+  ],
+  "hit": true,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00160",
+  "doc": "PM-33.0302",
+  "role": "soldier",
+  "picks": [
+   "33.0302 — דין משמעתי"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00046",
+  "doc": "61.0104",
+  "role": "soldier",
+  "picks": [
+   "61.0104",
+   "21.0401",
+   "32.0402"
+  ],
+  "hit": true,
+  "first": true,
+  "rs": false
+ },
+ {
+  "id": "q00065",
+  "doc": "PM-35.0402",
+  "role": "soldier",
+  "picks": [
+   "21.0123",
+   "35.0402",
+   "PM-35.0402"
+  ],
+  "hit": true,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00032",
+  "doc": "PM-35.0402",
+  "role": "soldier",
+  "picks": [
+   "35.0408",
+   "35.0502",
+   "PM-35.0402"
+  ],
+  "hit": true,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00112",
+  "doc": "PM-35.0402",
+  "role": "soldier",
+  "picks": [
+   "35.0408",
+   "35.0822",
+   "PM-35.0402"
+  ],
+  "hit": true,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00033",
+  "doc": "61.0104",
+  "role": "soldier",
+  "picks": [
+   "61.0104"
+  ],
+  "hit": true,
+  "first": true,
+  "rs": false
+ },
+ {
+  "id": "q00067",
+  "doc": "PM-35.0402",
+  "role": "soldier",
+  "picks": [
+   "35.0352",
+   "PM-33.0352",
+   "35.0408"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00115",
+  "doc": "PM-35.0402",
+  "role": "soldier",
+  "picks": [
+   "35.0402"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00035",
+  "doc": "36.0528",
+  "role": "soldier",
+  "picks": [
+   "בהתאם לרשימת הפקודות שלפניי",
+   "אני לא מוצא פקודות ספציפיות המטפלות במשכנתאות של חיילים בקורס"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00201",
+  "doc": "36.0401",
+  "role": "soldier",
+  "picks": [
+   "35.0402",
+   "35.0205",
+   "35.0201"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00053",
+  "doc": "33.0146",
+  "role": "soldier",
+  "picks": [
+   "21.0106",
+   "33.0146",
+   "33.0304"
+  ],
+  "hit": true,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00116",
+  "doc": "31.0513",
+  "role": "soldier",
+  "picks": [
+   "21.0113",
+   "35.0807",
+   "PM-35.0402"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00117",
+  "doc": "PM-35.0402",
+  "role": "soldier",
+  "picks": [
+   "35.0502"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00146",
+  "doc": "61.0104",
+  "role": "soldier",
+  "picks": [
+   "21.0113"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "q00164",
+  "doc": "35.0822",
+  "role": "soldier",
+  "picks": [
+   "35.0822"
+  ],
+  "hit": true,
+  "first": true,
+  "rs": false
+ },
+ {
+  "id": "q00200",
+  "doc": "35.0205",
+  "role": "soldier",
+  "picks": [
+   "35.0201",
+   "35.0232",
+   "35.0233"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": false
+ },
+ {
+  "id": "rs005",
+  "doc": "31.0513",
+  "role": "soldier",
+  "picks": [
+   "33.0119",
+   "33.0202",
+   "PM-33.0352"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": true
+ },
+ {
+  "id": "rs054",
+  "doc": "35.0807",
+  "role": "soldier",
+  "picks": [
+   "35.0306"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": true
+ },
+ {
+  "id": "rs024",
+  "doc": "33-05-01",
+  "role": "soldier",
+  "picks": [
+   "33.0501",
+   "61.0109",
+   "PM-33.0213"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": true
+ },
+ {
+  "id": "rs060",
+  "doc": "35.0223",
+  "role": "soldier",
+  "picks": [
+   "35.0223"
+  ],
+  "hit": true,
+  "first": true,
+  "rs": true
+ },
+ {
+  "id": "rs033",
+  "doc": "33-05-01",
+  "role": "soldier",
+  "picks": [
+   "33-05-01"
+  ],
+  "hit": true,
+  "first": true,
+  "rs": true
+ },
+ {
+  "id": "rs063",
+  "doc": "21.0113",
+  "role": "soldier",
+  "picks": [
+   "21.0113"
+  ],
+  "hit": true,
+  "first": true,
+  "rs": true
+ },
+ {
+  "id": "rs010",
+  "doc": "CHOK-SHIPUT-1955",
+  "role": "soldier",
+  "picks": [
+   "21.0106",
+   "33.0114",
+   "33.0321"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": true
+ },
+ {
+  "id": "rs000",
+  "doc": "33.0115",
+  "role": "soldier",
+  "picks": [
+   "35.0807",
+   "33.0126",
+   "33.0115"
+  ],
+  "hit": true,
+  "first": false,
+  "rs": true
+ },
+ {
+  "id": "rs012",
+  "doc": "PM-33.0302",
+  "role": "soldier",
+  "picks": [
+   "33.0302",
+   "PM-33.0202",
+   "33.0111"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": true
+ },
+ {
+  "id": "rs045",
+  "doc": "PM-33.0213",
+  "role": "soldier",
+  "picks": [
+   "33.0213"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": true
+ },
+ {
+  "id": "rs007",
+  "doc": "35.0206",
+  "role": "soldier",
+  "picks": [
+   "35.0234",
+   "35.0205",
+   "31.0103"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": true
+ },
+ {
+  "id": "rs070",
+  "doc": "CHOK-SHIPUT-1955",
+  "role": "soldier",
+  "picks": [
+   "35.0822",
+   "35.0807",
+   "33.0302"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": true
+ },
+ {
+  "id": "rs014",
+  "doc": "33-05-01",
+  "role": "soldier",
+  "picks": [
+   "33-05-01"
+  ],
+  "hit": true,
+  "first": true,
+  "rs": true
+ },
+ {
+  "id": "rs067",
+  "doc": "31.0103",
+  "role": "soldier",
+  "picks": [
+   "31.0103",
+   "35.0205",
+   "30.0401"
+  ],
+  "hit": true,
+  "first": true,
+  "rs": true
+ },
+ {
+  "id": "rs071",
+  "doc": "33.0220",
+  "role": "soldier",
+  "picks": [
+   "33.0111",
+   "35.0807",
+   "61.0104"
+  ],
+  "hit": false,
+  "first": false,
+  "rs": true
+ }
+]
