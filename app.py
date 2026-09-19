@@ -1689,6 +1689,15 @@ MAIN_TOP_PADDING = "12px" if _entry_like else "calc(72px + var(--cai-sat, 0px))"
 # with the terms expanded the screen still scrolls, because it is long.
 MAIN_BOTTOM_PADDING = "16px" if _entry_like else "7rem"
 MAIN_OVERSCROLL = "none" if _entry_like else "auto"
+# The SAME hole, one layer down, and the one the phone actually falls into:
+# the installed app reserves --cai-sbh (the measured composer strip, fallback
+# 134px) on the SCROLLER. The entry screens have no composer, and the variable
+# is stamped on <html>, so it survives from the chat screen — 134px of empty
+# page under the welcome, on top of the 112 above. Measured 2026-09-19 with the
+# standalone layer forced on: stMain scrollHeight 1038 in a 844 pane (194px of
+# drag) against 908 (64px) in a tab, which is why the browser measurement said
+# the smear was fixed and the phone said it was not.
+MAIN_SB_PADDING = "0px" if _entry_like else "var(--cai-sbh, 134px)"
 
 # entry elements stagger in around the boot splash curtain lift (delay 1.15s
 # + .65s travel). 1.35s meant nothing STARTED fading until the lift was 30%
@@ -1910,7 +1919,7 @@ html.cai-standalone [data-testid="stBottom"] {{
     z-index: 99;
 }}
 html.cai-standalone .stMain {{
-    padding-bottom: var(--cai-sbh, 134px) !important;
+    padding-bottom: {MAIN_SB_PADDING} !important;
 }}
 /* ── keyboard mode (html.cai-kb) — armed by the engine while the composer
    textarea is focused AND the pane is keyboard-shrunken. The strip glues

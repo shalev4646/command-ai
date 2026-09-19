@@ -1,5 +1,11 @@
 (scope) => {
-  const W = innerWidth, H = innerHeight, out = [];
+  // innerWidth is the VISUAL viewport, and on a mobile viewport it grows to
+  // the content when the content overflows sideways — so measuring "wider than
+  // the screen" against it silences exactly the case it is there to catch (the
+  // off-screen and overflow-x baits both went quiet the moment the context was
+  // given is_mobile, 2026-09-19). clientWidth is the layout viewport and holds.
+  const de0 = document.documentElement;
+  const W = de0.clientWidth || innerWidth, H = de0.clientHeight || innerHeight, out = [];
 
   // ---- visibility, the way a user experiences it --------------------------
   // Three things this must catch, all of which produced noise in v1:
@@ -48,9 +54,17 @@
   };
   const norm = t => t.replace(/\s+/g, ' ').replace(/[‎‏]/g, '').trim();
 
+  // The installed app clips the page (html.cai-standalone sets overflow:hidden
+  // on html, body and the app container), and a scroll area does not reach past
+  // a clipping ancestor — so <html> alone reports nothing there while the
+  // content is simply cut off, which is worse than a sideways scroll. Ask every
+  // box that could be holding it: the page, the body, and the app's scroller.
   const de = document.documentElement;
-  if (de.scrollWidth > W + 1)
-    out.push({k: 'overflow-x', what: `page scrolls sideways: ${de.scrollWidth}px > ${W}px`});
+  const sc = document.querySelector('[data-testid="stMain"]');
+  const wide = Math.max(de.scrollWidth, document.body.scrollWidth,
+                        sc ? sc.scrollWidth : 0);
+  if (wide > W + 1)
+    out.push({k: 'overflow-x', what: `page runs past the screen: ${wide}px > ${W}px`});
 
   // scope: the layer a screen is about (an open drawer or settings sheet).
   // What lies under it is covered on purpose and is audited on its own

@@ -43,6 +43,23 @@ def test_entry_screens_do_not_carry_the_composers_padding():
     assert "{MAIN_BOTTOM_PADDING}" in APP, "the token is computed but not used"
 
 
+def test_the_installed_app_does_not_reserve_the_composer_on_entry():
+    """The same hole one layer down, and the one the phone falls into. The
+    installed app (html.cai-standalone) reserves --cai-sbh -- the measured
+    composer strip, fallback 134px -- on the SCROLLER itself. The entry screens
+    have no composer, and the variable lives on <html>, so it survives from the
+    chat screen.
+
+    This is why the first fix measured clean and the phone still smeared: a
+    browser tab never has that rule. Measured 2026-09-19 with the standalone
+    layer forced on: stMain scrollHeight 1038 in an 844 pane (194px to drag
+    into) against 908 (64px) in a tab; 64px in both after."""
+    assert 'MAIN_SB_PADDING = "0px" if _entry_like else "var(--cai-sbh, 134px)"' in APP
+    assert "padding-bottom: {MAIN_SB_PADDING}" in APP, (
+        "the standalone scroller still hard-codes the composer's room"
+    )
+
+
 def test_entry_screens_do_not_bounce():
     """iOS rubber-band drags the column away from the page's fixed gradient
     underlay and snaps it back -- the smear. The chat keeps its bounce: there
