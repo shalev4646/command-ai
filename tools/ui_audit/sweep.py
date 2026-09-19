@@ -22,7 +22,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 import audit_selftest
-from _browser import VIEWPORT, launch
+from _browser import launch, phone_context
 
 sys.stdout.reconfigure(encoding="utf-8")
 HERE = Path(__file__).resolve().parent
@@ -57,6 +57,8 @@ def main():
     ap.add_argument("--out", default="")
     ap.add_argument("--label", default="sweep")
     ap.add_argument("--no-selftest", action="store_true")
+    ap.add_argument("--standalone", action="store_true",
+                    help="audit the INSTALLED app's CSS world, not a browser tab")
     args = ap.parse_args()
     out = Path(args.out) if args.out else (
         Path(tempfile.gettempdir()) / "cai_ui_audit"
@@ -67,7 +69,7 @@ def main():
 
     with sync_playwright() as p:
         br = launch(p)
-        ctx = br.new_context(viewport=VIEWPORT, device_scale_factor=2, locale="he-IL")
+        ctx = phone_context(br, standalone=args.standalone, device_scale_factor=2)
         pg = ctx.new_page()
 
         def run(screen, scope=None):
@@ -97,7 +99,17 @@ def main():
             before = pg.evaluate(ANSWERS_JS)
             box = pg.locator('[data-testid="stChatInput"] textarea')
             box.fill(question)
-            box.press("Enter")
+            # Send with the ARROW, the way a thumb does. On a touch device the
+            # app makes Return insert a newline on purpose (soldiers write
+            # multi-line questions), so pressing Enter in a phone-shaped context
+            # types into the box forever and the audit times out with no answer
+            # — which is how the three answer screens went missing from the
+            # first installed-app sweep (2026-09-19).
+            send = pg.locator('[data-testid="stChatInputSubmitButton"]')
+            if send.count():
+                send.first.click()
+            else:
+                box.press("Enter")
             pg.wait_for_function("(n) => (" + ANSWERS_JS + ")() > n", arg=before,
                                  timeout=30000)
             pg.wait_for_timeout(2500)      # the stream and its reruns settle

@@ -27,7 +27,7 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-from _browser import VIEWPORT, launch
+from _browser import launch, phone_context
 
 sys.stdout.reconfigure(encoding="utf-8")
 HERE = Path(__file__).resolve().parent
@@ -250,8 +250,14 @@ MUTANTS = [
      "    if (r.width < W && (r.right > W + 1 || r.left < -1) && s.position !== 'fixed')",
      "    if (false)"),
     ("overflow-x: off",
-     "  if (de.scrollWidth > W + 1)",
+     "  if (wide > W + 1)",
      "  if (false)"),
+    # the visual viewport widens with the content on a mobile viewport: a
+    # checker that measures the screen with innerWidth goes quiet exactly when
+    # something runs past it (2026-09-19)
+    ("width: the visual viewport instead of the layout one",
+     "  const W = de0.clientWidth || innerWidth, H = de0.clientHeight || innerHeight, out = [];",
+     "  const W = innerWidth, H = innerHeight, out = [];"),
 ]
 
 INJECT = """(b) => {
@@ -334,6 +340,8 @@ def main():
     ap.add_argument("--url", default="http://localhost:8851/")
     ap.add_argument("--audit", default=str(HERE / "audit.js"))
     ap.add_argument("--mutants", action="store_true")
+    ap.add_argument("--standalone", action="store_true",
+                    help="plant the baits in the INSTALLED app's CSS world")
     ap.add_argument("--settle", type=int, default=6500,
                     help="ms to wait after load before the first audit")
     args = ap.parse_args()
@@ -341,7 +349,7 @@ def main():
 
     with sync_playwright() as p:
         br = launch(p)
-        page = br.new_context(viewport=VIEWPORT, locale="he-IL").new_page()
+        page = phone_context(br, standalone=args.standalone).new_page()
         page.goto(args.url, wait_until="load", timeout=60000)
         page.wait_for_timeout(args.settle)
 
