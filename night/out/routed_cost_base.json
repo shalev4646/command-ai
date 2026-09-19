@@ -1,0 +1,833 @@
+{
+ "agg": {
+  "n": 82,
+  "doc_in_window": 50,
+  "sect_in_window": 22,
+  "sect_in_window_content": 37,
+  "rs_content": 12,
+  "words_median": 3133.5,
+  "docs_median": 8.0
+ },
+ "per": [
+  {
+   "id": "q00119",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 3077,
+   "window_docs": 7
+  },
+  {
+   "id": "q00152",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.27,
+   "window_words": 4808,
+   "window_docs": 8
+  },
+  {
+   "id": "q00172",
+   "doc_id": "31.0605",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 2599,
+   "window_docs": 8
+  },
+  {
+   "id": "q00250",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 2888,
+   "window_docs": 6
+  },
+  {
+   "id": "q00014",
+   "doc_id": "31.0103",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "sect_content": true,
+   "sect_overlap": 0.55,
+   "window_words": 2721,
+   "window_docs": 8
+  },
+  {
+   "id": "q00039",
+   "doc_id": "61.0104",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.16,
+   "window_words": 3102,
+   "window_docs": 7
+  },
+  {
+   "id": "q00120",
+   "doc_id": "31.0606",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": true,
+   "sect_overlap": 0.33,
+   "window_words": 3267,
+   "window_docs": 8
+  },
+  {
+   "id": "q00153",
+   "doc_id": "36.0401",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "sect_content": true,
+   "sect_overlap": 0.94,
+   "window_words": 2483,
+   "window_docs": 7
+  },
+  {
+   "id": "q00189",
+   "doc_id": "31.0603",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.25,
+   "window_words": 2806,
+   "window_docs": 8
+  },
+  {
+   "id": "q00251",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 3224,
+   "window_docs": 8
+  },
+  {
+   "id": "q00015",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 3231,
+   "window_docs": 8
+  },
+  {
+   "id": "q00040",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 2538,
+   "window_docs": 8
+  },
+  {
+   "id": "q00060",
+   "doc_id": "31.0507",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 2858,
+   "window_docs": 8
+  },
+  {
+   "id": "q00096",
+   "doc_id": "35.0209",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": true,
+   "sect_overlap": 0.4,
+   "window_words": 2698,
+   "window_docs": 8
+  },
+  {
+   "id": "q00154",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "sect_content": true,
+   "sect_overlap": 0.83,
+   "window_words": 2735,
+   "window_docs": 8
+  },
+  {
+   "id": "q00177",
+   "doc_id": "36.0301",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 2639,
+   "window_docs": 7
+  },
+  {
+   "id": "q00252",
+   "doc_id": "32.0101",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 3054,
+   "window_docs": 8
+  },
+  {
+   "id": "q00042",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "sect_content": true,
+   "sect_overlap": 1.0,
+   "window_words": 2952,
+   "window_docs": 8
+  },
+  {
+   "id": "q00075",
+   "doc_id": "33.0336",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.23,
+   "window_words": 3074,
+   "window_docs": 8
+  },
+  {
+   "id": "q00097",
+   "doc_id": "33.0115",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.19,
+   "window_words": 4332,
+   "window_docs": 8
+  },
+  {
+   "id": "q00158",
+   "doc_id": "61.0104",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "sect_content": true,
+   "sect_overlap": 1.0,
+   "window_words": 5054,
+   "window_docs": 8
+  },
+  {
+   "id": "q00194",
+   "doc_id": "35.0822",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 2363,
+   "window_docs": 7
+  },
+  {
+   "id": "q00099",
+   "doc_id": "35.0206",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "sect_content": true,
+   "sect_overlap": 1.0,
+   "window_words": 3249,
+   "window_docs": 8
+  },
+  {
+   "id": "q00159",
+   "doc_id": "36.0401",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": true,
+   "sect_overlap": 0.7,
+   "window_words": 2621,
+   "window_docs": 7
+  },
+  {
+   "id": "q00179",
+   "doc_id": "56.0131",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": true,
+   "sect_overlap": 0.33,
+   "window_words": 3696,
+   "window_docs": 8
+  },
+  {
+   "id": "q00195",
+   "doc_id": "CHOK-SHIPUT-1955",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 2320,
+   "window_docs": 8
+  },
+  {
+   "id": "q00030",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "sect_content": true,
+   "sect_overlap": 0.91,
+   "window_words": 3383,
+   "window_docs": 6
+  },
+  {
+   "id": "q00044",
+   "doc_id": "61.0104",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": true,
+   "sect_overlap": 0.47,
+   "window_words": 3064,
+   "window_docs": 7
+  },
+  {
+   "id": "q00064",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "sect_content": true,
+   "sect_overlap": 0.89,
+   "window_words": 3635,
+   "window_docs": 8
+  },
+  {
+   "id": "q00087",
+   "doc_id": "21.0401",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "sect_content": true,
+   "sect_overlap": 1.0,
+   "window_words": 3074,
+   "window_docs": 7
+  },
+  {
+   "id": "q00109",
+   "doc_id": "HKA-31-08-01",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 3649,
+   "window_docs": 6
+  },
+  {
+   "id": "q00160",
+   "doc_id": "PM-33.0302",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 3174,
+   "window_docs": 8
+  },
+  {
+   "id": "q00197",
+   "doc_id": "31.0308",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "sect_content": true,
+   "sect_overlap": 0.53,
+   "window_words": 3133,
+   "window_docs": 8
+  },
+  {
+   "id": "q00255",
+   "doc_id": "3.0501",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 3525,
+   "window_docs": 8
+  },
+  {
+   "id": "q00046",
+   "doc_id": "61.0104",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.26,
+   "window_words": 3213,
+   "window_docs": 7
+  },
+  {
+   "id": "q00065",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": true,
+   "sect_overlap": 0.8,
+   "window_words": 3756,
+   "window_docs": 8
+  },
+  {
+   "id": "q00088",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 3107,
+   "window_docs": 8
+  },
+  {
+   "id": "q00110",
+   "doc_id": "33.0336",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 2808,
+   "window_docs": 8
+  },
+  {
+   "id": "q00135",
+   "doc_id": "35.0314",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 3289,
+   "window_docs": 8
+  },
+  {
+   "id": "q00198",
+   "doc_id": "35.0822",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 4112,
+   "window_docs": 8
+  },
+  {
+   "id": "q00032",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 3453,
+   "window_docs": 7
+  },
+  {
+   "id": "q00112",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "sect_content": true,
+   "sect_overlap": 0.53,
+   "window_words": 3812,
+   "window_docs": 8
+  },
+  {
+   "id": "q00137",
+   "doc_id": "HKA-31-08-01",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 4048,
+   "window_docs": 8
+  },
+  {
+   "id": "q00184",
+   "doc_id": "HKA-31-08-01",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 1936,
+   "window_docs": 8
+  },
+  {
+   "id": "q00267",
+   "doc_id": "31.0513",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": true,
+   "sect_overlap": 0.3,
+   "window_words": 3134,
+   "window_docs": 8
+  },
+  {
+   "id": "q00033",
+   "doc_id": "61.0104",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": true,
+   "sect_overlap": 0.5,
+   "window_words": 2574,
+   "window_docs": 8
+  },
+  {
+   "id": "q00139",
+   "doc_id": "61.0104",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "sect_content": true,
+   "sect_overlap": 1.0,
+   "window_words": 5649,
+   "window_docs": 8
+  },
+  {
+   "id": "q00067",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "sect_content": true,
+   "sect_overlap": 0.89,
+   "window_words": 3580,
+   "window_docs": 7
+  },
+  {
+   "id": "q00115",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "sect_content": true,
+   "sect_overlap": 0.67,
+   "window_words": 3485,
+   "window_docs": 8
+  },
+  {
+   "id": "q00035",
+   "doc_id": "36.0528",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 3987,
+   "window_docs": 8
+  },
+  {
+   "id": "q00201",
+   "doc_id": "36.0401",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 2947,
+   "window_docs": 8
+  },
+  {
+   "id": "q00053",
+   "doc_id": "33.0146",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.1,
+   "window_words": 3281,
+   "window_docs": 8
+  },
+  {
+   "id": "q00092",
+   "doc_id": "CHOK-SHIPUT-1955",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 3142,
+   "window_docs": 8
+  },
+  {
+   "id": "q00116",
+   "doc_id": "31.0513",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.15,
+   "window_words": 3477,
+   "window_docs": 8
+  },
+  {
+   "id": "q00093",
+   "doc_id": "31.0513",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 3631,
+   "window_docs": 8
+  },
+  {
+   "id": "q00117",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 5037,
+   "window_docs": 8
+  },
+  {
+   "id": "q00248",
+   "doc_id": "32.0220",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": true,
+   "sect_overlap": 0.38,
+   "window_words": 2737,
+   "window_docs": 8
+  },
+  {
+   "id": "q00146",
+   "doc_id": "61.0104",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": true,
+   "sect_overlap": 0.32,
+   "window_words": 2881,
+   "window_docs": 7
+  },
+  {
+   "id": "q00164",
+   "doc_id": "35.0822",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "sect_content": true,
+   "sect_overlap": 1.0,
+   "window_words": 3145,
+   "window_docs": 7
+  },
+  {
+   "id": "q00186",
+   "doc_id": "36.0401",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 2760,
+   "window_docs": 7
+  },
+  {
+   "id": "q00188",
+   "doc_id": "61.0104",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 3039,
+   "window_docs": 8
+  },
+  {
+   "id": "q00200",
+   "doc_id": "35.0205",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.07,
+   "window_words": 3144,
+   "window_docs": 8
+  },
+  {
+   "id": "rs005",
+   "doc_id": "31.0513",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "sect_content": true,
+   "sect_overlap": 0.57,
+   "window_words": 3790,
+   "window_docs": 8
+  },
+  {
+   "id": "rs054",
+   "doc_id": "35.0807",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.05,
+   "window_words": 3462,
+   "window_docs": 8
+  },
+  {
+   "id": "rs024",
+   "doc_id": "33-05-01",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.14,
+   "window_words": 2738,
+   "window_docs": 7
+  },
+  {
+   "id": "rs018",
+   "doc_id": "CHOK-SHIPUT-1955",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 2761,
+   "window_docs": 7
+  },
+  {
+   "id": "rs060",
+   "doc_id": "35.0223",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": true,
+   "sect_overlap": 0.37,
+   "window_words": 2985,
+   "window_docs": 7
+  },
+  {
+   "id": "rs033",
+   "doc_id": "33-05-01",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": true,
+   "sect_overlap": 0.45,
+   "window_words": 2441,
+   "window_docs": 7
+  },
+  {
+   "id": "rs063",
+   "doc_id": "21.0113",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "sect_content": true,
+   "sect_overlap": 0.77,
+   "window_words": 3156,
+   "window_docs": 8
+  },
+  {
+   "id": "rs010",
+   "doc_id": "CHOK-SHIPUT-1955",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 3043,
+   "window_docs": 8
+  },
+  {
+   "id": "rs000",
+   "doc_id": "33.0115",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.14,
+   "window_words": 2903,
+   "window_docs": 8
+  },
+  {
+   "id": "rs012",
+   "doc_id": "PM-33.0302",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "sect_content": true,
+   "sect_overlap": 0.63,
+   "window_words": 12040,
+   "window_docs": 7
+  },
+  {
+   "id": "rs059",
+   "doc_id": "HKA-31-08-01",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 3160,
+   "window_docs": 8
+  },
+  {
+   "id": "rs045",
+   "doc_id": "PM-33.0213",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "sect_content": true,
+   "sect_overlap": 1.0,
+   "window_words": 3003,
+   "window_docs": 7
+  },
+  {
+   "id": "rs007",
+   "doc_id": "35.0206",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "window_words": 3118,
+   "window_docs": 7
+  },
+  {
+   "id": "rs039",
+   "doc_id": "HKA-31-08-01",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": true,
+   "sect_overlap": 0.54,
+   "window_words": 10650,
+   "window_docs": 8
+  },
+  {
+   "id": "rs070",
+   "doc_id": "CHOK-SHIPUT-1955",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": true,
+   "sect_overlap": 0.35,
+   "window_words": 2349,
+   "window_docs": 7
+  },
+  {
+   "id": "rs014",
+   "doc_id": "33-05-01",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.06,
+   "window_words": 2773,
+   "window_docs": 8
+  },
+  {
+   "id": "rs067",
+   "doc_id": "31.0103",
+   "doc_in_window": true,
+   "sect_in_window": false,
+   "sect_content": true,
+   "sect_overlap": 0.72,
+   "window_words": 3207,
+   "window_docs": 8
+  },
+  {
+   "id": "rs009",
+   "doc_id": "35.0107",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "sect_content": true,
+   "sect_overlap": 0.88,
+   "window_words": 3469,
+   "window_docs": 7
+  },
+  {
+   "id": "rs048",
+   "doc_id": "36.0401",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "sect_content": true,
+   "sect_overlap": 0.8,
+   "window_words": 3230,
+   "window_docs": 7
+  },
+  {
+   "id": "rs071",
+   "doc_id": "33.0220",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "sect_content": true,
+   "sect_overlap": 0.82,
+   "window_words": 2102,
+   "window_docs": 8
+  }
+ ]
+}

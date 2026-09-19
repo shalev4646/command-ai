@@ -43,9 +43,13 @@ FEEDBACK_DAILY_LIMIT = 20
 # question and report the pilot ever wrote, and ?admin=1 is public.
 _ADMIN_FAIL_CAP = 8
 
-# Opus 4.8 pricing, $/MTok — for the per-question cost estimate in the log
+# Opus 4.8 pricing, $/MTok — for the per-question cost estimate in the log.
+# A cache write is priced by its TTL: 1.25x input for the 5-minute entry, 2x
+# for the 1-hour one (SYSTEM_CACHE_TTL=1h since v146). Until 19.09 every write
+# was priced at 1.25x, which under-reported a cold single-pass question by
+# ~$0.02 — $0.124 logged against $0.144 billed on 18.09 (night/PLAN_COST.md).
 _PRICE_IN, _PRICE_OUT = 5.0, 25.0
-_PRICE_CACHE_READ, _PRICE_CACHE_WRITE = 0.5, 6.25
+_PRICE_CACHE_READ, _PRICE_CACHE_WRITE, _PRICE_CACHE_WRITE_1H = 0.5, 6.25, 10.0
 
 _JSONL_PATH = Path(__file__).parent / "storage" / "metrics_log.jsonl"
 
@@ -161,11 +165,16 @@ def estimate_cost(usage: dict | None) -> float:
     """Rough $ cost of one answer from its token usage (0.0 if unknown)."""
     if not usage:
         return 0.0
+    # the 1-hour share of the write, when the caller recorded it; a usage dict
+    # from before 19.09 carries only the total and prices as it always did
+    written = usage.get("cache_creation_input_tokens", 0)
+    written_1h = min(written, usage.get("cache_creation_1h_input_tokens", 0))
     return round(
         usage.get("input_tokens", 0) * _PRICE_IN / 1e6
         + usage.get("output_tokens", 0) * _PRICE_OUT / 1e6
         + usage.get("cache_read_input_tokens", 0) * _PRICE_CACHE_READ / 1e6
-        + usage.get("cache_creation_input_tokens", 0) * _PRICE_CACHE_WRITE / 1e6,
+        + (written - written_1h) * _PRICE_CACHE_WRITE / 1e6
+        + written_1h * _PRICE_CACHE_WRITE_1H / 1e6,
         5,
     )
 
