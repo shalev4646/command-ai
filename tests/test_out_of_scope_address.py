@@ -84,6 +84,50 @@ CIVILIAN_OVERTIME = ("הפקיד אמר שהעסקתי בשעות נוספות �
 
 _UNIT_CLAIM = "פקודות הקבע של היחידה"
 
+# ⚡ 20.09 — the one widening the split earned, and the trap inside it.
+# FINDING (the other session): rs036 asks how long a phone may be held during
+# duty, and פ"מ 21.0113 — already cited in this module's evidence — hands the
+# רט"ן arrangements to „פק\"ל שגרת המחנה". So the CONFIDENT wording is true for
+# it, and the split was handing it the vague one. Fixable with a citation, not
+# a feeling, which is the bar.
+# TRAP (measured before accepting): the bare word „טלפון" pulls in four more
+# questions that are NOT camp routine — confiscation as punishment and
+# photography on base are discipline and information security, decided above
+# the unit. Adding the bare word would have manufactured exactly the false
+# locating claim the split exists to delete. Same signature as the two doorgate
+# caught: one signal too few.
+# ⇒ the phone term is admitted only WITH a duty signal beside it.
+# ⚠ and „דיוט" may never be added alone: rs058 („לא ללבוש דיוט בעיר") carries
+# it as uniform, not duty, and a bare term would drag the showcase question for
+# the honest door straight back into the false one.
+PHONE_ON_DUTY = "כמה זמן אמורים להחזיק את הטלפון בידיים בעת דיוטי?"
+PHONE_PUNISHMENT = "מותר להחרים לי את הטלפון כעונש?"
+PHONE_TAKEN = "המפקד לקח לי את הפלאפון, זה חוקי?"
+PHONE_PHOTO = "צילמתי בטלפון בתוך הבסיס, מה הדין?"
+DRESS_IN_TOWN = "מותר למפקד להגיד לי לא ללבוש דיוט בעיר?"
+
+
+def test_a_phone_during_duty_is_camp_routine():
+    """פ"מ 21.0113 delegates the רט"ן arrangements to the unit's standing
+    orders, so here the confident wording is the true one."""
+    assert OS.family_of(PHONE_ON_DUTY) == "unit_level_default"
+    assert _UNIT_CLAIM in OS.destination_for(PHONE_ON_DUTY)["where"]
+
+
+def test_a_phone_as_punishment_or_evidence_is_not_camp_routine():
+    """Discipline and information security are decided above the unit. Telling
+    a soldier his base decides these is the false claim the split deletes."""
+    for q in (PHONE_PUNISHMENT, PHONE_TAKEN, PHONE_PHOTO):
+        assert OS.family_of(q) == "not_in_our_orders", f"{q} -> {OS.family_of(q)}"
+        assert _UNIT_CLAIM not in OS.destination_for(q)["where"], q
+
+
+def test_dress_in_town_stays_on_the_honest_door():
+    """rs058 carries „דיוט" as uniform, not duty. It is the sharpest example of
+    the split working — the rule is a GS order we do not hold — and no widening
+    may drag it back to „your unit decides"."""
+    assert OS.family_of(DRESS_IN_TOWN) == "not_in_our_orders"
+
 
 def test_school_question_reaches_a_civil_school_door():
     assert OS.family_of(SCHOOL) == "civil_school"
