@@ -218,6 +218,20 @@ HYDE_EXTRA_CHUNKS = int(os.environ.get("HYDE_EXTRA_CHUNKS", "1"))
 RETRIEVE_ROUTER_SLOTS = int(os.environ.get("RETRIEVE_ROUTER_SLOTS", "0"))
 RETRIEVE_FULL_BLOCKS = int(os.environ.get("RETRIEVE_FULL_BLOCKS", "0"))
 
+# A ceiling, in words, on the lead order's full block. RETRIEVE_FULL_BLOCKS
+# serves the WHOLE curated block of the window's first order, and four blocks
+# are huge (PM-33.0302 9.8K words, HKA-31-08-01 7.6K, 34.0101 4K, the justice
+# law 3.2K). Measured 18.09 on the 82 adjudicated targets with the production
+# flags: window mean 3,397 words, median 3,134, max 12,040 — and Hebrew costs
+# 3.9-4.5 tokens a word on the Opus tokenizer (count_tokens), so a question
+# PM-33.0302 leads pays ~$0.22 a pass for that one block. Over the ceiling the
+# block is served as the clauses the clause-title index scores for the question,
+# best first until the word budget is spent, then unscored clauses in block
+# order while budget remains — and always emitted in block order, the reading
+# order the curator wrote. 0 = off, byte for byte. Criterion written before the
+# measurement: night/COST_WINDOW_CRITERION.md; profile: night/PLAN_COST.md.
+RETRIEVE_FULL_BLOCK_MAX_WORDS = int(os.environ.get("RETRIEVE_FULL_BLOCK_MAX_WORDS", "0"))
+
 # The second pass's own clause finder. RETRIEVE_SECOND_PASS retrieves on the
 # answer's lack statement with the same embedding that missed the clause the
 # first time. On the realstyle set (adjudicated 2026-09-10) 11 of 45 zeros had
@@ -1031,9 +1045,40 @@ def _full_block(doc: dict) -> list[dict]:
     return out
 
 
-def extend_with_full_blocks(chunks: list[dict], role: str) -> list[dict]:
+def _capped_block(doc: dict, question: str, max_words: int) -> list[dict]:
+    """The order's curated block under RETRIEVE_FULL_BLOCK_MAX_WORDS. Whole when
+    the ceiling is off or the block fits; otherwise the clauses the clause-title
+    index scores for the question, best first, then unscored clauses in block
+    order, until the word budget is spent — emitted in block order. A clause
+    that would overshoot the budget is skipped for smaller ones; the first
+    clause is always kept, so an over-long opener never empties the block."""
+    block = _full_block(doc)
+    if max_words <= 0 or sum(len(c["text"].split()) for c in block) <= max_words:
+        return block
+    scores: dict = {}
+    if (question or "").strip():
+        doc_id = doc.get("document_id", "")
+        scores = _clause_index().rank(question, doc_ids=[doc_id]).clause_scores(doc_id)
+    ranked = sorted(range(len(block)),
+                    key=lambda i: (-scores.get((block[i]["section"], block[i]["clause"]), 0.0), i))
+    keep: set[int] = set()
+    used = 0
+    for i in ranked:
+        words = len(block[i]["text"].split())
+        if keep and used + words > max_words:
+            continue
+        keep.add(i)
+        used += words
+        if used >= max_words:
+            break
+    return [c for i, c in enumerate(block) if i in keep]
+
+
+def extend_with_full_blocks(chunks: list[dict], role: str, question: str = "") -> list[dict]:
     """Append the whole curated block of the first RETRIEVE_FULL_BLOCKS distinct
-    orders in the window. Deduplicated against what is already there."""
+    orders in the window. Deduplicated against what is already there. A block
+    over RETRIEVE_FULL_BLOCK_MAX_WORDS (off by default) is cut to its
+    best-evidenced clauses for `question` — see _capped_block."""
     if RETRIEVE_FULL_BLOCKS <= 0 or not chunks:
         return chunks
     by_id = {d["document_id"]: d for d in _docs_for_role(role) if d.get("document_id")}
@@ -1045,7 +1090,7 @@ def extend_with_full_blocks(chunks: list[dict], role: str) -> list[dict]:
     for doc_id in order[:RETRIEVE_FULL_BLOCKS]:
         doc = by_id.get(doc_id)
         if doc:
-            out = _append_new(out, _full_block(doc), None)
+            out = _append_new(out, _capped_block(doc, question, RETRIEVE_FULL_BLOCK_MAX_WORDS), None)
     return out
 
 
@@ -1431,7 +1476,7 @@ def widen_context(chunks: list[dict], question: str, role: str,
     pre-extension pipeline."""
     out = extend_with_hypothetical(chunks, question, role, route)
     out = extend_with_router_slots(out, question, role, route)
-    out = extend_with_full_blocks(out, role)
+    out = extend_with_full_blocks(out, role, question)
     out = extend_with_doc_blocks(out, question, role, route)
     out = extend_with_router_blocks(out, question, role, route)
     out = extend_with_clause_index(out, question, role, route)
@@ -2043,6 +2088,11 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
                 "input_tokens": usage.input_tokens,
                 "output_tokens": usage.output_tokens,
                 "cache_creation_input_tokens": getattr(usage, "cache_creation_input_tokens", 0) or 0,
+                # the 1-hour share of that write (SYSTEM_CACHE_TTL=1h bills it
+                # at 2x, the 5-minute history breakpoint at 1.25x) — metrics
+                # prices the two apart; absent on an SDK without the breakdown
+                "cache_creation_1h_input_tokens": getattr(
+                    getattr(usage, "cache_creation", None), "ephemeral_1h_input_tokens", 0) or 0,
                 "cache_read_input_tokens": getattr(usage, "cache_read_input_tokens", 0) or 0,
                 # the rewritten retrieval query rides along for the metrics log
                 "search_query": search_query if search_query != question else "",
