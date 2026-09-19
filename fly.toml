@@ -108,7 +108,23 @@ swap_size_mb = 768
   # minutes apart and costs about $0.02 more per question when gaps exceed an
   # hour. A traffic bet, reversible: remove this line (or set "5m") and
   # redeploy. The history breakpoint stays at five minutes (longer TTL first).
-  SYSTEM_CACHE_TTL = "1h"
+  # 2026-09-19: back to "5m" by the user's decision. The measured cold
+  # single-pass production question (18.09) cost $0.144, of which the
+  # 5,244-token system prompt written at the 1-hour rate (2x) was $0.052 - 37%.
+  # With pre-pilot traffic hours apart every question is cold, so 1h only adds
+  # about $0.02 each; at 5m the write is 1.25x and the second pass still reads
+  # it at 0.1x seconds later. Flip back to "1h" when pilot traffic shows
+  # questions arriving 5-60 minutes apart (night/PLAN_COST.md, lever 3).
+  SYSTEM_CACHE_TTL = "5m"
+  # The lead document's curated block is served whole, and on the biggest
+  # orders that alone filled the window (PM-33.0302: 9,808 words). Above this
+  # ceiling the lead block is served as its clause-title-scored clauses in
+  # block order instead. Off in code; on here after the paired free measurement
+  # of 2026-09-19 on the wave-6 tree: zero clauses lost on the frozen ruler
+  # (30/82) and on head-100 (148/174), zero newly failing gate cases (390/431),
+  # while the head-100 window maximum fell 12,273 -> 4,689 words and the mean
+  # 3,596 -> 3,014. Remove this line and redeploy to revert.
+  RETRIEVE_FULL_BLOCK_MAX_WORDS = "2000"
   # How long backend.load_documents trusts its last freshness scan. Off in
   # code (0 = scan every call), which is what the night pipeline needs since
   # it writes into json_store while the same process reads it. Here it is on:
