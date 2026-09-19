@@ -95,6 +95,16 @@ _MARKERS = tuple(m for m in (getattr(scope_routes, "MARK_MISSING", ""),
 # lagging behind reality."
 DEFAULT_FAMILY = "unit_level_default"
 
+# 2026-09-19: the catch-all split in two. `unit_level_default` keeps the
+# confident wording for daily-routine topics, where the orders themselves hand
+# the rule to the unit (33.0401, 21.0113, 61.0104); `not_in_our_orders` is the
+# honest half for everything else, which asserts nothing about where the rule
+# lives. Both are catch-alls: neither names a new address, so neither may buy
+# a single part of `served`. Counting the split as two "verified families"
+# would have moved the number without moving the product -- which is the exact
+# failure `night/DOORS_CRITERION.md` was written to prevent.
+DEFAULT_FAMILIES = frozenset({DEFAULT_FAMILY, "not_in_our_orders"})
+
 
 def door(answer: str, question: str) -> str | None:
     """The app's gate, replayed. Family name, or None when nothing fires."""
@@ -157,7 +167,7 @@ def tally(rows: list[dict], verds: dict[str, str], tag: str = "") -> dict:
             fam = door(r.get("answer") or "", r.get("clean_q") or r.get("q") or "")
             if fam is None:
                 stranded.append(r["id"])
-            elif fam == DEFAULT_FAMILY:
+            elif fam in DEFAULT_FAMILIES:
                 defaulted.append(r["id"])
                 default_parts += len(parts)
             else:

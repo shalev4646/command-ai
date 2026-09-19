@@ -100,7 +100,8 @@ MEASURED_REALSTYLE = {
     # hours-or-movement signal in the phrasing, and a pattern cut to one
     # question is the mirror trap the module warns about
     "rs061": ("מי קובע מתי משדרים את ההתרעה בבוקר?", None),
-    "rs003": ("איך מדווחים שיש בעיה בתאורה בגדר בשעה 3 בלילה?", None),
+    # ⚡ 19.09: a fault at 03:00 is reported, not researched — `fault_report`.
+    "rs003": ("איך מדווחים שיש בעיה בתאורה בגדר בשעה 3 בלילה?", "fault_report"),
     # 12.09 — שלב 3.2: the silences with an address, all adjudicated
     "rs043": ("כמה כסף אני אמור לשלוח הביתה?", "family_support_pay"),
     "rs047": ("למה לא קיבלתי את התוספת של החודש הזה?", "pay_slip"),
@@ -108,11 +109,18 @@ MEASURED_REALSTYLE = {
     "rs022": ("אפשר לבקש כסף עבור ביגוד שקרע?", "quartermaster_issue"),
     "rs041": ("כמה ימים חופש חולים מגיע לי על שפעת?", "medical_scope"),
     "rs004": ("אם אני בבסיס איך אני מתקשר עם המשפחה?", "unit_routine"),
-    # still deliberately without a door: reserve money without a reserve word
-    # in the question (rs049) and a civilian school matter (rs053) — the only
-    # patterns that reach them are cut to the one question, the mirror trap
-    "rs049": ("מגיע לי כסף על שעות נוספות או לא?", None),
-    "rs053": ("מותר לי להוציא את הבן שלי מבית ספר לביקור?", None),
+    # ⚡ 19.09 — these two got doors, and the note above them was the reason it
+    # took so long: "the only patterns that reach them are cut to the one
+    # question, the mirror trap". That is still the honest risk, and it is now
+    # measured rather than feared — `night/doorgate.py` proves zero captures on
+    # 388 answered questions, and reports that the held-out set of 51
+    # adjudicated no-rule questions yields **zero** captures too. Zero captures
+    # there is not safety, it is silence: no evidence these generalise beyond
+    # the phrasing they were written on. What justifies shipping them anyway is
+    # that both send the soldier somewhere the generic door does not — a school
+    # and a pay desk — which is the whole criterion (night/DOORS_CRITERION.md).
+    "rs049": ("מגיע לי כסף על שעות נוספות או לא?", "pay_entitlement"),
+    "rs053": ("מותר לי להוציא את הבן שלי מבית ספר לביקור?", "civil_school"),
 }
 
 # pilot-150 rows (2026-08-25 adjudication) that 12.09 gave a door
@@ -164,13 +172,24 @@ UNIT_ROUTINE_NEGATIVES = {
 # exact family that is allowed to catch an unclaimed question.
 LAST_RESORT = "unit_level_default"
 
+# ⚡ 19.09: the last resort split in two (see night/DOORS_CRITERION.md). The
+# confident half kept the name and the daily-routine topics; the honest half,
+# `not_in_our_orders`, took everything else and asserts nothing about where the
+# rule lives. `None` in the tables above still means exactly what it meant —
+# **no SPECIFIC family claims this question** — so it is now satisfied by
+# either half. What the assertion still forbids is the thing this file exists
+# to catch: an unclaimed question being handed a specific, invented address.
+LAST_RESORTS = ("unit_level_default", "not_in_our_orders")
+
 
 def test_every_measured_question_lands_where_the_table_says():
     for qid, (question, expected) in {**MEASURED, **MEASURED_NEWSRC,
                                       **MEASURED_REALSTYLE, **MEASURED_PILOT150}.items():
         got = OS.family_of(question)
-        want = LAST_RESORT if expected is None else expected
-        assert got == want, f"{qid}: got {got!r}, expected {want!r}"
+        if expected is None:
+            assert got in LAST_RESORTS, f"{qid}: got {got!r}, expected a catch-all"
+        else:
+            assert got == expected, f"{qid}: got {got!r}, expected {expected!r}"
 
 
 def test_a_family_returns_a_door_and_a_reason():
@@ -180,7 +199,7 @@ def test_a_family_returns_a_door_and_a_reason():
     # points at a procedure and names no office — asserted in full in
     # tests/test_out_of_scope_default.py.
     fallback = OS.destination_for(MEASURED["q00023"][0])
-    assert fallback and OS.family_of(MEASURED["q00023"][0]) == LAST_RESORT
+    assert fallback and OS.family_of(MEASURED["q00023"][0]) in LAST_RESORTS
 
 
 def test_no_specific_door_is_better_than_a_wrong_one():
@@ -195,7 +214,7 @@ def test_no_specific_door_is_better_than_a_wrong_one():
               # משמעתית אל השלישות. זו שאלה על עונש, לא על מי מנהל את הסידור.
               "מה קורה אם איחרתי לתורנות במטבח?",
               "כמה זמן נמשך מסדר בוקר?"):
-        assert OS.family_of(q) == LAST_RESORT, f"{q} -> {OS.family_of(q)}"
+        assert OS.family_of(q) in LAST_RESORTS, f"{q} -> {OS.family_of(q)}"
 
 
 def test_an_empty_question_gets_nothing_at_all():
@@ -266,8 +285,8 @@ def test_evidence_and_families_stay_in_step():
     families = {name for name, _, _ in OS._FAMILIES}
     assert families == set(OS.EVIDENCE), (families ^ set(OS.EVIDENCE))
     for name, ids in OS.EVIDENCE.items():
-        if name == LAST_RESORT:
-            assert not ids, "the last resort is not derived from a sample"
+        if name in LAST_RESORTS:
+            assert not ids, "a catch-all is not derived from a sample"
             continue
         assert ids, name
         for qid in ids:
@@ -331,7 +350,7 @@ def test_unmatched_ids_reach_no_specific_family():
     """The guard that matters: no topic family may claim them by accident."""
     for qid in OS._UNMATCHED:
         if qid in MEASURED:
-            assert OS.family_of(MEASURED[qid][0]) == LAST_RESORT, qid
+            assert OS.family_of(MEASURED[qid][0]) in LAST_RESORTS, qid
 
 
 if __name__ == "__main__":

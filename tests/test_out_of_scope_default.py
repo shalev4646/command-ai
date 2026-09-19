@@ -74,7 +74,12 @@ def test_specific_families_still_win():
 
 
 def test_it_really_is_last():
-    assert OS._FAMILIES[-1][0] == "unit_level_default"
+    """⚡ 19.09: the catch-all split in two (night/DOORS_CRITERION.md) and the
+    honest half took the last slot. What this test guards is unchanged — the
+    family whose pattern matches every question must sit last, or it swallows
+    every specific family above it."""
+    assert OS._FAMILIES[-1][0] == "not_in_our_orders"
+    assert OS._FAMILIES[-1][1].pattern == r"\S"
 
 
 if __name__ == "__main__":
