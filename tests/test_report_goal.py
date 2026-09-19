@@ -129,7 +129,9 @@ def test_the_strip_is_not_in_the_answer_text():
     prose = _row("q1", ["a"], 0, answer='המידע לא קיים. יש לפנות למדור ת"ש.')
     assert G.door(prose["answer"], prose["question"]) is None
     gated = _row("q2", ["a"], 0, answer=MARK + " כלל.", question="שאלה כלשהי?")
-    assert G.door(gated["answer"], gated["question"]) == G.DEFAULT_FAMILY
+    # 19.09: the catch-all split in two, and both halves stay catch-alls for
+    # the metric -- `DEFAULT_FAMILIES`, not one name.
+    assert G.door(gated["answer"], gated["question"]) in G.DEFAULT_FAMILIES
 
 
 def test_verdicts_read_only_files_that_carry_ids():
