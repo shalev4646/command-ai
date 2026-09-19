@@ -52,6 +52,14 @@ def build(defn: dict) -> tuple[dict, list[str], list[str]]:
         return {}, [f"cut_start not found: {defn['cut_start']!r}"], []
     b = raw_all.find(defn["cut_end"], a) if defn.get("cut_end") else -1
     raw = raw_all[a:b] if b > a else raw_all[a:]
+    # `drop_ranges`: chapters of the source that no asker needs and that only add
+    # ranking competition (karpar-300.001's internal committee chapters pulled a
+    # profile-committee question off its order — gate 390 -> 389, 2026-09-19).
+    for start, end in defn.get("drop_ranges") or []:
+        i, j = raw.find(start), raw.find(end)
+        if i < 0 or j <= i:
+            return {}, [f"drop_range markers not found in order: {start!r} .. {end!r}"], []
+        raw = raw[:i] + raw[j:]
 
     doc = {
         "document_id": defn["document_id"], "title": defn["title"],
@@ -61,14 +69,18 @@ def build(defn: dict) -> tuple[dict, list[str], list[str]]:
         "roles": defn["roles"], "anchor_questions": defn.get("anchor_questions") or [],
         "questions_curated": True, "civil_label": defn["civil_label"],
     }
-    trusted = digits.trustworthy(doc)
+    # `force_digit_free`: the source's digits may be sound and its NUMBERS still
+    # unfit to state — hka-32-03-10 is the May-2009 text and the army said in 2021
+    # it was under revision. The block then carries structure only, and the note
+    # says why (the default note would wrongly blame the extraction).
+    trusted = digits.trustworthy(doc) and not defn.get("force_digit_free")
     section = {"id": "key-facts", "title": f"עיקרי המסמך — {defn['title']}",
                "clauses": defn["clauses"]}
     problems, warnings = check(section, raw, digit_free=not trusted)
     if not trusted:
         section["id"] = "key-facts-nodigits"
         section["digit_free"] = True
-        section["title"] = f"{section['title']} [{DIGIT_FREE_NOTE}]"
+        section["title"] = f"{section['title']} [{defn.get('digit_free_note') or DIGIT_FREE_NOTE}]"
     doc["sections"] = [section]
     doc["_wave"] = "wave6-2026-09-19 hand-curated"
     safe_print(f"[wave6] {defn['document_id']}: raw {len(raw.split())} words, digits "
