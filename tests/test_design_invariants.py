@@ -205,6 +205,34 @@ def test_primary_controls_meet_the_thumb_floor():
     assert "min-height: 44px" in name
 
 
+def test_every_control_in_a_tool_dialog_meets_the_floor():
+    """The suggested questions measured 328x43 -- 11px of padding, a 21px line,
+    11px of padding. One pixel under the floor, and 14 of the 18 small targets
+    the 2026-09-18 sweep found. A minimum and not a height: a question that
+    wraps to two lines still grows past it."""
+    block = APP.split('div[data-testid="stDialog"] .stDownloadButton button {')[1].split("}")[0]
+    assert "min-height: 44px" in block, "a tool's buttons are back under the floor"
+
+
+def test_the_dialog_close_chip_hands_its_height_back():
+    """It was 44x34. Growing it is not enough on its own: the chip is sticky
+    with order:-1, and the NEGATIVE BOTTOM MARGIN is what returns its height to
+    the column so the injected header keeps its place. The two must move
+    together -- 44px tall against a -34px margin drops the header 10px
+    (measured: .cai-mhead top 59 -> 69)."""
+    block = APP.split(
+        'div[data-testid="stDialog"] [data-testid="stDialogCloseButton"] {')[1].split("}")[0]
+    m = re.search(r"height: (\d+)px !important;\s+min-height: (\d+)px", block)
+    assert m, "the close chip has no explicit height"
+    h, mh = int(m.group(1)), int(m.group(2))
+    assert h >= 44 and mh >= 44, f"the close chip is {h}px tall, under the 44px floor"
+    mg = re.search(r"margin: 0 0 -(\d+)px !important;", block)
+    assert mg, "the chip's height is no longer handed back to the column"
+    assert int(mg.group(1)) == h, (
+        f"margin -{mg.group(1)}px does not match the chip's {h}px -- the header moves"
+    )
+
+
 def test_header_padding_tracks_the_hamburger():
     """The wordmark optically centres between the button-side padding edge and
     the identity pill, so padding = inset + button width. Measured live after

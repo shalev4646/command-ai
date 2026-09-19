@@ -5029,10 +5029,14 @@ div[data-testid="stDialog"] [data-testid="stDialogCloseButton"] {
     order: -1;
     position: sticky !important; top: 0 !important;
     align-self: flex-end;               /* RTL column: cross-axis end = left */
-    margin: 0 0 -34px !important;
+    /* 44 and not 34: it was 44x34 on the sweep, under the 44px floor the
+       accessibility statement claims. The negative margin is what hands the
+       chip's height back to the column, so it tracks the height exactly —
+       at -34 the injected header jumped 10px down (measured: top 59 -> 69). */
+    margin: 0 0 -44px !important;
     z-index: 6;
-    width: 34px !important; height: 34px !important;
-    min-height: 34px !important; border-radius: 50% !important;
+    width: 44px !important; height: 44px !important;
+    min-height: 44px !important; border-radius: 50% !important;
     background: rgba(30,33,21,.92) !important;
     border: 1px solid rgba(236,237,230,.12) !important;
     color: rgba(236,237,230,.6) !important;
@@ -5152,6 +5156,10 @@ div[data-testid="stDialog"] .stButton button,
 div[data-testid="stDialog"] .stDownloadButton button {
     border-radius: 12px !important; font: 700 14px Heebo, sans-serif !important;
     padding: 11px !important;
+    /* 11 + 21 line + 11 = 43, one pixel under the 44px floor (sweep 2026-09-18,
+       14 of 18 small targets). The floor is a minimum, so a two-line question
+       still grows past it. */
+    min-height: 44px !important;
 }
 /* dark fill + olive outline + olive text (the mock's OUTLINED button), not the
    green-tinted accent-soft fill that read as a solid olive block */
