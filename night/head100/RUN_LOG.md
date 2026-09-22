@@ -78,7 +78,10 @@ input_tokens 14077 · cache_read 0 · cache_write 5316 · output_tokens 861 · c
   לפי קבוצות (n / חסר / סירוב / יעד-במקורות): A 3/0/0/3 · C 2/0/0/2 · Cmd 2/0/0/2 · D 6/2/0/6 · L 5/3/0/5 · M 5/1/0/5 ·
   R 5/0/0/5 · Res 4/2/0/4 · S 3/1/0/3 · W 5/2/0/4 · G(בלי-פקודה) 10/10/7/0. (held — מצרפים בלבד.)
 
-_(p2 / grade / report — ממלא)_
+- **p2 הוזמן** (~09:30Z+): 21 בקשות, כל אחת עם `first_answer` כזרע (כמו בפרודקשן), batch `msgbatch_018JsmBRc6G7vG1eVwHxL46K`,
+  reserve $0.59; כרטיס `night/out/batch_probe-head100A_p2.json`. התאוששות: `python -m night.collect probe-head100A_p2`.
+
+_(grade / report — ממלא)_
 
 ## 4. עיון שלב 6
 
