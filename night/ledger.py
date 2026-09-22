@@ -21,7 +21,15 @@ from pathlib import Path
 #   ~$2   re-measure the saved 54 questions for a paired before/after
 #   ~$7   curate wave 1 (85 orders) once the PDFs are downloaded
 #   ~$0.5 grow the gate by 3 probes per new order
-CEILING_USD = 145.00
+CEILING_USD = 155.00
+# Raised 145 -> 155 on 2026-09-22, approved by the user in chat ("תעלה את
+# התקרה אני מאשר"), for the head-100 paid run (night/head100/PAID_RUN_PLAN.md):
+# arm dry priced it $4.52-5.27 against $8.25 left under 145, which is inside
+# the estimate but not inside the doubling rule, and the digit-less
+# re-curation that follows the run (~$0.1) plus its grading had no room at
+# all. The run is the first answer-level measurement since 17.09 and the only
+# one that can see whether the 2000-word lead-block ceiling (v155) costs full
+# answers; the sample was fixed on 18.09 before any answer existed.
 # Raised 135 -> 145 on 2026-09-17, approved by the user in chat ("תעלה את
 # התקרה ב-10 דולר"), to buy the Sonnet 5 arm: the blocks6 arm passed
 # (+7/-1 after review) and was deployed, the measured price is $0.20-0.25 a
