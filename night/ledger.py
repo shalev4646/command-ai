@@ -21,7 +21,15 @@ from pathlib import Path
 #   ~$2   re-measure the saved 54 questions for a paired before/after
 #   ~$7   curate wave 1 (85 orders) once the PDFs are downloaded
 #   ~$0.5 grow the gate by 3 probes per new order
-CEILING_USD = 155.00
+CEILING_USD = 195.00
+# Raised 155 -> 195 on 2026-09-22, on the user's words in the coordinating
+# session's chat ("תעלה את התקרה ל-195"), relayed to this branch by that session.
+# What the $40 is meant to cover, each item still on its own approval:
+#   ~$3-4   the small corpus wave (20-30 soldier-relevant orders, curated)
+#   ~$20-30 the freedom-of-information documents, after the 29.09 reply
+#   ~$5-6   the final paid test on the frozen ruler
+# The ceiling is a guard, not an approval: no spend runs without the user's
+# explicit go in chat for that spend.
 # Raised 145 -> 155 on 2026-09-22, approved by the user in chat ("תעלה את
 # התקרה אני מאשר"), for the head-100 paid run (night/head100/PAID_RUN_PLAN.md):
 # arm dry priced it $4.52-5.27 against $8.25 left under 145, which is inside
