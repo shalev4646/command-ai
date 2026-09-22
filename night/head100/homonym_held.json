@@ -13,7 +13,8 @@
    "verified_quotes": [
     "ותק מזערי בשירות, הנקבע לכל דרגה"
    ],
-   "split": "held"
+   "split": "held",
+   "leaked": false
   },
   {
    "id": "hom02",
@@ -24,7 +25,8 @@
    "verified_quotes": [
     "יאושר אך ורק לחייל שנקבע לו פרופיל עם סעיפי ליקוי נפשיים"
    ],
-   "split": "held"
+   "split": "held",
+   "leaked": true
   },
   {
    "id": "hom03",
@@ -35,7 +37,8 @@
    "verified_quotes": [
     "המבקש פונה למשרד קצין העיר או לנציגות במקום מגוריו"
    ],
-   "split": "held"
+   "split": "held",
+   "leaked": false
   },
   {
    "id": "hom04",
@@ -46,7 +49,8 @@
    "verified_quotes": [
     "ימי המנוחה (ימי ג) יבוצעו ביחידה, בבית החייל או במקום אחר"
    ],
-   "split": "held"
+   "split": "held",
+   "leaked": false
   },
   {
    "id": "hom05",
@@ -57,7 +61,8 @@
    "verified_quotes": [
     "לא יעסוק בשום עבודה פרטית, בין בשעה שהוא בתפקיד ובין בשעה שאינו בתפקיד"
    ],
-   "split": "held"
+   "split": "held",
+   "leaked": true
   },
   {
    "id": "hom06",
@@ -68,7 +73,8 @@
    "verified_quotes": [
     "הניתנת לחייל ברמת פעילות ב' ומעלה אחת לחודש, על חשבון המערכת"
    ],
-   "split": "held"
+   "split": "held",
+   "leaked": false
   },
   {
    "id": "hom07",
@@ -79,7 +85,8 @@
    "verified_quotes": [
     "בקשה לביטול תב\"ן שאורכו אינו עולה על מספר ימים קצוב"
    ],
-   "split": "held"
+   "split": "held",
+   "leaked": true
   },
   {
    "id": "hom08",
@@ -90,7 +97,8 @@
    "verified_quotes": [
     "תוקפו מרגע קבלתו ועד השעה 08:00 למחרת"
    ],
-   "split": "held"
+   "split": "held",
+   "leaked": true
   },
   {
    "id": "hom09",
@@ -101,7 +109,8 @@
    "verified_quotes": [
     "יפנה אותו לקצין רפואה כדי לבדוק אם יש צורך לזמנו לוועדה רפואית"
    ],
-   "split": "held"
+   "split": "held",
+   "leaked": false
   },
   {
    "id": "hom10",
@@ -112,7 +121,8 @@
    "verified_quotes": [
     "חוגר 54 ימים, מש\"ק 70 ימים, קצין 84 ימים"
    ],
-   "split": "held"
+   "split": "held",
+   "leaked": false
   },
   {
    "id": "hom11",
@@ -123,7 +133,8 @@
    "verified_quotes": [
     "רשאי להתנדב למשמר האזרחי ולבצע כל פעולה במסגרתו"
    ],
-   "split": "held"
+   "split": "held",
+   "leaked": false
   },
   {
    "id": "hom12",
@@ -134,7 +145,19 @@
    "verified_quotes": [
     "לא ייקרא לתעסוקה מבצעית יותר מפעם אחת במהלך תקופת שירות תלת-שנתית"
    ],
-   "split": "held"
+   "split": "held",
+   "leaked": false
   }
- ]
+ ],
+ "leaked": {
+  "when": "2026-09-22",
+  "how": "הודעת-הקומיט של 7282ee0 פירטה את ראשי-התיבות; סשן ב' ראה אותה ב-git log לפני שבנה את התיקון (נכנסו ל-HOMONYMS שלו)",
+  "ids": [
+   "hom02",
+   "hom05",
+   "hom07",
+   "hom08"
+  ],
+  "rule": "כל מדידה על הסט מדווחת פעמיים: כל 12, ובלי 4 המודלפות"
+ }
 }

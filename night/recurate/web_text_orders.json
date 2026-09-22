@@ -1,0 +1,233 @@
+[
+ {
+  "document_id": "2.0101",
+  "title": "נשיאת נשק ואבטחתו בחופשה ובמהלך שהיה מחוץ למתקני צ",
+  "raw_words": 2455,
+  "digits_fixed": false,
+  "clauses": 4
+ },
+ {
+  "document_id": "21.0113",
+  "title": "הגבלת שימוש בטלפון אישי (רט\"ן) בצה\"ל",
+  "raw_words": 683,
+  "digits_fixed": false,
+  "clauses": 8
+ },
+ {
+  "document_id": "21.0210",
+  "title": "צילום במחנות צה\"ל",
+  "raw_words": 714,
+  "digits_fixed": false,
+  "clauses": 4
+ },
+ {
+  "document_id": "30.0106",
+  "title": "תעודות צבאיות",
+  "raw_words": 3120,
+  "digits_fixed": false,
+  "clauses": 2
+ },
+ {
+  "document_id": "31.0109",
+  "title": "שחרור חיילות בשירות חובה עקב נישואין או עקב הריון",
+  "raw_words": 2599,
+  "digits_fixed": false,
+  "clauses": 2
+ },
+ {
+  "document_id": "31.0116",
+  "title": "נוהל העברת חיילים ושיבוצם קרוב לבית (קל\"ב) מסיבה ר",
+  "raw_words": 1260,
+  "digits_fixed": false,
+  "clauses": 15
+ },
+ {
+  "document_id": "31.0308",
+  "title": "בקשה לשינוי שיבוץ - חוגרים בשירות חובה או בשירות מ",
+  "raw_words": 922,
+  "digits_fixed": false,
+  "clauses": 2
+ },
+ {
+  "document_id": "31.0605",
+  "title": "ועדה לתיאום שירות מילואים אישי בעת חירום",
+  "raw_words": 1692,
+  "digits_fixed": false,
+  "clauses": 8
+ },
+ {
+  "document_id": "32.0401",
+  "title": "כושר בריאותי - בדיקה, קביעה וסמכות",
+  "raw_words": 866,
+  "digits_fixed": false,
+  "clauses": 12
+ },
+ {
+  "document_id": "33.0111",
+  "title": "פקודת מטכ\"ל - נוהל דיווח, מעצר ופתיחת חקירת מצ\"ח, ",
+  "raw_words": 1027,
+  "digits_fixed": false,
+  "clauses": 11
+ },
+ {
+  "document_id": "33.0120",
+  "title": "נסיעות חיילים בתחבורה ציבורית",
+  "raw_words": 1375,
+  "digits_fixed": false,
+  "clauses": 3
+ },
+ {
+  "document_id": "33.0146",
+  "title": "המרשם הפלילי - כללי סודיות, דרכי קבלת מידע מהמרשם ",
+  "raw_words": 1686,
+  "digits_fixed": false,
+  "clauses": 8
+ },
+ {
+  "document_id": "33.0351",
+  "title": "תרגול נוסף",
+  "raw_words": 370,
+  "digits_fixed": false,
+  "clauses": 10
+ },
+ {
+  "document_id": "35.0205",
+  "title": "תשלומים - חיילים משתחררים או מפוטרים משירות חובה",
+  "raw_words": 303,
+  "digits_fixed": false,
+  "clauses": 6
+ },
+ {
+  "document_id": "35.0206",
+  "title": "תשלומים - שירות מילואים",
+  "raw_words": 2614,
+  "digits_fixed": false,
+  "clauses": 16
+ },
+ {
+  "document_id": "35.0209",
+  "title": "חיילי מילואים - תגמול מיוחד והשתתפות בהוצאות אישיו",
+  "raw_words": 1829,
+  "digits_fixed": false,
+  "clauses": 3
+ },
+ {
+  "document_id": "35.0221",
+  "title": "הפקעת משכורת, גביית קנסות, פיצויים וחובות",
+  "raw_words": 2377,
+  "digits_fixed": false,
+  "clauses": 13
+ },
+ {
+  "document_id": "35.0223",
+  "title": "אובדן או נזק ציוד אזרחי - חיילים בשירות סדיר או מי",
+  "raw_words": 725,
+  "digits_fixed": false,
+  "clauses": 2
+ },
+ {
+  "document_id": "35.0227",
+  "title": "הפחתת שכר עקב מעצר וריצוי עונש - מתן פיצוי לאחר זי",
+  "raw_words": 1185,
+  "digits_fixed": false,
+  "clauses": 8
+ },
+ {
+  "document_id": "35.0307",
+  "title": "השתתפות בשכ\"ד, בשכר חדר או בהוצאות בעבור אחזקת דיר",
+  "raw_words": 1512,
+  "digits_fixed": false,
+  "clauses": 16
+ },
+ {
+  "document_id": "35.0408",
+  "title": "פעילויות גיבוש והפגה, סיורים, ימי כיף, טיולים ונופ",
+  "raw_words": 2494,
+  "digits_fixed": false,
+  "clauses": 6
+ },
+ {
+  "document_id": "35.0803",
+  "title": "קופה להלוואות ולמענקים לסיוע לחיילים בשירות חובה",
+  "raw_words": 881,
+  "digits_fixed": false,
+  "clauses": 7
+ },
+ {
+  "document_id": "35.0805",
+  "title": "שירות חובה - מענק נישואין ומענק עקב לידה או אימוץ",
+  "raw_words": 218,
+  "digits_fixed": false,
+  "clauses": 6
+ },
+ {
+  "document_id": "35.0807",
+  "title": "הקלות בתנאי שירות (הת\"ש)",
+  "raw_words": 845,
+  "digits_fixed": false,
+  "clauses": 15
+ },
+ {
+  "document_id": "36.0106",
+  "title": "הסדרי הפנסייה למשרתי הקבע החדשים",
+  "raw_words": 1762,
+  "digits_fixed": false,
+  "clauses": 6
+ },
+ {
+  "document_id": "36.0513",
+  "title": "השתתפות בשכר דירה, בשכר חדר ובהוצאות העברת תכולת ד",
+  "raw_words": 2254,
+  "digits_fixed": false,
+  "clauses": 2
+ },
+ {
+  "document_id": "38.0122",
+  "title": "נוהל טיפול בחיילים המשוחררים עקב אי-כשירות רפואית ",
+  "raw_words": 1873,
+  "digits_fixed": false,
+  "clauses": 8
+ },
+ {
+  "document_id": "56.0131",
+  "title": "דמי כלכלה לחיילים בשירות חובה",
+  "raw_words": 820,
+  "digits_fixed": false,
+  "clauses": 3
+ },
+ {
+  "document_id": "58.0202",
+  "title": "רישיון נהיגה",
+  "raw_words": 3896,
+  "digits_fixed": false,
+  "clauses": 2
+ },
+ {
+  "document_id": "61.0104",
+  "title": "טיפול רפואי בחייל",
+  "raw_words": 3977,
+  "digits_fixed": false,
+  "clauses": 34
+ },
+ {
+  "document_id": "61.0113",
+  "title": "חסיון רפואי וסודיות רפואית",
+  "raw_words": 726,
+  "digits_fixed": false,
+  "clauses": 10
+ },
+ {
+  "document_id": "8.0101",
+  "title": "פניות גורמים אזרחיים - חובת מתן תשובה והנמקה",
+  "raw_words": 766,
+  "digits_fixed": false,
+  "clauses": 2
+ },
+ {
+  "document_id": "PM-33.0207",
+  "title": "השירות המשותף",
+  "raw_words": 2910,
+  "digits_fixed": false,
+  "clauses": 6
+ }
+]
