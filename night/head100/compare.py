@@ -14,6 +14,8 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parents[1]))
+from night.head100.tuned import held_count_lines, tuned_ids  # noqa: E402
 OUT = HERE / "out"
 
 
@@ -55,8 +57,8 @@ def main(base: str, tag: str) -> int:
         if split == "dev":
             print(f"[head100] dev {b}/{len(ids)} -> {a}/{len(ids)}   lost {lost}   gained {won}")
         else:
-            print(f"[head100] held {b}/{len(ids)} -> {a}/{len(ids)}   "
-                  f"(lost {len(lost)}, gained {len(won)} — not listed by design)")
+            for line in held_count_lines(ids, hb, ha, tuned_ids()):
+                print(line)
     return 0
 
 
