@@ -105,6 +105,11 @@ def main() -> int:
             safe_print(f"          not written: {did} is in NEVER and the def carries no user_approved_never")
             rc = 1
             continue
+        # a kept section with the same id (an existing key-facts) merges: its clauses first, the new ones after
+        same = [s for s in doc.get("sections", []) if s["id"] == section["id"] and s["id"] not in drop]
+        if same:
+            have = {c["number"] for s in same for c in s["clauses"]}
+            section["clauses"] = [c for s in same for c in s["clauses"]] + [c for c in section["clauses"] if c["number"] not in have]
         doc["sections"] = [s for s in doc.get("sections", []) if s["id"] not in drop and s["id"] != section["id"]] + [section]
         doc["recurated"] = {"when": defn.get("when") or "2026-09-22", "def": f.name, "replaced": drop}
         path.write_text(json.dumps(doc, ensure_ascii=False, indent=1), encoding="utf-8")
