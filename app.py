@@ -8392,9 +8392,17 @@ def handle_question(question: str):
                 try:
                     stage2.markdown(_stage_html("מרחיב את החיפוש לפי מה שחסר…"),
                                     unsafe_allow_html=True)
+                    # RETRIEVE_SECOND_PASS_CONTINUE (off by default): the
+                    # retry continues the first exchange instead of resending
+                    # the window, so it needs the exact user turn that
+                    # produced the first answer. getattr: a stale cached
+                    # backend without the flag keeps today's call.
+                    continue_kw = ({"first_user_content": user_msg.get("api_content")}
+                                   if getattr(backend, "RETRIEVE_SECOND_PASS_CONTINUE", 0) > 0
+                                   else {})
                     result2 = stream_ai_answer(question, history,
                                                role=st.session_state.role,
-                                               first_answer=text, **profile_kw)
+                                               first_answer=text, **profile_kw, **continue_kw)
 
                     def _swap(g):
                         # the first answer stays readable while the retry

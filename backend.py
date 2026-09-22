@@ -279,6 +279,31 @@ RETRIEVE_LACK_CLAUSES = int(os.environ.get("RETRIEVE_LACK_CLAUSES", "0"))
 # A refusal never carries what the first answer had. OFF until measured.
 RETRIEVE_SECOND_PASS_KEEP_RULING = int(os.environ.get("RETRIEVE_SECOND_PASS_KEEP_RULING", "0"))
 
+# ── The second pass as a cached continuation (RETRIEVE_SECOND_PASS_CONTINUE) ─
+# night/PLAN_COST.md, lever 1 (18.09). Today the second pass builds a NEW
+# window and sends everything again — the question, ~13K tokens of Hebrew
+# context (3.9-4.5 tokens a word), the system prompt — although the first
+# pass's window was just sent and is sitting on the API's side. The profile
+# puts the window at ~49% of a cold pass, so the resend is the largest
+# avoidable cost on a two-pass question (~$0.25 against ~$0.14 for one pass).
+# With this on, the first pass marks its user turn as a cache breakpoint and
+# the retry is sent as a CONTINUATION of that exchange:
+#   [user: question + window-1]           read from the cache at 0.1x
+#   [assistant: the first answer]
+#   [user: "passages found for what you said was missing" + ONLY the chunks
+#          window-2 adds over window-1 + the ask to answer again]
+# The model then reads the union of both windows; today it reads window-2
+# alone. That changes what the model sees, so it is a paired arm (~$3.5,
+# after the head-100 run), criterion written first in
+# night/SECOND_PASS_CONTINUE_CRITERION.md: zero full answers lost after
+# review, KEEP_RULING still honoured, cache_read_input_tokens >= 15K on the
+# second pass. When window-2 adds nothing, the ordinary second pass runs.
+# 0 = off, byte for byte — the first pass's user turn stays a bare string.
+RETRIEVE_SECOND_PASS_CONTINUE = int(os.environ.get("RETRIEVE_SECOND_PASS_CONTINUE", "0"))
+_CONTINUE_HEADER = "קטעים נוספים מהפקודות, שאותרו לפי מה שציינת כחסר:"
+_CONTINUE_ASK = ("ענה שוב על השאלה המקורית, לפי אותם כללים, על בסיס כל הקטעים "
+                 "שקיבלת — הקודמים והנוספים.")
+
 # The ceiling clause, for questions that ask for a ceiling.
 #
 # Measured free on 2026-08-23 against the three zeros the arbitration called
@@ -2001,8 +2026,14 @@ def lacked_from(answer: str) -> str:
 
 
 def stream_ai_answer(question: str, history: list[dict] | None = None, role: str = "soldier",
-                     profile: list[str] | None = None, first_answer: str | None = None):
+                     profile: list[str] | None = None, first_answer: str | None = None,
+                     first_user_content: str | None = None):
     """Answer a question as a live stream.
+
+    `first_answer` is a previous attempt at THIS question (the second pass,
+    RETRIEVE_SECOND_PASS); `first_user_content` is the exact user turn that
+    produced it, and matters only under RETRIEVE_SECOND_PASS_CONTINUE, where
+    the retry continues that exchange instead of resending the window.
 
     Returns (text_generator, sources, sent_user_content, usage_holder): the
     generator yields answer-text deltas as the model produces them (UI renders
@@ -2102,6 +2133,17 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
 
     user_content = _compose_user_content(question, context, profile)
 
+    # RETRIEVE_SECOND_PASS_CONTINUE: the retry as a continuation of the first
+    # exchange (see the flag). `new_chunks` is what window-2 adds over the
+    # text the first pass sent; nothing new ⇒ the ordinary second pass.
+    continuation = None
+    if (RETRIEVE_SECOND_PASS_CONTINUE > 0 and RETRIEVE_SECOND_PASS > 0
+            and first_answer and first_user_content and lacked_from(first_answer)):
+        new_chunks = [c for c in chunks if c["text"] not in first_user_content]
+        if new_chunks:
+            continuation = (f"{_CONTINUE_HEADER}\n{_context_from_chunks(new_chunks)}"
+                            f"\n\n{_CONTINUE_ASK}")
+
     # Two cache breakpoints (prefix caching, 5-min TTL): the static role
     # prompt, and everything up to the end of history. Turn 1 is below the
     # model's 4096-token cacheable minimum and gains nothing; from turn 2 the
@@ -2121,7 +2163,25 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
                 "cache_control": _history_cache_control(),
             }],
         }
-    messages = past + [{"role": "user", "content": user_content}]
+    if continuation is not None:
+        # the first exchange verbatim (its user turn is the breakpoint the
+        # first pass wrote, so the prefix reads from the cache), the first
+        # answer, and only what is new. History replays this turn as ONE
+        # user turn carrying both windows, so a follow-up still sees every
+        # passage the kept answer was written from.
+        messages = past + [
+            {"role": "user", "content": [{"type": "text", "text": first_user_content,
+                                          "cache_control": _history_cache_control()}]},
+            {"role": "assistant", "content": first_answer},
+            {"role": "user", "content": continuation},
+        ]
+        user_content = f"{first_user_content}\n\n{continuation}"
+    elif RETRIEVE_SECOND_PASS_CONTINUE > 0 and first_answer is None:
+        # the first pass writes the breakpoint a continuation will read
+        messages = past + [{"role": "user", "content": [{"type": "text", "text": user_content,
+                                                         "cache_control": _history_cache_control()}]}]
+    else:
+        messages = past + [{"role": "user", "content": user_content}]
 
     # usage rides back in a caller-owned dict, filled when the stream finishes
     # — NOT a module global. Streamlit serves each session on its own thread in
