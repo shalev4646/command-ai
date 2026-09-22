@@ -549,6 +549,19 @@ _COMMON_RULES = """חוקים מוחלטים:
 # measured in the same arm as RETRIEVE_V2 (1.c), never deployed alone.
 ANSWER_V2 = os.environ.get("ANSWER_V2", "0") == "1"
 
+# ── ANSWER_TERM_NOTE — one line of term clarification in the user turn ────────
+# The homonym class (storage/glossary.HOMONYMS, night/HOMONYMS_CRITERION.md):
+# the paid head-100 run of 22.09 failed its "zero confident-and-wrong" clause
+# on two answers where an acronym with two army meanings was read in the wrong
+# one — once the answering order was IN the sources and the model still took
+# the other sense. Retrieval-side expansions (RETRIEVE_HOMONYMS) cannot reach
+# that; this can: when the question carries a term from the table, one
+# parenthetical line under the question says what it means here (the one
+# sense the context settles, or all of them). Data from the glossary, not a
+# rule — the system prompt is untouched. 0 = off, and the user turn is
+# byte-identical; measured only in the paid mini-check the criterion names.
+ANSWER_TERM_NOTE = int(os.environ.get("ANSWER_TERM_NOTE", "0"))
+
 # ── SYSTEM_CACHE_TTL — how long the system prompt's cache entry lives ────────
 # Measured on production 2026-09-17: a two-pass question pays a 5,316-token
 # cache WRITE of the system prompt on its first pass ($0.03 of $0.25) whenever
@@ -1992,11 +2005,21 @@ def _compose_user_content(question: str, context: str, profile: list[str] | None
     into every answer. `profile` holds the asker's personal details — status
     pills (חייל בודד...) and, when set, service type/track (שירות סדיר,
     מסלול שירות: ...) — so the label reads "פרטי השואל", not just מעמד.
+
+    ANSWER_TERM_NOTE (off by default): when the question carries a term the
+    homonym table knows, one parenthetical line under the question says what
+    it means here. `head` is the question itself whenever the flag is off or
+    nothing is ambiguous, so both return paths stay byte-identical.
     """
+    head = question
+    if ANSWER_TERM_NOTE > 0:
+        note = _glossary.term_note(question)
+        if note:
+            head = f"{question}\n\n(הבהרת מונחים: {note})"
     if not profile:
-        return f"{question}\n\n{_CONTEXT_HEADER}\n{context}"
+        return f"{head}\n\n{_CONTEXT_HEADER}\n{context}"
     return (
-        f"{question}\n\n"
+        f"{head}\n\n"
         f"(פרטי השואל: {', '.join(profile)}. "
         f"התחשב בהם רק אם הם רלוונטיים לשאלה.)\n\n"
         f"{_CONTEXT_HEADER}\n{context}"
