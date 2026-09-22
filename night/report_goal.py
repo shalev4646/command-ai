@@ -56,7 +56,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import out_of_scope
-import scope_routes
 from common import safe_print
 from night import config as C
 
@@ -81,10 +80,9 @@ HONEST_LEVELS = ("full", "led_known", "refused")
 # pilot-150 where the real gate fires on 107 of 107.
 #
 # So the instrument replays the app's own two gates instead of guessing: the
-# ANSWER carries a routing marker, and the QUESTION matches a family. Both
-# modules are pure strings -- no Streamlit, no network, no API call.
-_MARKERS = tuple(m for m in (getattr(scope_routes, "MARK_MISSING", ""),
-                             getattr(scope_routes, "MARK_OUT_OF_SCOPE", "")) if m)
+# ANSWER declares a gap (out_of_scope.declares_gap -- the one predicate the
+# chip and the strip read too, since 22.09), and the QUESTION matches a
+# family. Both modules are pure strings -- no Streamlit, no network, no API.
 
 # The catch-all family added on 2026-08-26 so no soldier ends up with nothing.
 # It names no address: it says what the orders do not govern is set by the
@@ -107,8 +105,14 @@ DEFAULT_FAMILIES = frozenset({DEFAULT_FAMILY, "not_in_our_orders"})
 
 
 def door(answer: str, question: str) -> str | None:
-    """The app's gate, replayed. Family name, or None when nothing fires."""
-    if not answer or not any(m in answer for m in _MARKERS):
+    """The app's gate, replayed. Family name, or None when nothing fires.
+
+    22.09 (rs041): the answer-side test was "carries a routing marker"; the
+    kept second-pass answer opened "**תשובה:** אין בפקודות מספר ימים קבוע…"
+    with no rule-2א line and fell through here before the family was ever
+    asked. The gate is now `out_of_scope.declares_gap`, measured free against
+    every answered marker-less answer on disk (zero captures) -- see there."""
+    if not answer or not out_of_scope.declares_gap(answer):
         return None
     return out_of_scope.family_of(question)
 

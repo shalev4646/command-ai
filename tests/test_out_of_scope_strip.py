@@ -38,13 +38,26 @@ def test_the_strip_replaces_the_generic_chain_and_never_stacks_on_it():
 
 
 def test_both_gates_are_present():
-    """Marker in the ANSWER and a verified family for the QUESTION. Dropping
-    either one puts a referral under an answer that did resolve the question."""
+    """A declared gap in the ANSWER and a verified family for the QUESTION.
+    Dropping either one puts a referral under an answer that did resolve the
+    question. 22.09: the answer gate is out_of_scope.declares_gap (the chip's
+    predicate too); the marker test stays as the stale-build fallback."""
     fn = SRC[SRC.index("def _out_of_scope_destination"):
              SRC.index("def _out_of_scope_strip")]
+    assert 'getattr(_oos, "declares_gap", None)' in fn
+    assert "if not gap(content):" in fn
     assert "_MARK_MISS not in content and _MARK_OOS not in content" in fn
     assert "destination_for" in fn
     assert "_oos is None" in fn
+
+
+def test_the_chip_reads_the_same_gap_predicate():
+    """The 18.09 chip bug and the rs041 door bug were one bug seen twice: three
+    surfaces each read the model's sign for themselves. The chip's negative-
+    opening branch must go through out_of_scope.declares_gap, not its own regex."""
+    fn = SRC[SRC.index("def _verdict_chip"):SRC.index("def _render_body")]
+    assert 'gap(content) == "negative"' in fn
+    assert "verdict-none" in fn[fn.index('gap(content) == "negative"'):]
 
 
 def test_the_rendered_strip_escapes_everything_it_prints():
