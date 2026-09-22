@@ -202,6 +202,11 @@ def expansions(query: str) -> list[str]:
             if len(cand) < 2 or " " in cand:
                 continue
             exp = GLOSSARY.get(cand)
+            if exp is None and RETRIEVE_QUOTELESS:
+                # the same key typed without its gershayim (the
+                # RETRIEVE_QUOTELESS block below); a derived key never
+                # shadows a hand-written one
+                exp = _QUOTELESS_GLOSSARY.get(cand)
             if exp and exp not in seen:
                 found.append(exp); seen.add(exp)
                 break
@@ -311,6 +316,53 @@ HOMONYMS: list[dict] = [
      ]},
 ]
 
+# ── RETRIEVE_QUOTELESS: the same key typed without its gershayim (22.09) ─────
+# hW3a of the paid run typed „לתשמש"; the table knew only תשמ"ש, so the
+# expansion never fired (night/TERM_NOTE_CRITERION.md). The glossary already
+# carries hand-written quote-less twins for most of its quoted keys (קבן,
+# סופש, חפשש…); the homonym table carries none. This flag derives the
+# quote-less form of EVERY quoted key in both tables by one rule and matches
+# it too — a general spelling tolerance, not an entry for one question. The
+# rule (the manual review and its counts: night/QUOTELESS_CRITERION.md):
+# three letters or more (תש, שג, מם are too ambiguous), and neither a common
+# Hebrew word nor a word the orders write unquoted themselves (the glossary's
+# own rarity rule). A derived key never shadows a hand-written one, and the
+# derived set is locked by tests/test_quoteless.py — a new quoted entry means
+# a new review. Off ⇒ byte-identical. The homonym forms reach retrieval only
+# through the table's own consumer, RETRIEVE_HOMONYMS, like the quoted ones.
+RETRIEVE_QUOTELESS = os.environ.get("RETRIEVE_QUOTELESS", "0") == "1"
+_QUOTELESS_MIN = 3
+QUOTELESS_EXCLUDE = {
+    "קפץ",   # קפ"ץ — the everyday verb „קפץ"
+    "שקם",   # שק"ם — a verb, and the orders write „חברת שקם בע"מ", „אשראי שקם" themselves
+}
+
+
+def _dequote(term: str) -> str:
+    return term.translate(_QUOTES).replace('"', "").replace("'", "")
+
+
+def quoteless_forms() -> dict[str, str]:
+    """Derived quote-less form -> the quoted key it stands for, over both
+    tables, after the rule. This is the locked list of the criterion."""
+    out: dict[str, str] = {}
+    for term in list(GLOSSARY) + [h["term"] for h in HOMONYMS]:
+        q = _dequote(term)
+        if q == term or len(q) < _QUOTELESS_MIN or " " in q or q in QUOTELESS_EXCLUDE:
+            continue
+        if term in GLOSSARY and q in GLOSSARY:
+            continue                      # the hand-written twin already exists
+        out[q] = term
+    return out
+
+
+_QL = quoteless_forms()
+_QUOTELESS_GLOSSARY: dict[str, str] = {q: GLOSSARY[t] for q, t in _QL.items() if t in GLOSSARY}
+_QUOTELESS_HOMONYMS: dict[str, str] = {
+    t: h["pattern"].replace('"', "")
+    for q, t in _QL.items() if t not in GLOSSARY
+    for h in HOMONYMS if h["term"] == t}
+
 
 def homonym_senses(query: str) -> list[tuple[str, list[dict]]]:
     """(term, active senses) for every homonym present in `query`. A sense is
@@ -318,7 +370,9 @@ def homonym_senses(query: str) -> list[tuple[str, list[dict]]]:
     joined = " ".join(_norm(t) for t in query.split())
     out: list[tuple[str, list[dict]]] = []
     for h in HOMONYMS:
-        if not re.search(h["pattern"], joined):
+        if not re.search(h["pattern"], joined) and not (
+                RETRIEVE_QUOTELESS and h["term"] in _QUOTELESS_HOMONYMS
+                and re.search(_QUOTELESS_HOMONYMS[h["term"]], joined)):
             continue
         active = [s for s in h["senses"] if s.get("cue") and re.search(s["cue"], joined)]
         out.append((h["term"], active or list(h["senses"])))
