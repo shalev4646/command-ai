@@ -1,5 +1,5 @@
 {
- "spent": 136.7512,
+ "spent": 139.3518,
  "reserved": 0,
  "entries": [
   {
@@ -5755,6 +5755,12 @@
    "label": "probe-fresh_v99",
    "estimate": 1.344,
    "actual": 1.2542
+  },
+  {
+   "id": "probe-head100A_p1#12968-1023",
+   "label": "probe-head100A_p1",
+   "estimate": 1.4,
+   "actual": 2.6006
   },
   {
    "id": "probe-heldout_after#18052-309",
