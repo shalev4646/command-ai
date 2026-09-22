@@ -9025,6 +9025,7 @@ def _verdict_chip(content: str, question: str = "") -> tuple[str | None, str]:
     # labeled "not found". 80 chars covers marker + topic prefix; a real
     # verdict before the sentence pushes it past that.
     idx = content.find(_REFUSAL_SENTENCE)
+    label = None
     if 0 <= idx < 80:
         # Rule 2א tiers the refusal: a question the orders were never the tool
         # for gets routed to the framework that DOES govern it, and one that
@@ -9055,21 +9056,24 @@ def _verdict_chip(content: str, question: str = "") -> tuple[str | None, str]:
         # a bare refusal without a marker never earns the label.
         if label != "לא נמצא במאגר" and _unit_routine_question(question):
             label = "נקבע ביחידה שלך"
-        return (f'<div class="verdict-solo">'
-                f'<span class="verdict-chip verdict-none">ⓘ {label}</span></div>'), content
-    # 22.09 (rs041): an answer that OPENS with an explicit negative —
-    # "**תשובה:** אין בפקודות מספר ימים קבוע…" — refused in other words and
-    # skipped the rule-2א line. The strip and the door read that as a gap
-    # through out_of_scope.declares_gap; the chip reads the same predicate so
-    # the three surfaces never disagree again (the 18.09 chip bug and the
-    # rs041 door bug were one bug seen twice). Measured free before this was
-    # written: zero captures on 298 answered marker-less answers. No
-    # unit-routine relabel here — like a bare refusal, it carries no marker.
-    gap = getattr(_oos, "declares_gap", None) if _oos is not None else None
-    if gap is not None and gap(content) == "negative":
-        return (f'<div class="verdict-solo">'
-                f'<span class="verdict-chip verdict-none">ⓘ לא נמצא בפקודות</span></div>'), content
-    return None, content
+    else:
+        # 22.09 (rs041): an answer that OPENS with an explicit negative —
+        # "**תשובה:** אין בפקודות מספר ימים קבוע…" — refused in other words
+        # and skipped the rule-2א line. The strip and the door read that as a
+        # gap through out_of_scope.declares_gap; the chip reads the same
+        # predicate so the three surfaces never disagree again (the 18.09 chip
+        # bug and the rs041 door bug were one bug seen twice). Measured free
+        # before this was written: zero captures on 298 answered marker-less
+        # answers. No unit-routine relabel — like a bare refusal, no marker.
+        gap = getattr(_oos, "declares_gap", None) if _oos is not None else None
+        if gap is not None and gap(content) == "negative":
+            label = "לא נמצא בפקודות"
+    if label is None:
+        return None, content
+    # one wrapper for every neutral chip — .verdict-solo cancels Streamlit's
+    # margin-bottom:-1rem exactly as the verdict path does (design invariant)
+    return (f'<div class="verdict-solo">'
+            f'<span class="verdict-chip verdict-none">ⓘ {label}</span></div>'), content
 
 
 def _render_body(body: str, chip: str | None = None) -> None:
