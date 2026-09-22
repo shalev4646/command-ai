@@ -65,7 +65,13 @@ input_tokens 14077 · cache_read 0 · cache_write 5316 · output_tokens 861 · c
 
 ## 3. p1 → p2 → grade → report
 
-_(ממלא)_
+- **תקרת הליג'ר 145 → 155** (22.09, המשתמש בצ'אט: „תעלה את התקרה אני מאשר"; `night/ledger.py`, קומיט `8e34bf2`).
+- **p1 הוזמן 22.09 09:26Z** מ-`D:/_run_wt` עם 13 דגלי-הפרודקשן (HyDE דלוק): הרכבה 50/50 בלי `RetrievalDegraded`;
+  batch `msgbatch_017WNhTj8hMuPD3epChGH8Cn`, 50 בקשות, reserve $1.40 ($16.85 נותרים אחריו); כרטיס-התביעה
+  `night/out/batch_probe-head100A_p1.json` (מקומט בכוח). ההרכבה (HyDE+נתב ≈ $0.8–0.9) אינה נרשמת בליג'ר.
+  התאוששות אם הסשן נופל: `python -m night.collect probe-head100A_p1`.
+
+_(p2 / grade / report — ממלא)_
 
 ## 4. עיון שלב 6
 
