@@ -81,7 +81,11 @@ input_tokens 14077 · cache_read 0 · cache_write 5316 · output_tokens 861 · c
 - **p2 הוזמן** (~09:30Z+): 21 בקשות, כל אחת עם `first_answer` כזרע (כמו בפרודקשן), batch `msgbatch_018JsmBRc6G7vG1eVwHxL46K`,
   reserve $0.59; כרטיס `night/out/batch_probe-head100A_p2.json`. התאוששות: `python -m night.collect probe-head100A_p2`.
 
-_(grade / report — ממלא)_
+- **p2 נחת**: **21/21 נענו, אפס שגיאות/חיתוכים; $1.08 בפועל** ⇒ ליג'ר **$140.43** (p1+p2 $3.68 מול dry $3.57–4.18). חלון ממוצע 3,881
+  מילים, מקס' 5,164. `refused_flag` 4/21 (היו 7 במעבר הראשון).
+- **grade** (Haiku, באץ', decompose + grade) הוזמן מיד אחרי.
+
+_(report — ממלא)_
 
 ## 4. עיון שלב 6
 
