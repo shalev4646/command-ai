@@ -232,6 +232,29 @@ RETRIEVE_FULL_BLOCKS = int(os.environ.get("RETRIEVE_FULL_BLOCKS", "0"))
 # measurement: night/COST_WINDOW_CRITERION.md; profile: night/PLAN_COST.md.
 RETRIEVE_FULL_BLOCK_MAX_WORDS = int(os.environ.get("RETRIEVE_FULL_BLOCK_MAX_WORDS", "0"))
 
+# ── Clause selection inside a cut block (RETRIEVE_BLOCK_CLAUSE_EMBED) — 22.09 ─
+# Two measurements closed the block-shaped levers on one finding: K=8
+# (night/head100/K_CRITERION.md — "even when the order enters, the right
+# clause inside it is not picked") and the non-lead block cuts
+# (night/COST_WINDOW_CRITERION.md — "the misses are the choice of clause
+# inside the block; do not re-run without a better selector than the title
+# index"). Today a block over RETRIEVE_V2_BLOCK_WORDS is cut to its
+# RETRIEVE_V2_TOP_K clauses by the clause-TITLE index alone (character 4-grams
+# over the curator's question-shaped titles), and the lead block over
+# RETRIEVE_FULL_BLOCK_MAX_WORDS by the same evidence: a clause whose title
+# does not sound like the question is dropped even when its BODY is the rule.
+# Free ceiling, measured 22.09 on the w6cap records before this was written:
+# "order in the window, clause not" = 6/82 on the frozen ruler (all six in
+# blocks over 600 words), 1 per half of head-100, 13/82 with the router.
+#   1 = reciprocal-rank fusion (k=60) of the title ranking with the
+#       clause-BODY embedding ranking (storage/clause_embed.py — the minilm
+#       production stack, vectors cached) for every cut block;
+#   2 = the embedding ranking alone.
+# The cut budgets (600 words / 6 clauses, 2000 words), the served order and an
+# uncut block are untouched. 0 = off, byte for byte. Criterion, written first:
+# night/BLOCK_CLAUSE_CRITERION.md.
+RETRIEVE_BLOCK_CLAUSE_EMBED = int(os.environ.get("RETRIEVE_BLOCK_CLAUSE_EMBED", "0"))
+
 # The second pass's own clause finder. RETRIEVE_SECOND_PASS retrieves on the
 # answer's lack statement with the same embedding that missed the clause the
 # first time. On the realstyle set (adjudicated 2026-09-10) 11 of 45 zeros had
@@ -1059,6 +1082,9 @@ def _capped_block(doc: dict, question: str, max_words: int) -> list[dict]:
     if (question or "").strip():
         doc_id = doc.get("document_id", "")
         scores = _clause_index().rank(question, doc_ids=[doc_id]).clause_scores(doc_id)
+        if RETRIEVE_BLOCK_CLAUSE_EMBED > 0:
+            scores = fuse_clause_scores(
+                scores, _clause_embed_index().rank(question, doc_ids=[doc_id]).clause_scores(doc_id))
     ranked = sorted(range(len(block)),
                     key=lambda i: (-scores.get((block[i]["section"], block[i]["clause"]), 0.0), i))
     keep: set[int] = set()
@@ -1297,6 +1323,32 @@ def _clause_embed_index() -> "_ce.ClauseEmbedIndex":
     return _v3_index[1]
 
 
+_RRF_K = 60
+
+
+def fuse_clause_scores(title_scores: dict, embed_scores: dict, mode: int | None = None) -> dict:
+    """The clause evidence a block cut ranks by, under RETRIEVE_BLOCK_CLAUSE_EMBED.
+
+    Off (mode 0): `title_scores` itself, untouched — the cut is byte-identical.
+    1: reciprocal-rank fusion of the two rankings, 1/(k+rank) summed, so every
+    clause of the union scores above zero (a clause the title index never saw
+    ranks last on that list); 2: the embedding ranking alone, as 1/(k+rank).
+    Rank-based on purpose — a 4-gram overlap and a cosine are not on one scale."""
+    mode = RETRIEVE_BLOCK_CLAUSE_EMBED if mode is None else mode
+    if mode <= 0:
+        return title_scores
+    emb_rank = {key: r for r, (key, _) in
+                enumerate(sorted(embed_scores.items(), key=lambda kv: -kv[1]), 1)}
+    if mode >= 2:
+        return {key: 1.0 / (_RRF_K + r) for key, r in emb_rank.items()}
+    titled = [key for key, s in sorted(title_scores.items(), key=lambda kv: -kv[1]) if s > 0]
+    title_rank = {key: r for r, key in enumerate(titled, 1)}
+    worst_title, worst_emb = len(titled) + 1, len(emb_rank) + 1
+    return {key: 1.0 / (_RRF_K + title_rank.get(key, worst_title))
+            + 1.0 / (_RRF_K + emb_rank.get(key, worst_emb))
+            for key in list(title_rank) + [k for k in emb_rank if k not in title_rank]}
+
+
 def _serve_blocks_by_hits(chunks: list[dict], hits, by_id: dict, route: set[str] | None,
                           n_docs: int, bonus: float) -> list[dict]:
     """The V2/V3 serving rule: the `n_docs` best orders by the index's document
@@ -1345,12 +1397,17 @@ def doc_blocks_window(question: str, role: str, route: set[str] | None,
         if c["doc_id"] not in order:
             order.append(c["doc_id"])
     hits = _clause_index().rank(question, doc_ids=order[:RETRIEVE_DOC_BLOCKS])
+    # RETRIEVE_BLOCK_CLAUSE_EMBED: one question embedding for all N blocks
+    ehits = (_clause_embed_index().rank(question, doc_ids=order[:RETRIEVE_DOC_BLOCKS])
+             if RETRIEVE_BLOCK_CLAUSE_EMBED > 0 else None)
     out: list[dict] = []
     for doc_id in order[:RETRIEVE_DOC_BLOCKS]:
         doc = by_id.get(doc_id)
         if doc is None:
             continue
         cl = hits.clause_scores(doc_id)
+        if ehits is not None:
+            cl = fuse_clause_scores(cl, ehits.clause_scores(doc_id))
         for c in v2_block_chunks(doc, cl):
             c = dict(c)
             # the order's own ranking score, so the block sorts where the
