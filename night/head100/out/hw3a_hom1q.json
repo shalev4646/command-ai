@@ -1,0 +1,27 @@
+{
+ "agg": {
+  "n": 1,
+  "doc_in_window": 1,
+  "sect_in_window": 1,
+  "sect_in_window_content": 1,
+  "sect_rank_top8": 0,
+  "sect_rank_top25": 1,
+  "sect_rank_median": 11,
+  "avg_words": 3416,
+  "avg_docs": 6.0
+ },
+ "per": [
+  {
+   "id": "hW3a",
+   "doc_id": "35.0210",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "sect_content": true,
+   "sect_overlap": 1.0,
+   "doc_rank": 11,
+   "sect_rank": 11,
+   "window_words": 3416,
+   "window_docs": 6
+  }
+ ]
+}
