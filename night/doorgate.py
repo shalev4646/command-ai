@@ -32,6 +32,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import out_of_scope as OS  # noqa: E402
+import scope_routes  # noqa: E402
 
 OUT = ROOT / "night" / "out"
 
@@ -66,6 +67,19 @@ def _text(r: dict) -> str:
     return (r.get("clean_q") or r.get("question") or r.get("q") or "").strip()
 
 
+def no_rule_questions() -> set[str]:
+    """כל שאלה שהבוררות סימנה `NO_SUCH_RULE` / `NOT_IN_CORPUS` — הסט שהבוררות
+    מוציאה מכל שער אפס-תפיסות (ראו `answered_questions`)."""
+    no_rule: set[str] = set()
+    for path in sorted(OUT.glob("adjudication*.json")):
+        for r in _rows_of(_load(path)):
+            if str(r.get("verdict", "")) in ("NO_SUCH_RULE", "NOT_IN_CORPUS"):
+                q = _text(r)
+                if q:
+                    no_rule.add(q)
+    return no_rule
+
+
 def answered_questions() -> list[tuple[str, str]]:
     """(מקור, שאלה) לכל שאלה שהפקודות כן ענו עליה — משני סוגי ראיה.
 
@@ -76,13 +90,7 @@ def answered_questions() -> list[tuple[str, str]]:
     אפס-התפיסות גם אם זרוע כלשהי ענתה עליה; אחרת השער מעניש דלת על כך
     שהיא עושה בדיוק את עבודתה.
     """
-    no_rule: set[str] = set()
-    for path in sorted(OUT.glob("adjudication*.json")):
-        for r in _rows_of(_load(path)):
-            if str(r.get("verdict", "")) in ("NO_SUCH_RULE", "NOT_IN_CORPUS"):
-                q = _text(r)
-                if q:
-                    no_rule.add(q)
+    no_rule = no_rule_questions()
 
     seen: dict[str, str] = {}
     for path in sorted(OUT.glob("adjudication*.json")):
@@ -120,6 +128,61 @@ def held_out_no_rule() -> list[tuple[str, str]]:
                 if q:
                     out.setdefault(q, f"{path.name}:{r.get('id', '?')}")
     return sorted(out.items(), key=lambda kv: kv[1])
+
+
+def graded_rows() -> list[dict]:
+    """כל שורה מדורגת שעל הדיסק (`grades_*.jsonl`), עם שם-הזרוע ב-`_arm`."""
+    rows: list[dict] = []
+    for path in sorted(OUT.glob("grades_*.jsonl")):
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            continue
+        for line in lines:
+            try:
+                r = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(r, dict):
+                r["_arm"] = path.stem[len("grades_"):]
+                rows.append(r)
+    return rows
+
+
+def gap_sign_breaches(rows: list[dict] | None = None,
+                      no_rule: set[str] | None = None) -> tuple[list, list, int]:
+    """שער-הסימן (22.09): `out_of_scope.declares_gap` מושמע על כל תשובה מדורגת
+    **בלי** שורת-סימן. תשובה שענתה על **כל** חלקי השאלה ושהפרדיקט נדלק עליה
+    היא דלת שגויה ⇒ פרצה. תשובה חלקית (חלק נענה, חלק לא) **מדווחת ואינה
+    נספרת**: כלל 2 מבקש ממנה לומר מה הפקודות לא קובעות, וכלל 2א מבקש ממנה
+    את שורת-הסימן — הסימן שם נכון. הבוררות גוברת, כמו בשער-המשפחות.
+
+    מחזיר (פרצות, דליקות-על-חלקיות, מספר התשובות המלאות שנבדקו)."""
+    rows = graded_rows() if rows is None else rows
+    no_rule = no_rule_questions() if no_rule is None else no_rule
+    marks = (scope_routes.MARK_MISSING, scope_routes.MARK_OUT_OF_SCOPE)
+    breaches, partial = [], []
+    n_full = 0
+    for r in rows:
+        g = r.get("grade") or {}
+        parts = g.get("parts") or []
+        answered = int(g.get("answered_parts") or 0)
+        if answered <= 0 or not parts:
+            continue
+        q = _text(r)
+        if not q or q in no_rule:
+            continue
+        a = r.get("answer") or ""
+        if any(m in a for m in marks):
+            continue
+        full = answered >= len(parts)
+        if full:
+            n_full += 1
+        kind = OS.declares_gap(a)
+        if kind:
+            src = f"{r.get('_arm', '?')}:{r.get('id', '?')}"
+            (breaches if full else partial).append((kind, src, q))
+    return breaches, partial, n_full
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -161,7 +224,22 @@ def main(argv: list[str] | None = None) -> int:
     for fam, src, q in hits:
         print(f"    {fam:16} {src:34} {q[:70]}")
 
-    return 1 if breaches else 0
+    sign_breaches, partial, n_full = gap_sign_breaches()
+    print()
+    if sign_breaches:
+        print(f"[doorgate] FAIL -- the gap sign fires on {len(sign_breaches)} FULLY answered, "
+              f"marker-less answers (of {n_full}):")
+        for kind, src, q in sign_breaches:
+            print(f"    {kind:10} {src:34} {q[:70]}")
+    else:
+        print(f"[doorgate] PASS -- the gap sign (out_of_scope.declares_gap) fires on none of "
+              f"{n_full} fully answered, marker-less answers")
+    print(f"[doorgate] gap sign on partially answered answers: {len(partial)} "
+          f"(rule 2 asks for it there -- reported, not counted)")
+    for kind, src, q in partial[:20]:
+        print(f"    {kind:10} {src:34} {q[:70]}")
+
+    return 1 if (breaches or sign_breaches) else 0
 
 
 if __name__ == "__main__":

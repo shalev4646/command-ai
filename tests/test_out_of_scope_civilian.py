@@ -37,6 +37,11 @@ UNREGISTERED = "השאלתי ציוד מהחניכייה ועכשיו הם או�
 # Controls
 RESERVE_PAY = "אני במילואים, מתי מגיע לי התגמול ומי משלם אותו?"
 RETURN_KIT = "אני משתחרר ואני צריך להחזיר ציוד, לאן הולכים?"
+# 22.09 — a wrong door caught by the paid head-100 run (hRes1a): the orders
+# answer WHO pays in full (35.0206), the answer added a rule-2א line about an
+# amount nobody asked for, and the family fired on the words "ביטוח לאומי".
+WHO_PAYS = "מי משלם לי על המילואים, הצבא או ביטוח לאומי?"
+WHO_PAYS_2 = "את התגמול על מילואים משלם ביטוח לאומי או הצבא?"
 
 
 def test_civilian_body_questions_get_a_civilian_door():
@@ -59,6 +64,17 @@ def test_reserve_pay_keeps_its_three_door_answer():
 
 def test_returning_kit_stays_with_equipment_return():
     assert OS.family_of(RETURN_KIT) == "equipment_return"
+
+
+def test_asking_which_body_pays_is_not_a_civilian_body_question():
+    """The orders settle who pays (35.0206 — the National Insurance Institute);
+    a question posing the army and the NII as alternatives asks about the
+    order, not about NII matters, and must not earn the civilian door."""
+    for q in (WHO_PAYS, WHO_PAYS_2):
+        assert OS.family_of(q) != "civilian_body", q
+    # the family's own evidence still reaches it
+    for q in (NI_DISCHARGE, NI_SUPPLEMENT):
+        assert OS.family_of(q) == "civilian_body", q
 
 
 if __name__ == "__main__":

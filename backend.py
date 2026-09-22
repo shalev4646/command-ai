@@ -232,6 +232,29 @@ RETRIEVE_FULL_BLOCKS = int(os.environ.get("RETRIEVE_FULL_BLOCKS", "0"))
 # measurement: night/COST_WINDOW_CRITERION.md; profile: night/PLAN_COST.md.
 RETRIEVE_FULL_BLOCK_MAX_WORDS = int(os.environ.get("RETRIEVE_FULL_BLOCK_MAX_WORDS", "0"))
 
+# ── Clause selection inside a cut block (RETRIEVE_BLOCK_CLAUSE_EMBED) — 22.09 ─
+# Two measurements closed the block-shaped levers on one finding: K=8
+# (night/head100/K_CRITERION.md — "even when the order enters, the right
+# clause inside it is not picked") and the non-lead block cuts
+# (night/COST_WINDOW_CRITERION.md — "the misses are the choice of clause
+# inside the block; do not re-run without a better selector than the title
+# index"). Today a block over RETRIEVE_V2_BLOCK_WORDS is cut to its
+# RETRIEVE_V2_TOP_K clauses by the clause-TITLE index alone (character 4-grams
+# over the curator's question-shaped titles), and the lead block over
+# RETRIEVE_FULL_BLOCK_MAX_WORDS by the same evidence: a clause whose title
+# does not sound like the question is dropped even when its BODY is the rule.
+# Free ceiling, measured 22.09 on the w6cap records before this was written:
+# "order in the window, clause not" = 6/82 on the frozen ruler (all six in
+# blocks over 600 words), 1 per half of head-100, 13/82 with the router.
+#   1 = reciprocal-rank fusion (k=60) of the title ranking with the
+#       clause-BODY embedding ranking (storage/clause_embed.py — the minilm
+#       production stack, vectors cached) for every cut block;
+#   2 = the embedding ranking alone.
+# The cut budgets (600 words / 6 clauses, 2000 words), the served order and an
+# uncut block are untouched. 0 = off, byte for byte. Criterion, written first:
+# night/BLOCK_CLAUSE_CRITERION.md.
+RETRIEVE_BLOCK_CLAUSE_EMBED = int(os.environ.get("RETRIEVE_BLOCK_CLAUSE_EMBED", "0"))
+
 # The second pass's own clause finder. RETRIEVE_SECOND_PASS retrieves on the
 # answer's lack statement with the same embedding that missed the clause the
 # first time. On the realstyle set (adjudicated 2026-09-10) 11 of 45 zeros had
@@ -255,6 +278,31 @@ RETRIEVE_LACK_CLAUSES = int(os.environ.get("RETRIEVE_LACK_CLAUSES", "0"))
 # "מותר בתנאים" (33.0220 §§7-8), rs009 — and the grader scored the refusal.
 # A refusal never carries what the first answer had. OFF until measured.
 RETRIEVE_SECOND_PASS_KEEP_RULING = int(os.environ.get("RETRIEVE_SECOND_PASS_KEEP_RULING", "0"))
+
+# ── The second pass as a cached continuation (RETRIEVE_SECOND_PASS_CONTINUE) ─
+# night/PLAN_COST.md, lever 1 (18.09). Today the second pass builds a NEW
+# window and sends everything again — the question, ~13K tokens of Hebrew
+# context (3.9-4.5 tokens a word), the system prompt — although the first
+# pass's window was just sent and is sitting on the API's side. The profile
+# puts the window at ~49% of a cold pass, so the resend is the largest
+# avoidable cost on a two-pass question (~$0.25 against ~$0.14 for one pass).
+# With this on, the first pass marks its user turn as a cache breakpoint and
+# the retry is sent as a CONTINUATION of that exchange:
+#   [user: question + window-1]           read from the cache at 0.1x
+#   [assistant: the first answer]
+#   [user: "passages found for what you said was missing" + ONLY the chunks
+#          window-2 adds over window-1 + the ask to answer again]
+# The model then reads the union of both windows; today it reads window-2
+# alone. That changes what the model sees, so it is a paired arm (~$3.5,
+# after the head-100 run), criterion written first in
+# night/SECOND_PASS_CONTINUE_CRITERION.md: zero full answers lost after
+# review, KEEP_RULING still honoured, cache_read_input_tokens >= 15K on the
+# second pass. When window-2 adds nothing, the ordinary second pass runs.
+# 0 = off, byte for byte — the first pass's user turn stays a bare string.
+RETRIEVE_SECOND_PASS_CONTINUE = int(os.environ.get("RETRIEVE_SECOND_PASS_CONTINUE", "0"))
+_CONTINUE_HEADER = "קטעים נוספים מהפקודות, שאותרו לפי מה שציינת כחסר:"
+_CONTINUE_ASK = ("ענה שוב על השאלה המקורית, לפי אותם כללים, על בסיס כל הקטעים "
+                 "שקיבלת — הקודמים והנוספים.")
 
 # The ceiling clause, for questions that ask for a ceiling.
 #
@@ -500,6 +548,19 @@ _COMMON_RULES = """חוקים מוחלטים:
 # passages that do not apply. Off = the historical sentence, byte for byte;
 # measured in the same arm as RETRIEVE_V2 (1.c), never deployed alone.
 ANSWER_V2 = os.environ.get("ANSWER_V2", "0") == "1"
+
+# ── ANSWER_TERM_NOTE — one line of term clarification in the user turn ────────
+# The homonym class (storage/glossary.HOMONYMS, night/HOMONYMS_CRITERION.md):
+# the paid head-100 run of 22.09 failed its "zero confident-and-wrong" clause
+# on two answers where an acronym with two army meanings was read in the wrong
+# one — once the answering order was IN the sources and the model still took
+# the other sense. Retrieval-side expansions (RETRIEVE_HOMONYMS) cannot reach
+# that; this can: when the question carries a term from the table, one
+# parenthetical line under the question says what it means here (the one
+# sense the context settles, or all of them). Data from the glossary, not a
+# rule — the system prompt is untouched. 0 = off, and the user turn is
+# byte-identical; measured only in the paid mini-check the criterion names.
+ANSWER_TERM_NOTE = int(os.environ.get("ANSWER_TERM_NOTE", "0"))
 
 # ── SYSTEM_CACHE_TTL — how long the system prompt's cache entry lives ────────
 # Measured on production 2026-09-17: a two-pass question pays a 5,316-token
@@ -1059,6 +1120,9 @@ def _capped_block(doc: dict, question: str, max_words: int) -> list[dict]:
     if (question or "").strip():
         doc_id = doc.get("document_id", "")
         scores = _clause_index().rank(question, doc_ids=[doc_id]).clause_scores(doc_id)
+        if RETRIEVE_BLOCK_CLAUSE_EMBED > 0:
+            scores = fuse_clause_scores(
+                scores, _clause_embed_index().rank(question, doc_ids=[doc_id]).clause_scores(doc_id))
     ranked = sorted(range(len(block)),
                     key=lambda i: (-scores.get((block[i]["section"], block[i]["clause"]), 0.0), i))
     keep: set[int] = set()
@@ -1297,6 +1361,32 @@ def _clause_embed_index() -> "_ce.ClauseEmbedIndex":
     return _v3_index[1]
 
 
+_RRF_K = 60
+
+
+def fuse_clause_scores(title_scores: dict, embed_scores: dict, mode: int | None = None) -> dict:
+    """The clause evidence a block cut ranks by, under RETRIEVE_BLOCK_CLAUSE_EMBED.
+
+    Off (mode 0): `title_scores` itself, untouched — the cut is byte-identical.
+    1: reciprocal-rank fusion of the two rankings, 1/(k+rank) summed, so every
+    clause of the union scores above zero (a clause the title index never saw
+    ranks last on that list); 2: the embedding ranking alone, as 1/(k+rank).
+    Rank-based on purpose — a 4-gram overlap and a cosine are not on one scale."""
+    mode = RETRIEVE_BLOCK_CLAUSE_EMBED if mode is None else mode
+    if mode <= 0:
+        return title_scores
+    emb_rank = {key: r for r, (key, _) in
+                enumerate(sorted(embed_scores.items(), key=lambda kv: -kv[1]), 1)}
+    if mode >= 2:
+        return {key: 1.0 / (_RRF_K + r) for key, r in emb_rank.items()}
+    titled = [key for key, s in sorted(title_scores.items(), key=lambda kv: -kv[1]) if s > 0]
+    title_rank = {key: r for r, key in enumerate(titled, 1)}
+    worst_title, worst_emb = len(titled) + 1, len(emb_rank) + 1
+    return {key: 1.0 / (_RRF_K + title_rank.get(key, worst_title))
+            + 1.0 / (_RRF_K + emb_rank.get(key, worst_emb))
+            for key in list(title_rank) + [k for k in emb_rank if k not in title_rank]}
+
+
 def _serve_blocks_by_hits(chunks: list[dict], hits, by_id: dict, route: set[str] | None,
                           n_docs: int, bonus: float) -> list[dict]:
     """The V2/V3 serving rule: the `n_docs` best orders by the index's document
@@ -1345,12 +1435,17 @@ def doc_blocks_window(question: str, role: str, route: set[str] | None,
         if c["doc_id"] not in order:
             order.append(c["doc_id"])
     hits = _clause_index().rank(question, doc_ids=order[:RETRIEVE_DOC_BLOCKS])
+    # RETRIEVE_BLOCK_CLAUSE_EMBED: one question embedding for all N blocks
+    ehits = (_clause_embed_index().rank(question, doc_ids=order[:RETRIEVE_DOC_BLOCKS])
+             if RETRIEVE_BLOCK_CLAUSE_EMBED > 0 else None)
     out: list[dict] = []
     for doc_id in order[:RETRIEVE_DOC_BLOCKS]:
         doc = by_id.get(doc_id)
         if doc is None:
             continue
         cl = hits.clause_scores(doc_id)
+        if ehits is not None:
+            cl = fuse_clause_scores(cl, ehits.clause_scores(doc_id))
         for c in v2_block_chunks(doc, cl):
             c = dict(c)
             # the order's own ranking score, so the block sorts where the
@@ -1910,11 +2005,21 @@ def _compose_user_content(question: str, context: str, profile: list[str] | None
     into every answer. `profile` holds the asker's personal details — status
     pills (חייל בודד...) and, when set, service type/track (שירות סדיר,
     מסלול שירות: ...) — so the label reads "פרטי השואל", not just מעמד.
+
+    ANSWER_TERM_NOTE (off by default): when the question carries a term the
+    homonym table knows, one parenthetical line under the question says what
+    it means here. `head` is the question itself whenever the flag is off or
+    nothing is ambiguous, so both return paths stay byte-identical.
     """
+    head = question
+    if ANSWER_TERM_NOTE > 0:
+        note = _glossary.term_note(question)
+        if note:
+            head = f"{question}\n\n(הבהרת מונחים: {note})"
     if not profile:
-        return f"{question}\n\n{_CONTEXT_HEADER}\n{context}"
+        return f"{head}\n\n{_CONTEXT_HEADER}\n{context}"
     return (
-        f"{question}\n\n"
+        f"{head}\n\n"
         f"(פרטי השואל: {', '.join(profile)}. "
         f"התחשב בהם רק אם הם רלוונטיים לשאלה.)\n\n"
         f"{_CONTEXT_HEADER}\n{context}"
@@ -1944,8 +2049,14 @@ def lacked_from(answer: str) -> str:
 
 
 def stream_ai_answer(question: str, history: list[dict] | None = None, role: str = "soldier",
-                     profile: list[str] | None = None, first_answer: str | None = None):
+                     profile: list[str] | None = None, first_answer: str | None = None,
+                     first_user_content: str | None = None):
     """Answer a question as a live stream.
+
+    `first_answer` is a previous attempt at THIS question (the second pass,
+    RETRIEVE_SECOND_PASS); `first_user_content` is the exact user turn that
+    produced it, and matters only under RETRIEVE_SECOND_PASS_CONTINUE, where
+    the retry continues that exchange instead of resending the window.
 
     Returns (text_generator, sources, sent_user_content, usage_holder): the
     generator yields answer-text deltas as the model produces them (UI renders
@@ -2045,6 +2156,17 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
 
     user_content = _compose_user_content(question, context, profile)
 
+    # RETRIEVE_SECOND_PASS_CONTINUE: the retry as a continuation of the first
+    # exchange (see the flag). `new_chunks` is what window-2 adds over the
+    # text the first pass sent; nothing new ⇒ the ordinary second pass.
+    continuation = None
+    if (RETRIEVE_SECOND_PASS_CONTINUE > 0 and RETRIEVE_SECOND_PASS > 0
+            and first_answer and first_user_content and lacked_from(first_answer)):
+        new_chunks = [c for c in chunks if c["text"] not in first_user_content]
+        if new_chunks:
+            continuation = (f"{_CONTINUE_HEADER}\n{_context_from_chunks(new_chunks)}"
+                            f"\n\n{_CONTINUE_ASK}")
+
     # Two cache breakpoints (prefix caching, 5-min TTL): the static role
     # prompt, and everything up to the end of history. Turn 1 is below the
     # model's 4096-token cacheable minimum and gains nothing; from turn 2 the
@@ -2064,7 +2186,25 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
                 "cache_control": _history_cache_control(),
             }],
         }
-    messages = past + [{"role": "user", "content": user_content}]
+    if continuation is not None:
+        # the first exchange verbatim (its user turn is the breakpoint the
+        # first pass wrote, so the prefix reads from the cache), the first
+        # answer, and only what is new. History replays this turn as ONE
+        # user turn carrying both windows, so a follow-up still sees every
+        # passage the kept answer was written from.
+        messages = past + [
+            {"role": "user", "content": [{"type": "text", "text": first_user_content,
+                                          "cache_control": _history_cache_control()}]},
+            {"role": "assistant", "content": first_answer},
+            {"role": "user", "content": continuation},
+        ]
+        user_content = f"{first_user_content}\n\n{continuation}"
+    elif RETRIEVE_SECOND_PASS_CONTINUE > 0 and first_answer is None:
+        # the first pass writes the breakpoint a continuation will read
+        messages = past + [{"role": "user", "content": [{"type": "text", "text": user_content,
+                                                         "cache_control": _history_cache_control()}]}]
+    else:
+        messages = past + [{"role": "user", "content": user_content}]
 
     # usage rides back in a caller-owned dict, filled when the stream finishes
     # — NOT a module global. Streamlit serves each session on its own thread in

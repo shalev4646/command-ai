@@ -8392,9 +8392,17 @@ def handle_question(question: str):
                 try:
                     stage2.markdown(_stage_html("מרחיב את החיפוש לפי מה שחסר…"),
                                     unsafe_allow_html=True)
+                    # RETRIEVE_SECOND_PASS_CONTINUE (off by default): the
+                    # retry continues the first exchange instead of resending
+                    # the window, so it needs the exact user turn that
+                    # produced the first answer. getattr: a stale cached
+                    # backend without the flag keeps today's call.
+                    continue_kw = ({"first_user_content": user_msg.get("api_content")}
+                                   if getattr(backend, "RETRIEVE_SECOND_PASS_CONTINUE", 0) > 0
+                                   else {})
                     result2 = stream_ai_answer(question, history,
                                                role=st.session_state.role,
-                                               first_answer=text, **profile_kw)
+                                               first_answer=text, **profile_kw, **continue_kw)
 
                     def _swap(g):
                         # the first answer stays readable while the retry
@@ -9025,6 +9033,7 @@ def _verdict_chip(content: str, question: str = "") -> tuple[str | None, str]:
     # labeled "not found". 80 chars covers marker + topic prefix; a real
     # verdict before the sentence pushes it past that.
     idx = content.find(_REFUSAL_SENTENCE)
+    label = None
     if 0 <= idx < 80:
         # Rule 2א tiers the refusal: a question the orders were never the tool
         # for gets routed to the framework that DOES govern it, and one that
@@ -9055,9 +9064,24 @@ def _verdict_chip(content: str, question: str = "") -> tuple[str | None, str]:
         # a bare refusal without a marker never earns the label.
         if label != "לא נמצא במאגר" and _unit_routine_question(question):
             label = "נקבע ביחידה שלך"
-        return (f'<div class="verdict-solo">'
-                f'<span class="verdict-chip verdict-none">ⓘ {label}</span></div>'), content
-    return None, content
+    else:
+        # 22.09 (rs041): an answer that OPENS with an explicit negative —
+        # "**תשובה:** אין בפקודות מספר ימים קבוע…" — refused in other words
+        # and skipped the rule-2א line. The strip and the door read that as a
+        # gap through out_of_scope.declares_gap; the chip reads the same
+        # predicate so the three surfaces never disagree again (the 18.09 chip
+        # bug and the rs041 door bug were one bug seen twice). Measured free
+        # before this was written: zero captures on 298 answered marker-less
+        # answers. No unit-routine relabel — like a bare refusal, no marker.
+        gap = getattr(_oos, "declares_gap", None) if _oos is not None else None
+        if gap is not None and gap(content) == "negative":
+            label = "לא נמצא בפקודות"
+    if label is None:
+        return None, content
+    # one wrapper for every neutral chip — .verdict-solo cancels Streamlit's
+    # margin-bottom:-1rem exactly as the verdict path does (design invariant)
+    return (f'<div class="verdict-solo">'
+            f'<span class="verdict-chip verdict-none">ⓘ {label}</span></div>'), content
 
 
 def _render_body(body: str, chip: str | None = None) -> None:
@@ -9597,18 +9621,30 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
 def _out_of_scope_destination(content: str, question: str) -> dict | None:
     """The verified door for an answer that said no order governs the question.
 
-    Two gates, both cheap: the ANSWER must carry one of the two routing markers
-    the prompt dictates (`scope_routes.MARK_MISSING` / `MARK_OUT_OF_SCOPE`), and
-    the QUESTION must fall in a family `out_of_scope` has a verified
-    destination for. Either gate closed → None, and the ordinary escalation
-    chain renders as before.
+    Two gates, both cheap: the ANSWER must declare a gap — one of the two
+    routing markers the prompt dictates (`scope_routes.MARK_MISSING` /
+    `MARK_OUT_OF_SCOPE`), the refusal sentence at the top, or an explicit
+    negative opening ("**תשובה:** אין בפקודות…") — as `out_of_scope.declares_gap`
+    decides it, the same predicate the chip reads; and the QUESTION must fall
+    in a family `out_of_scope` has a verified destination for. Either gate
+    closed → None, and the ordinary escalation chain renders as before.
+
+    22.09 (rs041): the kept second-pass answer declared the gap in words and
+    skipped the marker line, so this gate hid the medical door the question
+    had earned. Measured free before the change: zero captures on 298 answered
+    marker-less answers — the numbers are in out_of_scope.py.
 
     getattr/None-guard like the sibling deterministic tools: a stale cached
-    cloud build pairing a new app.py with an older tree just hides the strip.
+    cloud build pairing a new app.py with an older tree just hides the strip;
+    one without `declares_gap` keeps the marker test it always had.
     """
     if _oos is None or not content:
         return None
-    if _MARK_MISS not in content and _MARK_OOS not in content:
+    gap = getattr(_oos, "declares_gap", None)
+    if gap is not None:
+        if not gap(content):
+            return None
+    elif _MARK_MISS not in content and _MARK_OOS not in content:
         return None
     fn = getattr(_oos, "destination_for", None)
     return fn(question) if fn else None

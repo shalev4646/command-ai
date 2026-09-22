@@ -205,6 +205,12 @@ def expansions(query: str) -> list[str]:
             if exp and exp not in seen:
                 found.append(exp); seen.add(exp)
                 break
+    # RETRIEVE_HOMONYMS: the active senses of an ambiguous term (see HOMONYMS
+    # below). Off ⇒ nothing here runs and the list above is byte-identical.
+    if RETRIEVE_HOMONYMS:
+        for exp in homonym_expansions(query):
+            if exp not in seen:
+                found.append(exp); seen.add(exp)
     return found
 
 
@@ -213,3 +219,130 @@ def expand(query: str) -> str:
     altered, so an empty match returns it byte-for-byte."""
     ex = expansions(query)
     return f"{query} {' '.join(ex)}" if ex else query
+
+
+# ── Homonyms: one soldier token, more than one order meaning (22.09) ─────────
+# The paid head-100 run (22.09) passed 38/40 full answers after review and
+# failed its "zero confident-and-wrong" clause on two answers with ONE
+# mechanism: an acronym or slang word with more than one army meaning, read
+# in the wrong sense — once by retrieval (the answering order at rank 11, no
+# glossary entry), once by the model (the answering order was in the sources
+# and the acronym was read in its other sense). The table below is the class,
+# not the two cases; every sense is grounded in an order that uses it
+# (scratchpad/homonym_scan.py, 22.09 — where each candidate appears in the
+# curated blocks and the raw text, with contexts). A candidate with no sense
+# in the corpus (רמ"פ, משא"ז) is not here: there is nothing to anchor it to.
+#
+# Two consumers, two flags, both OFF (byte-identical) until measured against
+# the locked set of night/HOMONYMS_CRITERION.md:
+#   RETRIEVE_HOMONYMS  — expansions() also appends the ACTIVE senses'
+#                        expansions (retrieval side; free instruments);
+#   ANSWER_TERM_NOTE   — backend._compose_user_content adds one line of
+#                        term clarification to the user turn (answer side;
+#                        the paid mini-check).
+# A sense is active when its `cue` matches the question; when no cue matches,
+# every sense is active — a real ambiguity is passed on as one, never guessed.
+# An empty `expand` means the orders use the acronym themselves (the existing
+# glossary rule: expanding those dilutes) and the sense exists for the note.
+RETRIEVE_HOMONYMS = os.environ.get("RETRIEVE_HOMONYMS", "0") == "1"
+
+_P = f"[{_PREFIXES}]{{0,2}}"
+HOMONYMS: list[dict] = [
+    {"term": 'ת"ש', "pattern": rf'(?<![א-ת]){_P}ת"ש(?![א-ת])',
+     "senses": [
+         # 27 orders: ענף ת"ש, קצין הת"ש, רכז הת"ש, רכב ת"ש
+         {"label": 'תנאי שירות (משק"ית ת"ש, קצין הת"ש)',
+          "cue": r'משק|מש"ק|קצינ|רכז|ענף|מדור|תנאי|רכב|סיוע', "expand": ""},
+         # PM-33.0213: „שעת טרום השינה (שעת ט"ש)" — a soldier writes שעת ת"ש
+         {"label": 'שעת טרום השינה (ט"ש)',
+          "cue": r"שע[הת]|שעות|שינה|לישון|ישן|לילה|ערב|להעיר|לפני",
+          "expand": 'שעת טרום השינה ט"ש שינה סדורה'},
+     ]},
+    {"term": "יום ב'", "pattern": rf"(?<![א-ת]){_P}(?:יום|ימי) ב(?![א-ת])",
+     "senses": [
+         # 61.0104: „יום ב — אישור שחייל מוגבל בכושר עבודתו"
+         {"label": "אישור רפואי „יום ב'\" (הגבלה בכושר עבודה)",
+          "cue": r"רופא|חולה|מחלה|מרפאה|אישור|רפוא|חובש|ימי ב",
+          "expand": "יום ב אישור רופא הגבלה בכושר עבודה"},
+         {"label": "יום שני בשבוע",
+          "cue": r"בשבוע|שבוע|יום א|יום ג|ראשון|שלישי|מחר|אתמול|בבוקר|בערב|תאריך", "expand": ""},
+     ]},
+    {"term": 'מ"מ', "pattern": rf'(?<![א-ת]){_P}מ"מ(?![א-ת])',
+     "senses": [
+         # 31.0215, 32.0201, 32.0316 — מפקד מחלקה
+         {"label": "מפקד מחלקה", "cue": r'(?<!\d)(?<!\d )מ"מ', "expand": "מפקד מחלקה"},
+         # 33-05-01: „קוטר עד 3 מ"מ"
+         {"label": "מילימטר", "cue": r'\d\s*מ"מ', "expand": ""},
+     ]},
+    {"term": "שליש", "pattern": rf"(?<![א-ת]){_P}שליש(?![א-ת])",
+     "senses": [
+         # 18 orders — the orders use the word, so no expansion (dilution rule)
+         {"label": "קצין השלישות (שליש היחידה)",
+          "cue": r"שליש ה?יחיד|לשליש|השליש|שלישות|לפנות|לבקש|שאל", "expand": ""},
+         # 36.0505: „שכ"ד בגובה שליש מן המשכורת"
+         {"label": "חלק שלישי (שליש מן הסכום)",
+          "cue": r"\d\s*שליש|שליש מ(?:ן|ה)|שלישים|משכורת|סכום|מהשכר", "expand": ""},
+     ]},
+    {"term": 'תב"ן', "pattern": rf'(?<![א-ת]){_P}תב"ן(?![א-ת])',
+     "senses": [
+         # 35.0809: „ביטול תב"ן" — the unpaid extension of service
+         {"label": "תקופה בלתי נמנית — הארכת השירות (ביטול תב\"ן, 35.0809)",
+          "cue": r"ביטול|לבטל|הארכ|שחרור|לשחרר|מאריכ|תוספת שירות|להשתחרר", "expand": ""},
+         # PM-33.0302: „מה זה תב"ן ומתי המחבוש שלי נחשב תקופה בלתי-נמנית"
+         {"label": "תקופה בלתי נמנית — מחבוש שאינו נמנה בשירות (דין משמעתי)",
+          "cue": r"מחבוש|עונש|נשפט|דין|כלא|קצין שיפוט", "expand": ""},
+     ]},
+    # single-sense acronyms the orders spell out differently — the same
+    # table, the same flag, the same measurement
+    {"term": 'תשמ"ש', "pattern": rf'(?<![א-ת]){_P}תשמ"ש(?![א-ת])',
+     "senses": [
+         # 35.0210 „מדור תשמ"ש ופרט" / „בקשת החייל לתשלום משפחתי"; 56.0131 „זכאי תשמ"ש"
+         {"label": "תשלומי משפחה (תשלום משפחתי)", "cue": "", "expand": "תשלום משפחתי תשלומי משפחה למשפחות חיילים"},
+     ]},
+    {"term": 'קל"ב', "pattern": rf'(?<![א-ת]){_P}קל"ב(?![א-ת])',
+     "senses": [
+         # 31.0116: „שיבוץ קרוב לבית (קל"ב)"
+         {"label": "שיבוץ קרוב לבית", "cue": "", "expand": "שיבוץ קרוב לבית"},
+     ]},
+    {"term": 'ש"ג', "pattern": rf'(?<![א-ת]){_P}ש"ג(?![א-ת])',
+     "senses": [
+         # PM-33.0302 „מש"ק ש"ג"; הק"א 33-05-01 §5 „חייל היוצא מהמחנה"
+         {"label": "שער המחנה (השומר בשער)", "cue": "", "expand": "שער המחנה יציאה מהמחנה כניסה למחנה"},
+     ]},
+]
+
+
+def homonym_senses(query: str) -> list[tuple[str, list[dict]]]:
+    """(term, active senses) for every homonym present in `query`. A sense is
+    active when its cue matches the question; no cue matching ⇒ all senses."""
+    joined = " ".join(_norm(t) for t in query.split())
+    out: list[tuple[str, list[dict]]] = []
+    for h in HOMONYMS:
+        if not re.search(h["pattern"], joined):
+            continue
+        active = [s for s in h["senses"] if s.get("cue") and re.search(s["cue"], joined)]
+        out.append((h["term"], active or list(h["senses"])))
+    return out
+
+
+def homonym_expansions(query: str) -> list[str]:
+    """The active senses' expansion phrases, in order, deduplicated."""
+    found: list[str] = []
+    for _term, senses in homonym_senses(query):
+        for s in senses:
+            if s.get("expand") and s["expand"] not in found:
+                found.append(s["expand"])
+    return found
+
+
+def term_note(query: str) -> str:
+    """One line for the answer side (ANSWER_TERM_NOTE): what the ambiguous
+    term in the question means here — the one active sense when the context
+    settles it, all of them when it does not. Empty when nothing is ambiguous."""
+    parts: list[str] = []
+    for term, senses in homonym_senses(query):
+        if len(senses) == 1:
+            parts.append(f"{term} = {senses[0]['label']}")
+        else:
+            parts.append(f"{term} — {' או '.join(s['label'] for s in senses)}, לפי ההקשר")
+    return "; ".join(parts)
