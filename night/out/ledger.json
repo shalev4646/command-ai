@@ -1,5 +1,5 @@
 {
- "spent": 140.5014,
+ "spent": 140.54760000000002,
  "reserved": 0,
  "entries": [
   {
@@ -4911,6 +4911,66 @@
    "actual": 0.003
   },
   {
+   "id": "digitfix:35.0221#s0#2188-1033",
+   "label": "digitfix:35.0221#s0",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:35.0221#s0#2188-1038",
+   "label": "digitfix:35.0221#s0",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:35.0221#s1#2188-1034",
+   "label": "digitfix:35.0221#s1",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:35.0221#s1#2188-1039",
+   "label": "digitfix:35.0221#s1",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:35.0221#s2#2188-1035",
+   "label": "digitfix:35.0221#s2",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:35.0221#s2#2188-1040",
+   "label": "digitfix:35.0221#s2",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:35.0221#s3#2188-1036",
+   "label": "digitfix:35.0221#s3",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:35.0221#s3#2188-1041",
+   "label": "digitfix:35.0221#s3",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:35.0221#s4#2188-1037",
+   "label": "digitfix:35.0221#s4",
+   "estimate": 0.02,
+   "actual": 0.0009
+  },
+  {
+   "id": "digitfix:35.0221#s4#2188-1042",
+   "label": "digitfix:35.0221#s4",
+   "estimate": 0.02,
+   "actual": 0.0009
+  },
+  {
    "id": "digitfix:35.0233#s0#11680-994",
    "label": "digitfix:35.0233#s0",
    "estimate": 0.02,
@@ -5173,6 +5233,42 @@
    "label": "digitfix:PM-33.0342#s2",
    "estimate": 0.02,
    "actual": 0.0008
+  },
+  {
+   "id": "digitfix:PM-33.0352#s0#5368-1027",
+   "label": "digitfix:PM-33.0352#s0",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:PM-33.0352#s0#5368-1030",
+   "label": "digitfix:PM-33.0352#s0",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:PM-33.0352#s1#5368-1028",
+   "label": "digitfix:PM-33.0352#s1",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:PM-33.0352#s1#5368-1031",
+   "label": "digitfix:PM-33.0352#s1",
+   "estimate": 0.02,
+   "actual": 0.0036
+  },
+  {
+   "id": "digitfix:PM-33.0352#s2#5368-1029",
+   "label": "digitfix:PM-33.0352#s2",
+   "estimate": 0.02,
+   "actual": 0.0006
+  },
+  {
+   "id": "digitfix:PM-33.0352#s2#5368-1032",
+   "label": "digitfix:PM-33.0352#s2",
+   "estimate": 0.02,
+   "actual": 0.0006
   },
   {
    "id": "evidence:route#16648-316",
