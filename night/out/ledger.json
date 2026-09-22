@@ -1,6 +1,6 @@
 {
- "spent": 140.4345,
- "reserved": 0.04,
+ "spent": 140.5014,
+ "reserved": 0,
  "entries": [
   {
    "id": "anchors2:31.0116#20840-644",
@@ -3279,6 +3279,12 @@
    "actual": 0.0364
   },
   {
+   "id": "decompose#14388-1025",
+   "label": "decompose",
+   "estimate": 0.04,
+   "actual": 0.0163
+  },
+  {
    "id": "decompose#14492-791",
    "label": "decompose",
    "estimate": 0.0128,
@@ -5355,6 +5361,12 @@
    "actual": 0.0699
   },
   {
+   "id": "grade-grade-head100A#14388-1026",
+   "label": "grade-grade-head100A",
+   "estimate": 0.075,
+   "actual": 0.0506
+  },
+  {
    "id": "grade-grade-lack3#564-845",
    "label": "grade-grade-lack3",
    "estimate": 0.108,
@@ -6151,12 +6163,6 @@
    "label": "unscramble:PM-33.0401",
    "estimate": 0.006,
    "actual": 0.0057
-  },
-  {
-   "id": "decompose#14388-1025",
-   "label": "decompose",
-   "estimate": 0.04,
-   "actual": null
   }
  ]
 }
