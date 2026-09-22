@@ -9057,6 +9057,18 @@ def _verdict_chip(content: str, question: str = "") -> tuple[str | None, str]:
             label = "נקבע ביחידה שלך"
         return (f'<div class="verdict-solo">'
                 f'<span class="verdict-chip verdict-none">ⓘ {label}</span></div>'), content
+    # 22.09 (rs041): an answer that OPENS with an explicit negative —
+    # "**תשובה:** אין בפקודות מספר ימים קבוע…" — refused in other words and
+    # skipped the rule-2א line. The strip and the door read that as a gap
+    # through out_of_scope.declares_gap; the chip reads the same predicate so
+    # the three surfaces never disagree again (the 18.09 chip bug and the
+    # rs041 door bug were one bug seen twice). Measured free before this was
+    # written: zero captures on 298 answered marker-less answers. No
+    # unit-routine relabel here — like a bare refusal, it carries no marker.
+    gap = getattr(_oos, "declares_gap", None) if _oos is not None else None
+    if gap is not None and gap(content) == "negative":
+        return (f'<div class="verdict-solo">'
+                f'<span class="verdict-chip verdict-none">ⓘ לא נמצא בפקודות</span></div>'), content
     return None, content
 
 
@@ -9597,18 +9609,30 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
 def _out_of_scope_destination(content: str, question: str) -> dict | None:
     """The verified door for an answer that said no order governs the question.
 
-    Two gates, both cheap: the ANSWER must carry one of the two routing markers
-    the prompt dictates (`scope_routes.MARK_MISSING` / `MARK_OUT_OF_SCOPE`), and
-    the QUESTION must fall in a family `out_of_scope` has a verified
-    destination for. Either gate closed → None, and the ordinary escalation
-    chain renders as before.
+    Two gates, both cheap: the ANSWER must declare a gap — one of the two
+    routing markers the prompt dictates (`scope_routes.MARK_MISSING` /
+    `MARK_OUT_OF_SCOPE`), the refusal sentence at the top, or an explicit
+    negative opening ("**תשובה:** אין בפקודות…") — as `out_of_scope.declares_gap`
+    decides it, the same predicate the chip reads; and the QUESTION must fall
+    in a family `out_of_scope` has a verified destination for. Either gate
+    closed → None, and the ordinary escalation chain renders as before.
+
+    22.09 (rs041): the kept second-pass answer declared the gap in words and
+    skipped the marker line, so this gate hid the medical door the question
+    had earned. Measured free before the change: zero captures on 298 answered
+    marker-less answers — the numbers are in out_of_scope.py.
 
     getattr/None-guard like the sibling deterministic tools: a stale cached
-    cloud build pairing a new app.py with an older tree just hides the strip.
+    cloud build pairing a new app.py with an older tree just hides the strip;
+    one without `declares_gap` keeps the marker test it always had.
     """
     if _oos is None or not content:
         return None
-    if _MARK_MISS not in content and _MARK_OOS not in content:
+    gap = getattr(_oos, "declares_gap", None)
+    if gap is not None:
+        if not gap(content):
+            return None
+    elif _MARK_MISS not in content and _MARK_OOS not in content:
         return None
     fn = getattr(_oos, "destination_for", None)
     return fn(question) if fn else None
