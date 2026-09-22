@@ -23,6 +23,7 @@ sys.path.insert(0, str(ROOT))
 
 from common import safe_print  # noqa: E402
 from night import sectprobe  # noqa: E402
+from night.head100.tuned import held_lines, summary_line, tuned_ids  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 TARGETS = HERE / "targets.json"
@@ -37,13 +38,11 @@ def main(out: Path | None) -> int:
         return 0
     rows = {r["id"]: r for r in json.loads(TARGETS.read_text(encoding="utf-8"))}
     per = json.loads(out.read_text(encoding="utf-8"))["per"]
-    for split in ("dev", "held"):
-        ps = [p for p in per if rows[p["id"]]["split"] == split]
-        n = len(ps)
-        safe_print(f"[head100] {split}: n={n}  doc-in-window {sum(p['doc_in_window'] for p in ps)}"
-                   f"  sect(content) {sum(p['sect_content'] for p in ps)}"
-                   f"  doc-rank<=6 {sum(1 for p in ps if p['doc_rank'] and p['doc_rank'] <= 6)}"
-                   f"  doc-rank>25/none {sum(1 for p in ps if not p['doc_rank'] or p['doc_rank'] > 25)}")
+    safe_print(summary_line("dev", [p for p in per if rows[p["id"]]["split"] == "dev"]))
+    # held is printed twice once anything in it was read one by one and fixed
+    # (night/head100/held_tuned.json): with those ids, and without them.
+    for line in held_lines(per, rows, tuned_ids()):
+        safe_print(line)
     safe_print("[head100] dev misses (held misses are deliberately not listed):")
     for p in per:
         r = rows[p["id"]]

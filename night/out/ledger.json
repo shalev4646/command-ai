@@ -1,5 +1,5 @@
 {
- "spent": 136.7512,
+ "spent": 140.5014,
  "reserved": 0,
  "entries": [
   {
@@ -3279,6 +3279,12 @@
    "actual": 0.0364
   },
   {
+   "id": "decompose#14388-1025",
+   "label": "decompose",
+   "estimate": 0.04,
+   "actual": 0.0163
+  },
+  {
    "id": "decompose#14492-791",
    "label": "decompose",
    "estimate": 0.0128,
@@ -5355,6 +5361,12 @@
    "actual": 0.0699
   },
   {
+   "id": "grade-grade-head100A#14388-1026",
+   "label": "grade-grade-head100A",
+   "estimate": 0.075,
+   "actual": 0.0506
+  },
+  {
    "id": "grade-grade-lack3#564-845",
    "label": "grade-grade-lack3",
    "estimate": 0.108,
@@ -5755,6 +5767,18 @@
    "label": "probe-fresh_v99",
    "estimate": 1.344,
    "actual": 1.2542
+  },
+  {
+   "id": "probe-head100A_p1#12968-1023",
+   "label": "probe-head100A_p1",
+   "estimate": 1.4,
+   "actual": 2.6006
+  },
+  {
+   "id": "probe-head100A_p2#16960-1024",
+   "label": "probe-head100A_p2",
+   "estimate": 0.588,
+   "actual": 1.0827
   },
   {
    "id": "probe-heldout_after#18052-309",
