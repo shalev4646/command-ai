@@ -1,0 +1,16 @@
+[
+ {
+  "id": "hW3a",
+  "topic_id": "W3",
+  "topic": "תשלומי משפחה — הגשה",
+  "split": "held",
+  "question": "איך מגישים בקשה לתשמש?",
+  "role": "soldier",
+  "verdict": "ANSWERED_IN_CORPUS_IN_BLOCK",
+  "doc_id": "35.0210",
+  "verified_quotes": [
+   "יגיש את בקשתו ביחידתו, באמצעות רכז תנאי השירות ובסיועו, על גבי טופס 60"
+  ],
+  "note": ""
+ }
+]
