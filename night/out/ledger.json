@@ -1,5 +1,5 @@
 {
- "spent": 140.54760000000002,
+ "spent": 142.1816,
  "reserved": 0,
  "entries": [
   {
@@ -3255,6 +3255,12 @@
    "actual": 0.0
   },
   {
+   "id": "decompose#13576-1044",
+   "label": "decompose",
+   "estimate": 0.0096,
+   "actual": 0.0039
+  },
+  {
    "id": "decompose#13880-779",
    "label": "decompose",
    "estimate": 0.0128,
@@ -5481,6 +5487,18 @@
    "actual": 0.0708
   },
   {
+   "id": "grade-grade-termnote_arm0#13576-1045",
+   "label": "grade-grade-termnote_arm0",
+   "estimate": 0.021,
+   "actual": 0.015
+  },
+  {
+   "id": "grade-grade-termnote_arm1#13576-1046",
+   "label": "grade-grade-termnote_arm1",
+   "estimate": 0.021,
+   "actual": 0.0148
+  },
+  {
    "id": "grade-grade-win16#4440-839",
    "label": "grade-grade-win16",
    "estimate": 0.108,
@@ -6043,6 +6061,12 @@
    "label": "probe-sonnet6",
    "estimate": 1.764,
    "actual": 1.5369
+  },
+  {
+   "id": "probe-termnote_p1#22996-1043",
+   "label": "probe-termnote_p1",
+   "estimate": 0.784,
+   "actual": 1.6003
   },
   {
    "id": "probe-win16#10940-837",
