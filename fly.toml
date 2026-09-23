@@ -125,6 +125,25 @@ swap_size_mb = 768
   # while the head-100 window maximum fell 12,273 -> 4,689 words and the mean
   # 3,596 -> 3,014. Remove this line and redeploy to revert.
   RETRIEVE_FULL_BLOCK_MAX_WORDS = "2000"
+  # The homonym table and its quote-less spellings (storage/glossary.HOMONYMS,
+  # RETRIEVE_HOMONYMS; RETRIEVE_QUOTELESS derives the gershayim-less form of
+  # every quoted key in both tables by one rule, three letters or more and not
+  # an everyday word). Both off in code; on here by the user's decision of
+  # 2026-09-23 ("turn on both flags in v157") after the free paired
+  # measurements of 2026-09-22 on the same tree: the homonyms alone moved
+  # nothing (locked set 10/12 -> 10/12, ruler 30/82, head-100 148/174, gate
+  # 390/431, router 37/82 - zero lost, zero gained); the two together put the
+  # answering order of the paid run's retrieval failure (a soldier typing the
+  # family-payment acronym without gershayim) into the served window, again
+  # with zero lost on every instrument and no other question's window moved.
+  # Criteria and records: night/HOMONYMS_CRITERION.md and
+  # night/QUOTELESS_CRITERION.md. No extra API call; the expansion adds a few
+  # words to the retrieval query only when the question carries a table term.
+  # The answer-side note (ANSWER_TERM_NOTE) is a separate, paid-measured
+  # flag and stays off. Turn either off with "0" and redeploy.
+  # ASCII only in this file: flyctl rejects Hebrew quote marks.
+  RETRIEVE_HOMONYMS = "1"
+  RETRIEVE_QUOTELESS = "1"
   # How long backend.load_documents trusts its last freshness scan. Off in
   # code (0 = scan every call), which is what the night pipeline needs since
   # it writes into json_store while the same process reads it. Here it is on:
