@@ -139,11 +139,22 @@ swap_size_mb = 768
   # Criteria and records: night/HOMONYMS_CRITERION.md and
   # night/QUOTELESS_CRITERION.md. No extra API call; the expansion adds a few
   # words to the retrieval query only when the question carries a table term.
-  # The answer-side note (ANSWER_TERM_NOTE) is a separate, paid-measured
-  # flag and stays off. Turn either off with "0" and redeploy.
+  # The answer-side note (backend.ANSWER_TERM_NOTE): one line under the
+  # question in the user turn, built from the same table, saying what the
+  # ambiguous term means here (or listing the senses when the context does not
+  # settle it). Invisible to the free instruments, so it was measured on its
+  # own in the paid answer check of 2026-09-23 (night/TERM_NOTE_CRITERION.md;
+  # $1.60, 14 questions x 2 arms, first pass only): the sleep-hour question
+  # (hR1db) moved to the correct sense, the other 13 had zero regressions and
+  # the 12 locked questions were correct in both arms. The family-payment
+  # question (hW3a) was NOT fixed there because RETRIEVE_QUOTELESS was off in
+  # that check - its acronym had no gershayim - which is why the three flags
+  # ship as ONE package by the user's decision of 2026-09-23 ("turn on the
+  # note too in v157"). Turn any of the three off with "0" and redeploy.
   # ASCII only in this file: flyctl rejects Hebrew quote marks.
   RETRIEVE_HOMONYMS = "1"
   RETRIEVE_QUOTELESS = "1"
+  ANSWER_TERM_NOTE = "1"
   # How long backend.load_documents trusts its last freshness scan. Off in
   # code (0 = scan every call), which is what the night pipeline needs since
   # it writes into json_store while the same process reads it. Here it is on:
