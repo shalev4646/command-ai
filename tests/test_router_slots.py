@@ -130,28 +130,92 @@ def test_production_deploys_the_seats():
 # ingest pipeline exists to produce. Whether uncurated orders should be served
 # is a real question and deserves a deliberate answer; it must not arrive as a
 # side effect of a retrieval fix.
-UNCURATED_PROBE = "תוספת פעילות ברמה 3 — מי זכאי וכמה זה?"
+FIXTURE_ID = "TEST-UNCURATED-FIXTURE"
+FIXTURE_PROBE = "מה קובעת הפקודה הבדויה על מסלול הבדיקה של הדלת האחורית לנתב?"
+
+
+def _uncurated_fixture() -> dict:
+    """An order with NO curated block — the shape RETRIEVE_CURATED_ONLY keeps
+    out of the search space. It lives only in this process: the chroma
+    collection is ephemeral, and the embedding cache is not saved for it, so
+    nothing under storage/ changes (tests/run_all.py guards that).
+
+    2026-09-23: the corpus became fully curated (the last seven orders
+    received blocks), so the real-order version of this test had nothing to
+    assert — and a test that passes vacuously is not a test. The fixture keeps
+    the guard live regardless of the corpus."""
+    text = ("הפקודה הבדויה קובעת כי מסלול הבדיקה של הדלת האחורית לנתב נפתח רק "
+            "לצורך בדיקה, ואינו משמש לשום דבר אחר. כל מי שמבקש לעבור במסלול "
+            "הבדיקה של הדלת האחורית לנתב חייב להציג את מסמך הבדיקה.")
+    return {
+        "document_id": FIXTURE_ID,
+        "title": "פקודה בדויה לבדיקת הדלת האחורית לנתב",
+        "roles": list(backend.ALL_ROLES),
+        "raw_text": text,
+        "sections": [{"id": "raw-extract", "title": "טקסט גולמי",
+                      "clauses": [{"number": "1", "text": text}]}],
+    }
+
+
+class _fixture_in_corpus:
+    """Index the fixture and plant it in backend's document list (so the
+    role scope and the curated-only filter both see it, exactly like an
+    ingested-but-uncurated order); undo everything on exit."""
+
+    def __enter__(self):
+        from storage import vector_store as vs
+        self.vs = vs
+        cache = vs._get_emb_cache()
+        self.keys_before = set(cache.keys())
+        self.dirty_before = vs._emb_cache_dirty
+        vs.index_document(_uncurated_fixture(), save_cache=False)
+        backend.load_documents()  # fill the stamp cache, then extend it in place
+        self.docs = backend._docs_cache[1]
+        self.docs.append(_uncurated_fixture())
+        return self
+
+    def __exit__(self, *exc):
+        self.docs[:] = [d for d in self.docs if d.get("document_id") != FIXTURE_ID]
+        try:
+            self.vs._get_collection().delete(where={"doc_id": FIXTURE_ID})
+        except Exception:
+            pass
+        cache = self.vs._get_emb_cache()
+        for k in set(cache.keys()) - self.keys_before:
+            cache.pop(k, None)
+        self.vs._emb_cache_dirty = self.dirty_before
+        self.vs._corpus = self.vs._vocab = self.vs._folded_corpus_cache = None
+        self.vs._term_hits.clear()
+        return False
+
+
+def _served_ids(route: set[str]) -> set[str]:
+    return {c["doc_id"] for c in backend.retrieve_for_role(
+        FIXTURE_PROBE, "soldier", route=route, widen=True)}
 
 
 def test_a_seat_does_not_smuggle_in_an_uncurated_order():
-    if not backend.RETRIEVE_CURATED_ONLY:
-        return  # the policy is off; nothing to enforce
     backend.RETRIEVE_ROUTER_SLOTS = max(2, _configured_slots())
-    uncurated = {d["document_id"] for d in backend.load_documents()
-                 if d.get("document_id") and not backend._has_key_facts(d)}
-    if not uncurated:
-        # 2026-09-23: the last seven uncurated orders received blocks, so the
-        # side door has nothing left to smuggle. The guard stays for the day an
-        # uncurated order is ingested again; until then there is nothing to assert.
-        return
-    route = set(sorted(uncurated)[:2])
-    served = {c["doc_id"] for c in backend.retrieve_for_role(
-        UNCURATED_PROBE, "soldier", route=route, widen=True)}
-    leaked = served & uncurated
-    assert not leaked, (
-        f"router seats served uncurated orders {sorted(leaked)} that "
-        f"RETRIEVE_CURATED_ONLY keeps out of retrieval everywhere else"
-    )
+    policy = backend.RETRIEVE_CURATED_ONLY
+    with _fixture_in_corpus():
+        assert not backend._has_key_facts(_uncurated_fixture())
+        try:
+            # positive control: with the policy OFF the seat does serve the
+            # routed fixture — the door is real and the fixture reachable, so
+            # the assertion below cannot pass for want of a candidate
+            backend.RETRIEVE_CURATED_ONLY = False
+            assert FIXTURE_ID in _served_ids({FIXTURE_ID}), (
+                "the fixture never reached the context even with the curated-only "
+                "policy off — the test has no door to guard; check the fixture is indexed"
+            )
+            backend.RETRIEVE_CURATED_ONLY = True
+            leaked = _served_ids({FIXTURE_ID}) & {FIXTURE_ID}
+            assert not leaked, (
+                f"router seats served the uncurated order {sorted(leaked)} that "
+                f"RETRIEVE_CURATED_ONLY keeps out of retrieval everywhere else"
+            )
+        finally:
+            backend.RETRIEVE_CURATED_ONLY = policy
 
 
 if __name__ == "__main__":
