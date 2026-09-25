@@ -5,9 +5,9 @@
   "sect_in_window": 17,
   "sect_in_window_content": 24,
   "sect_rank_top8": 5,
-  "sect_rank_top25": 8,
+  "sect_rank_top25": 7,
   "sect_rank_median": 201,
-  "avg_words": 3339,
+  "avg_words": 3385,
   "avg_docs": 6.0
  },
  "per": [
@@ -20,7 +20,7 @@
    "sect_overlap": 1.0,
    "doc_rank": 12,
    "sect_rank": 12,
-   "window_words": 3045,
+   "window_words": 2881,
    "window_docs": 6
   },
   {
@@ -32,7 +32,7 @@
    "sect_overlap": 0.6,
    "doc_rank": 2,
    "sect_rank": 25,
-   "window_words": 3653,
+   "window_words": 3765,
    "window_docs": 6
   },
   {
@@ -54,8 +54,8 @@
    "sect_in_window": false,
    "sect_content": false,
    "sect_overlap": 0.0,
-   "doc_rank": null,
-   "sect_rank": null,
+   "doc_rank": 162,
+   "sect_rank": 162,
    "window_words": 3548,
    "window_docs": 6
   },
@@ -68,7 +68,7 @@
    "sect_overlap": 1.0,
    "doc_rank": 2,
    "sect_rank": 3,
-   "window_words": 4450,
+   "window_words": 4553,
    "window_docs": 6
   },
   {
@@ -80,7 +80,7 @@
    "sect_overlap": 1.0,
    "doc_rank": 1,
    "sect_rank": 6,
-   "window_words": 3110,
+   "window_words": 3247,
    "window_docs": 6
   },
   {
@@ -121,14 +121,14 @@
   },
   {
    "id": "c_hS5b",
-   "doc_id": "35.0502",
+   "doc_id": "32.0502",
    "doc_in_window": true,
    "sect_in_window": true,
    "sect_content": true,
    "sect_overlap": 1.0,
    "doc_rank": 2,
-   "sect_rank": 24,
-   "window_words": 3154,
+   "sect_rank": null,
+   "window_words": 3551,
    "window_docs": 6
   },
   {
@@ -150,7 +150,7 @@
    "sect_in_window": false,
    "sect_content": false,
    "sect_overlap": 0.0,
-   "doc_rank": 44,
+   "doc_rank": 46,
    "sect_rank": null,
    "window_words": 2994,
    "window_docs": 6
@@ -164,7 +164,7 @@
    "sect_overlap": 1.0,
    "doc_rank": 9,
    "sect_rank": null,
-   "window_words": 2887,
+   "window_words": 2805,
    "window_docs": 6
   },
   {
@@ -200,7 +200,7 @@
    "sect_overlap": 0.65,
    "doc_rank": 3,
    "sect_rank": null,
-   "window_words": 2953,
+   "window_words": 2921,
    "window_docs": 6
   },
   {
@@ -284,7 +284,7 @@
    "sect_overlap": 0.18,
    "doc_rank": 4,
    "sect_rank": null,
-   "window_words": 2501,
+   "window_words": 2497,
    "window_docs": 6
   },
   {
@@ -308,7 +308,7 @@
    "sect_overlap": 0.36,
    "doc_rank": 3,
    "sect_rank": null,
-   "window_words": 2827,
+   "window_words": 2837,
    "window_docs": 6
   },
   {
@@ -320,7 +320,7 @@
    "sect_overlap": 0.0,
    "doc_rank": null,
    "sect_rank": null,
-   "window_words": 2835,
+   "window_words": 3275,
    "window_docs": 6
   },
   {
@@ -332,7 +332,7 @@
    "sect_overlap": 0.0,
    "doc_rank": null,
    "sect_rank": null,
-   "window_words": 3056,
+   "window_words": 3067,
    "window_docs": 6
   },
   {
@@ -344,7 +344,7 @@
    "sect_overlap": 0.0,
    "doc_rank": null,
    "sect_rank": null,
-   "window_words": 2554,
+   "window_words": 2752,
    "window_docs": 6
   },
   {
@@ -380,7 +380,7 @@
    "sect_overlap": 0.86,
    "doc_rank": 1,
    "sect_rank": null,
-   "window_words": 3783,
+   "window_words": 4230,
    "window_docs": 6
   },
   {
@@ -404,7 +404,7 @@
    "sect_overlap": 0.86,
    "doc_rank": 1,
    "sect_rank": null,
-   "window_words": 2349,
+   "window_words": 2840,
    "window_docs": 6
   },
   {
@@ -428,7 +428,7 @@
    "sect_overlap": 0.41,
    "doc_rank": 2,
    "sect_rank": null,
-   "window_words": 4668,
+   "window_words": 4339,
    "window_docs": 6
   },
   {
@@ -440,7 +440,7 @@
    "sect_overlap": 0.27,
    "doc_rank": 6,
    "sect_rank": null,
-   "window_words": 3485,
+   "window_words": 3512,
    "window_docs": 6
   },
   {
