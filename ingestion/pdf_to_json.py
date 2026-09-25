@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -96,20 +97,55 @@ def _get_tool_input(response) -> dict:
 # (order page on the IDF site / page-image reading) before ingesting.
 MIN_CHARS_PER_PAGE = 900
 
+# The gate above has a second kind of casualty: a REAL order that is simply
+# short. On 2026-09-23 the ten one-page orders parked in pdf-ldf_law/
+# _unextractable were OCR'd (night/ocr.py, Tesseract heb): the OCR text matched
+# their text layer almost character for character (545 vs 565 chars on
+# 21.0104, noise 0.000, Hebrew ratio 0.81-0.94) - they are not scans, they are
+# 380-630-character orders (36.0314 operational-readiness allowance, 35.0204
+# advance for conscripts...). One of them, 32.0104, is a cancellation stub
+# ("the order was cancelled in amendments circular 186") and must stay out.
+# So, OFF by default and byte-identical when off (a boot-time ingest must never
+# start accepting files nobody looked at), the allowance below accepts a
+# sparse file only when all three hold: at most SHORT_ORDER_MAX_PAGES pages,
+# letters at least SHORT_ORDER_MIN_HEBREW Hebrew (a partial text layer of a
+# scan is mostly garbage or Latin), and no cancellation marker. Turn on with
+# INGEST_SHORT_ORDERS=1 for the wave that ingests them (night.intake), not in
+# production. The evidence that the text layer is complete came from the
+# offline OCR comparison, not from this code: it cannot see the page image.
+INGEST_SHORT_ORDERS = os.environ.get("INGEST_SHORT_ORDERS", "0") == "1"
+SHORT_ORDER_MAX_PAGES = 2
+SHORT_ORDER_MIN_HEBREW = 0.80
+_CANCELLED = re.compile(r"הפקודה\s+בוטלה|בוטלה\s+בחוזר|פקודה\s+זו\s+בוטלה")
+
+
+def _hebrew_ratio(text: str) -> float:
+    letters = [c for c in text if c.isalpha()]
+    return sum(1 for c in letters if "\u05d0" <= c <= "\u05ea") / len(letters) if letters else 0.0
+
+
+def gate_text(pages: list[str]) -> str:
+    """The sparse-text gate on already-extracted page texts (testable without a PDF)."""
+    n_pages = len(pages)
+    text = "\n\n".join(p for p in pages if p.strip())
+    if n_pages and len(text) // n_pages < MIN_CHARS_PER_PAGE:
+        short_ok = (INGEST_SHORT_ORDERS and n_pages <= SHORT_ORDER_MAX_PAGES
+                    and _hebrew_ratio(text) >= SHORT_ORDER_MIN_HEBREW and not _CANCELLED.search(text))
+        if not short_ok:
+            raise ValueError(
+                f"חילוץ טקסט דליל ({len(text)} תווים ב-{n_pages} עמודים — "
+                f"כנראה PDF סרוק עם שכבת טקסט חלקית); יש לשחזר את הטקסט ידנית"
+            )
+        safe_print(f"[ingest] short order accepted under INGEST_SHORT_ORDERS: {len(text)} chars in {n_pages} page(s)")
+    return text
+
 
 def extract_text(pdf_path: Path) -> str:
     """Extract text using PyMuPDF (handles Hebrew RTL correctly)."""
     doc = fitz.open(str(pdf_path))
     pages = [page.get_text() for page in doc]
-    n_pages = len(doc)
     doc.close()
-    text = "\n\n".join(p for p in pages if p.strip())
-    if n_pages and len(text) // n_pages < MIN_CHARS_PER_PAGE:
-        raise ValueError(
-            f"חילוץ טקסט דליל ({len(text)} תווים ב-{n_pages} עמודים — "
-            f"כנראה PDF סרוק עם שכבת טקסט חלקית); יש לשחזר את הטקסט ידנית"
-        )
-    return text
+    return gate_text(pages)
 
 
 def extract_metadata(text: str) -> dict:

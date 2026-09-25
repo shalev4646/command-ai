@@ -7,7 +7,7 @@
   "sect_rank_top8": 6,
   "sect_rank_top25": 7,
   "sect_rank_median": 22,
-  "avg_words": 3280,
+  "avg_words": 3313,
   "avg_docs": 5.7
  },
  "per": [
@@ -68,7 +68,7 @@
    "sect_overlap": 0.0,
    "doc_rank": 42,
    "sect_rank": null,
-   "window_words": 3058,
+   "window_words": 3245,
    "window_docs": 6
   },
   {
@@ -92,7 +92,7 @@
    "sect_overlap": 0.89,
    "doc_rank": 3,
    "sect_rank": 3,
-   "window_words": 3387,
+   "window_words": 3227,
    "window_docs": 6
   },
   {
@@ -116,7 +116,7 @@
    "sect_overlap": 1.0,
    "doc_rank": 1,
    "sect_rank": 1,
-   "window_words": 3243,
+   "window_words": 3618,
    "window_docs": 6
   },
   {

@@ -6,7 +6,7 @@
   "sect_in_window_content": 0,
   "sect_rank_top8": 0,
   "sect_rank_top25": 1,
-  "sect_rank_median": 11,
+  "sect_rank_median": 10,
   "avg_words": 3122,
   "avg_docs": 6.0
  },
@@ -18,8 +18,8 @@
    "sect_in_window": false,
    "sect_content": false,
    "sect_overlap": 0.0,
-   "doc_rank": 11,
-   "sect_rank": 11,
+   "doc_rank": 10,
+   "sect_rank": 10,
    "window_words": 3122,
    "window_docs": 6
   }
