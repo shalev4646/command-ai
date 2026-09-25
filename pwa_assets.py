@@ -343,7 +343,7 @@ def build_manifest(start_url: str, icons: dict) -> bytes:
     """The manifest bytes. start_url is passed in because it depends on request
     state (the caidbg flag) that this module deliberately knows nothing about."""
     return json.dumps({
-        "name": "CommandAI — עוזר הפקודות של צה\"ל",
+        "name": "CommandAI — עוזר לפקודות מטכ\"ל",
         "short_name": "CommandAI",
         "lang": "he",
         "dir": "rtl",

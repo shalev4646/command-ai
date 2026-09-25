@@ -4585,7 +4585,7 @@ _TOS_SECTIONS = [
      "עיון או מחיקה — מופיע ב«מדיניות הפרטיות» שבמסך ההגדרות, והיא חלק מתנאים אלה.<br><br>"
      "אין אבטחה מוחלטת ברשת, והמשתמש לוקח על עצמו את הסיכון הכרוך בהזנת נתונים במערכת."),
     ("5. קניין רוחני",
-     "כלל התוכן, העיצוב, הקוד המקור והלוגו של האפליקציה הינם קניינו הרוחני הבלעדי של המפתח. אין להעתיק, "
+     "כלל התוכן, העיצוב, קוד המקור והלוגו של האפליקציה הינם קניינו הרוחני הבלעדי של המפתח. אין להעתיק, "
      "לשכפל או להשתמש בהם ללא אישור מראש ובכתב."),
 ]
 
@@ -4698,7 +4698,7 @@ if _welcome_gate or st.session_state.role is None:
                 else:
                     st.markdown(
                         "<div class='cai-gate-err'>כדי להמשיך צריך לסמן את האישור "
-                        "שלמעלה. הדילוג מוותר על הברכה בשם, לא על האישור.</div>",
+                        "שלמעלה. אפשר לוותר על השם, אבל לא על האישור.</div>",
                         unsafe_allow_html=True,
                     )
 
@@ -4710,9 +4710,9 @@ if _welcome_gate or st.session_state.role is None:
                 "<div class='cai-entry'>"
                 "<div class='cai-entry-classif'>מערכת פקודות · בלמ\"ס</div>"
                 "<div class='cai-entry-chev'><span></span><span></span></div>"
-                + ("<div class='cai-entry-greet'>ערב טוב, "
+                + ("<div class='cai-entry-greet'>שלום, "
                    + html.escape(_gname) + "</div>" if _gname else
-                   "<div class='cai-entry-greet'>ערב טוב</div>")
+                   "<div class='cai-entry-greet'>שלום</div>")
                 + "<div class='cai-entry-greet-sub'>נשאר רק לבחור איך אתה משרת</div>"
                 "<div class='cai-entry-divider'></div>"
                 "<div class='cai-entry-choose'>בחר את סוג הכניסה שלך</div>"
@@ -4914,7 +4914,7 @@ def _letters_dialog():
     st.markdown(
         "<div style='font:400 11.5px Heebo,sans-serif;color:rgba(236,237,230,.58);"
         "direction:rtl;text-align:right;margin:10px 2px 0;line-height:1.55'>"
-        "הטיוטה נוסחה לפי לשון הפקודה — יש לעבור עליה לפני הגשה.</div>",
+        "הטיוטה מנוסחת לפי לשון הפקודה — יש לעבור עליה לפני הגשה.</div>",
         unsafe_allow_html=True,
     )
     draft = st.session_state.get("letter_draft")
@@ -6103,7 +6103,7 @@ def _miluim_guide_dialog():
                 metrics.refund(st.session_state.session_id)
                 st.error("אירעה שגיאה זמנית בניסוח. נסה לשלוח שוב.")
     st.markdown(
-        "<div class='cai-sc-disc'>זה הצעד היחיד בכלי שפונה למודל — בעלות של "
+        "<div class='cai-sc-disc'>זה הצעד היחיד בכלי שפונה למודל, והוא נספר כ"
         "שאלה אחת מהמכסה היומית. הטיוטה דורשת קריאה והשלמה לפני הגשה.</div>",
         unsafe_allow_html=True,
     )
@@ -6266,7 +6266,7 @@ def _conscript_map_dialog():
             st.rerun(scope="fragment")
         st.markdown(
             "<div class='cai-sc-disc'>הנתונים נשמרים במכשיר בלבד ואינם נשלחים "
-            "לצ׳אט. תאריך השחרור נלקח ממך ואינו מחושב — אורך שירות החובה נקבע "
+            "לצ׳אט. תאריך השחרור הוא זה שהזנת ואינו מחושב — אורך שירות החובה נקבע "
             "בחקיקה ואינו מופיע בפקודות.</div>",
             unsafe_allow_html=True,
         )
@@ -7346,18 +7346,18 @@ _CONTACT_EMAIL = "commandai.support@gmail.com"
 #       from mil_* but deliberately omits mil_salary.
 _PRIVACY_SECTIONS = [
     ("איזה מידע נאסף",
-     "<b>מה שאתה מקליד:</b> נוסח השאלה, והתשובה שהתקבלה (1500 התווים הראשונים).<br><br>"
+     "<b>השאלה והתשובה:</b> נוסח השאלה, והתשובה שהתקבלה (1500 התווים הראשונים).<br><br>"
      "<b>מה שנגזר מהשימוש:</b> תפקיד (חייל / מילואים / קבע), מזהה מכשיר אקראי, מזהה "
      "הפעלה, חותמת זמן, אילו פקודות אוחזרו, זמן תגובה ועלות החישוב.<br><br>"
-     "<b>מה שנשלח יחד עם השאלה:</b> התפקיד שבחרת, וכשסימנת אותם גם סטטוסים אישיים "
+     "<b>מה שנשלח יחד עם השאלה:</b> התפקיד שבחרת, סטטוסים אישיים אם סימנת אותם "
      "(למשל «חייל בודד»), סוג השירות ומסלולו. במסלול מילואים נשלחים גם ימי המילואים "
      "שהזנת ומצב התעסוקה — הם משנים את התשובה. במחולל המכתבים נשלחים הפרטים שמילאת "
      "בטופס, ובהם השם והדרגה; נוסח הטיוטה עצמו אינו נרשם אצלנו.<br><br>"
      "<b>מה שנשמר רק אצלך במכשיר ולא מגיע אלינו:</b> שם הפרופיל, תאריכי גיוס ושחרור, "
      "וגובה השכר שהוזן במחשבון התגמול. השכר במפורש אינו נשלח לשום מקום — הוא משמש "
-     "לחישוב מקומי בלבד. <b>גם השיחה עצמה</b> — השאלות והתשובות שעל המסך, ועד חמש "
+     "לחישוב מקומי בלבד. <b>גם השיחה המלאה</b> — השאלות והתשובות שעל המסך, ועד חמש "
      "שיחות אחרונות — נשמרת במכשיר בלבד, כדי שתחזור אליך אם האפליקציה נסגרה או "
-     "הוסרה מהזיכרון. «מחיקת היסטוריית שיחות» במסך «פרטיות ואבטחה» מוחקת גם את "
+     "הוסרה מהזיכרון. «נקה היסטוריית שיחות» במסך «פרטיות ואבטחה» מוחקת גם את "
      "העותק הזה.<br><br>"
      "האפליקציה אינה מבקשת ואינה שומרת מספר אישי, מספר טלפון, כתובת או דוא\"ל."),
     ("למה נאסף",
@@ -7389,7 +7389,7 @@ _PRIVACY_SECTIONS = [
      "<b>הפסקת איסוף:</b> מיידית ובלי לפנות לאיש — הכיבוי במסך «פרטיות ואבטחה».<br><br>"
      "את מזהה המכשיר אפשר לראות במסך «יצירת קשר»."),
     ("אין להזין מידע מסווג",
-     "האפליקציה אינה מערכת מסווגת, והמידע שתקליד בה יוצא אל מחוץ לרשת האזרחית שלך "
+     "האפליקציה אינה מערכת מסווגת, והמידע שתקליד בה יוצא מהמכשיר שלך "
      "אל שרתי ספק חיצוני בחו\"ל.<br><br>"
      "<b>אין להזין פרטים מסווגים, שמות יחידות, מיקומים, לוחות זמנים מבצעיים או כל מידע "
      "שחשיפתו מהווה עבירת ביטחון שדה.</b> שאל שאלות כלליות על הפקודה, לא על המקרה שלך "
@@ -7407,14 +7407,14 @@ _PRIVACY_SECTIONS = [
 _A11Y_SECTIONS = [
     ("מה נגיש היום",
      "<b>גודל טקסט:</b> שלוש מדרגות הגדלה לגוף התשובות (הגדרות ← גודל טקסט).<br>"
-     "<b>ניגודיות:</b> צבעי הטקסט נבדקו מול הרקע ועומדים בתקן AA.<br>"
+     "<b>ניגודיות:</b> צבעי הטקסט נבדקו מול הרקע ועומדים ברמה AA של תקן WCAG.<br>"
      "<b>ניווט מקלדת:</b> לכל כפתור ושדה יש סימון פוקוס נראה.<br>"
      "<b>קורא מסך:</b> לכפתורי האייקונים יש שמות נגישים בעברית.<br>"
-     "<b>הפחתת תנועה:</b> המערכת מכבדת «צמצום תנועה» של מערכת ההפעלה.<br>"
+     "<b>הפחתת תנועה:</b> האפליקציה פועלת לפי הגדרת «צמצום תנועה» של מערכת ההפעלה.<br>"
      "<b>שטחי מגע:</b> הכפתורים הראשיים בגודל 44 פיקסלים לפחות."),
     ("מגבלות ידועות",
      "אנחנו מעדיפים לומר מה לא הושלם מאשר להצהיר על התאמה מלאה:<br><br>"
-     "• <b>שדה החיפוש</b> בתפריט הצד ושדות בחלונות מסוימים קטנים מ-16 פיקסלים, "
+     "• <b>שדה החיפוש</b> בתפריט הצד ושדות בחלונות מסוימים מוצגים בגופן קטן מ-16 פיקסלים, "
      "ולכן באייפון הקשה עליהם עלולה להגדיל את המסך.<br>"
      "• לא בוצעה בדיקת נגישות חיצונית מלאה, ולא נבדקה כל האפליקציה מקצה לקצה "
      "עם קורא מסך.<br>"
@@ -7432,7 +7432,7 @@ _A11Y_SECTIONS = [
 _WIPE_NOTE = (
     "מוחק מהמכשיר הזה: השם, הפרופיל, היסטוריית השיחות והנתונים שהזנת בכלים. "
     "שורות שכבר נרשמו בלוג השימוש שלנו אינן נמחקות בפעולה הזו — "
-    "לכך יש לשלוח בקשת מחיקה ממסך «יצירת קשר»."
+    "לשם כך יש לשלוח בקשת מחיקה ממסך «יצירת קשר»."
 )
 
 # The greeting-screen coverage note ("the corpus holds N orders — not all of
@@ -7810,7 +7810,7 @@ def _settings_personal():
                 # printed on the card. pfSync swaps it and fills the <b>.
                 st.markdown(
                     "<div class='cai-pf-reg'>"
-                    "<span class='z'>לא סומן סטטוס נוסף. סימון משנה חישובי זכאות וניסוח תשובות.</span>"
+                    "<span class='z'>לא סומן סטטוס נוסף. סימון סטטוס משנה את חישובי הזכאות ואת ניסוח התשובות.</span>"
                     "<span class='p'>רשום בכרטיס: <b data-pf-reg></b></span>"
                     "</div>", unsafe_allow_html=True)
                 if "profile_statuses" not in st.session_state and st.session_state.get("profile_saved"):
@@ -7862,7 +7862,7 @@ def _settings_language():
         "</div>", unsafe_allow_html=True)
     st.markdown(
         "<div class='cai-info'><div class='ii'></div>"
-        "<span>שינוי שפה יחיל מיד את הכיווניות המתאימה לממשק.</span></div>", unsafe_allow_html=True)
+        "<span>שינוי שפה יחיל מיד על הממשק את כיוון הכתיבה המתאים.</span></div>", unsafe_allow_html=True)
 
 
 def _settings_access():
@@ -8046,14 +8046,14 @@ def _settings_about():
     # SW-controlled?, first paint, response start/end, the 793->852 step, the
     # lift — filled by the viewport engine from localStorage. Diagnostic, not
     # product: it answers where a cold launch's time goes.
-    st.markdown("<div class='cai-set-seclabel'>אבחון פתיחות</div>", unsafe_allow_html=True)
+    st.markdown("<div class='cai-set-seclabel'>אבחון פתיחת האפליקציה</div>", unsafe_allow_html=True)
     st.markdown(
         "<div class='cai-lang-card' style='padding:12px'><div class='cai-launchlog cai-tos-b' "
         "style='direction:ltr;text-align:left;white-space:pre-wrap;font-size:11px;"
         "font-family:ui-monospace,Menlo,monospace;margin:0'>…</div></div>",
         unsafe_allow_html=True)
     st.markdown(
-        "<div class='cai-set-foot'><div class='a'>מחשבון זכאויות · גרסה 2.4</div>"
+        "<div class='cai-set-foot'><div class='a'>CommandAI · גרסה 2.4</div>"
         "<div class='b'>כלי עזר פרטי · אינו כלי רשמי של צה\"ל</div></div>", unsafe_allow_html=True)
 
 
@@ -8114,7 +8114,7 @@ def _settings_contact():
     """
     st.markdown(
         "<div class='cai-lang-note'>יש תשובה שגויה, באג, בעיית נגישות או בקשה "
-        "לעיון ומחיקה של הנתונים שלך — כאן המקום.</div>", unsafe_allow_html=True)
+        "לעיון בנתונים שלך או למחיקתם — כאן המקום.</div>", unsafe_allow_html=True)
 
     if st.session_state.get("report_sent"):
         _bt, _bs = "הדיווח נשלח", "תודה. אנחנו קוראים כל דיווח."
@@ -8640,7 +8640,7 @@ def _orders_panel(docs: list[dict]) -> str:
         for d in docs
     )
     if not docs:
-        body = "<div class='cai-orders-empty'>אין פקודות טעונות</div>"
+        body = "<div class='cai-orders-empty'>לא נטענו פקודות</div>"
     else:
         body = (
             "<input class='cai-orders-q' type='search' autocomplete='off'"
@@ -9534,7 +9534,7 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
             ctx.fillStyle = "#ECEDE6"; ctx.font = FONTS.brand;
             ctx.fillText("CommandAI", xR, 94);
             ctx.fillStyle = "rgba(236,237,230,.62)"; ctx.font = FONTS.tag;
-            ctx.fillText("עוזר הפקודות של צה״ל", xR, 128);
+            ctx.fillText("עוזר לפקודות מטכ״ל", xR, 128);
             ctx.fillStyle = "{ACCENT}";
             ctx.fillRect(xR - 56, 146, 56, 3);
             if (vLines) {{
@@ -9576,7 +9576,7 @@ def _answer_actions(content: str, sources: list[dict] | None = None, pdf: tuple[
             a.click();
             a.remove();
             setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-            cardNote("✓ ירד — צרף בוואטסאפ");
+            cardNote("✓ נשמר — צרף בוואטסאפ");
         }}
         cardBtn.addEventListener("click", async () => {{
             try {{
@@ -9896,7 +9896,7 @@ for msg_i, msg in enumerate(st.session_state.messages):
             _render_body(body, chip)
             _superseded_notice(msg.get("sources"))
             if msg.get("truncated"):
-                st.warning("התשובה נקטעה בגלל אורך. אפשר לשאול על חלק ממוקד יותר לתשובה שלמה.")
+                st.warning("התשובה נקטעה בגלל אורכה. אפשר לשאול על חלק ממוקד יותר כדי לקבל תשובה שלמה.")
             elif msg.get("interrupted"):
                 st.warning("התשובה נקטעה באמצע. שלח את השאלה שוב כדי לקבל אותה במלואה.")
         else:
