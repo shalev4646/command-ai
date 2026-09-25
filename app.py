@@ -4755,7 +4755,7 @@ if _welcome_gate or st.session_state.role is None:
 # cached from the previous build, so importing a newly-added name from
 # backend crashes the whole boot with ImportError.
 _FALLBACK_QUESTIONS = {
-    "soldier": ["מה זכויותיי כחייל?", "האם מגיע לי שינה מספקת?", "מה העונש על עבירה משמעתית?"],
+    "soldier": ["מה זכויותיי כחייל?", "כמה שעות שינה מגיעות לי?", "מה העונש על עבירה משמעתית?"],
     "commander": ["אילו עונשים מוסמך מפקד להטיל בדין משמעתי?", "מה חובות הדיווח שלי כמפקד?"],
     "reserve": ["אילו תגמולים מגיעים לי כחייל מילואים?", "מה זכויותיי כחייל מילואים?"],
 }
