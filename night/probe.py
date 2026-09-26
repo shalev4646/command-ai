@@ -70,8 +70,27 @@ def _build_requests(rows, MessageCreateParamsNonStreaming, Request):
         # `first_answer` is set only by night.arm_second: it seeds the second
         # search off what THIS question's previous answer said it lacked.
         # Absent for every other arm, so their composition is unchanged.
-        _gen, sources, user_content, _usage = backend.stream_ai_answer(
-            r["q"], None, r["role"], None, first_answer=r.get("first_answer"))
+        #
+        # Recorded, not changed (26.09): the exact user turn and the router's
+        # shortlist go into the row, so a later arm can continue THIS pass —
+        # RETRIEVE_SECOND_PASS_CONTINUE needs the first pass's user turn verbatim
+        # and reuses its route for the second search — without paying for a first
+        # pass again. The route is read by wrapping backend.route_for for the
+        # duration of this one call; the composed request is byte-identical.
+        routes: list = []
+        real_route_for = backend.route_for
+
+        def _recording_route_for(*a, **k):
+            got = real_route_for(*a, **k)
+            routes.append(got)
+            return got
+
+        backend.route_for = _recording_route_for
+        try:
+            _gen, sources, user_content, _usage = backend.stream_ai_answer(
+                r["q"], None, r["role"], None, first_answer=r.get("first_answer"))
+        finally:
+            backend.route_for = real_route_for
         del _gen
         system_prompt = backend.SYSTEM_PROMPTS.get(r["role"], backend.SYSTEM_PROMPT_SOLDIER)
         reqs.append(Request(
@@ -85,7 +104,9 @@ def _build_requests(rows, MessageCreateParamsNonStreaming, Request):
                 messages=[{"role": "user", "content": user_content}],
             )))
         meta.append({**r, "sources": [s.get("doc_id") for s in sources],
-                     "context_words": len(user_content.split())})
+                     "context_words": len(user_content.split()),
+                     "sent_user_content": user_content,
+                     "route": sorted(routes[-1]) if routes and routes[-1] is not None else None})
         if (i + 1) % 25 == 0:
             C.log(f"[probe] composed {i + 1}/{len(rows)}")
     return reqs, meta
