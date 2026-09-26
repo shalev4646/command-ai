@@ -157,6 +157,43 @@ GLOSSARY: dict[str, str] = {
     'ימי רגילה': 'חופשה שנתית',
     'לרגילה': 'חופשה שנתית',
     'ברגילה': 'חופשה שנתית',
+    # ── 2026-09-26 batch (gl-w9, DRAFT, not measured; criterion written first:
+    # night/GLOSSARY_W9_CRITERION.md). KARPAR-302.006 (medical care of reserve
+    # soldiers) missed the window for two v158 smoke phrasings. It is NOT a
+    # missing synonym: the block itself writes „משרד הביטחון" and „להגיש
+    # תביעה". It is dilution — the soldier's single words are everywhere
+    # (שמ"פ 130 occurrences, 96 in HKA-31-08-01; משרד הביטחון in 40 orders;
+    # חייל מילואים in 51), so those words stay OUT (the rarity rule above).
+    # What is absent from every order is the PHRASE that ties an injury to
+    # reserve duty (0 occurrences each), and „חייל בשמ"פ" is a phrase that
+    # lives in 302.006 (5 of its 6 occurrences).
+    'נפצעתי במילואים': 'חייל בשמ"פ עקב השירות',
+    'נפצע במילואים': 'חייל בשמ"פ עקב השירות',
+    'נפצעה במילואים': 'חייל בשמ"פ עקב השירות',
+    'נפגעתי במילואים': 'חייל בשמ"פ עקב השירות',
+    'נפגע במילואים': 'חייל בשמ"פ עקב השירות',
+    'נפגעה במילואים': 'חייל בשמ"פ עקב השירות',
+    'פציעה במילואים': 'חייל בשמ"פ עקב השירות',
+    'חליתי במילואים': 'חייל בשמ"פ עקב השירות',
+    'חלה במילואים': 'חייל בשמ"פ עקב השירות',
+    'נפצעתי בשמ"פ': 'חייל בשמ"פ עקב השירות',
+    'נפצע בשמ"פ': 'חייל בשמ"פ עקב השירות',
+    'נפגעתי בשמ"פ': 'חייל בשמ"פ עקב השירות',
+    'נפגע בשמ"פ': 'חייל בשמ"פ עקב השירות',
+    'נפגע במהלך השמ"פ': 'חייל בשמ"פ עקב השירות',
+    'נפצע במהלך השמ"פ': 'חייל בשמ"פ עקב השירות',
+    # multi-word keys get no derived quote-less form (RETRIEVE_QUOTELESS
+    # skips them), so the unquoted spellings are written out
+    'נפצע בשמפ': 'חייל בשמ"פ עקב השירות',
+    'נפגע בשמפ': 'חייל בשמ"פ עקב השירות',
+    'נפגע במהלך השמפ': 'חייל בשמ"פ עקב השירות',
+    'נפצע במהלך השמפ': 'חייל בשמ"פ עקב השירות',
+    # refusing the Ministry of Defence claim: the order's own words are
+    # „מסרב להגיש תביעה" (one occurrence, in 302.006) — a neutral paraphrase
+    # only, so a regular soldier's question still ranks on its own words
+    'לא רוצה להגיש תביעה': 'מסרב להגיש תביעה',
+    'לא מעוניין להגיש תביעה': 'מסרב להגיש תביעה',
+    'לא רוצה לתבוע': 'מסרב להגיש תביעה',
 }
 
 _QUOTES = str.maketrans({"״": '"', "”": '"', "“": '"', "׳": "'", "’": "'"})
