@@ -107,6 +107,18 @@ def test_writes_need_the_flag_only_for_the_corpus_and_never_overwrite():
     assert not (T.JSON_STORE / f"{T.slug_for('כותרת בדיקה')}.json").exists()
 
 
+def test_one_pdf_may_hold_two_instructions_but_one_instruction_is_written_once():
+    """26.09: the FOI answer hka-32-02-10_and_32-02-27 carries two instructions, split
+    by keep_pages; both keep the PDF's name as source_file. The duplicate guard must
+    let the second in and still refuse the same instruction twice."""
+    a = T.build_document([FULL], document_id="32-A", title="הוראה א", source_file="two.pdf", roles=["soldier"])
+    b = T.build_document([FULL], document_id="32-B", title="הוראה ב", source_file="two.pdf", roles=["soldier"])
+    with tempfile.TemporaryDirectory() as d:
+        (Path(d) / "a.json").write_text(json.dumps(a, ensure_ascii=False), encoding="utf-8")
+        assert T.conflicting_doc(Path(d), b) is None, "a second instruction from the same PDF is not a duplicate"
+        assert T.conflicting_doc(Path(d), dict(a, title="כותרת אחרת"))["document_id"] == "32-A",             "the same instruction from the same PDF is a duplicate even under another title"
+
+
 if __name__ == "__main__":
     fails = 0
     for name, fn in sorted(globals().items()):

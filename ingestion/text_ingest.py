@@ -106,6 +106,22 @@ def slug_for(title: str) -> str:
     return re.sub(r"[^\w֐-׿-]", "-", title)[:60]
 
 
+def conflicting_doc(out_dir: Path, doc: dict) -> dict | None:
+    """A stored document this one would duplicate: the same source PDF AND the same
+    document_id. One PDF may carry several instructions (the FOI answer
+    hka-32-02-10_and_32-02-27 holds two, split by keep_pages) — each keeps the PDF's
+    name as its source_file so the app can still resolve the file, and the second
+    must not be refused as a duplicate of the first."""
+    for f in Path(out_dir).glob("*.json"):
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if d.get("source_file") == doc.get("source_file") and d.get("document_id") == doc.get("document_id"):
+            return d
+    return None
+
+
 def write_document(doc: dict, out_dir: Path) -> Path:
     """Write the document JSON. Writing into the corpus (storage/json_store)
     requires INGEST_FROM_TEXT=1 and never overwrites an existing document;
@@ -116,8 +132,8 @@ def write_document(doc: dict, out_dir: Path) -> Path:
         raise PermissionError("INGEST_FROM_TEXT is off — refusing to write into storage/json_store")
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / f"{slug_for(doc['title'])}.json"
-    if into_corpus and (out.exists() or P._existing_doc_for(out_dir, doc["source_file"])):
-        raise FileExistsError(f"{out.name} (or a document for {doc['source_file']}) already exists — "
-                              "text ingest never overwrites; remove it first on purpose")
+    if into_corpus and (out.exists() or conflicting_doc(out_dir, doc)):
+        raise FileExistsError(f"{out.name} (or a document {doc['document_id']} for {doc['source_file']}) already "
+                              "exists — text ingest never overwrites; remove it first on purpose")
     out.write_text(json.dumps(doc, ensure_ascii=False, indent=2), encoding="utf-8")
     return out
