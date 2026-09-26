@@ -47,7 +47,8 @@ os.environ.update(FLY_ENV)            # before backend is imported anywhere
 from common import safe_print  # noqa: E402
 from night import config as C  # noqa: E402
 
-QUESTIONS = C.OUT / "realstyle_questions.json"
+QUESTIONS = C.OUT / "realstyle_questions.json"            # the frozen ruler
+QUESTIONS_V2 = C.OUT / "realstyle_v2_questions.json"      # ruler v2 (27.09): same ids/parts, soldiers' wording
 BASE = "grade-blocks6"
 FIXED_USD, PER_KWORD_USD = 0.010, 0.0115     # Opus batch answer ≈ fixed + per 1k window words (18.09)
 COMPOSE_USD = 0.010                          # HyDE + router per composed request (Haiku, not batched)
@@ -55,8 +56,10 @@ GRADE_USD = 0.15
 P2_RATE_BLOCKS6 = 63 / 72                    # share that declared a gap in blocks6
 
 
-def _questions() -> list[dict]:
-    return json.loads(QUESTIONS.read_text(encoding="utf-8"))
+def _questions(tag: str = "") -> list[dict]:
+    """A tag ending in `v2` runs ruler v2 (night/FINAL_RULER_V2_CRITERION.md); any other, the frozen ruler."""
+    path = QUESTIONS_V2 if tag.endswith("v2") else QUESTIONS
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _need_key() -> None:
@@ -76,7 +79,7 @@ def _flag_line() -> str:
 def cmd_dry(tag: str) -> int:
     """Free: the free window (HyDE off, router replay-free) of all 72 -> words -> dollars."""
     import backend
-    qs = _questions()
+    qs = _questions(tag)
     hyde, backend.RETRIEVE_HYDE = backend.RETRIEVE_HYDE, False
     words = []
     try:
@@ -89,7 +92,7 @@ def cmd_dry(tag: str) -> int:
     n = len(qs)
     p1 = sum(FIXED_USD + PER_KWORD_USD * w / 1000 for w in words)
     srt = sorted(words)
-    safe_print(f"[final] {tag} dry — flags: {_flag_line()}")
+    safe_print(f"[final] {tag} dry — questions: {(QUESTIONS_V2 if tag.endswith('v2') else QUESTIONS).name} — flags: {_flag_line()}")
     safe_print(f"[final] {n} questions, free-window words mean {sum(words)//n}, median {srt[n//2]}, max {max(words)}")
     for rate in (P2_RATE_BLOCKS6, 1.0):
         p2 = rate * p1
@@ -108,7 +111,7 @@ def cmd_pass(which: str, tag: str) -> int:
     out = C.OUT / f"probe_{tag}_{which}.jsonl"
     if out.exists():
         safe_print(f"[final] {out.name} already on disk — refusing to pay twice."); return 1
-    rows = _questions()
+    rows = _questions(tag)
     if which == "p2":
         first = {r["id"]: r for r in C.read_jsonl(C.OUT / f"probe_{tag}_p1.jsonl")}
         if len(first) != len(rows):
