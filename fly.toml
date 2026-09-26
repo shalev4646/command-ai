@@ -177,6 +177,18 @@ swap_size_mb = 768
   # network-backed and a stat is a round-trip there, so the real saving is
   # plausibly larger - NOT measured, do not quote it as if it were.
   DOC_SCAN_TTL_SEC = "5"
+  # A durable retry queue in front of the metrics Sheet (metrics.METRICS_OUTBOX,
+  # night/PILOT_LOGGING.md). Off in code. Without it a failed Sheet append is
+  # swallowed and the pilot question is gone, and storage/metrics_log.jsonl on
+  # the root filesystem is wiped by every deploy and restart. With it every row
+  # is written to this file on the mounted volume first and removed only after
+  # the Sheet accepted it; a failed send is retried every minute and at boot,
+  # and a row whose confirmation was lost is checked by row_id instead of being
+  # written twice. The queue is empty in normal operation. If /data is not
+  # mounted, the app falls back to the direct append and keeps serving. By the
+  # user's decision of 2026-09-26 ("approve the persistent disk and the policy
+  # sentence"). Remove this line and redeploy to revert.
+  METRICS_OUTBOX = "/data/outbox.jsonl"
 
 [build]
 
@@ -223,3 +235,16 @@ swap_size_mb = 768
   # verify with `fly machine status <id> -d` after every deploy, exactly
   # like swap_size_mb below, which silently never applied at all.
   memory = "2gb"
+
+# The volume behind METRICS_OUTBOX. Mounted at /data and NOT at /app/storage:
+# /app/storage holds the corpus shipped in the image (json_store, the
+# indexes), and a mount there would hide it. Create the volume BEFORE the first
+# deploy that carries this table, in the machine's region, one volume for the
+# one machine:  fly volumes create cai_data --size 1 --region fra -a commandai
+# $0.15/GB-month (1GB); daily snapshots, 5 days, free under 10GB. A volume rules
+# out the canary and bluegreen deploy strategies; this app uses the default
+# rolling one on a single machine, so deploys behave as before.
+# It must stay the LAST table in this file, or keys below it would land here.
+[mounts]
+  source = "cai_data"
+  destination = "/data"
