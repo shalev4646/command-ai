@@ -1,0 +1,67 @@
+# On demand: fingerprint the corpus orders that order-watch does not watch yet
+# (storage/order_watch.json -> "pending") through the same WAF-crossing
+# Chromium as order-watch, and hand the updated baseline back as an artifact
+# to review and commit. Nothing is committed from here, and the tri-weekly
+# order-watch run is untouched. Actions -> order-watch-enroll -> Run workflow.
+name: order-watch-enroll
+
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: 'מזהים מופרדים ברווח (ריק = כל הממתינים)'
+        required: false
+        default: ''
+      accept_drift:
+        description: 'לרשום גם פקודות שה-PDF בפורטל שונה מהעותק שנקלט (רק עם only)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  enroll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Playwright Chromium
+        run: |
+          pip install playwright
+          playwright install --with-deps chromium
+
+      - name: Enroll pending orders
+        env:
+          PYTHONUNBUFFERED: '1'
+          ONLY: ${{ inputs.only }}
+          ACCEPT_DRIFT: ${{ inputs.accept_drift }}
+        run: |
+          set -- --enroll
+          if [ -n "$ONLY" ]; then set -- "$@" --only $ONLY; fi
+          if [ "$ACCEPT_DRIFT" = "true" ]; then set -- "$@" --accept-drift; fi
+          # exit 4 = "a corpus doc is covered by nothing" -- the artifact is
+          # still the thing to look at. 3 (portal unreachable), 2 (e.g.
+          # accept_drift without ids) and a crash (1) fail the run.
+          python _watch_enroll.py "$@" || [ $? -eq 4 ]
+
+      - name: Publish report to run summary
+        if: always()
+        run: |
+          if [ -f storage/order_watch_enroll_report.md ]; then
+            cat storage/order_watch_enroll_report.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: order-watch-enroll
+          path: |
+            storage/order_watch.json
+            storage/order_watch_enroll_report.md
+          if-no-files-found: ignore
