@@ -43,6 +43,9 @@ def test_the_door_names_the_order_the_channel_and_the_open_question():
     assert d and "35.0210" in d["where"] and "35.0210" in d["why"]
     assert "טופס 60" in d["where"] and 'ת"ש' in d["where"]
     assert "מי מאשר" in d["why"], "the reasoning must speak to the declared gap, not to food grants"
+    # 27.09: 35.0210 sets both — approval by the family-payments section (4a) and an
+    # answer within 60 days (37). The door must never again say the orders are silent.
+    assert "60 ימים" in d["why"] and "אינן קובעות מי מאשר" not in d["why"], d["why"]
     assert "מזון" not in d["why"] and "בודד" not in d["why"]
     assert d["link"] and 'תשמ"ש' in d["link"][1]
 
