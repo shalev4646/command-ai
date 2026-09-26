@@ -13,7 +13,9 @@ deploy/reboot wipes local files):
 Every storage layer is fail-soft: logging must never break answering.
 """
 import json
+import os
 import threading
+import time
 import uuid
 from collections import deque
 from datetime import datetime, date
@@ -226,6 +228,7 @@ def _append_to_sheet(tab: str, columns: list[str], row: list, config: tuple) -> 
                     ws.update_cell(1, i + 1, columns[i])
         ws.append_row(row, value_input_option="RAW")
         s["sheets_status"] = "ok"
+        return True
     except Exception as e:
         # keep serving; surface the problem on the admin dashboard only.
         # Don't disable permanently — Google hiccups are transient.
@@ -233,6 +236,7 @@ def _append_to_sheet(tab: str, columns: list[str], row: list, config: tuple) -> 
         s["sheets_error"] = f"{type(e).__name__}: {e}"
         s["_gspread_client"] = None
         s["_spreadsheet"] = None
+        return False
 
 
 def _persist(tab: str, columns: list[str], record: dict) -> None:
@@ -245,10 +249,201 @@ def _persist(tab: str, columns: list[str], record: dict) -> None:
         pass
     config = _sheets_config()
     if config:
+        # METRICS_OUTBOX (off by default): the row goes to a durable queue on
+        # the mounted volume first, and leaves it only when the Sheet confirmed
+        box = _outbox_path()
+        if box is not None and _outbox_add(box, tab, columns, record):
+            _outbox_kick(box, config)
+            return
         row = [record.get(c, "") for c in columns]
         threading.Thread(
             target=_append_to_sheet, args=(tab, columns, row, config), daemon=True,
         ).start()
+
+
+# ── METRICS_OUTBOX: a durable retry queue in front of the Sheet (26.09) ──────
+# Without it a failed append is swallowed and the row is gone (the Sheet is the
+# only durable copy; storage/metrics_log.jsonl lives on the machine's root
+# filesystem, which Fly rebuilds on every deploy and restart), and a deploy that
+# stops the machine mid-append loses that row too. With METRICS_OUTBOX set to a
+# file on a mounted volume (fly.toml: /data), every row is written there FIRST
+# and removed only after the Sheet accepted it; a failed send stays queued and
+# is retried in the background every _OUTBOX_RETRY_S seconds and at boot
+# (outbox_boot, called once by app.py). The queue is empty in normal operation
+# — it is a buffer, not a second copy of the log (night/PILOT_LOGGING.md; the
+# privacy policy names the Sheet as the log and says so).
+#
+# Duplicates: each queued row carries a random row_id, sent as the LAST column
+# (the append-only header rule). An attempt is recorded on disk BEFORE the
+# append, so a row whose append succeeded but whose removal was lost (crash,
+# deploy, a timeout after Google wrote it) is checked against the Sheet's
+# row_id column on its next attempt and removed instead of written twice.
+#
+# Off (unset) ⇒ the code above is the old path verbatim. Set but the folder
+# is missing (no volume mounted) ⇒ the old path too, never a crash.
+_OUTBOX_ENV = "METRICS_OUTBOX"
+_OUTBOX_RETRY_S = 60
+_OUTBOX_FILE_LOCK = threading.Lock()   # every read-modify-write of the file
+_OUTBOX_FLUSH_LOCK = threading.Lock()  # one sender at a time; never held on the soldier's thread
+_OUTBOX_BOOTED = {"done": False}
+
+
+def _outbox_path() -> Path | None:
+    raw = os.environ.get(_OUTBOX_ENV, "").strip()
+    if not raw:
+        return None
+    p = Path(raw)
+    return p if p.parent.is_dir() else None
+
+
+def _outbox_read(box: Path) -> list[dict]:
+    try:
+        lines = box.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        return []
+    out = []
+    for ln in lines:
+        try:
+            out.append(json.loads(ln))
+        except Exception:
+            continue          # a torn last line after a crash is dropped, not fatal
+    return out
+
+
+def _outbox_write(box: Path, entries: list[dict]) -> None:
+    tmp = box.with_suffix(box.suffix + ".tmp")
+    with tmp.open("w", encoding="utf-8") as f:
+        for e in entries:
+            f.write(json.dumps(e, ensure_ascii=False) + "\n")
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, box)
+
+
+def _outbox_add(box: Path, tab: str, columns: list[str], record: dict) -> bool:
+    """Queue one row durably. False ⇒ the caller falls back to the old path."""
+    try:
+        row_id = uuid.uuid4().hex
+        entry = {"row_id": row_id, "tab": tab, "columns": list(columns) + ["row_id"],
+                 "row": [record.get(c, "") for c in columns] + [row_id],
+                 "attempts": 0, "queued": datetime.now().isoformat(timespec="seconds")}
+        with _OUTBOX_FILE_LOCK:
+            with box.open("a", encoding="utf-8") as f:
+                f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+                f.flush()
+                os.fsync(f.fileno())
+        return True
+    except Exception:
+        return False
+
+
+def _sheet_has_row_id(tab: str, row_id: str, config: tuple) -> bool:
+    """Whether the Sheet already holds this row. Raises on any failure — the
+    caller must then NOT append (a duplicate is worse than a delay)."""
+    import gspread
+    from google.oauth2.service_account import Credentials
+
+    s = _store()
+    client = s.get("_gspread_client")
+    if client is None:
+        creds = Credentials.from_service_account_info(
+            config[0], scopes=["https://www.googleapis.com/auth/spreadsheets"])
+        client = gspread.authorize(creds)
+        s["_gspread_client"] = client
+    sheet = s.get("_spreadsheet")
+    if sheet is None:
+        sheet = client.open_by_url(config[1])
+        s["_spreadsheet"] = sheet
+    try:
+        ws = sheet.worksheet(tab)
+    except gspread.WorksheetNotFound:
+        return False
+    head = ws.row_values(1)
+    if "row_id" not in head:
+        return False
+    return row_id in ws.col_values(head.index("row_id") + 1)
+
+
+def _outbox_send(entry: dict, config: tuple) -> bool:
+    if entry.get("attempts", 0) > 1:
+        try:
+            if _sheet_has_row_id(entry["tab"], entry["row_id"], config):
+                return True
+        except Exception:
+            return False
+    return bool(_append_to_sheet(entry["tab"], entry["columns"], entry["row"], config))
+
+
+def _outbox_flush(box: Path, config: tuple) -> int:
+    """Send queued rows oldest-first until one fails. Returns how many left the queue."""
+    if not _OUTBOX_FLUSH_LOCK.acquire(blocking=False):
+        return 0
+    sent = 0
+    try:
+        while True:
+            with _OUTBOX_FILE_LOCK:
+                entries = _outbox_read(box)
+                if not entries:
+                    break
+                entry = entries[0]
+                entry["attempts"] = entry.get("attempts", 0) + 1
+                _outbox_write(box, entries)          # the attempt is on disk before the append
+            if not _outbox_send(entry, config):
+                break
+            with _OUTBOX_FILE_LOCK:
+                _outbox_write(box, [e for e in _outbox_read(box) if e.get("row_id") != entry["row_id"]])
+            sent += 1
+    except Exception:
+        pass
+    finally:
+        _OUTBOX_FLUSH_LOCK.release()
+    return sent
+
+
+def _outbox_kick(box: Path, config: tuple) -> None:
+    threading.Thread(target=_outbox_flush, args=(box, config), daemon=True).start()
+
+
+def _outbox_loop(box: Path, config: tuple, rounds: int | None = None) -> None:
+    """Boot flush, then a retry every _OUTBOX_RETRY_S seconds (forever unless rounds)."""
+    n = 0
+    while rounds is None or n < rounds:
+        _outbox_flush(box, config)
+        n += 1
+        if rounds is not None and n >= rounds:
+            break
+        time.sleep(_OUTBOX_RETRY_S)
+
+
+def outbox_boot() -> bool:
+    """Start the retry loop once per process. A no-op when METRICS_OUTBOX is off,
+    when its folder is missing, or when the Sheet is not configured."""
+    box = _outbox_path()
+    if box is None:
+        return False
+    config = _sheets_config()
+    if not config:
+        return False
+    with _OUTBOX_FILE_LOCK:
+        if _OUTBOX_BOOTED["done"]:
+            return False
+        _OUTBOX_BOOTED["done"] = True
+    threading.Thread(target=_outbox_loop, args=(box, config), daemon=True).start()
+    return True
+
+
+def outbox_status() -> dict | None:
+    """For the admin page: None when the flag is off; else pending rows and the oldest."""
+    raw = os.environ.get(_OUTBOX_ENV, "").strip()
+    if not raw:
+        return None
+    box = _outbox_path()
+    if box is None:
+        return {"path": raw, "available": False, "pending": 0, "oldest": ""}
+    with _OUTBOX_FILE_LOCK:
+        entries = _outbox_read(box)
+    return {"path": raw, "available": True, "pending": len(entries),
+            "oldest": entries[0].get("queued", "") if entries else ""}
 
 
 def log_question(session_id: str, role: str, question: str, answer: str,

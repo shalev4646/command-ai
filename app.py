@@ -44,6 +44,13 @@ _mute_component_deprecation()
 
 import metrics
 import escalation_paths
+
+# METRICS_OUTBOX: resend any Sheet rows a previous process left queued, and keep
+# retrying in the background. A no-op when the flag is off (night/PILOT_LOGGING.md).
+try:
+    metrics.outbox_boot()
+except Exception:
+    pass
 from escalation_paths import path_for
 from boot_shell import patch_index_html
 import pdf_static
@@ -1548,6 +1555,12 @@ def _render_admin():
         "not_configured": "❌ לא מוגדר — הנתונים נשמרים רק בזיכרון עד האתחול הבא",
     }.get(d["sheets_status"], f"סטטוס לא מוכר: {d['sheets_status']}")
     st.caption(f"Google Sheets: {sheets_label}")
+    _ob = getattr(metrics, "outbox_status", lambda: None)()
+    if _ob is not None:
+        st.caption(
+            f"תור-שליחה ({_ob['path']}): " + (
+                "⚠️ התיקייה לא קיימת — השורות נשלחות ישירות, בלי תור" if not _ob["available"]
+                else f"{_ob['pending']} שורות ממתינות" + (f", הוותיקה מ-{_ob['oldest']}" if _ob["oldest"] else "")))
     if d["sheet_url"]:
         st.markdown(f"🔗 [פתח את הגיליון המלא (כל ההיסטוריה)]({d['sheet_url']})")
 
@@ -7373,7 +7386,8 @@ _PRIVACY_SECTIONS = [
      "<b>Anthropic</b> (ארה\"ב) — מפעילת מודל השפה. כל שאלה נשלחת לשרתיה כדי להפיק את "
      "התשובה, יחד עם קטעי הפקודות הרלוונטיים, התפקיד שבחרת והפרטים המנויים למעלה "
      "תחת «מה שנשלח יחד עם השאלה».<br><br>"
-     "<b>Google</b> (Google Sheets) — שם נשמר לוג השימוש, אם לא כיבית אותו.<br><br>"
+     "<b>Google</b> (Google Sheets) — שם נשמר לוג השימוש, אם לא כיבית אותו. "
+     "עד שנשמרת בגיליון, השורה מוחזקת זמנית בשרת האחסון (Fly.io).<br><br>"
      "<b>Fly.io</b> — תשתית האירוח שעליה רצה האפליקציה.<br><br>"
      "המידע אינו נמכר, אינו מושכר ואינו מועבר לצה\"ל, ליחידתך או לכל גורם צבאי."),
     ("כמה זמן נשמר",
