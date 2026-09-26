@@ -229,11 +229,43 @@ def diff(state: dict, current: dict) -> list[dict]:
     return findings
 
 
+_TITLE_NOISE = {"פמ", "הפע", "פקודת", "מטכל"}
+
+
+def _title_words(title: str) -> set[str]:
+    """Title words without order numbers, 'פ"מ' and punctuation."""
+    t = re.sub(r"[\"'״׳”“]", "", title or "")
+    words = re.sub(r"[^֐-׿A-Za-z0-9.]+", " ", t).split()
+    return {w for w in words if w not in _TITLE_NOISE and not re.fullmatch(r"[\d.]+", w)}
+
+
+def renumber_hint(news_title: str, ours: list[tuple[str, dict]]) -> str:
+    """A news item that is not one of our numbers but carries one of our orders'
+    titles: the portal may be republishing that order under a new numbering
+    (lead of 26.09: 'פ"מ 04.101 – חופשות לחיילים...' next to our 35.0402).
+    Informational only -- it never marks the run as changed."""
+    words = _title_words(news_title)
+    for oid, o in ours:
+        tw = _title_words(o.get("title", ""))
+        same = len(words) >= 2 and words == tw
+        close = len(words) >= 3 and tw and len(words & tw) / len(words | tw) >= 0.75
+        if same or close:
+            return f" ← ⚠ **הכותרת של {oid} שבקורפוס, תחת מספר אחר — ייתכן מספור חדש, לבדוק**"
+    return ""
+
+
 def render_report(state: dict, findings: list[dict], news: list) -> str:
     today = datetime.date.today().isoformat()
     changed = [f for f in findings if f["status"] == "changed"]
     errors = [f for f in findings if f["status"] in ("error", "page-error")]
-    ours_digits = {order_digits(o["page"]) for o in state["orders"].values()}
+    # Corpus orders the monitor knows of: watched ones and those still waiting
+    # to be fingerprinted (_watch_enroll.py) -- for the news markers only.
+    # A pending key is itself the order number (PM-33.0307 -> 330307); its slug
+    # may open with a year ('...-1955-330307/'), so the key is the safer source.
+    ours = list(state["orders"].items()) + list(state.get("pending", {}).items())
+    ours_digits = {(order_digits(o["page"]) or "").lstrip("0") for o in state["orders"].values()}
+    ours_digits |= {re.sub(r"\D", "", k.removeprefix("PM-")).lstrip("0") for k in state.get("pending", {})}
+    ours_digits.discard("")
     lines = [f"# דוח מעקב פקודות — {today}", ""]
     if changed:
         lines.append(f"## 🔔 {len(changed)} פקודות התעדכנו בפורטל")
@@ -260,7 +292,8 @@ def render_report(state: dict, findings: list[dict], news: list) -> str:
         lines.append("## 🗞️ מה שהפורטל עצמו מסמן כ'פקודות חדשות' כרגע")
         for n in news:
             d = order_digits(n["h"]) or ""
-            marker = " ← **בקורפוס שלנו**" if d in ours_digits else ""
+            marker = (" ← **בקורפוס שלנו**" if d.lstrip("0") in ours_digits
+                      else renumber_hint(n["t"], ours))
             lines.append(f"- [{n['t']}]({BASE}{n['h']}){marker}")
         lines.append("")
     manual = state.get("manual", {})
