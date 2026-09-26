@@ -39,8 +39,11 @@ SCRATCH = Path(os.environ.get("WAVE8_DRY_DIR") or (ROOT / "night" / "wave8" / "_
 
 
 def ocr_path_for(defn: dict) -> Path:
-    stem = Path(defn["source_pdf"]).stem
-    return OCR / f"{stem}.ocr.txt"
+    """The page-marked text the document is built from: `text_txt` (e.g. the PDF's
+    own text layer when its digits are sound, KARPAR-300.001), else `ocr_txt`, else
+    <source stem>.ocr.txt — all in sources_pending/ocr."""
+    name = defn.get("text_txt") or defn.get("ocr_txt") or f"{Path(defn['source_pdf']).stem}.ocr.txt"
+    return OCR / name
 
 
 def gate(doc: dict) -> tuple[list[str], list[str], list[tuple]]:
