@@ -29,7 +29,7 @@ sys.path.insert(0, str(ROOT))
 
 from common import safe_print  # noqa: E402
 from night import numbers as N  # noqa: E402
-from night.curate import DIGIT_FREE_NOTE, check  # noqa: E402
+from night.curate import DIGIT_FREE_NOTE, check, coverage  # noqa: E402
 from night.rehearse import doc_path  # noqa: E402
 
 # Orders the automated curator refuses (night.curate.NEVER). A manual block for
@@ -88,12 +88,22 @@ def main() -> int:
         doc = json.loads(path.read_text(encoding="utf-8"))
         section, drop, digit_free = section_from(defn)
         problems, warnings, misses = gate(section, doc["raw_text"], digit_free)
+        # the coverage gate judges the block as it will be served: the kept sections plus this one
+        kept = [s for s in doc.get("sections", []) if s["id"] not in drop]
+        have = {c["number"] for s in kept if s["id"] == section["id"] for c in s["clauses"]}
+        served = {"clauses": [c for s in kept for c in s["clauses"]]
+                  + [c for c in section["clauses"] if c["number"] not in have]}
+        cp, cw = coverage(served, doc["raw_text"], doc.get("title") or "", defn.get("omitted_on_purpose"))
+        problems += cp
+        warnings += cw
         words = [len(c["text"].split()) for c in section["clauses"]]
         flag = " ⚠ NEVER — needs the user's yes" if did in NEVER else ""
         safe_print(f"[apply] {did:<11} {section['id']:<19} {len(section['clauses'])} clauses, words max {max(words)}, "
                    f"problems {len(problems)}, warnings {len(warnings)}, number misses {len(misses)}{flag}")
         for x in problems:
             safe_print(f"          PROBLEM {x[:150]}")
+        for x in cw:
+            safe_print(f"          COVER?  {x[:150]}")
         for x in misses:
             safe_print(f"          NUMBER  {x}")
         if problems or misses:

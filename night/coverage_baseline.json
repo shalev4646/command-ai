@@ -1,0 +1,2284 @@
+{
+ "2.0101": {
+  "title": [
+   "ואבטחתו",
+   "מחוץ"
+  ],
+  "rules": 21,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "21.0104": {
+  "title": [],
+  "rules": 0,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "21.0106": {
+  "title": [],
+  "rules": 50,
+  "headings": 3,
+  "numbers": 0,
+  "no_block": false
+ },
+ "21.0113": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "21.0120": {
+  "title": [],
+  "rules": 10,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "21.0123": {
+  "title": [],
+  "rules": 0,
+  "headings": 2,
+  "numbers": 1,
+  "no_block": false
+ },
+ "21.0201": {
+  "title": [],
+  "rules": 0,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "21.0210": {
+  "title": [],
+  "rules": 1,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "21.0211": {
+  "title": [],
+  "rules": 0,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "21.0305": {
+  "title": [],
+  "rules": 2,
+  "headings": 3,
+  "numbers": 0,
+  "no_block": false
+ },
+ "21.0401": {
+  "title": [],
+  "rules": 5,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "3.0110": {
+  "title": [],
+  "rules": 0,
+  "headings": 2,
+  "numbers": 36,
+  "no_block": false
+ },
+ "3.0501": {
+  "title": [],
+  "rules": 57,
+  "headings": 30,
+  "numbers": 0,
+  "no_block": false
+ },
+ "3.0502": {
+  "title": [],
+  "rules": 17,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "30.0106": {
+  "title": [],
+  "rules": 10,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "30.0117": {
+  "title": [],
+  "rules": 26,
+  "headings": 11,
+  "numbers": 0,
+  "no_block": false
+ },
+ "30.0118": {
+  "title": [],
+  "rules": 19,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "30.0401": {
+  "title": [],
+  "rules": 13,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "30.0403": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "30.0408": {
+  "title": [],
+  "rules": 3,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "30.0413": {
+  "title": [
+   "במאגר"
+  ],
+  "rules": 3,
+  "headings": 4,
+  "numbers": 0,
+  "no_block": false
+ },
+ "30.0603": {
+  "title": [
+   "מסמכים"
+  ],
+  "rules": 6,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0103": {
+  "title": [
+   "סדיר"
+  ],
+  "rules": 3,
+  "headings": 8,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0104": {
+  "title": [],
+  "rules": 1,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0106": {
+  "title": [],
+  "rules": 3,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0108": {
+  "title": [],
+  "rules": 1,
+  "headings": 8,
+  "numbers": 1,
+  "no_block": false
+ },
+ "31.0109": {
+  "title": [],
+  "rules": 7,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0116": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 2,
+  "no_block": false
+ },
+ "31.0117": {
+  "title": [],
+  "rules": 1,
+  "headings": 1,
+  "numbers": 1,
+  "no_block": false
+ },
+ "31.0201": {
+  "title": [],
+  "rules": 7,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0202": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0203": {
+  "title": [
+   "וחוגרות",
+   "חוגרים"
+  ],
+  "rules": 11,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0205": {
+  "title": [],
+  "rules": 8,
+  "headings": 4,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0206": {
+  "title": [],
+  "rules": 5,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0207": {
+  "title": [],
+  "rules": 4,
+  "headings": 6,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0214": {
+  "title": [],
+  "rules": 128,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0215": {
+  "title": [],
+  "rules": 22,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0252": {
+  "title": [],
+  "rules": 5,
+  "headings": 4,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0308": {
+  "title": [
+   "בשירות",
+   "חוגרים",
+   "מילואים"
+  ],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 2,
+  "no_block": false
+ },
+ "31.0317": {
+  "title": [],
+  "rules": 0,
+  "headings": 3,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0318": {
+  "title": [],
+  "rules": 0,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0402": {
+  "title": [],
+  "rules": 6,
+  "headings": 6,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0404": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0405": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0407": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0409": {
+  "title": [],
+  "rules": 0,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0503": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0504": {
+  "title": [],
+  "rules": 0,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0507": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0508": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0513": {
+  "title": [],
+  "rules": 3,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0515": {
+  "title": [],
+  "rules": 8,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0517": {
+  "title": [],
+  "rules": 8,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0519": {
+  "title": [],
+  "rules": 2,
+  "headings": 7,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0521": {
+  "title": [],
+  "rules": 8,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0601": {
+  "title": [],
+  "rules": 0,
+  "headings": 5,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0603": {
+  "title": [
+   "ספר"
+  ],
+  "rules": 12,
+  "headings": 12,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0605": {
+  "title": [],
+  "rules": 1,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0606": {
+  "title": [],
+  "rules": 1,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0608": {
+  "title": [
+   "ובשעת"
+  ],
+  "rules": 2,
+  "headings": 12,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0609": {
+  "title": [
+   "פקודת",
+   "תיכונית"
+  ],
+  "rules": 16,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0701": {
+  "title": [],
+  "rules": 12,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0703": {
+  "title": [
+   "יציאה"
+  ],
+  "rules": 15,
+  "headings": 3,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0818": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0823": {
+  "title": [],
+  "rules": 2,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0830": {
+  "title": [],
+  "rules": 2,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0831": {
+  "title": [],
+  "rules": 0,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.0901": {
+  "title": [],
+  "rules": 15,
+  "headings": 12,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.1001": {
+  "title": [],
+  "rules": 6,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.1012": {
+  "title": [],
+  "rules": 0,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "31.1014": {
+  "title": [],
+  "rules": 1,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "32.0101": {
+  "title": [],
+  "rules": 27,
+  "headings": 7,
+  "numbers": 0,
+  "no_block": false
+ },
+ "32.0201": {
+  "title": [
+   "בשירות"
+  ],
+  "rules": 17,
+  "headings": 6,
+  "numbers": 0,
+  "no_block": false
+ },
+ "32.0202": {
+  "title": [
+   "הסדיר"
+  ],
+  "rules": 84,
+  "headings": 6,
+  "numbers": 0,
+  "no_block": false
+ },
+ "32.0207": {
+  "title": [],
+  "rules": 5,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "32.0214": {
+  "title": [],
+  "rules": 0,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "32.0215": {
+  "title": [],
+  "rules": 0,
+  "headings": 3,
+  "numbers": 0,
+  "no_block": false
+ },
+ "32.0220": {
+  "title": [],
+  "rules": 9,
+  "headings": 1,
+  "numbers": 1,
+  "no_block": false
+ },
+ "32.0221": {
+  "title": [],
+  "rules": 0,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "32.0222": {
+  "title": [],
+  "rules": 17,
+  "headings": 4,
+  "numbers": 0,
+  "no_block": false
+ },
+ "32.0223": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "32.0241": {
+  "title": [
+   "עיכוב"
+  ],
+  "rules": 5,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "32.0250": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "32.0307": {
+  "title": [],
+  "rules": 2,
+  "headings": 3,
+  "numbers": 0,
+  "no_block": false
+ },
+ "32.0312": {
+  "title": [],
+  "rules": 0,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "32.0314": {
+  "title": [],
+  "rules": 6,
+  "headings": 20,
+  "numbers": 7,
+  "no_block": false
+ },
+ "32.0315": {
+  "title": [],
+  "rules": 4,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "32.0316": {
+  "title": [],
+  "rules": 1,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "32.0401": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "32.0402": {
+  "title": [],
+  "rules": 0,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "32.0408": {
+  "title": [
+   "המיון"
+  ],
+  "rules": 1,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "32.0422": {
+  "title": [],
+  "rules": 1,
+  "headings": 3,
+  "numbers": 0,
+  "no_block": false
+ },
+ "32.0501": {
+  "title": [],
+  "rules": 20,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "32.0502": {
+  "title": [],
+  "rules": 2,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "32.0509": {
+  "title": [],
+  "rules": 3,
+  "headings": 3,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33-05-01": {
+  "title": [],
+  "rules": 89,
+  "headings": 12,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0111": {
+  "title": [],
+  "rules": 0,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0114": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0115": {
+  "title": [],
+  "rules": 10,
+  "headings": 3,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0117": {
+  "title": [],
+  "rules": 2,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0120": {
+  "title": [],
+  "rules": 12,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0126": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0133": {
+  "title": [],
+  "rules": 1,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0144": {
+  "title": [],
+  "rules": 11,
+  "headings": 4,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0145": {
+  "title": [],
+  "rules": 55,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0146": {
+  "title": [],
+  "rules": 3,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0147": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0149": {
+  "title": [
+   "אמצאות",
+   "ביצועים",
+   "ופטנטים"
+  ],
+  "rules": 25,
+  "headings": 8,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0160": {
+  "title": [],
+  "rules": 0,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0201": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0209": {
+  "title": [],
+  "rules": 12,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0219": {
+  "title": [],
+  "rules": 1,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0220": {
+  "title": [
+   "חומרים"
+  ],
+  "rules": 13,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0304": {
+  "title": [],
+  "rules": 9,
+  "headings": 3,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0306": {
+  "title": [
+   "בבתי"
+  ],
+  "rules": 1,
+  "headings": 2,
+  "numbers": 2,
+  "no_block": false
+ },
+ "33.0314": {
+  "title": [
+   "בעונש",
+   "בתי",
+   "המתייחסות",
+   "הקלה",
+   "לפסקי",
+   "מחילה"
+  ],
+  "rules": 25,
+  "headings": 25,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0321": {
+  "title": [],
+  "rules": 0,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0325": {
+  "title": [],
+  "rules": 0,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0334": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0336": {
+  "title": [],
+  "rules": 11,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0350": {
+  "title": [],
+  "rules": 26,
+  "headings": 7,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0351": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0501": {
+  "title": [],
+  "rules": 1,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0807": {
+  "title": [],
+  "rules": 15,
+  "headings": 3,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0808": {
+  "title": [],
+  "rules": 9,
+  "headings": 6,
+  "numbers": 8,
+  "no_block": false
+ },
+ "33.0909": {
+  "title": [],
+  "rules": 1,
+  "headings": 29,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0911": {
+  "title": [],
+  "rules": 2,
+  "headings": 3,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0913": {
+  "title": [],
+  "rules": 1,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0914": {
+  "title": [],
+  "rules": 0,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.0915": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.1001": {
+  "title": [],
+  "rules": 10,
+  "headings": 5,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.1010": {
+  "title": [],
+  "rules": 1,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.1104": {
+  "title": [],
+  "rules": 5,
+  "headings": 3,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.1112": {
+  "title": [],
+  "rules": 16,
+  "headings": 5,
+  "numbers": 0,
+  "no_block": false
+ },
+ "33.1125": {
+  "title": [],
+  "rules": 6,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0102": {
+  "title": [],
+  "rules": 1,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0105": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0107": {
+  "title": [],
+  "rules": 5,
+  "headings": 3,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0108": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0111": {
+  "title": [],
+  "rules": 3,
+  "headings": 3,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0115": {
+  "title": [],
+  "rules": 1,
+  "headings": 0,
+  "numbers": 1,
+  "no_block": false
+ },
+ "35.0123": {
+  "title": [],
+  "rules": 1,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0201": {
+  "title": [],
+  "rules": 6,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0202": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0203": {
+  "title": [],
+  "rules": 2,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0204": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0205": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0206": {
+  "title": [],
+  "rules": 5,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0209": {
+  "title": [],
+  "rules": 12,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0210": {
+  "title": [
+   "ואישורן"
+  ],
+  "rules": 83,
+  "headings": 12,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0211": {
+  "title": [],
+  "rules": 5,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0217": {
+  "title": [],
+  "rules": 1,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0218": {
+  "title": [],
+  "rules": 3,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0219": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0221": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0222": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0223": {
+  "title": [],
+  "rules": 3,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0227": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0228": {
+  "title": [],
+  "rules": 1,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0232": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0233": {
+  "title": [],
+  "rules": 1,
+  "headings": 0,
+  "numbers": 1,
+  "no_block": false
+ },
+ "35.0234": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0306": {
+  "title": [],
+  "rules": 0,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0307": {
+  "title": [],
+  "rules": 4,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0310": {
+  "title": [
+   "למפקדים"
+  ],
+  "rules": 5,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0313": {
+  "title": [],
+  "rules": 2,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0314": {
+  "title": [],
+  "rules": 5,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0315": {
+  "title": [],
+  "rules": 1,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0408": {
+  "title": [],
+  "rules": 14,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0501": {
+  "title": [],
+  "rules": 0,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0504": {
+  "title": [],
+  "rules": 7,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0802": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0803": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0804": {
+  "title": [],
+  "rules": 1,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0805": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0807": {
+  "title": [],
+  "rules": 1,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0808": {
+  "title": [],
+  "rules": 11,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0809": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0810": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0814": {
+  "title": [],
+  "rules": 11,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0818": {
+  "title": [],
+  "rules": 1,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "35.0822": {
+  "title": [
+   "עריכת"
+  ],
+  "rules": 8,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0103": {
+  "title": [],
+  "rules": 3,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0104": {
+  "title": [],
+  "rules": 9,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0105": {
+  "title": [],
+  "rules": 2,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0106": {
+  "title": [
+   "למשרתי"
+  ],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0107": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0109": {
+  "title": [],
+  "rules": 1,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0110": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0113": {
+  "title": [],
+  "rules": 1,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0204": {
+  "title": [],
+  "rules": 3,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0205": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0207": {
+  "title": [],
+  "rules": 5,
+  "headings": 4,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0209": {
+  "title": [],
+  "rules": 5,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0218": {
+  "title": [],
+  "rules": 10,
+  "headings": 5,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0301": {
+  "title": [],
+  "rules": 4,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0302": {
+  "title": [],
+  "rules": 0,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0303": {
+  "title": [],
+  "rules": 5,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0304": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0306": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0308": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0309": {
+  "title": [],
+  "rules": 2,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0312": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0313": {
+  "title": [],
+  "rules": 0,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0314": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0315": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0319": {
+  "title": [],
+  "rules": 7,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0320": {
+  "title": [],
+  "rules": 2,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0322": {
+  "title": [],
+  "rules": 0,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0401": {
+  "title": [],
+  "rules": 31,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0406": {
+  "title": [
+   "הורות",
+   "ובטיפול",
+   "זכויות",
+   "פוריות"
+  ],
+  "rules": 81,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0412": {
+  "title": [],
+  "rules": 9,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0413": {
+  "title": [],
+  "rules": 14,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0504": {
+  "title": [],
+  "rules": 1,
+  "headings": 0,
+  "numbers": 2,
+  "no_block": false
+ },
+ "36.0505": {
+  "title": [],
+  "rules": 79,
+  "headings": 7,
+  "numbers": 2,
+  "no_block": false
+ },
+ "36.0507": {
+  "title": [],
+  "rules": 8,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0511": {
+  "title": [],
+  "rules": 1,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0513": {
+  "title": [],
+  "rules": 32,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0515": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0520": {
+  "title": [],
+  "rules": 2,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0521": {
+  "title": [],
+  "rules": 12,
+  "headings": 1,
+  "numbers": 2,
+  "no_block": false
+ },
+ "36.0525": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0527": {
+  "title": [
+   "הטבות",
+   "משרתי",
+   "שחרור"
+  ],
+  "rules": 12,
+  "headings": 8,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0528": {
+  "title": [],
+  "rules": 33,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "36.0530": {
+  "title": [
+   "לנזקים"
+  ],
+  "rules": 54,
+  "headings": 8,
+  "numbers": 0,
+  "no_block": false
+ },
+ "37.0102": {
+  "title": [],
+  "rules": 18,
+  "headings": 3,
+  "numbers": 0,
+  "no_block": false
+ },
+ "38.0101": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "38.0102": {
+  "title": [],
+  "rules": 7,
+  "headings": 3,
+  "numbers": 0,
+  "no_block": false
+ },
+ "38.0103": {
+  "title": [
+   "בשעת",
+   "ומתים",
+   "חקירה",
+   "מספר",
+   "פקודת",
+   "רגיעה"
+  ],
+  "rules": 17,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "38.0105": {
+  "title": [
+   "בשעת",
+   "חירום"
+  ],
+  "rules": 3,
+  "headings": 10,
+  "numbers": 0,
+  "no_block": false
+ },
+ "38.0108": {
+  "title": [],
+  "rules": 14,
+  "headings": 5,
+  "numbers": 1,
+  "no_block": false
+ },
+ "38.0109": {
+  "title": [],
+  "rules": 8,
+  "headings": 4,
+  "numbers": 0,
+  "no_block": false
+ },
+ "38.0112": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "38.0115": {
+  "title": [],
+  "rules": 14,
+  "headings": 10,
+  "numbers": 2,
+  "no_block": false
+ },
+ "38.0116": {
+  "title": [],
+  "rules": 11,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "38.0117": {
+  "title": [],
+  "rules": 0,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "38.0118": {
+  "title": [
+   "זכרם"
+  ],
+  "rules": 2,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "38.0120": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "38.0121": {
+  "title": [],
+  "rules": 1,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "38.0122": {
+  "title": [],
+  "rules": 2,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "38.0123": {
+  "title": [],
+  "rules": 19,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "38.0124": {
+  "title": [],
+  "rules": 7,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "50.0204": {
+  "title": [],
+  "rules": 0,
+  "headings": 3,
+  "numbers": 0,
+  "no_block": false
+ },
+ "50.0302": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "50.0303": {
+  "title": [],
+  "rules": 8,
+  "headings": 3,
+  "numbers": 0,
+  "no_block": false
+ },
+ "50.0405": {
+  "title": [],
+  "rules": 2,
+  "headings": 5,
+  "numbers": 0,
+  "no_block": false
+ },
+ "56.0131": {
+  "title": [],
+  "rules": 9,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "58.0101": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "58.0201": {
+  "title": [],
+  "rules": 2,
+  "headings": 4,
+  "numbers": 0,
+  "no_block": false
+ },
+ "58.0202": {
+  "title": [],
+  "rules": 56,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "58.0204": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "58.0205": {
+  "title": [],
+  "rules": 1,
+  "headings": 5,
+  "numbers": 0,
+  "no_block": false
+ },
+ "58.0209": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "58.0214": {
+  "title": [],
+  "rules": 30,
+  "headings": 3,
+  "numbers": 0,
+  "no_block": false
+ },
+ "58.0217": {
+  "title": [],
+  "rules": 30,
+  "headings": 4,
+  "numbers": 0,
+  "no_block": false
+ },
+ "58.0301": {
+  "title": [],
+  "rules": 2,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "58.0306": {
+  "title": [],
+  "rules": 0,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "61.0104": {
+  "title": [],
+  "rules": 3,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "61.0105": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "61.0106": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "61.0108": {
+  "title": [],
+  "rules": 1,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "61.0109": {
+  "title": [],
+  "rules": 1,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "61.0110": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "61.0113": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "61.0117": {
+  "title": [],
+  "rules": 18,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "61.0118": {
+  "title": [],
+  "rules": 7,
+  "headings": 1,
+  "numbers": 3,
+  "no_block": false
+ },
+ "8.0101": {
+  "title": [
+   "מתן"
+  ],
+  "rules": 2,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "CHOK-SHIPUT-1955": {
+  "title": [],
+  "rules": 23,
+  "headings": 12,
+  "numbers": 1,
+  "no_block": false
+ },
+ "FOI-FOOD-2025": {
+  "title": [],
+  "rules": 0,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "HKA-30-07-01": {
+  "title": [],
+  "rules": 1,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "HKA-31-08-01": {
+  "title": [
+   "קובץ"
+  ],
+  "rules": 65,
+  "headings": 32,
+  "numbers": 0,
+  "no_block": false
+ },
+ "HKA-32-02-10": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "HKA-32-02-27": {
+  "title": [],
+  "rules": 3,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "HKA-32-03-10": {
+  "title": [],
+  "rules": 4,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "HKA-33-05-01-S5": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "KARPAR-300.001": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": true
+ },
+ "KARPAR-302.006": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "KARPAR-701.001": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-21.0203": {
+  "title": [],
+  "rules": 5,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-31.0213": {
+  "title": [],
+  "rules": 2,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-31.0251": {
+  "title": [
+   "הקצונה"
+  ],
+  "rules": 4,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-32.0213": {
+  "title": [],
+  "rules": 0,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-33.0109": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-33.0112": {
+  "title": [
+   "הנאה",
+   "וקנסות",
+   "טובות",
+   "מגביות"
+  ],
+  "rules": 3,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-33.0113": {
+  "title": [
+   "מיועדים"
+  ],
+  "rules": 4,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-33.0119": {
+  "title": [],
+  "rules": 9,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-33.0136": {
+  "title": [
+   "האזרחי"
+  ],
+  "rules": 1,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-33.0137": {
+  "title": [],
+  "rules": 3,
+  "headings": 4,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-33.0143": {
+  "title": [],
+  "rules": 6,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-33.0161": {
+  "title": [],
+  "rules": 6,
+  "headings": 9,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-33.0202": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-33.0207": {
+  "title": [],
+  "rules": 14,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-33.0209": {
+  "title": [],
+  "rules": 14,
+  "headings": 3,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-33.0213": {
+  "title": [],
+  "rules": 6,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-33.0302": {
+  "title": [],
+  "rules": 58,
+  "headings": 2,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-33.0307": {
+  "title": [],
+  "rules": 0,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-33.0309": {
+  "title": [
+   "וחיפושים"
+  ],
+  "rules": 67,
+  "headings": 31,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-33.0316": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-33.0332": {
+  "title": [],
+  "rules": 0,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-33.0333": {
+  "title": [],
+  "rules": 1,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-33.0342": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-33.0352": {
+  "title": [],
+  "rules": 0,
+  "headings": 3,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-33.0401": {
+  "title": [],
+  "rules": 0,
+  "headings": 6,
+  "numbers": 6,
+  "no_block": false
+ },
+ "PM-33.0901": {
+  "title": [
+   "העצמאות"
+  ],
+  "rules": 14,
+  "headings": 1,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-33.0917": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 2,
+  "no_block": false
+ },
+ "PM-34.0101": {
+  "title": [],
+  "rules": 8,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-34.0205": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "PM-35.0402": {
+  "title": [],
+  "rules": 30,
+  "headings": 10,
+  "numbers": 0,
+  "no_block": false
+ },
+ "זכויות-סטודנטים-מילואים": {
+  "title": [],
+  "rules": 8,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "זכויות-עבודה-מילואים": {
+  "title": [],
+  "rules": 0,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "חוק-קליטת-חיילים": {
+  "title": [],
+  "rules": 6,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ },
+ "שוברי-נופש-מילואים": {
+  "title": [],
+  "rules": 3,
+  "headings": 0,
+  "numbers": 0,
+  "no_block": false
+ }
+}
