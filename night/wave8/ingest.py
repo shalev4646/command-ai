@@ -59,10 +59,39 @@ def gate(doc: dict) -> tuple[list[str], list[str], list[tuple]]:
     return problems, warnings, misses
 
 
+def refresh_block(doc: dict) -> Path | None:
+    """Replace the curated block of a document already written from text. Only the
+    `sections` change; the stored raw_text must equal the rebuilt one, so a refresh
+    can never swap the source under a block. Returns the path, or None (and says why)."""
+    if not T.INGEST_FROM_TEXT:
+        safe_print("          not refreshed: INGEST_FROM_TEXT is off"); return None
+    hits = []
+    for f in T.JSON_STORE.glob("*.json"):
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            continue
+        if d.get("document_id") == doc["document_id"]:
+            hits.append((f, d))
+    if len(hits) != 1:
+        safe_print(f"          not refreshed: {len(hits)} stored documents carry {doc['document_id']}"); return None
+    f, stored = hits[0]
+    if stored.get("raw_text") != doc["raw_text"]:
+        safe_print("          not refreshed: the stored raw_text differs from the rebuilt one"); return None
+    stored["sections"] = doc["sections"]
+    stored.setdefault("refreshed", []).append({"date": __import__("datetime").date.today().isoformat(),
+                                               "what": "curated block replaced from the definition"})
+    f.write_text(json.dumps(stored, ensure_ascii=False, indent=2), encoding="utf-8")
+    return f
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--write", action="store_true")
     ap.add_argument("--only", action="append", default=[])
+    ap.add_argument("--refresh", action="store_true",
+                    help="the document is already in the corpus: replace its curated block from the definition "
+                         "(raw_text must be byte-identical; both gates; re-index). Needs INGEST_FROM_TEXT=1")
     args = ap.parse_args()
     out_dir = T.JSON_STORE if args.write else SCRATCH
     rc, written = 0, []
@@ -89,6 +118,16 @@ def main() -> int:
             safe_print(f"          NUMBER  {x}")
         if problems or misses:
             rc = 1
+            continue
+        if args.refresh:
+            path = refresh_block(doc)
+            if path is None:
+                rc = 1
+                continue
+            from storage import vector_store as vs
+            n = vs.index_document(json.loads(path.read_text(encoding="utf-8")), save_cache=True)
+            safe_print(f"          REFRESHED {path.name} — block replaced, re-indexed {n} chunks")
+            written.append(did)
             continue
         try:
             path = T.write_document(doc, out_dir)
