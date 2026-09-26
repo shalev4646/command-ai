@@ -79,6 +79,9 @@ def refresh_block(doc: dict) -> Path | None:
     if stored.get("raw_text") != doc["raw_text"]:
         safe_print("          not refreshed: the stored raw_text differs from the rebuilt one"); return None
     stored["sections"] = doc["sections"]
+    for k in ("civil_label", "status_note"):   # display metadata from the definition
+        if doc.get(k):
+            stored[k] = doc[k]
     stored.setdefault("refreshed", []).append({"date": __import__("datetime").date.today().isoformat(),
                                                "what": "curated block replaced from the definition"})
     f.write_text(json.dumps(stored, ensure_ascii=False, indent=2), encoding="utf-8")

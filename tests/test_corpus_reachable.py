@@ -38,9 +38,13 @@ import backend
 # raising "ועדה רפואית", a topic the order never mentions. All eleven were
 # quarantined in the first place because their extracted digits are not
 # trustworthy, so this list is not an oversight; it is a safety rule holding.
+# 2026-09-23/26: all seven received blocks (wave-7; PM-33.0109 and 33.1010 re-applied
+# with K=7). 2026-09-26: KARPAR-300.001 (patient rights, wave-8) is HELD BACK by the
+# stopping rule — its block displaced answering orders from two measured rows
+# (night/head100/RUN_LOG.md 9ד); the verified definition waits in
+# night/wave8/defs. A deliberate hold-back, listed so it cannot pass as silent.
 KNOWN_UNCURATED = {
-    "3.0502", "31.0252", "33.1010",
-    "36.0301", "36.0313", "PM-33.0109", "PM-33.0342",
+    "KARPAR-300.001",
 }
 
 

@@ -122,5 +122,6 @@
  "section_id": "key-facts",
  "section_title": "עיקרי ההוראה",
  "draft_note": "טיוטה 26.09.2026 (סשן ב'), מתמונות-העמוד; לא נכתב לקורפוס. קליטה מטקסט ה-OCR של keep_pages (ingestion.text_ingest.document_from_def), ואז night.recurate.apply_defs ושני השערים.",
- "ingest_note": "קליטה מטקסט ה-OCR של keep_pages בלבד (ingestion.text_ingest.document_from_def עם ocr_txt); הבלוק מוחל אחרי הקליטה"
+ "ingest_note": "קליטה מטקסט ה-OCR של keep_pages בלבד (ingestion.text_ingest.document_from_def עם ocr_txt); הבלוק מוחל אחרי הקליטה",
+ "civil_label": "הוראת קצין רפואה ראשי 302.006 (יוני 2011) — נמסרה במענה לבקשת חופש מידע (קטלוג מאי 2026)"
 }

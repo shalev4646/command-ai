@@ -62,7 +62,7 @@ def read_ocr_pages(path: Path, keep_pages: list[int] | None = None) -> list[str]
 def build_document(pages: list[str], *, document_id: str, title: str, source_file: str,
                    roles: list[str], sections: list[dict] | None = None,
                    anchor_questions: list[str] | None = None, published: str = "",
-                   status_note: str = "", text_source: str = "") -> dict:
+                   status_note: str = "", text_source: str = "", civil_label: str = "") -> dict:
     """The document dict the corpus stores, from page texts. Runs the same
     sparse-text gate as the PDF path (so INGEST_SHORT_ORDERS applies here too)."""
     text = P.gate_text(list(pages))
@@ -85,6 +85,10 @@ def build_document(pages: list[str], *, document_id: str, title: str, source_fil
     }
     if status_note:
         doc["status_note"] = status_note
+    if civil_label:
+        # the source line under an answer; a slug id (HKA-…, KARPAR-…) has no
+        # order number to derive it from (tests/test_source_attribution.py)
+        doc["civil_label"] = civil_label
     return doc
 
 
@@ -99,7 +103,7 @@ def document_from_def(defn: dict, text_path: Path) -> dict:
         source_file=Path(defn.get("source_pdf") or text_path).name, roles=defn.get("roles") or [],
         sections=[section], anchor_questions=defn.get("anchor_questions"),
         published=defn.get("published") or "", status_note=defn.get("status_note") or "",
-        text_source=str(text_path))
+        text_source=str(text_path), civil_label=defn.get("civil_label") or "")
 
 
 def slug_for(title: str) -> str:

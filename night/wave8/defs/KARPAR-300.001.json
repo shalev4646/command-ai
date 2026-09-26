@@ -156,5 +156,6 @@
  "section_title": "עיקרי ההוראה",
  "draft_note": "טיוטה 26.09.2026 (סשן ב'), מתמונות-העמוד; לא נכתב לקורפוס. קליטה מטקסט ה-OCR של keep_pages (ingestion.text_ingest.document_from_def), ואז night.recurate.apply_defs ושני השערים.",
  "ingest_note": "קליטה מטקסט ה-OCR של keep_pages בלבד (ingestion.text_ingest.document_from_def עם ocr_txt); הבלוק מוחל אחרי הקליטה",
- "text_txt": "karpar-300.001_patient-rights_2020.layer.txt"
+ "text_txt": "karpar-300.001_patient-rights_2020.layer.txt",
+ "civil_label": "הוראת קצין רפואה ראשי 300.001 (אוגוסט 2020) — נמסרה במענה לבקשת חופש מידע (אפריל 2021)"
 }

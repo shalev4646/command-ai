@@ -69,5 +69,6 @@
  "section_id": "key-facts",
  "section_title": "עיקרי ההוראה",
  "draft_note": "טיוטה 25.09.2026 (סשן ב'), מתמונת-העמוד; לא נכתב לקורפוס. להחיל דרך night.recurate.apply_defs אחרי קליטת הפקודה (INGEST_SHORT_ORDERS=1 ב-night.intake), ואז שני השערים ואינדוקס.",
- "ingest_note": "קליטה מטקסט (OCR או שכבת-טקסט) של keep_pages בלבד — מנגנון ingest-from-text נדרש (ראה README); הבלוק מוחל אחרי הקליטה"
+ "ingest_note": "קליטה מטקסט (OCR או שכבת-טקסט) של keep_pages בלבד — מנגנון ingest-from-text נדרש (ראה README); הבלוק מוחל אחרי הקליטה",
+ "civil_label": "הוראת קצין רפואה ראשי 701.001 (אוגוסט 2024) — נמסרה במענה לבקשת חופש מידע (מאי 2025)"
 }
