@@ -316,8 +316,63 @@ def uncovered_headings(raw: str, title: str, clauses: list[dict]) -> list[str]:
 
 
 # ── (d) numbers ─────────────────────────────────────────────────────────────
-def number_misses(raw: str, clauses: list[dict]) -> list[str]:
+# ── page-verified numbers (27.09, the manager's rule) ───────────────────────
+# A number read on the page image is right even when the scrambled raw_text does not carry it
+# (v161: 36.0505's „60" and „1/30"). Such a number is recorded on the order and is not counted —
+# here or in night/support_audit.py — so a correction from the page needs no new baseline. A number
+# that entered WITHOUT a page reading still counts: the scrambled orders are the dangerous ones.
+# Recorded as doc["recurated"][...]["page_verified_numbers"] (any depth): entries
+# "<clause number, or its first 40 chars>: ['60', '30']" (session A, v161) or
+# {"clause": ..., "numbers": [...]} (night.recurate.apply_defs, from a def's numbers_seen).
+_PV_ENTRY = re.compile(r"^(.*?):\s*\[(.*?)\]")
+_DIGITS = re.compile(r"\d+(?:[./:]\d+)*")
+
+
+def page_verified(doc: dict) -> dict[str, set[str]]:
+    """clause-number prefix ("" = the whole order) -> numbers read on the page."""
+    out: dict[str, set[str]] = {}
+
+    def add(e) -> None:
+        if isinstance(e, dict):
+            out.setdefault(str(e.get("clause", "")), set()).update(str(x) for x in e.get("numbers", []))
+            return
+        m = _PV_ENTRY.match(str(e))
+        if m:
+            out.setdefault(m.group(1).strip(), set()).update(_DIGITS.findall(m.group(2)))
+        else:
+            out.setdefault("", set()).update(_DIGITS.findall(str(e)))
+
+    def walk(x) -> None:
+        if isinstance(x, dict):
+            for k, v in x.items():
+                if k == "page_verified_numbers" and isinstance(v, list):
+                    for e in v:
+                        add(e)
+                else:
+                    walk(v)
+        elif isinstance(x, list):
+            for v in x:
+                walk(v)
+
+    walk(doc.get("recurated") or {})
+    return out
+
+
+def is_page_verified(pv: dict[str, set[str]], clause_number: str, num: str) -> bool:
+    """num (as extracted: „60", „1/30", „08:00") was read on the page for this clause. A compound
+    value counts when each of its parts that is not a trivial 0/00/1 was recorded."""
+    parts = [x for x in re.findall(r"\d+", num) if x not in ("0", "00", "1")] or [num]
+    for label, nums in pv.items():
+        if label and not (clause_number.startswith(label) or label.startswith(clause_number)):
+            continue
+        if num in nums or all(x in nums for x in parts):
+            return True
+    return False
+
+
+def number_misses(raw: str, clauses: list[dict], pv: dict[str, set[str]] | None = None) -> list[str]:
     from night import numbers as N
+    pv = pv or {}
     miss = []
     for c in clauses:
         if c["digit_free"]:
@@ -327,7 +382,7 @@ def number_misses(raw: str, clauses: list[dict]) -> list[str]:
                 ok = N.present(x, raw)
             except Exception:
                 ok = x in raw
-            if not ok:
+            if not ok and not is_page_verified(pv, c["number"], x):
                 miss.append(f"{c['number'][:30]}: {x}")
     return miss
 
@@ -345,7 +400,7 @@ def audit_doc(doc: dict) -> dict:
     r["title_uncovered"] = uncovered_title_terms(title, clauses, raw)
     r["rules"] = uncovered_rules(raw, clauses)
     r["headings_uncovered"] = uncovered_headings(raw, title, clauses)
-    r["number_misses"] = number_misses(raw, clauses)
+    r["number_misses"] = number_misses(raw, clauses, page_verified(doc))
     return r
 
 
