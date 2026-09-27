@@ -94,6 +94,13 @@ GLOSSARY: dict[str, str] = {
     'ולתם': 'ועדה לתיאום מילואים',
     'קלב': 'קרוב לבית העברה',
     'שק"ם': 'קנטינה',
+    # ── renumbered orders (night/ALIAS_04101.md). The portal republishes orders under a new
+    # numbering; the corpus keeps the number it was ingested with. A soldier who types the
+    # new number gets the order's own title, which heads every chunk of it.
+    # פ"מ 04.101 = PM-35.0402 (same title and text; the one difference found, 90 vs 60 days,
+    # is the user's call and does not change the mapping)
+    '04.101': 'חופשות לחיילים המשרתים בשירות חובה',
+    '04101': 'חופשות לחיילים המשרתים בשירות חובה',
     # ── 2026-09-18 batch — soldier words with ZERO (or near-zero) occurrences
     # in the index, each expanded to a phrase that lives almost entirely in
     # the answering order (counts: night/head100/out/glossary_counts.txt;
