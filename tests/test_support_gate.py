@@ -66,6 +66,21 @@ def test_scrambled_digits_make_it_a_warning():
     assert any("raw digits unreadable" in x for x in w), w
 
 
+
+def test_an_order_reference_read_on_the_page_is_not_counted():
+    # night.numbers skips „פ"מ 21.0101", the support gate counts it — numbers_seen must reach both
+    from night.recurate.apply_defs import seen_numbers
+    scrambled = RAW.replace("60 יום", "06 יום").replace(" 45 ימי", " 54 ימי")
+    for i in range(11, 21):
+        scrambled = scrambled.replace(f"ל-{i} ימי", f"ל-{str(i)[::-1]} ימי")
+    text = 'לא נכנס החייל להתגורר בדיור הצבאי תוך 60 יום ממועד החלטת הוועדה, כאמור בפ"מ 21.0101.'
+    sec = _sec(*GOOD, text)
+    _, w = support(sec, scrambled)
+    assert any("21.0101" in x for x in w), "not read on the page ⇒ still a warning"
+    seen = seen_numbers({"clauses": [{"number": "c6", "text": text, "numbers_seen": ["60", "21.0101"]}]})
+    _, w = support(sec, scrambled, seen=seen)
+    assert not any("21.0101" in x for x in w), (seen, w)
+
 def test_weak_support_is_only_a_warning():
     p, w = support(_sec(*GOOD, "הדגל יונף בכל יום לפני שעת ההשכמה ויורד לפני השקיעה בכל יחידה."), RAW)
     assert p == [] and any("no supporting passage" in x for x in w), (p, w)
