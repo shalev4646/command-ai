@@ -32,6 +32,7 @@ from common import safe_print  # noqa: E402
 from night import numbers as N  # noqa: E402
 from night.curate import DIGIT_FREE_NOTE, check, coverage, support  # noqa: E402
 from night.rehearse import doc_path  # noqa: E402
+from night.support_audit import numbers_of  # noqa: E402
 
 # Orders the automated curator refuses (night.curate.NEVER). A manual block for
 # one of them needs the user's explicit yes — the flag says so, it does not decide.
@@ -65,7 +66,9 @@ def seen_numbers(defn: dict) -> dict[str, list[str]]:
         seen: set[str] = set()
         for note in c.get("numbers_seen", []):
             seen |= set(N.numbers_in(str(note))) | set(re.findall(r"\d+(?:[./:]\d+)*", str(note)))
-        hit = sorted(x for x in N.numbers_in(c["text"]) if x in seen)
+        # both extractors: night.numbers skips order references („פ"מ 21.0101"), the support gate counts them
+        in_text = set(N.numbers_in(c["text"])) | set(numbers_of(c["text"]))
+        hit = sorted(x for x in in_text if x in seen)
         if hit:
             out[c["number"]] = hit
     return out
