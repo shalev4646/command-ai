@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -29,7 +30,7 @@ sys.path.insert(0, str(ROOT))
 
 from common import safe_print  # noqa: E402
 from night import numbers as N  # noqa: E402
-from night.curate import DIGIT_FREE_NOTE, check, coverage  # noqa: E402
+from night.curate import DIGIT_FREE_NOTE, check, coverage, support  # noqa: E402
 from night.rehearse import doc_path  # noqa: E402
 
 # Orders the automated curator refuses (night.curate.NEVER). A manual block for
@@ -56,15 +57,43 @@ def section_from(defn: dict) -> tuple[dict, list[str], bool]:
     return section, [], digit_free
 
 
-def gate(section: dict, raw: str, digit_free: bool) -> tuple[list[str], list[str], list[tuple]]:
+def seen_numbers(defn: dict) -> dict[str, list[str]]:
+    """Per clause: the numbers of its text that the def records in numbers_seen (read on the page).
+    Only the intersection — numbers_seen also carries notes („372 in raw_text")."""
+    out = {}
+    for c in defn.get("clauses", []):
+        seen: set[str] = set()
+        for note in c.get("numbers_seen", []):
+            seen |= set(N.numbers_in(str(note))) | set(re.findall(r"\d+(?:[./:]\d+)*", str(note)))
+        hit = sorted(x for x in N.numbers_in(c["text"]) if x in seen)
+        if hit:
+            out[c["number"]] = hit
+    return out
+
+
+def gate(section: dict, raw: str, digit_free: bool, seen: dict[str, list[str]] | None = None
+         ) -> tuple[list[str], list[str], list[tuple]]:
     problems, warnings = check(section, raw, digit_free=digit_free)
+    seen = seen or {}
     misses = []
     if not digit_free:
         for c in section["clauses"]:
-            m = [x for x in N.numbers_in(c["text"]) if not N.present(x, raw)]
+            # a number read on the page image passes although the scrambled raw_text lacks it
+            m = [x for x in N.numbers_in(c["text"]) if not N.present(x, raw) and x not in seen.get(c["number"], [])]
             if m:
                 misses.append((c["number"][:40], m))
     return problems, warnings, misses
+
+
+def recurated_record(doc: dict, defn: dict, def_name: str, drop: list, seen: dict[str, list[str]]) -> dict:
+    """Merge, never overwrite: another wave's notes (v161's page_verified_numbers) live here too.
+    The def's page-read numbers are recorded so the audits do not count them (coverage_audit.page_verified)."""
+    rec = dict(doc["recurated"]) if isinstance(doc.get("recurated"), dict) else {}
+    rec.update({"when": defn.get("when") or "2026-09-22", "def": def_name, "replaced": drop})
+    if seen:
+        rec["page_verified_numbers"] = list(rec.get("page_verified_numbers", [])) + [
+            {"clause": k, "numbers": v, "def": def_name} for k, v in seen.items()]
+    return rec
 
 
 def main() -> int:
@@ -87,7 +116,8 @@ def main() -> int:
             safe_print(f"[apply] {did}: not in json_store ({type(e).__name__})"); rc = 1; continue
         doc = json.loads(path.read_text(encoding="utf-8"))
         section, drop, digit_free = section_from(defn)
-        problems, warnings, misses = gate(section, doc["raw_text"], digit_free)
+        seen = seen_numbers(defn)
+        problems, warnings, misses = gate(section, doc["raw_text"], digit_free, seen)
         # the coverage gate judges the block as it will be served: the kept sections plus this one
         kept = [s for s in doc.get("sections", []) if s["id"] not in drop]
         have = {c["number"] for s in kept if s["id"] == section["id"] for c in s["clauses"]}
@@ -96,6 +126,10 @@ def main() -> int:
         cp, cw = coverage(served, doc["raw_text"], doc.get("title") or "", defn.get("omitted_on_purpose"))
         problems += cp
         warnings += cw
+        # the support gate judges the def's OWN clauses (the existing ones are held by the ratchet)
+        sp, sw = support(section, doc["raw_text"], did, seen)
+        problems += sp
+        warnings += sw
         words = [len(c["text"].split()) for c in section["clauses"]]
         flag = " ⚠ NEVER — needs the user's yes" if did in NEVER else ""
         safe_print(f"[apply] {did:<11} {section['id']:<19} {len(section['clauses'])} clauses, words max {max(words)}, "
@@ -104,6 +138,8 @@ def main() -> int:
             safe_print(f"          PROBLEM {x[:150]}")
         for x in cw:
             safe_print(f"          COVER?  {x[:150]}")
+        for x in sw:
+            safe_print(f"          SUPPORT? {x[:150]}")
         for x in misses:
             safe_print(f"          NUMBER  {x}")
         if problems or misses:
@@ -121,7 +157,7 @@ def main() -> int:
             have = {c["number"] for s in same for c in s["clauses"]}
             section["clauses"] = [c for s in same for c in s["clauses"]] + [c for c in section["clauses"] if c["number"] not in have]
         doc["sections"] = [s for s in doc.get("sections", []) if s["id"] not in drop and s["id"] != section["id"]] + [section]
-        doc["recurated"] = {"when": defn.get("when") or "2026-09-22", "def": f.name, "replaced": drop}
+        doc["recurated"] = recurated_record(doc, defn, f.name, drop, seen)
         path.write_text(json.dumps(doc, ensure_ascii=False, indent=1), encoding="utf-8")
         from storage import vector_store as vs
         n = vs.index_document(doc, save_cache=True)
