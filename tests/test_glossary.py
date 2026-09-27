@@ -92,6 +92,26 @@ def test_noun_forms_of_regila_expand_but_the_adjective_does_not():
     assert G.expansions("זו פעילות רגילה של היחידה") == []
 
 
+
+# ── the 2026-09-27 gap round (night/GLOSSARY_GAPS_CRITERION.md) ─────────────
+
+def test_haircut_verb_reaches_the_appearance_order_vocabulary():
+    # "להסתפר" and its forms occur 0 times in the orders; "תספורת"/"שיער" only in 33-05-01
+    for q in ("הסמל שלח אותי להסתפר באמצע השבוע",
+              "לא הסתפרתי לפני שחזרתי מהבית",
+              "אני חיילת, גם אני צריכה להסתפר?"):
+        assert G.expansions(q) == ["תספורת שיער"], q
+    # the order's own noun needs no bridge
+    assert G.expansions("מה כללי התספורת בצבא?") == []
+
+
+def test_gap_words_that_failed_or_are_ambiguous_stay_out():
+    # measured and rejected (a lost order, or no gain on a new phrasing), or ambiguous by
+    # count — the reasons are in the comment under the haircut entries
+    for w in ("טופס השחרור", "טופס שחרור", "צו השחרור", "צו שחרור", "כניסה יומית",
+              "יומיות", "משימה", "המשימה", "משימות"):
+        assert w not in G.GLOSSARY, w
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_") and callable(fn):

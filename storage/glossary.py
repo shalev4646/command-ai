@@ -157,6 +157,30 @@ GLOSSARY: dict[str, str] = {
     'ימי רגילה': 'חופשה שנתית',
     'לרגילה': 'חופשה שנתית',
     'ברגילה': 'חופשה שנתית',
+    # ── 2026-09-27 — the word gaps of the final161v2 misses (night/GLOSSARY_GAPS_CRITERION.md,
+    # criterion and phrasings saved before the values). haircut: the verb and its forms occur
+    # 0 times in the orders, "תספורת" and "שיער" only in 33-05-01. Measured paired: 33-05-01 and
+    # its hair clause entered the window on 3 of 3 new phrasings, zero lost on every instrument.
+    'להסתפר': 'תספורת שיער',
+    'הסתפר': 'תספורת שיער',
+    'הסתפרתי': 'תספורת שיער',
+    'הסתפרה': 'תספורת שיער',
+    'הסתפרו': 'תספורת שיער',
+    'מסתפר': 'תספורת שיער',
+    'מסתפרת': 'תספורת שיער',
+    'מסתפרים': 'תספורת שיער',
+    'תסתפר': 'תספורת שיער',
+    'אסתפר': 'תספורת שיער',
+    # NOT here, from the same round:
+    # - "טופס/צו השחרור" -> "פקודת השחרור": the PHRASE is the order's own, 14 of its 26
+    #   occurrences in 31.0103 — but retrieval scores WORDS: "פקודת" is in 113 orders, "השחרור"
+    #   in 54 (the entry above that works adds two words that live in ONE order).
+    #   Appended to "…בצו השחרור…" (frozen rs067) it moved the whole window off the topic
+    #   (PM-33.0333, PM-33.0202, 8.0101 in; 31.0103 out). Judge an expansion by its words too.
+    # - "כניסה יומית" -> "לינת בית": harmless, but its new phrasing was served without it.
+    # - "יומיות": in the orders always the adjective (נסיעות יומיות, 36.0521), and a wage word.
+    # - "משימה": the orders' own word (73 times in 22 orders); the two instrument questions
+    #   that carry it outside the diagnosed row use it in the neutral sense.
 }
 
 _QUOTES = str.maketrans({"״": '"', "”": '"', "“": '"', "׳": "'", "’": "'"})
