@@ -30,7 +30,7 @@ sys.path.insert(0, str(ROOT))
 
 from common import safe_print  # noqa: E402
 from night import numbers as N  # noqa: E402
-from night.curate import DIGIT_FREE_NOTE, check, coverage  # noqa: E402
+from night.curate import DIGIT_FREE_NOTE, check, coverage, support  # noqa: E402
 from night.rehearse import doc_path  # noqa: E402
 
 # Orders the automated curator refuses (night.curate.NEVER). A manual block for
@@ -126,6 +126,10 @@ def main() -> int:
         cp, cw = coverage(served, doc["raw_text"], doc.get("title") or "", defn.get("omitted_on_purpose"))
         problems += cp
         warnings += cw
+        # the support gate judges the def's OWN clauses (the existing ones are held by the ratchet)
+        sp, sw = support(section, doc["raw_text"], did, seen)
+        problems += sp
+        warnings += sw
         words = [len(c["text"].split()) for c in section["clauses"]]
         flag = " ⚠ NEVER — needs the user's yes" if did in NEVER else ""
         safe_print(f"[apply] {did:<11} {section['id']:<19} {len(section['clauses'])} clauses, words max {max(words)}, "
@@ -134,6 +138,8 @@ def main() -> int:
             safe_print(f"          PROBLEM {x[:150]}")
         for x in cw:
             safe_print(f"          COVER?  {x[:150]}")
+        for x in sw:
+            safe_print(f"          SUPPORT? {x[:150]}")
         for x in misses:
             safe_print(f"          NUMBER  {x}")
         if problems or misses:

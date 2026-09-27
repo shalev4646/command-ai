@@ -339,6 +339,53 @@ def coverage(section: dict, raw: str, title: str, omitted: dict | None = None) -
     return problems, warnings
 
 
+def support(section: dict, raw: str, doc_id: str = "", seen: dict[str, list[str]] | None = None
+            ) -> tuple[list[str], list[str]]:
+    """The support gate (27.09, night/SUPPORT_AUDIT.md): what the block says that the order does not.
+
+    The faithfulness gates above test a clause's vocabulary and numbers against the WHOLE order, so
+    a sentence whose words and digits all occur somewhere passes even when no passage says it —
+    36.0505's „30 יום… שליש מן המשכורת" (the order: 60 days, 1/30) and 32.0220's „40… 16 חודשים"
+    passed. Judged per sentence, against its best supporting passage (night.support_audit):
+
+      problem  — a fraction, a rank or an acronym that is not in the order (precise: 39 flags over
+                 the whole corpus, one of them a real misreading, קמשל"ר for מקשל"ר);
+      problem  — a number outside its supporting passage, when the block's own numbers show the raw
+                 digits are readable (≥80% found locally); a number read on the page (`seen`, a
+                 def's numbers_seen) is not counted at all;
+      warning  — such a number where the raw digits are scrambled;
+      warning  — a sentence below SUPPORT_MIN (measured 70% false alarms by eye: paraphrased lists,
+                 OCR — it points a reader at the page, it cannot block).
+
+    Judge the NEW clauses only: the clauses already in the order are held by the ratchet
+    (tests/test_support_ratchet.py), and a def must not be blocked for text it did not write.
+    """
+    from night import support_audit as sa
+    clauses = [{"number": str(c.get("number", "")), "text": str(c.get("text", ""))}
+               for c in section.get("clauses", [])]
+    sec = {"id": section.get("id") or "key-facts", "clauses": clauses}
+    if section.get("digit_free"):
+        sec["digit_free"] = True
+    doc = {"document_id": doc_id, "raw_text": raw, "sections": [sec],
+           "recurated": {"page_verified_numbers": [{"clause": k, "numbers": v} for k, v in (seen or {}).items()]}}
+    df, n = sa.corpus_df()
+    r = sa.audit_doc(doc, df, n)
+    problems: list[str] = []
+    warnings: list[str] = []
+    for f in r["flags"]:
+        label = f["clause"][:40]
+        ents = f["fractions"] + f["ranks"] + f["roles"]
+        if ents:
+            problems.append(f"clause {label!r}: {ents} not in the order — „{f['sentence'][:70]}\"")
+        if f["numbers"]:
+            problems.append(f"clause {label!r}: {f['numbers']} outside the passage that supports „{f['sentence'][:60]}\"")
+        if f["support"] < sa.SUPPORT_MIN:
+            warnings.append(f"clause {label!r}: no supporting passage ({f['support']}) for „{f['sentence'][:70]}\"")
+    for u in r.get("numbers_unreliable", []):
+        warnings.append(f"clause {u['clause'][:40]!r}: {u['numbers']} not in the passage, raw digits unreadable — check the page")
+    return problems, warnings
+
+
 def check(section: dict, raw: str, digit_free: bool = False, title: str | None = None,
           omitted: dict | None = None) -> tuple[list[str], list[str]]:
     """The faithfulness gates, and — when `title` is given — the coverage gate (coverage()).
@@ -418,6 +465,9 @@ def check(section: dict, raw: str, digit_free: bool = False, title: str | None =
         cp, cw = coverage(section, raw, title, omitted)
         problems += cp
         warnings += cw
+        sp, sw = support(section, raw)
+        problems += sp
+        warnings += sw
     return problems, warnings
 
 

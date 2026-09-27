@@ -226,6 +226,11 @@ def _in_order(tok: str, raw_norm: str, raw_letters: str) -> bool:
         letters = f.replace('"', "")
         if len(letters) >= 4 and letters in _squeezed(raw_norm):
             return True
+        # …or keeps the letters in order with one space, dot or quote between them („ק א"ב" once the
+        # vowel points of „קָ ָא"ּב" are gone)
+        if len(letters) >= 3 and re.search(r"(?<![א-ת])" + r"[\s.\"]?".join(map(re.escape, letters)) + r"(?![א-ת])",
+                                           raw_norm):
+            return True
     return False
 
 
@@ -261,7 +266,8 @@ def build_df(docs: list[dict]) -> tuple[dict[str, int], int]:
 
 
 def audit_doc(doc: dict, df: dict[str, int], n_docs: int) -> dict:
-    raw = doc.get("raw_text") or ""
+    # vowel points break every match: 33.0352 writes „קָ ָא"ּב", „קַ ּבוֹ"ד"
+    raw = re.sub(r"[֑-ׇ]", "", doc.get("raw_text") or "")
     # Whether the raw digits can be read is measured on the block itself: night.digits.trustworthy
     # passed 32.0220, whose raw_text writes „10.2001" where the page says 32.0223.
     trusted = None
@@ -305,6 +311,9 @@ def audit_doc(doc: dict, df: dict[str, int], n_docs: int) -> dict:
                             "passage": " ".join(wins[bi].split()[:40]) if wins else "",
                             "numbers": miss_num, "fractions": miss_frac, "ranks": miss_rank, "roles": miss_role})
     trusted = num_total >= NUM_MIN and num_found / num_total >= NUM_RELIABLE
+    # kept apart for the gate's warnings (night.curate.support); never counted by the ratchet
+    unreliable = [{"clause": f["clause"], "numbers": f["numbers"], "sentence": f["sentence"]}
+                  for f in out if f["numbers"]] if not trusted else []
     if not trusted:                      # scrambled raw digits: number misses are noise, drop them
         for f in out:
             f["numbers"] = []
@@ -314,7 +323,18 @@ def audit_doc(doc: dict, df: dict[str, int], n_docs: int) -> dict:
             "numbers_local": f"{num_found}/{num_total}", "sentences": n_sent,
             "low_support": sum(1 for f in out if f["support"] < SUPPORT_MIN),
             "entity_misses": sum(1 for f in out if f["numbers"] or f["fractions"] or f["ranks"] or f["roles"]),
-            "flags": out}
+            "flags": out, "numbers_unreliable": unreliable}
+
+
+_DF: tuple[dict[str, int], int] | None = None
+
+
+def corpus_df() -> tuple[dict[str, int], int]:
+    """The corpus rarity table, built once per process (the gate calls audit_doc per def)."""
+    global _DF
+    if _DF is None:
+        _DF = build_df(ca.load_corpus())
+    return _DF
 
 
 def audit_corpus() -> dict[str, dict]:
