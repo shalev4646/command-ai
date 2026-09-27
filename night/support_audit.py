@@ -272,6 +272,7 @@ def audit_doc(doc: dict, df: dict[str, int], n_docs: int) -> dict:
     raw_letters = raw_norm.replace('"', "")
     out = []
     num_total = num_found = 0
+    pv = ca.page_verified(doc)            # read on the page ⇒ not counted (coverage_audit.page_verified)
     for c in ca.block_clauses(doc):
         for s in sentences(c["text"]):
             words = _words(s)
@@ -291,7 +292,8 @@ def audit_doc(doc: dict, df: dict[str, int], n_docs: int) -> dict:
             near = " ".join(units[lo:hi]) if units else raw
             # numbers: in the supporting passage — only where the raw digits can be trusted; on scrambled
             # raw a correct value fails as often as a wrong one (measured on the v161 orders, 27.09)
-            nums = numbers_of(s) if not c["digit_free"] else []
+            nums = ([x for x in numbers_of(s) if not ca.is_page_verified(pv, c["number"], x)]
+                    if not c["digit_free"] else [])
             miss_num = [x for x in nums if not number_in(x, near)]
             num_total += len(nums)
             num_found += len(nums) - len(miss_num)
