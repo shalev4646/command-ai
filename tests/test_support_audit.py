@@ -54,6 +54,13 @@ def test_a_fraction_the_passage_does_not_carry_is_flagged():
     assert any("שליש" in f["fractions"] for f in r["flags"]), r["flags"]
 
 
+
+def test_half_day_service_is_a_term_not_a_fraction():
+    # HKA-31-08-01's „שמ"פ חצי-יומי" was flagged as a „חצי" its passage lacks; „חצי יום" is still a half
+    assert sa.fractions_of('שיבוצעו בשירות חצי-יומי או חד-יומי בלבד') == []
+    assert sa.fractions_of("לשירות חצי יומי") == []
+    assert sa.fractions_of("ינוכה לחייל חצי יום חופשה") == ["חצי"]
+
 def test_a_number_from_elsewhere_in_the_order_is_flagged_locally():
     """„16" is in the order (סע' 31), so the old whole-text numbers gate passes it; the passage that
     carries the rule (סע' 28) says 60."""

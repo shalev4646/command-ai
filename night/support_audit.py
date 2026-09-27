@@ -184,8 +184,13 @@ def number_in(num: str, passage: str) -> bool:
     return False
 
 
+# „חצי-יומי" names a kind of reserve service (HKA-31-08-01), it is not a half of anything
+_NOT_A_FRACTION = re.compile(r"חצי[\s\-־]*יומי")
+
+
 def fractions_of(text: str) -> list[str]:
-    return [w for w in FRACTIONS if re.search(rf"(?<![א-ת])[ובלמהשכ]?{w}(?![א-ת])", text or "")]
+    text = _NOT_A_FRACTION.sub(" ", text or "")
+    return [w for w in FRACTIONS if re.search(rf"(?<![א-ת])[ובלמהשכ]?{w}(?![א-ת])", text)]
 
 
 def _strip_prefix(tok: str) -> set[str]:
