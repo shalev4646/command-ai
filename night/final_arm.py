@@ -124,15 +124,42 @@ def cmd_pass(which: str, tag: str) -> int:
     return 0
 
 
+def production_choice(first: str, second_row: dict | None) -> str:
+    """Which answer the app keeps after the retry (app.py, "The second search"):
+    the second one, unless the retry failed, came back empty, or — under
+    RETRIEVE_SECOND_PASS_KEEP_RULING (on in fly.toml) — regressed to a refusal
+    while the first carried a ruling. 'second', or why the first stayed.
+
+    Until 27.09 _final_rows kept the second whenever it existed; on final161v2
+    that graded the retry where production shows the first on rs055 and rs058
+    (night/head100/RUN_LOG.md 15). The official 34/48 stands; 35/48 in
+    production logic."""
+    import backend
+    if second_row is None:
+        return "no_gap"
+    second = second_row.get("answer")
+    if second is None:
+        return "second_failed"
+    if not second.strip():
+        return "second_empty"
+    if backend.RETRIEVE_SECOND_PASS_KEEP_RULING > 0 and backend.second_answer_regressed(first or "", second):
+        return "kept_ruling"
+    return "second"
+
+
 def _final_rows(tag: str) -> list[dict]:
     p1 = {r["id"]: r for r in C.read_jsonl(C.OUT / f"probe_{tag}_p1.jsonl")}
     p2 = {r["id"]: r for r in C.read_jsonl(C.OUT / f"probe_{tag}_p2.jsonl")}
     out = []
     for i, r in p1.items():
         row = {**r, "first_answer": r.get("answer")}
-        if i in p2 and p2[i].get("answer"):
+        kept = production_choice(r.get("answer") or "", p2.get(i))
+        row["kept"] = kept
+        if kept == "second":
             row.update({"answer": p2[i]["answer"], "sources": p2[i].get("sources"),
                         "context_words": p2[i].get("context_words"), "second_pass": True})
+        elif i in p2:
+            row["second_answer"] = p2[i].get("answer")      # bought, not kept — read in stage 6
         out.append(row)
     return out
 

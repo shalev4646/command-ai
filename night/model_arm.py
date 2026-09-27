@@ -8,7 +8,8 @@ request parameters), so the only thing that changes is the answering model.
 The second pass follows production (app.py, "The second search"): only where
 the first answer declared a gap, composed through the production path, and the
 kept answer is chosen the way the app chooses it — including
-RETRIEVE_SECOND_PASS_KEEP_RULING, which night/final_arm never applied.
+RETRIEVE_SECOND_PASS_KEEP_RULING, which night/final_arm did not apply before
+27.09 (final_arm.production_choice, shared by both).
 
     venv\\Scripts\\python.exe -m night.model_arm dry     opus5v2   # FREE: count_tokens + base usage -> price
     venv\\Scripts\\python.exe -m night.model_arm p1      opus5v2   # PAID (batch): the 72 recorded user turns
@@ -201,22 +202,7 @@ def _run_batch(reqs: list, meta: list[dict], label: str, out_path: Path, estimat
 
 # ── the production choice ────────────────────────────────────────────────────
 
-def production_choice(first: str, second_row: dict | None) -> str:
-    """Which answer the app keeps after the retry (app.py, "The second search"):
-    the second one, unless the retry failed, came back empty, or — under
-    RETRIEVE_SECOND_PASS_KEEP_RULING — regressed to a refusal while the first
-    carried a ruling. 'second', or why the first stayed."""
-    import backend
-    if second_row is None:
-        return "no_gap"
-    second = second_row.get("answer")
-    if second is None:
-        return "second_failed"
-    if not second.strip():
-        return "second_empty"
-    if backend.RETRIEVE_SECOND_PASS_KEEP_RULING > 0 and backend.second_answer_regressed(first or "", second):
-        return "kept_ruling"
-    return "second"
+production_choice = FA.production_choice       # one definition for every final test
 
 
 def final_rows(first: dict[str, dict], second: dict[str, dict], order: list[str]) -> list[dict]:
