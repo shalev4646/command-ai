@@ -203,7 +203,7 @@ def _rows_from_jsonl() -> list[dict]:
     return [r for r in rows if r.get("tab") == "feedback"]
 
 
-def _open_sheet():
+def _open_sheet(secrets_path: Path | None = None):
     """The pilot's spreadsheet. Reads the service account straight out of
     .streamlit/secrets.toml — st.secrets needs a Streamlit runtime, and this
     is a command-line tool. The scope stays read-only on purpose: a tool whose
@@ -216,7 +216,8 @@ def _open_sheet():
     except ImportError as e:
         sys.exit(f"חסרה חבילה למסלול הגיליון: {e.name}  (pip install gspread google-auth)")
 
-    secrets_path = _ROOT / ".streamlit" / "secrets.toml"
+    # another tool may point at the file where it already is (a worktree has none) — never a copy
+    secrets_path = secrets_path or (_ROOT / ".streamlit" / "secrets.toml")
     if not secrets_path.exists():
         sys.exit(f"אין {secrets_path}")
     secrets = tomllib.loads(secrets_path.read_text(encoding="utf-8"))
@@ -240,12 +241,12 @@ def _question_rows_from_jsonl() -> list[dict]:
     return [r for r in rows if r.get("tab") == "questions"]
 
 
-def _question_rows_from_sheets() -> list[dict]:
+def _question_rows_from_sheets(secrets_path: Path | None = None) -> list[dict]:
     """Same credentials path as _rows_from_sheets, other tab. The tab is only
     created on the first question ever logged, so a missing one means an empty
     pilot, not a broken setup — say so instead of raising."""
     try:
-        return _open_sheet().worksheet("questions").get_all_records()
+        return _open_sheet(secrets_path).worksheet("questions").get_all_records()
     except Exception as e:
         if "WorksheetNotFound" in type(e).__name__:
             print("אין עדיין לשונית 'questions' בגיליון — לא נרשמה אף שאלה.")

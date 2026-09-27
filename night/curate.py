@@ -308,8 +308,40 @@ def withdrawn(doc: dict) -> bool:
         str(doc.get(k) or "") for k in ("source_file", "title", "civil_label"))))
 
 
-def check(section: dict, raw: str, digit_free: bool = False) -> tuple[list[str], list[str]]:
-    """The faithfulness gates.
+def coverage(section: dict, raw: str, title: str, omitted: dict | None = None) -> tuple[list[str], list[str]]:
+    """The coverage gate (27.09, night/COVERAGE_AUDIT.md): what the block LEAVES OUT.
+
+    PM-33.0309 „מעצר וחיפושים כללי" carried four arrest clauses and no search clause, and a
+    soldier asking about a search got „not in the orders". Every faithfulness gate above passed,
+    because they judge what a block says, never what it omits.
+
+    A title term the order uses at least TITLE_MIN_RAW times with no clause is a problem unless
+    `omitted` (the def's `omitted_on_purpose`: term or heading -> reason) names it with a reason.
+    Uncovered chapter headings are warnings only: measured at 78% false alarms on a fresh
+    sample (PDF line breaks and form fields), they would fill omitted lists with noise.
+    Run on the block as it will be served — for a merge, the merged block.
+    """
+    from night import coverage_audit as ca
+    clauses = [{"number": str(c.get("number", "")), "text": str(c.get("text", ""))}
+               for c in section.get("clauses", [])]
+    omitted = omitted or {}
+    problems: list[str] = []
+    warnings: list[str] = []
+    for k, why in omitted.items():
+        if not str(why or "").strip():
+            problems.append(f"omitted_on_purpose[{k!r}] has no reason")
+    for t in ca.uncovered_title_terms(title, clauses, raw):
+        if t not in omitted:
+            problems.append(f"title term {t!r} has no clause — cover it or list it in omitted_on_purpose with a reason")
+    for h in ca.uncovered_headings(raw, title, clauses):
+        if h not in omitted:
+            warnings.append(f"chapter heading {h!r} has no clause")
+    return problems, warnings
+
+
+def check(section: dict, raw: str, digit_free: bool = False, title: str | None = None,
+          omitted: dict | None = None) -> tuple[list[str], list[str]]:
+    """The faithfulness gates, and — when `title` is given — the coverage gate (coverage()).
 
     Returns (problems, warnings). Problems block acceptance — they are the
     mechanically detectable forms of invention. Warnings are recorded for the
@@ -382,6 +414,10 @@ def check(section: dict, raw: str, digit_free: bool = False) -> tuple[list[str],
     for label, terms in RISK_TOPICS.items():
         if any(t in blob for t in terms) and not any(t in raw for t in terms):
             problems.append(f"raises {label!r}, which the order never mentions")
+    if title is not None:
+        cp, cw = coverage(section, raw, title, omitted)
+        problems += cp
+        warnings += cw
     return problems, warnings
 
 
@@ -441,7 +477,8 @@ def curate_one(doc: dict, ledger: Ledger, problems: list[str] | None = None,
                "clauses": parsed.get("clauses") or []}
     if not section["clauses"]:
         return None, usd, ["no clauses"]
-    problems, warnings = check(section, str(doc.get("raw_text", "")), digit_free=digit_free)
+    problems, warnings = check(section, str(doc.get("raw_text", "")), digit_free=digit_free,
+                               title=str(doc.get("title", "")))
     if digit_free:
         # The answering model must see that numbers are deliberately absent, so
         # it says "the order sets a deadline — check the source" rather than
