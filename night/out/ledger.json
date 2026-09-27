@@ -1,5 +1,5 @@
 {
- "spent": 143.0748,
+ "spent": 150.7038,
  "reserved": 0,
  "entries": [
   {
@@ -7167,6 +7167,12 @@
    "actual": 0.0699
   },
   {
+   "id": "grade-grade-final161v2#20024-1333",
+   "label": "grade-grade-final161v2",
+   "estimate": 0.108,
+   "actual": 0.069
+  },
+  {
    "id": "grade-grade-head100A#14388-1026",
    "label": "grade-grade-head100A",
    "estimate": 0.075,
@@ -7543,6 +7549,18 @@
    "label": "probe-fb2",
    "estimate": 2.8,
    "actual": 0.0
+  },
+  {
+   "id": "probe-final161v2_p1#4596-1331",
+   "label": "probe-final161v2_p1",
+   "estimate": 2.016,
+   "actual": 4.1335
+  },
+  {
+   "id": "probe-final161v2_p2#10344-1332",
+   "label": "probe-final161v2_p2",
+   "estimate": 1.568,
+   "actual": 3.4265
   },
   {
    "id": "probe-final91#6416-759",
