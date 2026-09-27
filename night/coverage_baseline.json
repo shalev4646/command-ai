@@ -41,7 +41,7 @@
   "title": [],
   "rules": 0,
   "headings": 2,
-  "numbers": 1,
+  "numbers": 0,
   "no_block": false
  },
  "21.0201": {
@@ -569,8 +569,8 @@
  },
  "32.0220": {
   "title": [],
-  "rules": 9,
-  "headings": 1,
+  "rules": 8,
+  "headings": 0,
   "numbers": 1,
   "no_block": false
  },
@@ -628,8 +628,8 @@
  "32.0314": {
   "title": [],
   "rules": 6,
-  "headings": 20,
-  "numbers": 7,
+  "headings": 15,
+  "numbers": 6,
   "no_block": false
  },
  "32.0315": {
@@ -917,9 +917,9 @@
  },
  "33.0808": {
   "title": [],
-  "rules": 9,
-  "headings": 6,
-  "numbers": 8,
+  "rules": 4,
+  "headings": 2,
+  "numbers": 15,
   "no_block": false
  },
  "33.0909": {
@@ -1560,8 +1560,8 @@
  },
  "36.0505": {
   "title": [],
-  "rules": 79,
-  "headings": 7,
+  "rules": 56,
+  "headings": 5,
   "numbers": 2,
   "no_block": false
  },
@@ -2212,8 +2212,8 @@
  "PM-33.0401": {
   "title": [],
   "rules": 0,
-  "headings": 6,
-  "numbers": 6,
+  "headings": 4,
+  "numbers": 18,
   "no_block": false
  },
  "PM-33.0901": {
@@ -2229,7 +2229,7 @@
   "title": [],
   "rules": 0,
   "headings": 0,
-  "numbers": 2,
+  "numbers": 8,
   "no_block": false
  },
  "PM-34.0101": {
