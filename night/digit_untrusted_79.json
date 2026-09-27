@@ -1,0 +1,718 @@
+{
+ "generated": "2026-09-27",
+ "rule": "a key-facts block with digits, on raw_text where night.digits.trustworthy(doc) is False",
+ "count": 79,
+ "orders": [
+  {
+   "doc_id": "33.0914",
+   "title": "שחרור ופיטור מצה\"ל - טקס פרידה ואיגרת",
+   "reach": 29,
+   "digits_in_block": 4,
+   "source_pdf": "330914.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "33.0913",
+   "title": "משמעת הצדעה",
+   "reach": 24,
+   "digits_in_block": 13,
+   "source_pdf": "33-0913.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "50.0405",
+   "title": "הריתוק המשקי בצה\"ל",
+   "reach": 23,
+   "digits_in_block": 1,
+   "source_pdf": "500405x.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "31.1012",
+   "title": "הרחקת צוער מקורס קצונה",
+   "reach": 18,
+   "digits_in_block": 4,
+   "source_pdf": "פמ-31-1012-הרחקת-צוער-מקורס-קצונה-כללים-סמכויות-ונהלים-לאתר-הפקודות-עודכן-ביום-27022023-1.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "31.1014",
+   "title": "נוהל הרחקת צוערים וצוערות מהשלמה חילית לקצונה",
+   "reach": 15,
+   "digits_in_block": 2,
+   "source_pdf": "פמ-31-1014-נוהל-הרחקת-צוערים-מהשלמה-חילית-לקצונה-לאתר-הפקודות-עודכן-ביום-27022023.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "32.0402",
+   "title": "שינוי כושר בריאותי - שירות סדיר ושירות מילואים - נוהל",
+   "reach": 15,
+   "digits_in_block": 45,
+   "source_pdf": "פמ-320402-שינוי-כושר-בריאותי.pdf",
+   "recurated_from_image": true,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "35.0808",
+   "title": "חיילים בודדים– עקרונות, זכויות ונהלים– שירות חובה",
+   "reach": 15,
+   "digits_in_block": 2,
+   "source_pdf": "פמ-350808-חיילים-בודדים.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "זכויות-עבודה-מילואים",
+   "title": "זכויות משרתי המילואים בעבודה — הגנה מפיטורים ומהרעת תנאים (מקור אזרחי)",
+   "reach": 13,
+   "digits_in_block": 6,
+   "source_pdf": "זכויות-עבודה-מילואים.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "35.0221",
+   "title": "הפקעת משכורת, גביית קנסות, פיצויים וחובות",
+   "reach": 12,
+   "digits_in_block": 51,
+   "source_pdf": "350221.pdf",
+   "recurated_from_image": true,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "38.0115",
+   "title": "ביקור חיילים חולים ופצועים בשעת רגיעה ובשעת חירום",
+   "reach": 12,
+   "digits_in_block": 18,
+   "source_pdf": "פמ-380115.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "38.0121",
+   "title": "חייל מילואים שנפגע במהלך גיוסו בשעת חירום",
+   "reach": 12,
+   "digits_in_block": 14,
+   "source_pdf": "380121.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "31.0402",
+   "title": "חיילי נח\"ל וחיילי ישיבות ההסדר- שירות ללא תשלום- מעמד, חובות וזכויות",
+   "reach": 11,
+   "digits_in_block": 36,
+   "source_pdf": "פ-מ-31-0402-פורמט-תיקון-נקודתי-ודברי-הסבר-1.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "33.0145",
+   "title": "איסור פגיעה על רקע מיני",
+   "reach": 11,
+   "digits_in_block": 1,
+   "source_pdf": "פמ-330145-איסור-פגיעה-על-רקע-מיני.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "21.0123",
+   "title": "אבטחת רשומות במערכות תקשוב",
+   "reach": 10,
+   "digits_in_block": 13,
+   "source_pdf": "210123.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": true
+  },
+  {
+   "doc_id": "31.0601",
+   "title": "דחיית חלק משירות חובה- נוהל",
+   "reach": 10,
+   "digits_in_block": 1,
+   "source_pdf": "310601.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "32.0408",
+   "title": "כללי המיון הרפואי ליחידה ולמקצוע",
+   "reach": 9,
+   "digits_in_block": 15,
+   "source_pdf": "32-0408.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "35.0210",
+   "title": "חוקת התשלומים למשפחות חיילים בשירות חובה- נוהל הגשת הבקשות ואישורן",
+   "reach": 8,
+   "digits_in_block": 8,
+   "source_pdf": "פמ-350210-תשלומים-למשפחות-חיילים.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "35.0809",
+   "title": "בקשה לשחרור מוקדם, ביטול תב\"ן, דחיית חלק משירות סדיר, פטור משירות ביטחון - טופס 55-1",
+   "reach": 8,
+   "digits_in_block": 6,
+   "source_pdf": "פמ-35-0809-טופס-55-1-שחרור-מוקדם-ופטור.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "31.0308",
+   "title": "בקשה לשינוי שיבוץ - חוגרים בשירות חובה או בשירות מילואים",
+   "reach": 7,
+   "digits_in_block": 2,
+   "source_pdf": "310308.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "31.0508",
+   "title": "חיילים במצב משפטי מיוחד- שירות סדיר ושירות מילואים",
+   "reach": 7,
+   "digits_in_block": 9,
+   "source_pdf": "310508-חיילים-במצב-משפטי-מיוח-1.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "33.0808",
+   "title": "אותות מערכה ואות השירות המבצעי - זכאויות",
+   "reach": 6,
+   "digits_in_block": 45,
+   "source_pdf": "330808.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": true
+  },
+  {
+   "doc_id": "30.0117",
+   "title": "הענקת תעודות הערכה לחייל המשתחרר משירות סדיר",
+   "reach": 5,
+   "digits_in_block": 5,
+   "source_pdf": "300117.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "30.0118",
+   "title": "הענקת תעודות פטור משירות ביטחון כללי",
+   "reach": 5,
+   "digits_in_block": 8,
+   "source_pdf": "300118.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "31.0606",
+   "title": "דחיית שירות בשעת חירום מסיבות אישיות - חיילי מילואים",
+   "reach": 5,
+   "digits_in_block": 22,
+   "source_pdf": "פמ-31-0606-דחיית-שירות-בשעת-חירום-מילואים.pdf",
+   "recurated_from_image": true,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "PM-21.0203",
+   "title": "כניסה למתקנים צבאיים",
+   "reach": 5,
+   "digits_in_block": 1,
+   "source_pdf": "210203.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "PM-33.0401",
+   "title": "דגל המדינה, דגל צה\"ל ותמונות אישים",
+   "reach": 5,
+   "digits_in_block": 15,
+   "source_pdf": "330401.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": true
+  },
+  {
+   "doc_id": "3.0110",
+   "title": "תגמול נוסף לחיילי מילואים",
+   "reach": 4,
+   "digits_in_block": 108,
+   "source_pdf": "הפע-חיילי מילואים – תגמול נוסף30110.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "31.0202",
+   "title": "התנדבות לשירות קבע- חיילים בשירות חובה ובשירות מילואים",
+   "reach": 4,
+   "digits_in_block": 30,
+   "source_pdf": "310202.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "31.0206",
+   "title": "יתרת שירות או תקופת שירות הנדרשת כתנאי להכשרה, לקורס, ללימודים או לליווי פרוייקטים בחו\"ל- מלש\"ב, חייל בשירות סדיר ועובד צה\"ל",
+   "reach": 4,
+   "digits_in_block": 19,
+   "source_pdf": "310206.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "33.0144",
+   "title": "נזקים לגוף ולרכוש- טיפול בתביעות, נוהל דיווח וחקירה",
+   "reach": 4,
+   "digits_in_block": 5,
+   "source_pdf": "330144.pdf",
+   "recurated_from_image": true,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "36.0320",
+   "title": "העלאה בתוספת מקצועית- שירות קבע",
+   "reach": 4,
+   "digits_in_block": 23,
+   "source_pdf": "360320.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "37.0102",
+   "title": "השכלה לחיילים בצה\"ל",
+   "reach": 4,
+   "digits_in_block": 51,
+   "source_pdf": "פמ-370102-השכלה-לחיילים.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "PM-32.0213",
+   "title": "דרגות ייצוג- שירות סדיר ושירות מילואים- נהלים",
+   "reach": 4,
+   "digits_in_block": 6,
+   "source_pdf": "320213.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "33.0915",
+   "title": "שבועת אמונים לצה\"ל וחלוקת נשק לטירונים",
+   "reach": 3,
+   "digits_in_block": 2,
+   "source_pdf": "330915.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "35.0204",
+   "title": "מפרעת חיול - שירות חובה",
+   "reach": 3,
+   "digits_in_block": 6,
+   "source_pdf": "350204.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "36.0504",
+   "title": "השתתפות בהוצאות של חיילים, שילדיהם לומדים בגני ילדים טרום חובה",
+   "reach": 3,
+   "digits_in_block": 12,
+   "source_pdf": "360504x.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": true
+  },
+  {
+   "doc_id": "61.0106",
+   "title": "ביקורת מחלות מדבקות",
+   "reach": 3,
+   "digits_in_block": 3,
+   "source_pdf": "610106.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "PM-33.0332",
+   "title": "הודעה על חקירות ועבירות ליחידות, למפקדות ממונות ול-חמ\"ה\"ס או של\"ר",
+   "reach": 3,
+   "digits_in_block": 1,
+   "source_pdf": "330332.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "33.1112",
+   "title": "כלי רכב- עצירה והחזקה ע\"י המשטרה הצבאית",
+   "reach": 2,
+   "digits_in_block": 3,
+   "source_pdf": "331112.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "PM-33.0917",
+   "title": "יום הזיכרון לשואה ולגבורה",
+   "reach": 2,
+   "digits_in_block": 11,
+   "source_pdf": "330917.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": true
+  },
+  {
+   "doc_id": "21.0104",
+   "title": "הצהרה לשמירת סודיות",
+   "reach": 1,
+   "digits_in_block": 1,
+   "source_pdf": "210104.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "31.0317",
+   "title": "הליכי מיון ושיבוץ לתפקיד רגיש",
+   "reach": 1,
+   "digits_in_block": 1,
+   "source_pdf": "310317x.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "31.0407",
+   "title": "חיילי נח\"ל או חיילי ישיבות ההסדר בשירות ללא תשלום - הפסקת השירות ללא תשלום ובקשות העברה ממשק למשק או ממוסד למוסד",
+   "reach": 1,
+   "digits_in_block": 12,
+   "source_pdf": "310407.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "31.0830",
+   "title": "גיוס ציוד של חיילי מילואים על ידי צה\"ל",
+   "reach": 1,
+   "digits_in_block": 8,
+   "source_pdf": "310830.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "31.0831",
+   "title": "הפעלת נהגי אוטובוסים בעת גיוס חירום",
+   "reach": 1,
+   "digits_in_block": 2,
+   "source_pdf": "310831.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "32.0101",
+   "title": "חוות דעת מפקד - קצינים ונגדים",
+   "reach": 1,
+   "digits_in_block": 1,
+   "source_pdf": "320101.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "35.0219",
+   "title": "השלמת תגמולים ושכר לחיילים שגויסו לשירות מילואים תוך 32 יום ממועד שחרורם משירות סדיר",
+   "reach": 1,
+   "digits_in_block": 8,
+   "source_pdf": "350219.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "36.0301",
+   "title": "תוספות תשלום - שירות סדיר - תוספת פעילות ב- 3 רמות",
+   "reach": 1,
+   "digits_in_block": 12,
+   "source_pdf": "360301.pdf",
+   "recurated_from_image": true,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "36.0507",
+   "title": "העברה בין שירות הקבע בצה\"ל ושירות המדינה",
+   "reach": 1,
+   "digits_in_block": 2,
+   "source_pdf": "360507.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "36.0511",
+   "title": "משפחות חיילים בשירות קבע - טיפול שיניים",
+   "reach": 1,
+   "digits_in_block": 7,
+   "source_pdf": "פמ-360511-טיפול-שיניים-משפחות-קבע.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "36.0521",
+   "title": "הוצאות נסיעה- חיילים בשירות קבע",
+   "reach": 1,
+   "digits_in_block": 15,
+   "source_pdf": "360521.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "38.0105",
+   "title": "נוהל טיפול בחללים בשעת חירום",
+   "reach": 1,
+   "digits_in_block": 41,
+   "source_pdf": "380105.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "38.0108",
+   "title": "שבויים - שבויי מלחמה מכוחותינו - חובות וזכויות",
+   "reach": 1,
+   "digits_in_block": 19,
+   "source_pdf": "380108.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "21.0211",
+   "title": "העסקת עובדים אזרחים בעבודות בינוי קבלניות ואחזקת בינוי במיתקנים בטחוניים צבאיים",
+   "reach": 0,
+   "digits_in_block": 5,
+   "source_pdf": "210211.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "31.0214",
+   "title": "שמירת המרכיב האיכותי של הקצונה הקרבית לשירות הקבע בצה\"ל – תוכנית \"אופק\"",
+   "reach": 0,
+   "digits_in_block": 3,
+   "source_pdf": "310214x.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "31.0404",
+   "title": "חיילי נח\"ל וחיילי ישיבות הסדר- העברה למעמד של שירות ללא תשלום",
+   "reach": 0,
+   "digits_in_block": 5,
+   "source_pdf": "310404.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "31.0409",
+   "title": "חוזר מס 001-ב01 - שירות ללא תשלום (של\"ת)",
+   "reach": 0,
+   "digits_in_block": 1,
+   "source_pdf": "310409.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "31.0504",
+   "title": "בתי סוהר ומחנות מעצר צבאיים- הצבה וסיפוח- שירות סדיר ושירות מילואים",
+   "reach": 0,
+   "digits_in_block": 17,
+   "source_pdf": "310504.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "31.0519",
+   "title": "חברי גרעיני נח\"ל להדרכה בתנועות נוער",
+   "reach": 0,
+   "digits_in_block": 2,
+   "source_pdf": "310519.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "31.0818",
+   "title": "הפעלת חיילי מילואים כנהגי מוניות בתנאי שכירות או כמגויסים לצורך הפצת צווי קריאה בשעת חירום",
+   "reach": 0,
+   "digits_in_block": 10,
+   "source_pdf": "310818x.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "32.0314",
+   "title": "נגדים - תנאים להעלאה בדרגה",
+   "reach": 0,
+   "digits_in_block": 36,
+   "source_pdf": "320314x.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": true
+  },
+  {
+   "doc_id": "32.0316",
+   "title": "חוגרים בתפקידי קצינים",
+   "reach": 0,
+   "digits_in_block": 9,
+   "source_pdf": "320316.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "33.0306",
+   "title": "העברת אסירים לבדיקה, טיפול או אשפוז בבתי חולים לחולי נפש",
+   "reach": 0,
+   "digits_in_block": 4,
+   "source_pdf": "330306.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "33.0909",
+   "title": "טקסים וכנסים - נוהל, תקציבים, ארגון והזמנות",
+   "reach": 0,
+   "digits_in_block": 2,
+   "source_pdf": "330909.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "33.1001",
+   "title": "בית-דין צבאי לערעורים - ערעור על פסק-דין",
+   "reach": 0,
+   "digits_in_block": 4,
+   "source_pdf": "331001.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "35.0105",
+   "title": "מדורי יחת\"שים איזוריים",
+   "reach": 0,
+   "digits_in_block": 12,
+   "source_pdf": "350105.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "35.0115",
+   "title": "כספים- קרן יחידה והוצאות מותרות, ניהול, החזקה וביטול",
+   "reach": 0,
+   "digits_in_block": 6,
+   "source_pdf": "350115.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "36.0105",
+   "title": "דירוג שכר קצינים הנדסאים",
+   "reach": 0,
+   "digits_in_block": 8,
+   "source_pdf": "360105.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "36.0107",
+   "title": "שירות קבע - תוספת יוקר",
+   "reach": 0,
+   "digits_in_block": 2,
+   "source_pdf": "360107.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "36.0204",
+   "title": "חבר משרתי הקבע והגמלאים בע\"מ",
+   "reach": 0,
+   "digits_in_block": 1,
+   "source_pdf": "360204.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "36.0312",
+   "title": "שירות קבע, תוספת מקצועית עבור הכשרה צבאית - קצינים",
+   "reach": 0,
+   "digits_in_block": 4,
+   "source_pdf": "360312.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "36.0313",
+   "title": "שירות קבע- תוספת צבא קבע",
+   "reach": 0,
+   "digits_in_block": 5,
+   "source_pdf": "360313.pdf",
+   "recurated_from_image": true,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "36.0314",
+   "title": "שירות קבע - תוספת דריכות מבצעית",
+   "reach": 0,
+   "digits_in_block": 2,
+   "source_pdf": "360314.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "36.0505",
+   "title": "דיור צבאי",
+   "reach": 0,
+   "digits_in_block": 6,
+   "source_pdf": "360505.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": true
+  },
+  {
+   "doc_id": "36.0515",
+   "title": "הוצאות כלכלה בתפקיד - חייל בשירות קבע",
+   "reach": 0,
+   "digits_in_block": 11,
+   "source_pdf": "360515.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "36.0520",
+   "title": "שכר חיילים בשירות קבע- החזרת דמי אגרת רישיון",
+   "reach": 0,
+   "digits_in_block": 11,
+   "source_pdf": "360520.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "36.0525",
+   "title": "השתתפות צה\"ל בהוצאות קייטנה לילדי חיילים בשירות קבע",
+   "reach": 0,
+   "digits_in_block": 8,
+   "source_pdf": "360525.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "61.0110",
+   "title": "בטיחות בעבודה- סמכויות פיקוח",
+   "reach": 0,
+   "digits_in_block": 2,
+   "source_pdf": "610110.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  },
+  {
+   "doc_id": "61.0118",
+   "title": "בדיקה רפואית תקופתית לחיילים בשירות קבע",
+   "reach": 0,
+   "digits_in_block": 4,
+   "source_pdf": "610118.pdf",
+   "recurated_from_image": false,
+   "in_v161_wrong_list": false
+  }
+ ]
+}
