@@ -1,0 +1,1246 @@
+{
+ "2.0101": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "21.0104": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "21.0106": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "21.0113": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "21.0120": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "21.0123": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "21.0201": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "21.0210": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "21.0211": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "21.0305": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "21.0401": {
+  "low_support": 1,
+  "entity_misses": 1
+ },
+ "3.0110": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "3.0501": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "3.0502": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "30.0106": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "30.0117": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "30.0118": {
+  "low_support": 1,
+  "entity_misses": 1
+ },
+ "30.0401": {
+  "low_support": 1,
+  "entity_misses": 1
+ },
+ "30.0403": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "30.0408": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "30.0413": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "30.0603": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "31.0103": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "31.0104": {
+  "low_support": 3,
+  "entity_misses": 0
+ },
+ "31.0106": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "31.0108": {
+  "low_support": 3,
+  "entity_misses": 0
+ },
+ "31.0109": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "31.0116": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "31.0117": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "31.0201": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "31.0202": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "31.0203": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "31.0205": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "31.0206": {
+  "low_support": 2,
+  "entity_misses": 1
+ },
+ "31.0207": {
+  "low_support": 5,
+  "entity_misses": 0
+ },
+ "31.0214": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "31.0215": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "31.0252": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "31.0308": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "31.0317": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "31.0318": {
+  "low_support": 1,
+  "entity_misses": 1
+ },
+ "31.0402": {
+  "low_support": 1,
+  "entity_misses": 3
+ },
+ "31.0404": {
+  "low_support": 0,
+  "entity_misses": 1
+ },
+ "31.0405": {
+  "low_support": 1,
+  "entity_misses": 1
+ },
+ "31.0407": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "31.0409": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "31.0503": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "31.0504": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "31.0507": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "31.0508": {
+  "low_support": 0,
+  "entity_misses": 1
+ },
+ "31.0513": {
+  "low_support": 1,
+  "entity_misses": 1
+ },
+ "31.0515": {
+  "low_support": 7,
+  "entity_misses": 0
+ },
+ "31.0517": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "31.0519": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "31.0521": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "31.0601": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "31.0603": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "31.0605": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "31.0606": {
+  "low_support": 1,
+  "entity_misses": 2
+ },
+ "31.0608": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "31.0609": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "31.0701": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "31.0703": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "31.0818": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "31.0823": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "31.0830": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "31.0831": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "31.0901": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "31.1001": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "31.1012": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "31.1014": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "32.0101": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "32.0201": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "32.0202": {
+  "low_support": 4,
+  "entity_misses": 0
+ },
+ "32.0207": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "32.0214": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "32.0215": {
+  "low_support": 1,
+  "entity_misses": 2
+ },
+ "32.0220": {
+  "low_support": 3,
+  "entity_misses": 0
+ },
+ "32.0221": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "32.0222": {
+  "low_support": 0,
+  "entity_misses": 1
+ },
+ "32.0223": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "32.0241": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "32.0250": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "32.0307": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "32.0312": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "32.0314": {
+  "low_support": 1,
+  "entity_misses": 1
+ },
+ "32.0315": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "32.0316": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "32.0401": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "32.0402": {
+  "low_support": 1,
+  "entity_misses": 1
+ },
+ "32.0408": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "32.0422": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "32.0501": {
+  "low_support": 4,
+  "entity_misses": 0
+ },
+ "32.0502": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "32.0509": {
+  "low_support": 7,
+  "entity_misses": 0
+ },
+ "33-05-01": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "33.0111": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "33.0114": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "33.0115": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "33.0117": {
+  "low_support": 4,
+  "entity_misses": 0
+ },
+ "33.0120": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "33.0126": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "33.0133": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "33.0144": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "33.0145": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "33.0146": {
+  "low_support": 4,
+  "entity_misses": 2
+ },
+ "33.0147": {
+  "low_support": 0,
+  "entity_misses": 1
+ },
+ "33.0149": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "33.0160": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "33.0201": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "33.0209": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "33.0219": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "33.0220": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "33.0304": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "33.0306": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "33.0314": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "33.0321": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "33.0325": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "33.0334": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "33.0336": {
+  "low_support": 0,
+  "entity_misses": 1
+ },
+ "33.0350": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "33.0351": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "33.0501": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "33.0807": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "33.0808": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "33.0909": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "33.0911": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "33.0913": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "33.0914": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "33.0915": {
+  "low_support": 0,
+  "entity_misses": 1
+ },
+ "33.1001": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "33.1010": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "33.1104": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "33.1112": {
+  "low_support": 9,
+  "entity_misses": 0
+ },
+ "33.1125": {
+  "low_support": 2,
+  "entity_misses": 1
+ },
+ "35.0102": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "35.0105": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "35.0107": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "35.0108": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "35.0111": {
+  "low_support": 2,
+  "entity_misses": 6
+ },
+ "35.0115": {
+  "low_support": 3,
+  "entity_misses": 0
+ },
+ "35.0123": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "35.0201": {
+  "low_support": 1,
+  "entity_misses": 1
+ },
+ "35.0202": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "35.0203": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "35.0204": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "35.0205": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "35.0206": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "35.0209": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "35.0210": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "35.0211": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "35.0217": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "35.0218": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "35.0219": {
+  "low_support": 2,
+  "entity_misses": 1
+ },
+ "35.0221": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "35.0222": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "35.0223": {
+  "low_support": 2,
+  "entity_misses": 1
+ },
+ "35.0227": {
+  "low_support": 0,
+  "entity_misses": 1
+ },
+ "35.0228": {
+  "low_support": 3,
+  "entity_misses": 0
+ },
+ "35.0232": {
+  "low_support": 6,
+  "entity_misses": 0
+ },
+ "35.0233": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "35.0234": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "35.0306": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "35.0307": {
+  "low_support": 0,
+  "entity_misses": 1
+ },
+ "35.0310": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "35.0313": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "35.0314": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "35.0315": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "35.0408": {
+  "low_support": 3,
+  "entity_misses": 0
+ },
+ "35.0501": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "35.0504": {
+  "low_support": 4,
+  "entity_misses": 0
+ },
+ "35.0802": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "35.0803": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "35.0804": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "35.0805": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "35.0807": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "35.0808": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "35.0809": {
+  "low_support": 0,
+  "entity_misses": 1
+ },
+ "35.0810": {
+  "low_support": 5,
+  "entity_misses": 0
+ },
+ "35.0814": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "35.0818": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "35.0822": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "36.0103": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "36.0104": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "36.0105": {
+  "low_support": 1,
+  "entity_misses": 1
+ },
+ "36.0106": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "36.0107": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "36.0109": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "36.0110": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "36.0113": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "36.0204": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "36.0205": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "36.0207": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "36.0209": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "36.0218": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "36.0301": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "36.0302": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "36.0303": {
+  "low_support": 3,
+  "entity_misses": 0
+ },
+ "36.0304": {
+  "low_support": 0,
+  "entity_misses": 1
+ },
+ "36.0306": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "36.0308": {
+  "low_support": 3,
+  "entity_misses": 0
+ },
+ "36.0309": {
+  "low_support": 6,
+  "entity_misses": 0
+ },
+ "36.0312": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "36.0313": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "36.0314": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "36.0315": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "36.0319": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "36.0320": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "36.0322": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "36.0401": {
+  "low_support": 0,
+  "entity_misses": 1
+ },
+ "36.0406": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "36.0412": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "36.0413": {
+  "low_support": 1,
+  "entity_misses": 1
+ },
+ "36.0504": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "36.0505": {
+  "low_support": 1,
+  "entity_misses": 1
+ },
+ "36.0507": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "36.0511": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "36.0513": {
+  "low_support": 0,
+  "entity_misses": 1
+ },
+ "36.0515": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "36.0520": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "36.0521": {
+  "low_support": 1,
+  "entity_misses": 1
+ },
+ "36.0525": {
+  "low_support": 1,
+  "entity_misses": 1
+ },
+ "36.0527": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "36.0528": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "36.0530": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "37.0102": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "38.0101": {
+  "low_support": 0,
+  "entity_misses": 1
+ },
+ "38.0102": {
+  "low_support": 1,
+  "entity_misses": 1
+ },
+ "38.0103": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "38.0105": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "38.0108": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "38.0109": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "38.0112": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "38.0115": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "38.0116": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "38.0117": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "38.0118": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "38.0120": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "38.0121": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "38.0122": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "38.0123": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "38.0124": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "50.0204": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "50.0302": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "50.0303": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "50.0405": {
+  "low_support": 3,
+  "entity_misses": 1
+ },
+ "56.0131": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "58.0101": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "58.0201": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "58.0202": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "58.0204": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "58.0205": {
+  "low_support": 0,
+  "entity_misses": 1
+ },
+ "58.0209": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "58.0214": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "58.0217": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "58.0301": {
+  "low_support": 1,
+  "entity_misses": 1
+ },
+ "58.0306": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "61.0104": {
+  "low_support": 1,
+  "entity_misses": 2
+ },
+ "61.0105": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "61.0106": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "61.0108": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "61.0109": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "61.0110": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "61.0113": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "61.0117": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "61.0118": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "8.0101": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "CHOK-SHIPUT-1955": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "FOI-FOOD-2025": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "HKA-30-07-01": {
+  "low_support": 0,
+  "entity_misses": 1
+ },
+ "HKA-31-08-01": {
+  "low_support": 0,
+  "entity_misses": 23
+ },
+ "HKA-32-02-10": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "HKA-32-02-27": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "HKA-32-03-10": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "HKA-33-05-01-S5": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "KARPAR-302.006": {
+  "low_support": 0,
+  "entity_misses": 1
+ },
+ "KARPAR-701.001": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "PM-21.0203": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "PM-31.0213": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "PM-31.0251": {
+  "low_support": 4,
+  "entity_misses": 0
+ },
+ "PM-32.0213": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "PM-33.0109": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "PM-33.0112": {
+  "low_support": 1,
+  "entity_misses": 2
+ },
+ "PM-33.0113": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "PM-33.0119": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "PM-33.0136": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "PM-33.0137": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "PM-33.0143": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "PM-33.0161": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "PM-33.0202": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "PM-33.0207": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "PM-33.0209": {
+  "low_support": 2,
+  "entity_misses": 1
+ },
+ "PM-33.0213": {
+  "low_support": 2,
+  "entity_misses": 1
+ },
+ "PM-33.0302": {
+  "low_support": 5,
+  "entity_misses": 1
+ },
+ "PM-33.0307": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "PM-33.0309": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "PM-33.0316": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "PM-33.0332": {
+  "low_support": 1,
+  "entity_misses": 1
+ },
+ "PM-33.0333": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "PM-33.0342": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "PM-33.0352": {
+  "low_support": 0,
+  "entity_misses": 2
+ },
+ "PM-33.0401": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "PM-33.0901": {
+  "low_support": 1,
+  "entity_misses": 0
+ },
+ "PM-33.0917": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "PM-34.0101": {
+  "low_support": 2,
+  "entity_misses": 10
+ },
+ "PM-34.0205": {
+  "low_support": 2,
+  "entity_misses": 0
+ },
+ "PM-35.0402": {
+  "low_support": 1,
+  "entity_misses": 3
+ },
+ "זכויות-סטודנטים-מילואים": {
+  "low_support": 0,
+  "entity_misses": 1
+ },
+ "זכויות-עבודה-מילואים": {
+  "low_support": 8,
+  "entity_misses": 1
+ },
+ "חוק-קליטת-חיילים": {
+  "low_support": 0,
+  "entity_misses": 0
+ },
+ "שוברי-נופש-מילואים": {
+  "low_support": 0,
+  "entity_misses": 1
+ }
+}
