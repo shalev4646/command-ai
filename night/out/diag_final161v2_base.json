@@ -1,0 +1,197 @@
+{
+ "rs014": {
+  "v2": {
+   "doc": true,
+   "clauses": 1,
+   "clause_hit": [],
+   "words": 4302
+  },
+  "frozen": {
+   "doc": true,
+   "clauses": 1,
+   "clause_hit": [],
+   "words": 3686
+  }
+ },
+ "rs024": {
+  "v2": {
+   "doc": false,
+   "clauses": 0,
+   "clause_hit": [],
+   "words": 2691
+  },
+  "frozen": {
+   "doc": true,
+   "clauses": 3,
+   "clause_hit": [],
+   "words": 3233
+  }
+ },
+ "rs054": {
+  "v2": {
+   "doc": true,
+   "clauses": 5,
+   "clause_hit": [],
+   "words": 3309
+  },
+  "frozen": {
+   "doc": true,
+   "clauses": 3,
+   "clause_hit": [],
+   "words": 3808
+  }
+ },
+ "rs059": {
+  "v2": {
+   "doc": false,
+   "clauses": 0,
+   "clause_hit": [],
+   "words": 3237
+  },
+  "frozen": {
+   "doc": false,
+   "clauses": 0,
+   "clause_hit": [],
+   "words": 3346
+  }
+ },
+ "rs067": {
+  "v2": {
+   "doc": true,
+   "clauses": 1,
+   "clause_hit": [],
+   "words": 3897
+  },
+  "frozen": {
+   "doc": true,
+   "clauses": 7,
+   "clause_hit": [
+    "אילו מסמכים צריכים להיות ברשותי לפני שאני משתחרר?"
+   ],
+   "words": 3305
+  }
+ },
+ "rs070": {
+  "v2": {
+   "doc": true,
+   "clauses": 6,
+   "clause_hit": [],
+   "words": 2382
+  },
+  "frozen": {
+   "doc": true,
+   "clauses": 6,
+   "clause_hit": [],
+   "words": 2508
+  }
+ },
+ "rs071": {
+  "v2": {
+   "doc": true,
+   "clauses": 3,
+   "clause_hit": [],
+   "words": 3262
+  },
+  "frozen": {
+   "doc": true,
+   "clauses": 3,
+   "clause_hit": [],
+   "words": 2702
+  }
+ },
+ "rs008": {
+  "v2": {
+   "doc": false,
+   "clauses": 0,
+   "clause_hit": [],
+   "words": 3809
+  },
+  "frozen": {
+   "doc": false,
+   "clauses": 0,
+   "clause_hit": [],
+   "words": 3230
+  }
+ },
+ "rs007": {
+  "v2": {
+   "doc": false,
+   "clauses": 0,
+   "clause_hit": [],
+   "words": 6062
+  },
+  "frozen": {
+   "doc": false,
+   "clauses": 0,
+   "clause_hit": [],
+   "words": 3641
+  }
+ },
+ "rs018": {
+  "v2": {
+   "doc": false,
+   "clauses": 0,
+   "clause_hit": [],
+   "words": 3703
+  },
+  "frozen": {
+   "doc": false,
+   "clauses": 0,
+   "clause_hit": [],
+   "words": 3075
+  }
+ },
+ "rs055": {
+  "v2": {
+   "doc": true,
+   "clauses": 19,
+   "clause_hit": [
+    "השלמת שינה לאחר חריגה"
+   ],
+   "words": 3345
+  },
+  "frozen": {
+   "doc": true,
+   "clauses": 19,
+   "clause_hit": [
+    "השלמת שינה לאחר חריגה"
+   ],
+   "words": 3439
+  }
+ },
+ "rs037": {
+  "v2": {
+   "doc": true,
+   "clauses": 1,
+   "clause_hit": [],
+   "words": 2693
+  },
+  "frozen": {
+   "doc": true,
+   "clauses": 5,
+   "clause_hit": [
+    "מתי ואיך מוסרים את התעודה?"
+   ],
+   "words": 3999
+  }
+ },
+ "rs026": {
+  "v2": {
+   "doc": true,
+   "clauses": 1,
+   "clause_hit": [
+    "מי זכאי לקבל את התשלום"
+   ],
+   "words": 4395
+  },
+  "frozen": {
+   "doc": true,
+   "clauses": 5,
+   "clause_hit": [
+    "מי זכאי לקבל את התשלום",
+    "תשלום לאשת חייל בהיריון"
+   ],
+   "words": 2705
+  }
+ }
+}
