@@ -1,0 +1,1030 @@
+{
+ "p1": {
+  "rs055": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 15973,
+   "out": 2371,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs065": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 19320,
+   "out": 2964,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs032": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 18103,
+   "out": 1359,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs063": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 17490,
+   "out": 1707,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs048": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 16047,
+   "out": 627,
+   "cw": 0,
+   "cr": 5459
+  },
+  "rs052": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 18947,
+   "out": 2121,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs016": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 22734,
+   "out": 73,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs044": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 14300,
+   "out": 408,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs008": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 19336,
+   "out": 473,
+   "cw": 0,
+   "cr": 5459
+  },
+  "rs007": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 28279,
+   "out": 1867,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs022": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 19289,
+   "out": 514,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs029": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 20937,
+   "out": 174,
+   "cw": 0,
+   "cr": 5383
+  },
+  "rs034": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 16987,
+   "out": 931,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs000": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 18385,
+   "out": 675,
+   "cw": 5316,
+   "cr": 0
+  },
+  "rs042": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 17733,
+   "out": 796,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs024": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 14052,
+   "out": 372,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs058": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 18832,
+   "out": 1822,
+   "cw": 0,
+   "cr": 5459
+  },
+  "rs060": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 21292,
+   "out": 535,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs049": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 16484,
+   "out": 699,
+   "cw": 0,
+   "cr": 5383
+  },
+  "rs040": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 20203,
+   "out": 647,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs064": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 17881,
+   "out": 1198,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs057": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 18714,
+   "out": 740,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs009": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 24293,
+   "out": 1134,
+   "cw": 0,
+   "cr": 5383
+  },
+  "rs045": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 21869,
+   "out": 1019,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs050": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 11493,
+   "out": 457,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs061": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 14072,
+   "out": 554,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs033": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 11741,
+   "out": 801,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs028": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 17555,
+   "out": 527,
+   "cw": 0,
+   "cr": 5459
+  },
+  "rs026": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 21773,
+   "out": 1272,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs006": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 17682,
+   "out": 823,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs038": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 23334,
+   "out": 531,
+   "cw": 0,
+   "cr": 5459
+  },
+  "rs056": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 14167,
+   "out": 171,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs030": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 23026,
+   "out": 1314,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs010": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 14665,
+   "out": 1257,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs046": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 15736,
+   "out": 1973,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs054": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 18257,
+   "out": 929,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs035": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 15166,
+   "out": 1071,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs013": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 10902,
+   "out": 681,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs020": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 14266,
+   "out": 987,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs066": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 16535,
+   "out": 1043,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs015": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 19593,
+   "out": 1141,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs012": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 21160,
+   "out": 1110,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs014": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 20137,
+   "out": 116,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs011": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 17180,
+   "out": 172,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs025": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 15979,
+   "out": 655,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs031": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 25901,
+   "out": 196,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs051": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 17265,
+   "out": 715,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs067": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 19209,
+   "out": 192,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs036": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 13197,
+   "out": 523,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs023": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 11808,
+   "out": 134,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs001": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 16138,
+   "out": 684,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs053": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 19843,
+   "out": 79,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs019": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 22165,
+   "out": 2349,
+   "cw": 0,
+   "cr": 5383
+  },
+  "rs002": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 17928,
+   "out": 1706,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs062": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 21799,
+   "out": 1654,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs005": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 18758,
+   "out": 1195,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs070": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 12141,
+   "out": 81,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs041": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 19390,
+   "out": 1015,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs021": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 17298,
+   "out": 668,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs039": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 19726,
+   "out": 786,
+   "cw": 5383,
+   "cr": 0
+  },
+  "rs004": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 17029,
+   "out": 192,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs027": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 13180,
+   "out": 148,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs017": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 18544,
+   "out": 576,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs069": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 15391,
+   "out": 1194,
+   "cw": 0,
+   "cr": 5383
+  },
+  "rs068": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 17446,
+   "out": 74,
+   "cw": 0,
+   "cr": 5459
+  },
+  "rs018": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 18323,
+   "out": 370,
+   "cw": 0,
+   "cr": 5459
+  },
+  "rs059": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 16501,
+   "out": 666,
+   "cw": 5383,
+   "cr": 0
+  },
+  "rs043": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 17927,
+   "out": 231,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs003": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 16683,
+   "out": 89,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs037": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 13844,
+   "out": 918,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs071": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 15813,
+   "out": 1565,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs047": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 18698,
+   "out": 1716,
+   "cw": 0,
+   "cr": 5316
+  }
+ },
+ "p2": {
+  "rs008": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 21135,
+   "out": 159,
+   "cw": 0,
+   "cr": 5459
+  },
+  "rs047": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 20743,
+   "out": 2170,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs000": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 19136,
+   "out": 1359,
+   "cw": 5316,
+   "cr": 0
+  },
+  "rs016": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 24803,
+   "out": 547,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs058": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 19036,
+   "out": 608,
+   "cw": 5459,
+   "cr": 0
+  },
+  "rs013": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 13033,
+   "out": 1155,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs038": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 24363,
+   "out": 495,
+   "cw": 0,
+   "cr": 5459
+  },
+  "rs071": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 15570,
+   "out": 1436,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs012": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 22429,
+   "out": 1674,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs056": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 16445,
+   "out": 351,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs049": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 16205,
+   "out": 791,
+   "cw": 0,
+   "cr": 5383
+  },
+  "rs018": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 19137,
+   "out": 496,
+   "cw": 0,
+   "cr": 5459
+  },
+  "rs021": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 20037,
+   "out": 1069,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs044": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 16092,
+   "out": 135,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs028": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 19753,
+   "out": 1227,
+   "cw": 0,
+   "cr": 5459
+  },
+  "rs059": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 18479,
+   "out": 595,
+   "cw": 0,
+   "cr": 5383
+  },
+  "rs014": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 20900,
+   "out": 165,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs024": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 16179,
+   "out": 810,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs040": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 19742,
+   "out": 515,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs041": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 21890,
+   "out": 1690,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs031": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 26002,
+   "out": 186,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs052": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 21381,
+   "out": 1747,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs039": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 19386,
+   "out": 972,
+   "cw": 0,
+   "cr": 5383
+  },
+  "rs055": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 15962,
+   "out": 175,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs001": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 18300,
+   "out": 179,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs054": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 17699,
+   "out": 138,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs011": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 20143,
+   "out": 192,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs057": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 20661,
+   "out": 569,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs005": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 21369,
+   "out": 1210,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs032": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 20839,
+   "out": 768,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs048": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 18044,
+   "out": 527,
+   "cw": 0,
+   "cr": 5459
+  },
+  "rs004": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 17163,
+   "out": 65,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs065": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 20612,
+   "out": 1955,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs003": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 18371,
+   "out": 86,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs002": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 17077,
+   "out": 754,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs023": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 13770,
+   "out": 1588,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs043": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 17510,
+   "out": 165,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs019": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 23098,
+   "out": 2376,
+   "cw": 5383,
+   "cr": 0
+  },
+  "rs061": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 13546,
+   "out": 139,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs063": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 18521,
+   "out": 1828,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs036": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 14162,
+   "out": 497,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs064": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 19823,
+   "out": 1205,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs027": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 13262,
+   "out": 762,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs068": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 16789,
+   "out": 78,
+   "cw": 0,
+   "cr": 5459
+  },
+  "rs069": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 17567,
+   "out": 1932,
+   "cw": 0,
+   "cr": 5383
+  },
+  "rs022": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 19471,
+   "out": 675,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs067": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 20917,
+   "out": 393,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs053": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 20988,
+   "out": 92,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs029": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 23450,
+   "out": 777,
+   "cw": 0,
+   "cr": 5383
+  },
+  "rs009": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 26928,
+   "out": 1029,
+   "cw": 5383,
+   "cr": 0
+  },
+  "rs045": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 22002,
+   "out": 1778,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs037": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 14671,
+   "out": 939,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs070": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 14791,
+   "out": 75,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs025": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 18839,
+   "out": 972,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs007": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 28627,
+   "out": 2908,
+   "cw": 0,
+   "cr": 5316
+  },
+  "rs010": {
+   "model": "claude-opus-4-8",
+   "stop": "end_turn",
+   "in": 16829,
+   "out": 1269,
+   "cw": 0,
+   "cr": 5316
+  }
+ }
+}
