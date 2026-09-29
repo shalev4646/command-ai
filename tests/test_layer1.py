@@ -4,6 +4,7 @@ answer parser, and the reach hit rule. No API: the paid calls are never reached 
 
     venv\\Scripts\\python.exe tests\\test_layer1.py
 """
+import json
 import sys
 from pathlib import Path
 
@@ -113,6 +114,20 @@ def test_fulltext_hit_reads_raw_punctuation_and_curated_wording():
     assert R.fulltext_hit(rule, R.runs(rule, loose=True), [raw]), "punctuation of a raw window does not hide the rule"
     other = {"doc_id": "X", "section": "chunk4", "clause": "4", "text": "T\nמסדר הבוקר יתקיים בכל יום"}
     assert not R.fulltext_hit(rule, R.runs(rule, loose=True), [other])
+
+
+def test_a_question_cut_at_an_abbreviation_is_not_parsed():
+    """Pilot 1 (30.09): an ASCII quote inside שמ"פ ended the JSON string and the halves came back as questions."""
+    units = FT[:2]
+    text = json.dumps({"items": [
+        {"n": 1, "questions": ["אני בשמ", "אם בעיה רפואית התחילה אצלי בזמן השמ", "מה מגיע לי?"], "skip": ""},
+        {"n": 2, "questions": ["מתי אני צריך לחזור ליחידה?", "חזרתי באיחור של יום — מה יעשו לי?",
+                               "מי מאשר לי להישאר עוד יום?"], "skip": ""}]}, ensure_ascii=False)
+    got = G.parse(text, units)
+    assert units[0]["uid"] not in got, "a unit with a fragment is a parse failure, never a set of questions"
+    assert units[1]["uid"] in got and len(got[units[1]["uid"]]["questions"]) == 3
+    assert "״" in G.PROMPT_FULLTEXT and "גרשיים" in G.PROMPT_FULLTEXT
+    assert "גרשיים" not in G.PROMPT, "the curated prompt is untouched"
 
 
 if __name__ == "__main__":
