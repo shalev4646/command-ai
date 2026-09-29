@@ -78,6 +78,16 @@ def seen_numbers(defn: dict) -> dict[str, list[str]]:
     return out
 
 
+def stale_clauses(kept: list[dict], section: dict) -> list[str]:
+    """Headings of the def that the kept block already carries with OTHER text. The write-time merge keeps the
+    live clause and skips the def's one with the same heading, so a review fix applied to a corpus that already
+    holds an earlier version of the def would vanish without a sign — 3.0501's C5 fixes on the v163 corpus, caught
+    by hand in v164 (29.09). The same text again is an idempotent re-apply and passes; a replaced block is not in
+    `kept` and is never consulted."""
+    live = {c["number"]: c["text"] for s in kept if s["id"] == section["id"] for c in s.get("clauses") or []}
+    return [c["number"] for c in section["clauses"] if c["number"] in live and live[c["number"]] != c["text"]]
+
+
 def gate(section: dict, raw: str, digit_free: bool, seen: dict[str, list[str]] | None = None
          ) -> tuple[list[str], list[str], list[tuple]]:
     problems, warnings = check(section, raw, digit_free=digit_free)
@@ -123,6 +133,16 @@ def main() -> int:
             safe_print(f"[apply] {did}: not in json_store ({type(e).__name__})"); rc = 1; continue
         doc = json.loads(path.read_text(encoding="utf-8"))
         section, drop, digit_free = section_from(defn)
+        stale = stale_clauses([s for s in doc.get("sections", []) if s["id"] not in drop], section)
+        if stale:
+            safe_print(f"[apply] {did:<11} REFUSED — {len(stale)} clause(s) of the def already in the block with other "
+                       f"text; the merge would keep the live text and drop the def's without a sign:")
+            for n in stale:
+                safe_print(f"          STALE   {n[:90]}")
+            safe_print("          restore the order's block from before the def was first applied (git show <base>:<path>) "
+                       "and apply again, or fix the live clause with its own script (night/v163/fix_live_v163.py)")
+            rc = 1
+            continue
         seen = seen_numbers(defn)
         problems, warnings, misses = gate(section, doc["raw_text"], digit_free, seen)
         # the coverage gate judges the block as it will be served: the kept sections plus this one
