@@ -107,6 +107,22 @@ def test_every_sense_is_grounded_in_the_corpus_docstring_rule():
             assert s["label"], h["term"]
 
 
+def test_yomiyot_is_a_note_only_homonym():
+    # 29.09 (night/stage2/CRITERION.md item ד): home every evening vs a daily wage;
+    # the note names the sense the context settles, both when it does not
+    home = G.term_note("יש לי יומיות ואני ישן בבית, באיזו שעה אני חייב להגיע בבוקר?")
+    pay = G.term_note("כמה כסף יוצא ליומיות במילואים?")
+    both = G.term_note("איך מבקשים יומיות?")
+    assert home.startswith("יומיות = ") and "לינה בבית" in home and "תשלום" not in home
+    assert pay.startswith("יומיות = ") and "תשלום לפי יום" in pay
+    assert "לינה בבית" in both and "תשלום לפי יום" in both and "לפי ההקשר" in both
+    # the orders' own adjective, definite, is not the soldier's noun
+    assert G.term_note("הנסיעות היומיות שלי לבסיס עולות הרבה") == ""
+    # note-only: retrieval never changes, flag on or off
+    with _flags(True, 1):
+        assert G.homonym_expansions("אפשר לקבל יומיות ולישון בבית?") == []
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_") and callable(fn):
