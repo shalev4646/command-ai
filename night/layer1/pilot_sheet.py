@@ -37,9 +37,11 @@ def main() -> int:
     for r in rows:
         by.setdefault(r["uid"], []).append(r)
     qs = echoes = 0
+    fulltext = bool(units) and units[0].get("section") == "fulltext"
     for u in units:
         rs = by.get(u["uid"])
-        print(f"\n== {u['doc_id']} | {u['clause']} [{u['role']}]")
+        tag = f" [{'in a block' if u.get('in_block') else 'only in the text'}]" if fulltext else ""
+        print(f"\n== {u['doc_id']} | {u['clause']} [{u['role']}]{tag}")
         print(f"   {u['text'][:400]}")
         if not rs:
             print("   (not parsed)")
@@ -48,14 +50,16 @@ def main() -> int:
             print(f"   SKIP: {rs[0]['skip']}")
             continue
         for r in rs:
-            e = echo(r["q"], u["clause"])
+            # a full-text rule has no title: the echo is against the rule's own words (CRITERION.md, addendum)
+            e = echo(r["q"], u["text"] if fulltext else u["clause"])
             qs += 1
             echoes += e >= ECHO
             print(f"   {'*' if e >= ECHO else ' '} {r['q']}   (echo {e:.2f})")
     parsed = len(by)
     skipped = sum(1 for rs in by.values() if rs[0]["skip"])
+    kind = "rule" if fulltext else "title"
     print(f"\n[pilot] parsed {parsed}/{len(units)}, skip {skipped}, questions {qs}, "
-          f"title echo >= {ECHO}: {echoes} ({echoes / qs:.0%})" if qs else "\n[pilot] no questions")
+          f"{kind} echo >= {ECHO}: {echoes} ({echoes / qs:.0%})" if qs else "\n[pilot] no questions")
     return 0
 
 
