@@ -273,6 +273,7 @@ def estimate(reqs) -> tuple[int, int, float, float]:
 
 
 _ABBR: set[str] | None = None
+_ABBR_STORE = [STORE]     # the corpus the units are cut from (--store); the abbreviations are read there too
 
 
 def _abbr_prefixes() -> set[str]:
@@ -280,7 +281,7 @@ def _abbr_prefixes() -> set[str]:
     global _ABBR
     if _ABBR is None:
         out: set[str] = set()
-        for p in sorted(STORE.glob("*.json")):
+        for p in sorted(Path(_ABBR_STORE[0]).glob("*.json")):
             raw = json.loads(p.read_text(encoding="utf-8")).get("raw_text") or ""
             out.update(re.findall(r'([א-ת]{1,6})["״][א-ת]{1,2}(?![א-ת])', raw))
         _ABBR = out
@@ -429,11 +430,15 @@ def main() -> int:
     ap.add_argument("--units", choices=["curated", "fulltext", "mixed"], default="curated",
                     help="curated clauses (the first criterion) or every rule of the order's full text")
     ap.add_argument("--source", default=str(SOURCE))
+    ap.add_argument("--store", default=str(STORE),
+                    help="the corpus to cut units from (a read-only copy of the measured main); default: this tree")
     args = ap.parse_args()
 
-    units = (build_units() if args.units == "curated" else
-             build_fulltext_units(source=Path(args.source)) if args.units == "fulltext" else
-             build_mixed_units(source=Path(args.source)))
+    store = Path(args.store)
+    _ABBR_STORE[0] = store
+    units = (build_units(store) if args.units == "curated" else
+             build_fulltext_units(store, Path(args.source)) if args.units == "fulltext" else
+             build_mixed_units(store, Path(args.source)))
     fp = fingerprint(units)
     held = sum(1 for u in units if u["split"] == "held")
     roles = {r: sum(1 for u in units if u["role"] == r) for r in PERSONA}
