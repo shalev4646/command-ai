@@ -60,6 +60,7 @@ BASE_FULL_48 = {"official": 34, "production": 35}                # (ד)
 PASS_48 = 41                                                     # FINAL_RULER_V2 (א): 85% of 48
 FIELDS_OF_AN_ANSWER = ("answer", "sources", "context_words", "sent_user_content", "route", "stop_reason",
                        "stop_details", "refusal_stop", "truncated", "refused_flag", "usage", "model")
+QUESTION_FIELDS = ("id", "q", "clean_q", "role", "band", "persona", "situation", "source", "target_doc", "ugly")
 
 
 def _path(tag: str, suffix: str = "") -> Path:
@@ -96,19 +97,24 @@ def _base_rows(suffix: str) -> dict[str, dict]:
     return {r["id"]: r for r in C.read_jsonl(_path(BASE_TAG, suffix))}
 
 
+def _order() -> list[str]:
+    """The ruler's id order — the only thing read from the ruler file. Wording
+    and role come from the base's recorded rows, so a later edit of the ruler
+    (rs007's role, 29.09) cannot change what the arm delivers or composes."""
+    return [q["id"] for q in FA._questions(BASE_TAG)]
+
+
 def p1_requests() -> tuple[list, list[dict]]:
     """The 72 first-pass requests: the base's recorded user turns, in ruler order."""
     from anthropic.types.message_create_params import MessageCreateParamsNonStreaming
     from anthropic.types.messages.batch_create_params import Request
     base = _base_rows("_p1")
-    qs = FA._questions(BASE_TAG)
-    if set(base) != {q["id"] for q in qs}:
-        raise SystemExit(f"[model_arm] {BASE_TAG} p1 holds {len(base)} rows that are not ruler v2's {len(qs)}")
+    order = _order()
+    if set(base) != set(order):
+        raise SystemExit(f"[model_arm] {BASE_TAG} p1 holds {len(base)} rows that are not the ruler's {len(order)}")
     reqs, meta = [], []
-    for i, q in enumerate(qs):
-        b = base[q["id"]]
-        if b["q"] != q["q"] or b["role"] != q["role"]:
-            raise SystemExit(f"[model_arm] {q['id']}: the recorded question/role is not ruler v2's")
+    for i, qid in enumerate(order):
+        b = base[qid]
         reqs.append(Request(custom_id=f"p{i}", params=MessageCreateParamsNonStreaming(
             **request_params(b["role"], b["sent_user_content"]))))
         meta.append({k: v for k, v in b.items() if k not in ("answer", "truncated", "refused_flag")})
@@ -367,17 +373,18 @@ def cmd_p2(tag: str) -> int:
     out = _path(tag, "_p2")
     if out.exists():
         safe_print(f"[model_arm] {out.name} already on disk — refusing to pay twice."); return 1
-    qs = FA._questions(BASE_TAG)
+    order = _order()
     first = {r["id"]: r for r in C.read_jsonl(_path(tag, "_p1"))}
-    if set(first) != {q["id"] for q in qs}:
-        safe_print(f"[model_arm] first pass has {len(first)} rows, expected {len(qs)} — collect it first."); return 1
+    if set(first) != set(order):
+        safe_print(f"[model_arm] first pass has {len(first)} rows, expected {len(order)} — collect it first."); return 1
     failed = sorted(i for i, r in first.items() if r.get("error"))
     if failed:
         safe_print(f"[model_arm] first pass has failed requests {failed} — resend them before the second pass."); return 1
-    # production: a second search only where the answer declared a gap (app.py)
-    rows = [{**q, "first_answer": first[q["id"]]["answer"]} for q in qs
-            if backend.lacked_from(first[q["id"]].get("answer") or "")]
-    safe_print(f"[model_arm] {tag} p2: {len(rows)} of {len(qs)} first answers declared a gap — flags: {FA._flag_line()}")
+    # production: a second search only where the answer declared a gap (app.py);
+    # the question as the base delivered it (wording and role recorded in p1)
+    rows = [{**{k: first[i][k] for k in QUESTION_FIELDS if k in first[i]}, "first_answer": first[i]["answer"]}
+            for i in order if backend.lacked_from(first[i].get("answer") or "")]
+    safe_print(f"[model_arm] {tag} p2: {len(rows)} of {len(order)} first answers declared a gap — flags: {FA._flag_line()}")
     if not rows:
         C.write_jsonl(out, []); return 0
     ledger = Ledger(C.LEDGER)
@@ -407,7 +414,7 @@ def cmd_grade(tag: str) -> int:
     if not final.exists():
         p1 = {r["id"]: r for r in C.read_jsonl(_path(tag, "_p1"))}
         p2 = {r["id"]: r for r in C.read_jsonl(_path(tag, "_p2"))}
-        rows = final_rows(p1, p2, [q["id"] for q in FA._questions(BASE_TAG)])
+        rows = final_rows(p1, p2, _order())
         C.write_jsonl(final, rows)
         from collections import Counter
         safe_print(f"[model_arm] {final.name}: {len(rows)} rows — kept: {dict(Counter(r['kept'] for r in rows))}")
@@ -431,8 +438,8 @@ def cmd_sheet(tag: str) -> int:
     arm_grades = {r["id"]: r for r in C.read_jsonl(C.OUT / f"grades_grade-{tag}.jsonl")}
     level = lambda g: ((g or {}).get("grade") or {})
     sheet = []
-    for q in FA._questions(BASE_TAG):
-        i, bs, a = q["id"], base_sheet[q["id"]], arm[q["id"]]
+    for i in _order():
+        bs, a, q = base_sheet[i], arm[i], base_p1[i]
         base_choice = production_choice(base_p1[i]["answer"], base_p2.get(i))
         base_prod = base_p2[i]["answer"] if base_choice == "second" else base_p1[i]["answer"]
         sheet.append({

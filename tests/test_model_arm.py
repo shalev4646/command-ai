@@ -69,6 +69,24 @@ def test_p1_requests_are_the_recorded_turns_in_ruler_order():
         assert "answer" not in m and m["sent_user_content"] == base[q["id"]]["sent_user_content"]
 
 
+def test_a_later_ruler_edit_does_not_change_the_delivery():
+    # 29.09: rs007's role is corrected to `reserve` in ruler v2 AFTER final161v2
+    # delivered it as `soldier` — the arm repeats the delivery, so it keeps the
+    # recorded role (system prompt) and wording; only the ruler's id order is read
+    real = M.FA._questions
+    edited = [dict(q, role="reserve", q=q["q"] + " (נוסח חדש)") if q["id"] == "rs007" else q
+              for q in real(M.BASE_TAG)]
+    M.FA._questions = lambda tag="": edited
+    try:
+        reqs, meta = M.p1_requests()
+    finally:
+        M.FA._questions = real
+    base = M._base_rows("_p1")["rs007"]
+    k = [m["id"] for m in meta].index("rs007")
+    assert meta[k]["role"] == base["role"] == "soldier" and meta[k]["q"] == base["q"]
+    assert reqs[k]["params"]["system"][0]["text"] == backend.SYSTEM_PROMPTS.get("soldier", backend.SYSTEM_PROMPT_SOLDIER)
+
+
 def test_the_guard_refuses_a_backend_on_another_model():
     try:
         M._backend()
