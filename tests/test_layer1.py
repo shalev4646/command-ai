@@ -127,7 +127,43 @@ def test_a_question_cut_at_an_abbreviation_is_not_parsed():
     assert units[0]["uid"] not in got, "a unit with a fragment is a parse failure, never a set of questions"
     assert units[1]["uid"] in got and len(got[units[1]["uid"]]["questions"]) == 3
     assert "״" in G.PROMPT_FULLTEXT and "גרשיים" in G.PROMPT_FULLTEXT
-    assert "גרשיים" not in G.PROMPT, "the curated prompt is untouched"
+    assert "גרשיים" in G.PROMPT and "שהסעיף אינו קובע" in G.PROMPT, "pilot 3: the curated prompt carries both fixes"
+
+
+def test_pilot3_reliability_and_the_unit_gate():
+    from night import digits as dg
+    saved = dg.trustworthy
+    try:
+        dg.trustworthy = lambda doc: True
+        ok = {"digits": "text-layer", "paragraphs": [{"text": "חייל רשאי לפנות למפקדו בתוך 30 ימים."}]}
+        assert G.order_reliable({}, ok)
+        assert not G.order_reliable({"ingested_from_text": True}, ok), "OCR of a scan is never reliable"
+        glued = {"digits": "read", "paragraphs": [{"text": " ".join(["המשקה המשכר אסור בבסיס2"] * 10)}]}
+        assert not G.order_reliable({}, glued), "punctuation coded as a digit"
+        dg.trustworthy = lambda doc: False
+        assert not G.order_reliable({}, ok) and G.order_reliable({}, {**ok, "digits": "read"})
+    finally:
+        dg.trustworthy = saved
+    assert G.unit_clean("חייל רשאי לבקש חופשה מיוחדת בכתב")
+    for bad in ("זאת, בתנאי שנתוני החייל מתאימים", "ובפרט לא יחוברו לרשת", "אלא לאחר שיומצא אישור",
+                "לא יחוברו לרשת האינטרנט1 מערכות", "2 ה2 אורך תקופת הלימודים", "• יתר סעיפי ההק״א"):
+        assert not G.unit_clean(bad), bad
+
+
+def test_pilot3_mixed_units_and_the_new_sample():
+    src = G.SOURCE if G.SOURCE.exists() else Path("D:/_levers_wt/night/out/source_fix")
+    units = G.build_mixed_units(source=src)
+    kinds: dict[str, set] = {}
+    for u in units:
+        kinds.setdefault(u["doc_id"], set()).add(u["section"] == "fulltext")
+    assert all(len(v) == 1 for v in kinds.values()), "an order is never both full text and curated"
+    assert any(u["section"] == "fulltext" for u in units) and any(u["section"] != "fulltext" for u in units)
+    assert all(G.unit_clean(u["text"]) for u in units if u["section"] == "fulltext")
+    seen = set(json.loads(G.PILOT12.read_text(encoding="utf-8")))
+    assert len(seen) == 40
+    a, b = G.pick_pilot(units, 40, seen), G.pick_pilot(list(reversed(units)), 40, seen)
+    assert [u["uid"] for u in a] == [u["uid"] for u in b], "fixed by hash, not by the order of the list"
+    assert len(a) == 40 and all(u["split"] == "dev" and u["uid"] not in seen for u in a)
 
 
 if __name__ == "__main__":

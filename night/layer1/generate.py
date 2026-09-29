@@ -57,9 +57,9 @@ PROMPT = """אתה כותב שאלות בדיקה לעוזר דיגיטלי שע
 
 כללים:
 1. שפה של השואל, לא של הפקודה: קצר, ישיר, בגוף ראשון, מותר סלנג וקיצורים צבאיים מקובלים. אל תצטט את הסעיף ואל תעתיק או תנסח מחדש את הכותרת שלו.
-2. אל תזכיר מספרי פקודות או סעיפים.
+2. אל תזכיר מספרי פקודות או סעיפים. בראשי-תיבות כתוב גרשיים עבריים (״) ולא מירכאות (") — צה״ל, שמ״פ, רמטכ״ל, אכ״א.
 3. שלוש שאלות בשלושה סגנונות: (א) שאלה קצרה כמו בהודעה; (ב) מצב קצר שקרה לשואל, שנגמר בשאלה; (ג) שאלה על תנאי, חריג, סכום, מועד או מי מאשר — לפי מה שהסעיף באמת קובע.
-4. כל שאלה חייבת להיות כזאת שהסעיף הזה עונה עליה, ולא רק שאלה על נושא דומה.
+4. כל שאלה חייבת להיות כזאת שהסעיף הזה עונה עליה — לא רק שאלה על נושא דומה, ולא פרט שהסעיף אינו קובע (סכום, מועד, מידה או תנאי שאינם כתובים בו).
 5. אם שום שואל כזה לא היה שואל על הסעיף (נוהל פנימי, טופס, הגדרה טכנית) — החזר עבורו skip עם סיבה קצרה, ורשימת שאלות ריקה. אחרת skip הוא מחרוזת ריקה.
 
 הסעיפים:
@@ -130,7 +130,8 @@ def build_units(store: Path = STORE) -> list[dict]:
                 if key in units and len(units[key]["text"]) >= len(text):
                     continue
                 units[key] = {"doc_id": did, "order_title": d.get("title") or "", "clause": clause,
-                              "text": text, "section": s.get("id") or "", "role": _role(d.get("roles") or [])}
+                              "text": text, "context": text, "section": s.get("id") or "",
+                              "role": _role(d.get("roles") or [])}
     out = []
     for (did, clause), u in sorted(units.items()):
         h = int(hashlib.sha1(f"{did}|{clause}".encode("utf-8")).hexdigest(), 16)
@@ -185,6 +186,56 @@ def build_fulltext_units(store: Path = STORE, source: Path = SOURCE) -> list[dic
         u["held_q"] = (h // HELD_MOD) % 3
         out.append(u)
     return out
+
+
+# ── Pilot 3 (30.09): units only from text that can be trusted (night/layer1/CRITERION.md, pilot 3) ──────
+PILOT_SALT = "pilot3-20260930"
+PILOT12 = ROOT / "night" / "layer1" / "pilot12_uids.json"   # the 40 rules pilots 1-2 were written on
+_WORD_END_DIGIT = re.compile(r"[\u05D0-\u05EA]{2,}\d(?=[\s,;:)]|$)", re.M)
+_CONT = re.compile(r"^(?:ו[א-ת]+|אלא|זאת|לבין|או|כאמור|לרבות|בתנאי|למעט|אך|וכן)(?=[\s,])")
+_GLUED = re.compile(r"[א-ת]\d|\d[א-ת]")
+
+
+def order_reliable(doc: dict, source: dict) -> bool:
+    """An order's full text may seed questions only when its digits are vouched for (read from the page image,
+    or night/digits.py's year/numbering test), no punctuation is coded as a digit (57 orders), and it is not
+    OCR of a scan (15). Pilot 2 (30.09): about half its defects came from rules whose text was garbled —
+    the question writer filled the gaps by invention."""
+    from night import digits as dg
+    if doc.get("ingested_from_text"):
+        return False
+    text = "\n".join(str(x.get("text") or "") for x in source.get("paragraphs") or [])
+    if len(_WORD_END_DIGIT.findall(text)) * 1000 / max(len(text.split()), 1) >= 5:
+        return False
+    return source.get("digits") == "read" or bool(doc.get("digits_fixed")) or dg.trustworthy(doc)
+
+
+def unit_clean(text: str) -> bool:
+    """A rule of a reliable order is still left out when it starts mid-sentence (a conjunction, „זאת, בתנאי ש…",
+    „אלא לאחר…") or glues a digit to a letter („האינטרנט1", „2 ה2") — the pieces pilot 2 invented around."""
+    t = (text or "").strip()
+    return bool(re.match(r"[א-ת]", t)) and not _CONT.match(t) and not _GLUED.search(t)
+
+
+def build_mixed_units(store: Path = STORE, source: Path = SOURCE) -> list[dict]:
+    """Rules of the full text for reliable orders (that pass unit_clean); the curated clauses for every other
+    order — so a question is always written from text that can be trusted. One order is never both."""
+    reliable: dict[str, bool] = {}
+    for p in sorted(Path(store).glob("*.json")):
+        d = json.loads(p.read_text(encoding="utf-8"))
+        sp = Path(source) / f"{d.get('document_id')}.json"
+        rec = json.loads(sp.read_text(encoding="utf-8")) if sp.exists() else {
+            "digits": "raw", "paragraphs": [{"text": ln} for ln in (d.get("raw_text") or "").split("\n")]}
+        reliable[d.get("document_id")] = order_reliable(d, rec)
+    ft = [u for u in build_fulltext_units(store, source) if reliable.get(u["doc_id"]) and unit_clean(u["text"])]
+    cur = [u for u in build_units(store) if not reliable.get(u["doc_id"])]
+    return sorted(ft + cur, key=lambda u: (u["doc_id"], u["uid"]))
+
+
+def pick_pilot(units: list[dict], n: int, exclude: set[str], salt: str = PILOT_SALT) -> list[dict]:
+    """n dev units, never one of `exclude`, in the order of sha1(salt|uid) — fixed before any run."""
+    pool = [u for u in units if u["split"] == "dev" and u["uid"] not in exclude]
+    return sorted(pool, key=lambda u: hashlib.sha1(f"{salt}|{u['uid']}".encode("utf-8")).hexdigest())[:n]
 
 
 def fingerprint(units: list[dict]) -> str:
@@ -375,12 +426,14 @@ def main() -> int:
     g.add_argument("--dry", action="store_true")
     g.add_argument("--pilot", type=int, metavar="N")
     g.add_argument("--full", action="store_true")
-    ap.add_argument("--units", choices=["curated", "fulltext"], default="curated",
+    ap.add_argument("--units", choices=["curated", "fulltext", "mixed"], default="curated",
                     help="curated clauses (the first criterion) or every rule of the order's full text")
     ap.add_argument("--source", default=str(SOURCE))
     args = ap.parse_args()
 
-    units = build_units() if args.units == "curated" else build_fulltext_units(source=Path(args.source))
+    units = (build_units() if args.units == "curated" else
+             build_fulltext_units(source=Path(args.source)) if args.units == "fulltext" else
+             build_mixed_units(source=Path(args.source)))
     fp = fingerprint(units)
     held = sum(1 for u in units if u["split"] == "held")
     roles = {r: sum(1 for u in units if u["role"] == r) for r in PERSONA}
@@ -393,8 +446,16 @@ def main() -> int:
                    f"soldier-worded {sol} ({sum(1 for u in units if u['soldier'] and not u['in_block'])} "
                    f"of them only in the text)")
 
-    prefix = "layer1" if args.units == "curated" else "layer1ft"
-    if args.pilot:
+    prefix = {"curated": "layer1", "fulltext": "layer1ft", "mixed": "layer1mx"}[args.units]
+    if args.units == "mixed":
+        n_ft = sum(1 for u in units if u["section"] == "fulltext")
+        safe_print(f"[layer1] mixed: {n_ft} full-text rules of reliable orders, {len(units) - n_ft} curated "
+                   f"clauses of the others")
+    if args.pilot and args.units == "mixed":
+        seen = set(json.loads(PILOT12.read_text(encoding="utf-8")))
+        chosen = pick_pilot(units, args.pilot, seen)
+        reqs, label = requests_for(chosen), f"{prefix}-pilot"
+    elif args.pilot:
         pool = [u for u in units if u["split"] == "dev"]
         chosen = random.Random(SEED).sample(pool, min(args.pilot, len(pool)))
         reqs, label = requests_for(chosen), f"{prefix}-pilot"

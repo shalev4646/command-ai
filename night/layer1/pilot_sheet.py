@@ -37,10 +37,12 @@ def main() -> int:
     for r in rows:
         by.setdefault(r["uid"], []).append(r)
     qs = echoes = 0
-    fulltext = bool(units) and units[0].get("section") == "fulltext"
+    kinds = set()
     for u in units:
+        fulltext = u.get("section") == "fulltext"
+        kinds.add("rule" if fulltext else "title")
         rs = by.get(u["uid"])
-        tag = f" [{'in a block' if u.get('in_block') else 'only in the text'}]" if fulltext else ""
+        tag = f" [{'in a block' if u.get('in_block') else 'only in the text'}]" if fulltext else " [curated clause]"
         print(f"\n== {u['doc_id']} | {u['clause']} [{u['role']}]{tag}")
         print(f"   {u['text'][:400]}")
         if not rs:
@@ -57,7 +59,7 @@ def main() -> int:
             print(f"   {'*' if e >= ECHO else ' '} {r['q']}   (echo {e:.2f})")
     parsed = len(by)
     skipped = sum(1 for rs in by.values() if rs[0]["skip"])
-    kind = "rule" if fulltext else "title"
+    kind = "/".join(sorted(kinds)) or "title"
     print(f"\n[pilot] parsed {parsed}/{len(units)}, skip {skipped}, questions {qs}, "
           f"{kind} echo >= {ECHO}: {echoes} ({echoes / qs:.0%})" if qs else "\n[pilot] no questions")
     return 0
