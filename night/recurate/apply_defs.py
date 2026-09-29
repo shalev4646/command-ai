@@ -100,6 +100,13 @@ def recurated_record(doc: dict, defn: dict, def_name: str, drop: list, seen: dic
     if seen:
         rec["page_verified_numbers"] = list(rec.get("page_verified_numbers", [])) + [
             {"clause": k, "numbers": v, "def": def_name} for k, v in seen.items()]
+    # whole sentences read on the page image — the support audit does not count them as low support
+    # (coverage_audit.page_verified_sentences); each carries its page and section, or it does not count
+    pvs = [{"clause": c["number"], "sentence": e.get("sentence"), "page": e.get("page"), "src": e.get("src"),
+            "def": def_name}
+           for c in defn.get("clauses", []) for e in c.get("page_verified_sentences") or [] if isinstance(e, dict)]
+    if pvs:
+        rec["page_verified_sentences"] = list(rec.get("page_verified_sentences", [])) + pvs
     return rec
 
 

@@ -358,6 +358,39 @@ def page_verified(doc: dict) -> dict[str, set[str]]:
     return out
 
 
+def _pv_sentence(s: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r'["״׳\'“”‘’„]', "", s or "")).strip()
+
+
+def page_verified_sentences(doc: dict) -> set[tuple[str, str]]:
+    """(clause number, sentence) pairs a curator read on the page image — `page_verified_sentences` entries of
+    the order's `recurated` record, written by apply_defs from a def clause's own list. An entry counts only
+    with BOTH its page and its section named, and only for the sentence exactly as verified: edit the
+    sentence and it must be read again (the support audit, night/support_audit.py)."""
+    out: set[tuple[str, str]] = set()
+
+    def walk(x) -> None:
+        if isinstance(x, dict):
+            for k, v in x.items():
+                if k == "page_verified_sentences" and isinstance(v, list):
+                    for e in v:
+                        if (isinstance(e, dict) and str(e.get("page") or "").strip() and str(e.get("src") or "").strip()
+                                and e.get("sentence") and e.get("clause") is not None):
+                            out.add((str(e["clause"]).strip(), _pv_sentence(str(e["sentence"]))))
+                else:
+                    walk(v)
+        elif isinstance(x, list):
+            for v in x:
+                walk(v)
+
+    walk(doc.get("recurated") or {})
+    return out
+
+
+def is_page_verified_sentence(pvs: set[tuple[str, str]], clause_number: str, sentence: str) -> bool:
+    return (str(clause_number).strip(), _pv_sentence(sentence)) in pvs
+
+
 def is_page_verified(pv: dict[str, set[str]], clause_number: str, num: str) -> bool:
     """num (as extracted: „60", „1/30", „08:00") was read on the page for this clause. A compound
     value counts when each of its parts that is not a trivial 0/00/1 was recorded."""
