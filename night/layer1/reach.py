@@ -172,6 +172,13 @@ def main() -> int:
     rows = [r for r in rows if r.get("q")]
     if args.limit:
         rows = rows[:args.limit]
+    if args.units == "fulltext":
+        # in_block belongs to the corpus being MEASURED, not to the one the questions were written on: the units'
+        # fingerprint is their text only, so v161 and v163 cut the same 5,320 rules, but v163's blocks carry 295
+        # more of them (2,932 -> 3,227). The split by in_block is recomputed from this tree.
+        inb = {u["uid"]: u["in_block"] for u in units}
+        for r in rows:
+            r["in_block"] = inb.get(r["uid"], r.get("in_block"))
     corp = {r.get("corpus") for r in rows}
     if corp != {fp}:
         print(f"[reach] the questions were cut from corpus {sorted(corp)}, this tree is {fp} — refusing")
