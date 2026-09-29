@@ -74,9 +74,9 @@ PROMPT_FULLTEXT = """אתה כותב שאלות בדיקה לעוזר דיגיט
 
 כללים:
 1. שפה של השואל, לא של הפקודה: קצר, ישיר, בגוף ראשון, מותר סלנג וקיצורים צבאיים מקובלים. אל תצטט את הכלל.
-2. אל תזכיר מספרי פקודות או סעיפים.
+2. אל תזכיר מספרי פקודות או סעיפים. בראשי-תיבות כתוב גרשיים עבריים (״) ולא מירכאות (") — צה״ל, שמ״פ, רמטכ״ל, אכ״א.
 3. שלוש שאלות בשלושה סגנונות: (א) שאלה קצרה כמו בהודעה; (ב) מצב קצר שקרה לשואל, שנגמר בשאלה; (ג) שאלה על תנאי, חריג, סכום, מועד או מי מאשר — לפי מה שהכלל באמת קובע.
-4. כל שאלה חייבת להיות כזאת שהכלל הזה עונה עליה — לא הפסקה כולה, ולא נושא דומה.
+4. כל שאלה חייבת להיות כזאת שהכלל הזה עונה עליה — לא הפסקה כולה, לא נושא דומה, ולא פרט שהכלל אינו קובע (סכום, מועד, מידה או תנאי שאינם כתובים בו).
 5. אם שום שואל כזה לא היה שואל על הכלל (נוהל פנימי, טופס, הגדרה טכנית) — החזר עבורו skip עם סיבה קצרה, ורשימת שאלות ריקה. אחרת skip הוא מחרוזת ריקה.
 
 הכללים:
@@ -221,6 +221,37 @@ def estimate(reqs) -> tuple[int, int, float, float]:
             cost_usd(MODEL, input_tokens=tin, output_tokens=tout, batch=True))
 
 
+_ABBR: set[str] | None = None
+
+
+def _abbr_prefixes() -> set[str]:
+    """The part before the quote of every abbreviation in the corpus: שמ"פ -> שמ, רמטכ"ל -> רמטכ."""
+    global _ABBR
+    if _ABBR is None:
+        out: set[str] = set()
+        for p in sorted(STORE.glob("*.json")):
+            raw = json.loads(p.read_text(encoding="utf-8")).get("raw_text") or ""
+            out.update(re.findall(r'([א-ת]{1,6})["״][א-ת]{1,2}(?![א-ת])', raw))
+        _ABBR = out
+    return _ABBR
+
+
+def _fragment(q: str) -> bool:
+    """A piece of a question, not a question. The first full-text pilot (30.09) cut 7 of 93 questions at the
+    ASCII quote of an abbreviation and handed back the halves: a first half that stops, with no question
+    mark, on an abbreviation's opening letters („אני בשמ", „…מהרמטכ"), and a second half that starts with
+    punctuation or with the abbreviation's lone last letter („. כמה סמלים", „פ למטרה…")."""
+    t = q.strip()
+    if not t or t[0] in ".,;:-–—)\"״" or re.match(r"^[א-ת](?:\s|[.,])", t):
+        return True
+    words = re.findall(r"[א-ת]+", t)
+    if t[-1] not in "?!." and words:
+        w = words[-1]
+        if {w[i:] for i in range(0, 3) if len(w) - i >= 2} & _abbr_prefixes():
+            return True
+    return False
+
+
 def parse(text: str, units: list[dict]) -> dict[str, dict]:
     """{uid: {"questions": [...], "skip": str}} for the items that parse; the rest are absent."""
     m = re.search(r"\{.*\}", text or "", re.S)
@@ -238,6 +269,8 @@ def parse(text: str, units: list[dict]) -> dict[str, dict]:
             continue
         qs = [q.strip() for q in it.get("questions") or [] if isinstance(q, str) and q.strip()]
         skip = str(it.get("skip") or "").strip()
+        if not skip and any(_fragment(q) for q in qs[:3]):
+            continue   # a question cut at an abbreviation's quote (pilot 30.09: „אני בשמ") — not parsed, never used
         if skip or len(qs) >= 3:
             got[u["uid"]] = {"questions": [] if skip else qs[:3], "skip": skip}
     return got
