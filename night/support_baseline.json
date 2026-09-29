@@ -8,7 +8,7 @@
   "entity_misses": 0
  },
  "21.0106": {
-  "low_support": 2,
+  "low_support": 0,
   "entity_misses": 0
  },
  "21.0113": {
@@ -92,7 +92,7 @@
   "entity_misses": 0
  },
  "31.0104": {
-  "low_support": 3,
+  "low_support": 0,
   "entity_misses": 0
  },
  "31.0106": {
@@ -200,8 +200,8 @@
   "entity_misses": 1
  },
  "31.0513": {
-  "low_support": 1,
-  "entity_misses": 1
+  "low_support": 0,
+  "entity_misses": 0
  },
  "31.0515": {
   "low_support": 7,
@@ -380,7 +380,7 @@
   "entity_misses": 0
  },
  "33-05-01": {
-  "low_support": 1,
+  "low_support": 0,
   "entity_misses": 0
  },
  "33.0111": {
@@ -396,7 +396,7 @@
   "entity_misses": 0
  },
  "33.0117": {
-  "low_support": 4,
+  "low_support": 0,
   "entity_misses": 0
  },
  "33.0120": {
@@ -496,7 +496,7 @@
   "entity_misses": 0
  },
  "33.0808": {
-  "low_support": 2,
+  "low_support": 0,
   "entity_misses": 0
  },
  "33.0909": {
@@ -857,7 +857,7 @@
  },
  "36.0505": {
   "low_support": 1,
-  "entity_misses": 1
+  "entity_misses": 0
  },
  "36.0507": {
   "low_support": 1,
@@ -909,7 +909,7 @@
  },
  "38.0102": {
   "low_support": 1,
-  "entity_misses": 1
+  "entity_misses": 0
  },
  "38.0103": {
   "low_support": 1,
@@ -980,7 +980,7 @@
   "entity_misses": 0
  },
  "50.0405": {
-  "low_support": 3,
+  "low_support": 2,
   "entity_misses": 1
  },
  "56.0131": {
@@ -1081,7 +1081,7 @@
  },
  "HKA-31-08-01": {
   "low_support": 0,
-  "entity_misses": 23
+  "entity_misses": 0
  },
  "HKA-32-02-10": {
   "low_support": 1,
@@ -1189,7 +1189,7 @@
  },
  "PM-33.0332": {
   "low_support": 1,
-  "entity_misses": 1
+  "entity_misses": 0
  },
  "PM-33.0333": {
   "low_support": 1,
@@ -1201,10 +1201,10 @@
  },
  "PM-33.0352": {
   "low_support": 0,
-  "entity_misses": 2
+  "entity_misses": 0
  },
  "PM-33.0401": {
-  "low_support": 2,
+  "low_support": 0,
   "entity_misses": 0
  },
  "PM-33.0901": {
@@ -1220,7 +1220,7 @@
   "entity_misses": 10
  },
  "PM-34.0205": {
-  "low_support": 2,
+  "low_support": 0,
   "entity_misses": 0
  },
  "PM-35.0402": {
@@ -1232,8 +1232,8 @@
   "entity_misses": 1
  },
  "זכויות-עבודה-מילואים": {
-  "low_support": 8,
-  "entity_misses": 1
+  "low_support": 0,
+  "entity_misses": 0
  },
  "חוק-קליטת-חיילים": {
   "low_support": 0,
