@@ -155,7 +155,7 @@ def main() -> int:
     ap.add_argument("--base")
     ap.add_argument("--workers", type=int, default=1)
     ap.add_argument("--limit", type=int, default=0, help="first N questions only (a smoke run)")
-    ap.add_argument("--units", choices=["curated", "fulltext"], default="curated")
+    ap.add_argument("--units", choices=["curated", "fulltext", "mixed"], default="curated")
     ap.add_argument("--source", default="", help="fulltext: night/cleantext/build_source.py output")
     args = ap.parse_args()
 
@@ -163,31 +163,32 @@ def main() -> int:
     os.environ["RETRIEVE_HYDE"] = "0"
     os.environ.pop("ANTHROPIC_API_KEY", None)
     sys.stdout.reconfigure(encoding="utf-8")
-    from night.layer1.generate import SOURCE, build_fulltext_units, build_units, fingerprint
+    from night.layer1.generate import SOURCE, build_fulltext_units, build_mixed_units, build_units, fingerprint
 
-    units = build_units() if args.units == "curated" else build_fulltext_units(source=Path(args.source or SOURCE))
+    src = Path(args.source or SOURCE)
+    units = (build_units() if args.units == "curated" else
+             build_fulltext_units(source=src) if args.units == "fulltext" else build_mixed_units(source=src))
     fp = fingerprint(units)
     text_of = {u["uid"]: u["text"] for u in units}
     rows = [json.loads(l) for l in open(args.questions, encoding="utf-8") if l.strip()]
     rows = [r for r in rows if r.get("q")]
     if args.limit:
         rows = rows[:args.limit]
-    if args.units == "fulltext":
+    if args.units in ("fulltext", "mixed"):
         # in_block belongs to the corpus being MEASURED, not to the one the questions were written on: the units'
         # fingerprint is their text only, so v161 and v163 cut the same 5,320 rules, but v163's blocks carry 295
         # more of them (2,932 -> 3,227). The split by in_block is recomputed from this tree.
-        inb = {u["uid"]: u["in_block"] for u in units}
+        inb = {u["uid"]: u["in_block"] for u in units if "in_block" in u}
         for r in rows:
             r["in_block"] = inb.get(r["uid"], r.get("in_block"))
     corp = {r.get("corpus") for r in rows}
     if corp != {fp}:
         print(f"[reach] the questions were cut from corpus {sorted(corp)}, this tree is {fp} — refusing")
         return 2
-    if args.units == "curated":
-        jobs = [(r["qid"], r["q"], r["role"], [r["doc_id"], *runs(text_of[r["uid"]])]) for r in rows]
-    else:
-        jobs = [(r["qid"], r["q"], r["role"], [r["doc_id"], *runs(text_of[r["uid"]], loose=True)], "fulltext",
-                 text_of[r["uid"]]) for r in rows]
+    kind = {u["uid"]: u.get("section") for u in units}
+    jobs = [(r["qid"], r["q"], r["role"], [r["doc_id"], *runs(text_of[r["uid"]], loose=True)], "fulltext",
+             text_of[r["uid"]]) if kind.get(r["uid"]) == "fulltext" else
+            (r["qid"], r["q"], r["role"], [r["doc_id"], *runs(text_of[r["uid"]])]) for r in rows]
     if args.workers > 1:
         with Pool(args.workers, initializer=_init) as pool:
             res = pool.map(_one, jobs, chunksize=8)
