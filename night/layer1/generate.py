@@ -67,6 +67,26 @@ PROMPT = """אתה כותב שאלות בדיקה לעוזר דיגיטלי שע
 
 החזר JSON בלבד: {{"items": [{{"n": 1, "questions": ["...", "...", "..."], "skip": ""}}]}}"""
 
+PROMPT_FULLTEXT = """אתה כותב שאלות בדיקה לעוזר דיגיטלי שעונה על שאלות מתוך פקודות מטכ"ל.
+השואל: {persona}
+
+לפניך כללים מתוך נוסח הפקודה „{order_title}", כל אחד עם הפסקה שהוא נמצא בה. לכל כלל כתוב שלוש שאלות שונות שהשואל היה מקליד בטלפון, שהתשובה עליהן היא הכלל הזה.
+
+כללים:
+1. שפה של השואל, לא של הפקודה: קצר, ישיר, בגוף ראשון, מותר סלנג וקיצורים צבאיים מקובלים. אל תצטט את הכלל.
+2. אל תזכיר מספרי פקודות או סעיפים.
+3. שלוש שאלות בשלושה סגנונות: (א) שאלה קצרה כמו בהודעה; (ב) מצב קצר שקרה לשואל, שנגמר בשאלה; (ג) שאלה על תנאי, חריג, סכום, מועד או מי מאשר — לפי מה שהכלל באמת קובע.
+4. כל שאלה חייבת להיות כזאת שהכלל הזה עונה עליה — לא הפסקה כולה, ולא נושא דומה.
+5. אם שום שואל כזה לא היה שואל על הכלל (נוהל פנימי, טופס, הגדרה טכנית) — החזר עבורו skip עם סיבה קצרה, ורשימת שאלות ריקה. אחרת skip הוא מחרוזת ריקה.
+
+הכללים:
+{clauses}
+
+החזר JSON בלבד: {{"items": [{{"n": 1, "questions": ["...", "...", "..."], "skip": ""}}]}}"""
+
+SOURCE = ROOT / "night" / "out" / "source"     # night/cleantext/build_source.py (clean text, or raw where better)
+CONTEXT_WORDS = 120
+
 SCHEMA = {
     # no minItems/maxItems: the Batch API rejects them on arrays (night/grade.py PARTS_SCHEMA)
     "type": "object",
@@ -121,6 +141,52 @@ def build_units(store: Path = STORE) -> list[dict]:
     return out
 
 
+def build_fulltext_units(store: Path = STORE, source: Path = SOURCE) -> list[dict]:
+    """One unit per RULE of the order's full text — not only what a curated block carries (29.09, the
+    manager: otherwise layer 1 measures only what the summary already has). A rule is the coverage audit's:
+    a unit of the order's text with a normative marker, not administrative, with enough content words
+    (night/coverage_audit.py). The text is the order's best one (clean, or raw where that is better —
+    night/cleantext/build_source.py); `context` is the paragraph it sits in, for the question writer only.
+    `in_block`: some curated clause of the order carries it (the audit's overlap ≥ CONTENT_MIN) — so the
+    results split into what the summary has and what only the order has. Split and held phrasing are
+    hashed from (order, rule text), as for the curated units."""
+    from night import coverage_audit as ca
+    units: dict[tuple, dict] = {}
+    for p in sorted(Path(store).glob("*.json")):
+        d = json.loads(p.read_text(encoding="utf-8"))
+        did = d.get("document_id")
+        if not did:
+            continue
+        sp = Path(source) / f"{did}.json"
+        if sp.exists():
+            paras = [str(x.get("text") or "") for x in json.loads(sp.read_text(encoding="utf-8"))["paragraphs"]]
+        else:
+            paras = [ln for ln in (d.get("raw_text") or "").split("\n") if ln.strip()]
+        flat = [re.sub(r"\s+", " ", x).strip() for x in paras if x.strip()]
+        texts = [c["number"] + " " + c["text"] for c in ca.block_clauses(d)]
+        for u in ca.rule_units("\n".join(paras)):
+            if not u["normative"] or u["admin"] or len(ca.content_words(u["text"])) < ca.MIN_CONTENT:
+                continue
+            t = re.sub(r"\s+", " ", u["text"]).strip()
+            if (did, t) in units:
+                continue
+            head = " ".join(t.split()[:6])
+            ctx = next((x for x in flat if head in x), t)
+            units[(did, t)] = {
+                "doc_id": did, "order_title": d.get("title") or "", "clause": "כלל: " + " ".join(t.split()[:8]),
+                "text": t, "context": " ".join(ctx.split()[:CONTEXT_WORDS]), "section": "fulltext",
+                "in_block": max((ca.overlap(t, x) for x in texts), default=0.0) >= ca.CONTENT_MIN,
+                "soldier": bool(u["soldier"]), "role": _role(d.get("roles") or [])}
+    out = []
+    for (did, t), u in sorted(units.items()):
+        h = int(hashlib.sha1(f"{did}|{t}".encode("utf-8")).hexdigest(), 16)
+        u["uid"] = f"f{h % 16 ** 12:012x}"
+        u["split"] = "held" if h % HELD_MOD == 0 else "dev"
+        u["held_q"] = (h // HELD_MOD) % 3
+        out.append(u)
+    return out
+
+
 def fingerprint(units: list[dict]) -> str:
     h = hashlib.sha1()
     for u in units:
@@ -137,8 +203,13 @@ def requests_for(units: list[dict]) -> list[tuple[str, list[dict], str]]:
     for (did, role), us in sorted(groups.items()):
         for i in range(0, len(us), PER_REQUEST):
             part = us[i:i + PER_REQUEST]
-            body = "\n\n".join(f"[{n}] כותרת: {u['clause']}\nטקסט: {u['text']}" for n, u in enumerate(part, 1))
-            prompt = PROMPT.format(persona=PERSONA[role], order_title=part[0]["order_title"], clauses=body)
+            if part[0].get("section") == "fulltext":
+                body = "\n\n".join(f"[{n}] כלל: {u['text']}\nהקשר: {u['context']}" for n, u in enumerate(part, 1))
+                prompt = PROMPT_FULLTEXT.format(persona=PERSONA[role], order_title=part[0]["order_title"],
+                                                clauses=body)
+            else:
+                body = "\n\n".join(f"[{n}] כותרת: {u['clause']}\nטקסט: {u['text']}" for n, u in enumerate(part, 1))
+                prompt = PROMPT.format(persona=PERSONA[role], order_title=part[0]["order_title"], clauses=body)
             out.append((f"r{len(out):05d}", part, prompt))
     return out
 
@@ -177,6 +248,7 @@ def rows_for(units_by_uid: dict[str, dict], got: dict[str, dict], req_of: dict[s
     for uid, g in got.items():
         u = units_by_uid[uid]
         base = {k: u[k] for k in ("uid", "doc_id", "clause", "section", "role", "split")}
+        base.update({k: u[k] for k in ("in_block", "soldier") if k in u})
         if g["skip"]:
             rows.append({**base, "qid": f"{uid}_skip", "i": None, "q": None, "phrasing": None,
                          "skip": g["skip"], "req": req_of[uid]})
@@ -270,21 +342,31 @@ def main() -> int:
     g.add_argument("--dry", action="store_true")
     g.add_argument("--pilot", type=int, metavar="N")
     g.add_argument("--full", action="store_true")
+    ap.add_argument("--units", choices=["curated", "fulltext"], default="curated",
+                    help="curated clauses (the first criterion) or every rule of the order's full text")
+    ap.add_argument("--source", default=str(SOURCE))
     args = ap.parse_args()
 
-    units = build_units()
+    units = build_units() if args.units == "curated" else build_fulltext_units(source=Path(args.source))
     fp = fingerprint(units)
     held = sum(1 for u in units if u["split"] == "held")
     roles = {r: sum(1 for u in units if u["role"] == r) for r in PERSONA}
-    safe_print(f"[layer1] {len(units)} clauses in {len({u['doc_id'] for u in units})} orders, corpus {fp}; "
-               f"held {held}, dev {len(units) - held}; roles {roles}")
+    safe_print(f"[layer1] {args.units}: {len(units)} units in {len({u['doc_id'] for u in units})} orders, "
+               f"corpus {fp}; held {held}, dev {len(units) - held}; roles {roles}")
+    if args.units == "fulltext":
+        inb = sum(1 for u in units if u["in_block"])
+        sol = sum(1 for u in units if u["soldier"])
+        safe_print(f"[layer1] fulltext: in a block {inb}, only in the order's text {len(units) - inb}; "
+                   f"soldier-worded {sol} ({sum(1 for u in units if u['soldier'] and not u['in_block'])} "
+                   f"of them only in the text)")
 
+    prefix = "layer1" if args.units == "curated" else "layer1ft"
     if args.pilot:
         pool = [u for u in units if u["split"] == "dev"]
         chosen = random.Random(SEED).sample(pool, min(args.pilot, len(pool)))
-        reqs, label = requests_for(chosen), "layer1-pilot"
+        reqs, label = requests_for(chosen), f"{prefix}-pilot"
     else:
-        reqs, label = requests_for(units), "layer1-full"
+        reqs, label = requests_for(units), f"{prefix}-full"
     tin, tout, usd, usd_b = estimate(reqs)
     safe_print(f"[layer1] {label}: {len(reqs)} requests, ~{tin:,} tokens in, ~{tout:,} out — "
                f"~${usd:.2f} standard, ~${usd_b:.2f} batch (cap ${CAP_USD:.2f})")

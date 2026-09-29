@@ -51,8 +51,14 @@ def _norm(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip()
 
 
-def runs(text: str, k: int = RUN) -> list[str]:
-    w = _norm(text).split()
+def _loose(s: str) -> str:
+    """Letters, digits and single spaces only — a full-text rule is matched against served chunks that may be
+    raw windows (a period glued to a word's start, "מילואים," vs "מילואים") or clean units alike."""
+    return re.sub(r"\s+", " ", re.sub(r"[^\w\s]|_", " ", s or "")).strip()
+
+
+def runs(text: str, k: int = RUN, loose: bool = False) -> list[str]:
+    w = (_loose(text) if loose else _norm(text)).split()
     if len(w) < k:
         return [" ".join(w)] if w else []
     return [" ".join(w[i:i + k]) for i in range(len(w) - k + 1)]
@@ -63,18 +69,33 @@ def clause_hit(clause_runs: list[str], served: list[str]) -> bool:
 
 
 _S = None
+_CA = None
 
 
 def _init() -> None:
-    global _S
-    from night import sectprobe
-    _S = sectprobe
+    global _S, _CA
+    from night import coverage_audit, sectprobe
+    _S, _CA = sectprobe, coverage_audit
 
 
-def _one(job: tuple[str, str, str, list[str]]) -> tuple[str, bool, bool]:
+def fulltext_hit(rule: str, rule_runs: list[str], mine: list[dict]) -> bool:
+    """A full-text rule reaches the model when a 6-word run of it is in a served chunk of its order
+    (letters and digits only), or when a served curated clause of the order carries it — the coverage
+    audit's own test (overlap ≥ CONTENT_MIN), since a block states a rule in its own words."""
+    served = [_loose(c["text"]) for c in mine]
+    if clause_hit(rule_runs, served):
+        return True
+    return any(_CA.overlap(rule, (c.get("clause") or "") + " " + c["text"]) >= _CA.CONTENT_MIN
+               for c in mine if "key-facts" in (c.get("section") or ""))
+
+
+def _one(job: tuple) -> tuple[str, bool, bool]:
     qid, q, role, doc, clause_runs = job[0], job[1], job[2], job[3][0], job[3][1:]
     win = _S._free_window(q, role)
-    served = [_norm(c["text"]) for c in win if c["doc_id"] == doc]
+    mine = [c for c in win if c["doc_id"] == doc]
+    if len(job) > 4 and job[4] == "fulltext":
+        return qid, bool(mine), fulltext_hit(job[5], clause_runs, mine)
+    served = [_norm(c["text"]) for c in mine]
     return qid, bool(served), clause_hit(clause_runs, served)
 
 
@@ -87,7 +108,10 @@ def summarize(rows: list[dict]) -> dict:
             "dev_clause_held_phrasing": rate([r for r in rows if r["split"] == "dev" and r["phrasing"] == "held"]),
             "held_clauses": rate([r for r in rows if r["split"] == "held"]),
             "by_role": {k: rate([r for r in dev if r["role"] == k]) for k in sorted({r["role"] for r in dev})},
-            "by_section": {k: rate([r for r in dev if r["section"] == k]) for k in sorted({r["section"] for r in dev})}}
+            "by_section": {k: rate([r for r in dev if r["section"] == k]) for k in sorted({r["section"] for r in dev})},
+            # full-text units: what the summary carries vs what only the order's text has
+            "by_in_block": {str(k): rate([r for r in dev if r.get("in_block") == k])
+                            for k in sorted({r["in_block"] for r in dev if "in_block" in r})}}
 
 
 def worklist(rows: list[dict]) -> dict:
@@ -131,15 +155,17 @@ def main() -> int:
     ap.add_argument("--base")
     ap.add_argument("--workers", type=int, default=1)
     ap.add_argument("--limit", type=int, default=0, help="first N questions only (a smoke run)")
+    ap.add_argument("--units", choices=["curated", "fulltext"], default="curated")
+    ap.add_argument("--source", default="", help="fulltext: night/cleantext/build_source.py output")
     args = ap.parse_args()
 
     os.environ.update(fly_env())
     os.environ["RETRIEVE_HYDE"] = "0"
     os.environ.pop("ANTHROPIC_API_KEY", None)
     sys.stdout.reconfigure(encoding="utf-8")
-    from night.layer1.generate import build_units, fingerprint
+    from night.layer1.generate import SOURCE, build_fulltext_units, build_units, fingerprint
 
-    units = build_units()
+    units = build_units() if args.units == "curated" else build_fulltext_units(source=Path(args.source or SOURCE))
     fp = fingerprint(units)
     text_of = {u["uid"]: u["text"] for u in units}
     rows = [json.loads(l) for l in open(args.questions, encoding="utf-8") if l.strip()]
@@ -150,7 +176,11 @@ def main() -> int:
     if corp != {fp}:
         print(f"[reach] the questions were cut from corpus {sorted(corp)}, this tree is {fp} — refusing")
         return 2
-    jobs = [(r["qid"], r["q"], r["role"], [r["doc_id"], *runs(text_of[r["uid"]])]) for r in rows]
+    if args.units == "curated":
+        jobs = [(r["qid"], r["q"], r["role"], [r["doc_id"], *runs(text_of[r["uid"]])]) for r in rows]
+    else:
+        jobs = [(r["qid"], r["q"], r["role"], [r["doc_id"], *runs(text_of[r["uid"]], loose=True)], "fulltext",
+                 text_of[r["uid"]]) for r in rows]
     if args.workers > 1:
         with Pool(args.workers, initializer=_init) as pool:
             res = pool.map(_one, jobs, chunksize=8)

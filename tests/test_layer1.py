@@ -85,6 +85,36 @@ def test_pairing_lists_dev_only():
     assert p["dev"]["gained_ids"] == ["a"] and p["held_clauses"] == {"n": 1, "gained": 0, "lost": 1}
 
 
+FT = G.build_fulltext_units()
+
+
+def test_fulltext_units_are_deterministic_rules_with_their_paragraph():
+    again = G.build_fulltext_units()
+    assert [u["uid"] for u in again] == [u["uid"] for u in FT] and G.fingerprint(again) == G.fingerprint(FT)
+    assert len({u["uid"] for u in FT}) == len(FT) > len(UNITS), "the full text has more rules than the blocks"
+    assert all(u["section"] == "fulltext" and isinstance(u["in_block"], bool) and u["context"] for u in FT)
+    assert any(u["in_block"] for u in FT) and any(not u["in_block"] for u in FT)
+    held = sum(u["split"] == "held" for u in FT)
+    assert 0.15 < held / len(FT) < 0.25
+
+
+def test_fulltext_requests_use_their_own_prompt():
+    reqs = G.requests_for(FT[:7])
+    assert reqs and all("כלל:" in p and "הקשר:" in p and "כותרת:" not in p for _, _, p in reqs)
+    creq = G.requests_for(UNITS[:3])
+    assert all("כותרת:" in p for _, _, p in creq), "the curated prompt is untouched"
+
+
+def test_fulltext_hit_reads_raw_punctuation_and_curated_wording():
+    R._init()
+    rule = "חייל רשאי לפנות למפקדו בבקשה לחופשה מיוחדת בתוך שבעה ימים מיום האירוע"
+    raw = {"doc_id": "X", "section": "chunk3", "clause": "3",
+           "text": "T\n.חייל רשאי לפנות למפקדו ,בבקשה לחופשה מיוחדת בתוך שבעה ימים"}
+    assert R.fulltext_hit(rule, R.runs(rule, loose=True), [raw]), "punctuation of a raw window does not hide the rule"
+    other = {"doc_id": "X", "section": "chunk4", "clause": "4", "text": "T\nמסדר הבוקר יתקיים בכל יום"}
+    assert not R.fulltext_hit(rule, R.runs(rule, loose=True), [other])
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_") and callable(fn):
