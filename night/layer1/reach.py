@@ -157,17 +157,21 @@ def main() -> int:
     ap.add_argument("--limit", type=int, default=0, help="first N questions only (a smoke run)")
     ap.add_argument("--units", choices=["curated", "fulltext", "mixed"], default="curated")
     ap.add_argument("--source", default="", help="fulltext: night/cleantext/build_source.py output")
+    ap.add_argument("--store", default="", help="the corpus the units were cut from (generate.py --store); "
+                                                "default: this tree — the retrieval always runs on this tree")
     args = ap.parse_args()
 
     os.environ.update(fly_env())
     os.environ["RETRIEVE_HYDE"] = "0"
     os.environ.pop("ANTHROPIC_API_KEY", None)
     sys.stdout.reconfigure(encoding="utf-8")
-    from night.layer1.generate import SOURCE, build_fulltext_units, build_mixed_units, build_units, fingerprint
+    from night.layer1.generate import (SOURCE, STORE, build_fulltext_units, build_mixed_units, build_units,
+                                       fingerprint)
 
     src = Path(args.source or SOURCE)
-    units = (build_units() if args.units == "curated" else
-             build_fulltext_units(source=src) if args.units == "fulltext" else build_mixed_units(source=src))
+    store = Path(args.store) if args.store else STORE
+    units = (build_units(store) if args.units == "curated" else
+             build_fulltext_units(store, src) if args.units == "fulltext" else build_mixed_units(store, src))
     fp = fingerprint(units)
     text_of = {u["uid"]: u["text"] for u in units}
     rows = [json.loads(l) for l in open(args.questions, encoding="utf-8") if l.strip()]
