@@ -42,7 +42,11 @@ NEVER = {"20.0502", "3.0502", "33.1010"}
 def section_from(defn: dict) -> tuple[dict, list[str], bool]:
     """(section, ids to drop, digit_free)."""
     if defn.get("mode") == "replace-sections":
-        title = f"עיקרי הפקודה — {defn['title']}"
+        # The section title is embedded in every clause chunk ("{doc} — {section}\nסעיף …"), so a
+        # new title moves the ranking of clauses whose text did not change: HKA-31-08-01 with the
+        # prefixed title lost an order from the ruler window (q00109, 29.09). A def that corrects an
+        # existing block in place carries the old title in `section_title`.
+        title = defn.get("section_title") or f"עיקרי הפקודה — {defn['title']}"
         return ({"id": "key-facts", "title": title,
                  "clauses": [{"number": c["number"], "text": c["text"]} for c in defn["clauses"]]},
                 list(defn.get("replaces_sections", [])), False)
