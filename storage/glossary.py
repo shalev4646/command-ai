@@ -314,6 +314,24 @@ HOMONYMS: list[dict] = [
          # PM-33.0302 „מש"ק ש"ג"; הק"א 33-05-01 §5 „חייל היוצא מהמחנה"
          {"label": "שער המחנה (השומר בשער)", "cue": "", "expand": "שער המחנה יציאה מהמחנה כניסה למחנה"},
      ]},
+    # „יומיות" (29.09, night/stage2/CRITERION.md item ד): a soldier says it for
+    # going home every evening — 35.0807's הת"ש 07 „לינת בית" — and for a daily
+    # wage (35.0206 „שיעור התגמול ליום", 56.0131 דמי כלכלה). The paid final test
+    # served rs054 „אפשר לקבל יומיות ולישון בבית?" the right clause and the model
+    # answered about pay. In the orders the word is only the adjective („נסיעות
+    # יומיות", 36.0521), so NEITHER sense expands retrieval (the glossary's rule;
+    # a measured round rejected it as a glossary key, GLOSSARY_GAPS_CRITERION):
+    # the entry exists for ANSWER_TERM_NOTE only. The pattern skips „היומיות",
+    # the definite adjective.
+    {"term": "יומיות", "pattern": r"(?<![א-ת])[ולבמכש]{0,2}יומיות(?![א-ת])",
+     "senses": [
+         {"label": 'חזרה הביתה כל ערב — לינה בבית (הת"ש 07, „לינת בית")',
+          "cue": r"לישון|ישן|ישנה|בבית|הביתה|לינה|לינת|לחזור|בבוקר|(?<![א-ת])[ולבמכשה]{0,2}(?:ערב|לילה)(?![א-ת])",
+          "expand": ""},
+         {"label": "תשלום לפי יום (שכר או תגמול יומי)",
+          "cue": r"כסף|תשלום|משלמים|לשלם|שכר|משכורת|שקל|₪|תגמול",
+          "expand": ""},
+     ]},
 ]
 
 # ── RETRIEVE_QUOTELESS: the same key typed without its gershayim (22.09) ─────
