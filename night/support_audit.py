@@ -284,6 +284,11 @@ def audit_doc(doc: dict, df: dict[str, int], n_docs: int) -> dict:
     out = []
     num_total = num_found = 0
     pv = ca.page_verified(doc)            # read on the page ⇒ not counted (coverage_audit.page_verified)
+    # a whole sentence a curator read on the page image (with page and section) is supported by the page even
+    # when the raw text cannot show it — 3.0501 §51ז (p. 12) scores 0.48 on its scrambled raw, and on the clean
+    # text too; waived only for low support, never for a missing number, fraction, rank or role
+    pvs = ca.page_verified_sentences(doc)
+    waived = 0
     for c in ca.block_clauses(doc):
         for s in sentences(c["text"]):
             words = _words(s)
@@ -311,6 +316,9 @@ def audit_doc(doc: dict, df: dict[str, int], n_docs: int) -> dict:
             miss_frac = [x for x in fractions_of(s) if not (x in near or number_in(FRACTIONS[x], near))]
             miss_rank = [r for r in ranks_of(s) if not _in_order(r, raw_norm, raw_letters)]
             miss_role = [r for r in roles_of(s) if not _in_order(r, raw_norm, raw_letters)]
+            if support < SUPPORT_MIN and ca.is_page_verified_sentence(pvs, c["number"], s):
+                waived += 1
+                support = SUPPORT_MIN
             if support < SUPPORT_MIN or miss_num or miss_frac or miss_rank or miss_role:
                 out.append({"clause": c["number"][:70], "sentence": s, "support": support,
                             "passage": " ".join(wins[bi].split()[:40]) if wins else "",
@@ -328,7 +336,7 @@ def audit_doc(doc: dict, df: dict[str, int], n_docs: int) -> dict:
             "numbers_local": f"{num_found}/{num_total}", "sentences": n_sent,
             "low_support": sum(1 for f in out if f["support"] < SUPPORT_MIN),
             "entity_misses": sum(1 for f in out if f["numbers"] or f["fractions"] or f["ranks"] or f["roles"]),
-            "flags": out, "numbers_unreliable": unreliable}
+            "flags": out, "numbers_unreliable": unreliable, "page_verified": waived}
 
 
 _DF: tuple[dict[str, int], int] | None = None
