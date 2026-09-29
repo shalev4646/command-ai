@@ -1,0 +1,51 @@
+{
+ "agg": {
+  "n": 3,
+  "doc_in_window": 2,
+  "sect_in_window": 2,
+  "sect_in_window_content": 2,
+  "sect_rank_top8": 0,
+  "sect_rank_top25": 0,
+  "sect_rank_median": 201,
+  "avg_words": 3928,
+  "avg_docs": 7.0
+ },
+ "per": [
+  {
+   "id": "al-1",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "sect_content": true,
+   "sect_overlap": 0.76,
+   "doc_rank": 74,
+   "sect_rank": null,
+   "window_words": 3852,
+   "window_docs": 7
+  },
+  {
+   "id": "al-2",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": true,
+   "sect_in_window": true,
+   "sect_content": true,
+   "sect_overlap": 0.67,
+   "doc_rank": 2,
+   "sect_rank": null,
+   "window_words": 3828,
+   "window_docs": 7
+  },
+  {
+   "id": "al-3",
+   "doc_id": "PM-35.0402",
+   "doc_in_window": false,
+   "sect_in_window": false,
+   "sect_content": false,
+   "sect_overlap": 0.0,
+   "doc_rank": 34,
+   "sect_rank": null,
+   "window_words": 4105,
+   "window_docs": 7
+  }
+ ]
+}

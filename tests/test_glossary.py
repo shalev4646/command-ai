@@ -53,6 +53,19 @@ def test_flag_off_by_default_in_code():
         assert G.RETRIEVE_GLOSSARY is False
 
 
+# ── renumbered orders (night/ALIAS_04101.md) ────────────────────────────────
+
+def test_new_number_of_the_leave_order_reaches_its_title():
+    title = "חופשות לחיילים המשרתים בשירות חובה"
+    for q in ('ראיתי שמפנים לפ"מ 04.101, על מה הפקודה הזאת?',
+              "לפי פקודה 04.101, מי מאשר לחייל חופשה מיוחדת?",
+              "מה כתוב ב 04101?"):
+        assert G.expansions(q) == [title], q
+    # another new number, and a number that only looks alike, stay silent
+    assert G.expansions('מה כתוב בפ"מ 07.102 על עונשים?') == []
+    assert G.expansions("יש לי 04.10 שעות") == []
+
+
 # ── the 2026-09-18 batch (night/head100/GLOSSARY_CRITERION.md) ──────────────
 
 def test_multiword_entry_accepts_hebrew_prefixes():
