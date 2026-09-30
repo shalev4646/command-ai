@@ -19,6 +19,10 @@ RETRIEVE_SECOND_PASS_KEEP_RULING, which night/final_arm did not apply before
     venv\\Scripts\\python.exe -m night.model_arm report  opus5v2   # FREE: the criterion, from the stage-6 review file
     venv\\Scripts\\python.exe -m night.model_arm collect opus5v2 p1  # recovery: a batch that outlived its process
 
+`--model M` and `--base TAG` (anywhere on the line) name another arm on recorded deliveries: the
+answering model, and the finished run whose user turns are re-sent. The defaults — claude-opus-5 on
+final161v2 — are the opus5v2 arm. Every step of one arm must be given the same pair.
+
 A refusal of the arm's model (stop_reason "refusal": the classifier declined,
 content empty or partial) is recorded on the row and counted as a FAILURE of
 that row — never dropped from the denominator. night.grade leaves rows without
@@ -41,10 +45,26 @@ from night import final_arm as FA  # noqa: E402  loads fly.toml [env] before bac
 from common import safe_print  # noqa: E402
 from night import config as C  # noqa: E402
 
-ARM_MODEL = "claude-opus-5"
-BASE_TAG = "final161v2"
+# The arm's model and the finished run whose deliveries it re-sends. The defaults are the opus5v2
+# arm (night/MODEL_ARM_CRITERION.md) and reproduce its records exactly; `configure` (--model /
+# --base) sets another pair — Opus 4.8 on final161v2, or Opus 5 on opus5v2 — for an arm that changes
+# something else (a system-prompt flag) on the same recorded deliveries (the manager, 30.09).
+DEFAULT_ARM_MODEL, DEFAULT_BASE_TAG = "claude-opus-5", "final161v2"
+ARM_MODEL = DEFAULT_ARM_MODEL
+BASE_TAG = DEFAULT_BASE_TAG
 PARTS = C.OUT / "question_parts.json"
 BASE_USAGE = C.OUT / f"usage_{BASE_TAG}.json"
+
+
+def configure(model: str | None = None, base: str | None = None) -> None:
+    """Set the arm's model and/or its base run; None leaves a value as it is."""
+    global ARM_MODEL, BASE_TAG, BASE_USAGE
+    if model:
+        ARM_MODEL = model
+    if base:
+        BASE_TAG = base
+        BASE_USAGE = C.OUT / f"usage_{BASE_TAG}.json"
+
 
 # The criterion's row sets — fixed in night/MODEL_ARM_CRITERION.md before the run.
 # (ב): the 34 rows the stage-6 review of final161v2 called full, plus rs055,
@@ -61,6 +81,10 @@ PASS_48 = 41                                                     # FINAL_RULER_V
 FIELDS_OF_AN_ANSWER = ("answer", "sources", "context_words", "sent_user_content", "route", "stop_reason",
                        "stop_details", "refusal_stop", "truncated", "refused_flag", "usage", "model")
 QUESTION_FIELDS = ("id", "q", "clean_q", "role", "band", "persona", "situation", "source", "target_doc", "ugly")
+# What a row says about the ANSWER it got — never part of a delivery. A base that is itself an arm
+# (opus5v2) carries all of them on its rows; final161v2's rows carry only the first three.
+ANSWER_SIDE_FIELDS = ("answer", "truncated", "refused_flag", "model", "stop_reason", "stop_details",
+                      "refusal_stop", "usage", "error")
 
 
 def _path(tag: str, suffix: str = "") -> Path:
@@ -78,14 +102,14 @@ def _backend():
 
 # ── the requests ──────────────────────────────────────────────────────────────
 
-def request_params(role: str, user_content: str, model: str = ARM_MODEL) -> dict:
+def request_params(role: str, user_content: str, model: str | None = None) -> dict:
     """The answering request exactly as night.probe composes it (production's
     request shape) — only the model is the arm's. tests/test_model_arm.py pins
     the equality against probe.build_requests."""
     import backend
     system_prompt = backend.SYSTEM_PROMPTS.get(role, backend.SYSTEM_PROMPT_SOLDIER)
     return dict(
-        model=model,
+        model=model or ARM_MODEL,
         max_tokens=backend.MAX_OUTPUT_TOKENS,
         thinking={"type": "adaptive"},
         system=[{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}],
@@ -117,7 +141,7 @@ def p1_requests() -> tuple[list, list[dict]]:
         b = base[qid]
         reqs.append(Request(custom_id=f"p{i}", params=MessageCreateParamsNonStreaming(
             **request_params(b["role"], b["sent_user_content"]))))
-        meta.append({k: v for k, v in b.items() if k not in ("answer", "truncated", "refused_flag")})
+        meta.append({k: v for k, v in b.items() if k not in ANSWER_SIDE_FIELDS})
     return reqs, meta
 
 
@@ -248,8 +272,13 @@ def complete_grades(final: list[dict], graded: list[dict], parts: dict[str, list
 # ── the criterion ────────────────────────────────────────────────────────────
 
 def row_sets() -> tuple[list[str], list[str]]:
-    """(the 48 of FINAL_RULER_V2 (א), the 24 NO_SUCH_RULE / NOT_IN_CORPUS) — from the base review sheet."""
-    sheet = json.loads((C.OUT / f"review_sheet_{BASE_TAG}.json").read_text(encoding="utf-8"))
+    """(the 48 of FINAL_RULER_V2 (א), the 24 NO_SUCH_RULE / NOT_IN_CORPUS) — from the base review sheet.
+    The adjudication verdicts are the ruler's, the same on every run of it: a base whose own sheet is
+    not built yet (an arm before its `sheet`) is read through the default base's."""
+    path = C.OUT / f"review_sheet_{BASE_TAG}.json"
+    if not path.exists():
+        path = C.OUT / f"review_sheet_{DEFAULT_BASE_TAG}.json"
+    sheet = json.loads(path.read_text(encoding="utf-8"))
     a48 = [x["id"] for x in sheet if x["verdict"].startswith("ANSWERED_IN_CORPUS") or x["verdict"] == "UNADJUDICATED"]
     n24 = [x["id"] for x in sheet if x["verdict"] in ("NO_SUCH_RULE", "NOT_IN_CORPUS")]
     return a48, n24
@@ -471,6 +500,10 @@ def cmd_report(tag: str) -> int:
     review = json.loads(review_path.read_text(encoding="utf-8")) if review_path.exists() else {}
     a48, n24 = row_sets()
     j = judge(review, a48, n24)
+    if (ARM_MODEL, BASE_TAG) != (DEFAULT_ARM_MODEL, DEFAULT_BASE_TAG):
+        safe_print(f"[model_arm] note: the protected rows, the answer-side rows and the 48-row bar below are those of "
+                   f"MODEL_ARM_CRITERION.md ({DEFAULT_ARM_MODEL} on {DEFAULT_BASE_TAG}); this arm ({ARM_MODEL} on "
+                   f"{BASE_TAG}) is judged by its own criterion")
     arm = {r["id"]: r for r in C.read_jsonl(_path(tag))}
     grades = {r["id"]: r for r in C.read_jsonl(C.OUT / f"grades_grade-{tag}.jsonl")}
     base_grades = {r["id"]: r for r in C.read_jsonl(C.OUT / f"grades_grade-{BASE_TAG}.jsonl")}
@@ -525,15 +558,46 @@ def cmd_collect(tag: str, which: str) -> int:
     return 0
 
 
+def _parse(argv: list[str]) -> tuple[str, str, list[str], str | None, str | None]:
+    """(command, tag, further positionals, --model, --base). The options may stand anywhere, as
+    `--model X` or `--model=X`; the positionals are what they were before the options existed."""
+    model = base = None
+    pos: list[str] = []
+    it = iter(argv[1:])
+    for a in it:
+        name, eq, val = a.partition("=")
+        if name in ("--model", "--base"):
+            if not eq:
+                val = next(it, "")
+            if not val:
+                raise SystemExit(f"[model_arm] {name} needs a value")
+            if name == "--model":
+                model = val
+            else:
+                base = val
+        else:
+            pos.append(a)
+    return (pos[0] if pos else "dry"), (pos[1] if len(pos) > 1 else "opus5v2"), pos[2:], model, base
+
+
+def _check_tag(tag: str) -> None:
+    if tag == BASE_TAG:
+        raise SystemExit(f"[model_arm] the arm's tag is its base's ({BASE_TAG}) — an arm is compared WITH its base, "
+                         f"it cannot write over it")
+
+
 def main(argv: list[str]) -> int:
+    cmd, tag, rest, model, base = _parse(argv)
+    configure(model, base)
+    _check_tag(tag)
     # before backend is imported anywhere: backend.MODEL is read once, at import
     os.environ["ANSWER_MODEL"] = ARM_MODEL
-    cmd = argv[1] if len(argv) > 1 else "dry"
-    tag = argv[2] if len(argv) > 2 else "opus5v2"
     fn = {"dry": cmd_dry, "p1": cmd_p1, "p2": cmd_p2, "grade": cmd_grade, "sheet": cmd_sheet,
           "report": cmd_report}.get(cmd)
     if cmd == "collect":
-        return cmd_collect(tag, argv[3])
+        if not rest:
+            raise SystemExit(__doc__)
+        return cmd_collect(tag, rest[0])
     if fn is None:
         raise SystemExit(__doc__)
     return fn(tag)
