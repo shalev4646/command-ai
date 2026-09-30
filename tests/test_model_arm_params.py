@@ -87,10 +87,12 @@ def test_base_resends_another_finished_run():
 
 
 def test_the_command_line():
-    assert M._parse(["m"]) == ("dry", "opus5v2", [], None, None)
-    assert M._parse(["m", "p1", "t"]) == ("p1", "t", [], None, None)
-    assert M._parse(["m", "collect", "t", "p2", "--model", "claude-opus-4-8"]) == ("collect", "t", ["p2"], "claude-opus-4-8", None)
-    assert M._parse(["m", "--base=opus5v2", "dry", "t", "--model=claude-opus-5"]) == ("dry", "t", [], "claude-opus-5", "opus5v2")
+    assert M._parse(["m"]) == ("dry", "opus5v2", [], None, None, {})
+    assert M._parse(["m", "p1", "t"]) == ("p1", "t", [], None, None, {})
+    assert M._parse(["m", "collect", "t", "p2", "--model", "claude-opus-4-8"]) == ("collect", "t", ["p2"], "claude-opus-4-8", None, {})
+    assert M._parse(["m", "--base=opus5v2", "dry", "t", "--model=claude-opus-5"]) == ("dry", "t", [], "claude-opus-5", "opus5v2", {})
+    assert M._parse(["m", "p1", "t", "--flag", "A=1", "--flag=B=0"])[5] == {"A": "1", "B": "0"}
+    assert M.unchanged_roles({"soldier": "x", "reserve": "y"}, {"soldier": "x", "reserve": "z"}, ["soldier", "reserve"]) == ["soldier"]
     try:
         M._parse(["m", "p1", "t", "--model"])
     except SystemExit:
