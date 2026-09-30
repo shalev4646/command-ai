@@ -267,14 +267,273 @@ def cmd_classes(store: Path) -> int:
     return 0
 
 
+# ══ The digit repair, by glyph id (night/PUNCFIX_CRITERION.md, "ההרחבה לספרות") ════════════════════════════════
+STD = {17: ".", **{19 + k: str(k) for k in range(10)}}
+ANCHORS = {15: ",", 16: "-", 29: ":"}
+DIGIT_SALT = "digits-20261001"
+FAMILIES_IN_SCOPE = ("Miriam", "David", "FrankRuehl")
+TRUST_FOOLING = ["38.0102", "33.0220", "31.0252", "PM-33.0342", "3.0501", "33.0336", "32.0220", "PM-33.0352",
+                 "PM-33.0307", "33.0115", "33.1010", "31.0507", "36.0207", "35.0314", "36.0304", "35.0233", "38.0117",
+                 "32.0502", "35.0107", "32.0223", "36.0205", "PM-33.0202", "31.0503", "35.0108", "33.0147", "35.0818",
+                 "HKA-32-03-10"]
+
+
+def family(font: str) -> str:
+    return re.sub(r"^[A-Z]{6}\+", "", font or "")
+
+
+def standard_fonts(doc) -> set[str]:
+    """Fonts whose glyph order is confirmed standard: >= 2 of the anchors (15 ',', 16 '-', 29 ':') present, all
+    mapped as standard."""
+    seen: dict[str, Counter] = {}
+    for pg in doc:
+        for sp in pg.get_texttrace():
+            for ucs, gid, _o, _b in sp["chars"]:
+                if gid in ANCHORS and ucs > 0:
+                    seen.setdefault(sp["font"], Counter())[(gid, chr(ucs))] += 1
+    return {f for f, c in seen.items() if len({g for g, _ in c}) >= 2 and all(ch == ANCHORS[g] for g, ch in c)}
+
+
+def digit_chars(doc) -> list[dict]:
+    """Every character of a confirmed standard-order font drawn with glyph 17 or 19..28 that the text layer maps
+    to a digit or '.': page, font, gid, the text layer's char, the glyph's own char, its box and baseline origin,
+    and its run (a span's consecutive such characters make one number)."""
+    std = standard_fonts(doc)
+    out = []
+    for pno, pg in enumerate(doc):
+        for si, sp in enumerate(pg.get_texttrace()):
+            if sp["font"] not in std:
+                continue
+            run = None
+            for ci, (ucs, gid, origin, bbox) in enumerate(sp["chars"]):
+                ch = chr(ucs) if ucs > 0 else ""
+                if gid in STD and (ch.isdigit() or ch == "."):
+                    run = run if run is not None else (pno, si, ci)
+                    out.append({"page": pno, "font": sp["font"], "gid": gid, "text": ch, "glyph": STD[gid],
+                                "origin": origin, "bbox": bbox, "run": run})
+                else:
+                    run = None
+    return out
+
+
+def numbers(chars: list[dict]) -> list[dict]:
+    """The runs as numbers: the text layer's reading and the glyph ids' reading, with the run's box."""
+    by: dict[tuple, list[dict]] = {}
+    for c in chars:
+        by.setdefault(c["run"], []).append(c)
+    out = []
+    for run, cs in by.items():
+        x0 = min(c["bbox"][0] for c in cs); y0 = min(c["bbox"][1] for c in cs)
+        x1 = max(c["bbox"][2] for c in cs); y1 = max(c["bbox"][3] for c in cs)
+        out.append({"page": run[0], "run": list(run), "text": "".join(c["text"] for c in cs),
+                    "glyph": "".join(c["glyph"] for c in cs), "bbox": [x0, y0, x1, y1], "font": cs[0]["font"]})
+    return out
+
+
+def _pdf_orders(store: Path) -> list[dict]:
+    return pdf_orders(store)
+
+
+def cmd_families(store: Path) -> int:
+    """Condition 1: for every family in scope, glyphs 17 and 19..28 — 3 crops each, from different orders — as sheets
+    for the visual check. The label says which character the glyph id means in the standard order."""
+    import fitz
+    OUT.mkdir(parents=True, exist_ok=True)
+    (OUT / "families").mkdir(exist_ok=True)
+    found: dict[tuple, list] = {}
+    for d in _pdf_orders(store):
+        pdf = find_pdf(d)
+        try:
+            doc = fitz.open(pdf)
+        except Exception:
+            continue
+        for c in digit_chars(doc):
+            fam = family(c["font"])
+            if not fam.startswith(FAMILIES_IN_SCOPE):
+                continue
+            k = (fam, c["gid"])
+            lst = found.setdefault(k, [])
+            if len(lst) < 3 and all(x[0] != d["document_id"] for x in lst):
+                lst.append((d["document_id"], str(pdf), c))
+    fams = sorted({k[0] for k in found})
+    for fam in fams:
+        crops = []
+        for gid in [17] + list(range(19, 29)):
+            for did, pdf, c in found.get((fam, gid), []):
+                doc = fitz.open(pdf)
+                g = {"page": c["page"], "bbox": c["bbox"], "line": [c["bbox"][0] - 60, c["bbox"][1] - 2,
+                                                                   c["bbox"][2] + 60, c["bbox"][3] + 2]}
+                crops.append((f"{fam} gid {gid} = '{STD[gid]}' (text layer: '{c['text']}') p{c['page'] + 1}",
+                              render_crop(doc, g, dpi=400)))
+        safe = re.sub(r"[^A-Za-z0-9]+", "_", fam)
+        sheet(crops, OUT / "families" / f"{safe}.png")
+        print(f"[puncfix] {fam}: {len(crops)} crops -> families/{safe}.png")
+    return 0
+
+
+def cmd_sample_digits(store: Path) -> int:
+    """Condition 4 — drawn from the PDFs BEFORE the dry run: numbers whose glyph reading differs from the text layer,
+    in the order of sha1(salt|order|page|run); first the first number of each of the first 5 trust-fooling orders
+    (by the same hash of the order id), then by order, at most 2 an order, until >= 30 numbers and >= 15 orders."""
+    import fitz
+    pop = []
+    for d in _pdf_orders(store):
+        did = d["document_id"]
+        try:
+            doc = fitz.open(find_pdf(d))
+        except Exception:
+            continue
+        for n in numbers(digit_chars(doc)):
+            if n["glyph"] != n["text"] and len(n["glyph"].strip(".")) >= 2:
+                h = hashlib.sha1(f"{DIGIT_SALT}|{did}|{n['page']}|{n['run'][1]}|{n['run'][2]}".encode("utf-8")).hexdigest()
+                pop.append((h, did, n))
+    pop.sort(key=lambda x: x[0])
+    fool_first5 = sorted(TRUST_FOOLING, key=lambda o: hashlib.sha1(f"{DIGIT_SALT}|{o}".encode("utf-8")).hexdigest())
+    pick, per = [], Counter()
+    for o in fool_first5:
+        first = next((x for x in pop if x[1] == o), None)
+        if first:
+            pick.append(first)
+            per[o] += 1
+        if len(pick) >= 5:
+            break
+    for x in pop:
+        if len(pick) >= 30 and len(per) >= 15:
+            break
+        if x in pick or per[x[1]] >= 2:
+            continue
+        pick.append(x)
+        per[x[1]] += 1
+    rows = [{"n": i + 1, "hash": h[:12], "doc_id": did, "page": n["page"] + 1, "text_layer": n["text"],
+             "by_glyph": n["glyph"], "bbox": n["bbox"], "font": family(n["font"]),
+             "trust_fooling": did in TRUST_FOOLING} for i, (h, did, n) in enumerate(pick)]
+    OUT.mkdir(parents=True, exist_ok=True)
+    (OUT / "digit_sample.json").write_text(json.dumps({"salt": DIGIT_SALT, "population": len(pop), "rows": rows},
+                                                      ensure_ascii=False, indent=1), encoding="utf-8")
+    docs = {x["document_id"]: x for x in _pdf_orders(store)}
+    crops = []
+    for r in rows:
+        doc = fitz.open(find_pdf(docs[r["doc_id"]]))
+        b = r["bbox"]
+        g = {"page": r["page"] - 1, "bbox": b, "line": [b[0] - 90, b[1] - 3, b[2] + 90, b[3] + 3]}
+        crops.append((f"#{r['n']} p{r['page']} text layer '{r['text_layer']}' -> by glyph '{r['by_glyph']}'",
+                      render_crop(doc, g, dpi=400)))
+    for i in range(0, len(crops), 10):
+        sheet(crops[i:i + 10], OUT / f"digit_sample_{i // 10 + 1}.png")
+    print(f"[puncfix] digit sample: {len(rows)} numbers from {len(per)} orders "
+          f"({sum(1 for r in rows if r['trust_fooling'])} from the trust-fooling orders); population {len(pop):,}")
+    return 0
+
+
+# the dry run ───────────────────────────────────────────────────────────────────────────────────────────────────
+MIN_EQUAL = 20
+
+
+def page_text_offsets(pg) -> tuple[str, dict[tuple, int]]:
+    T = pg.get_text()
+    pos, p = {}, 0
+    for b in pg.get_text("rawdict")["blocks"]:
+        for l in b.get("lines", []):
+            for s in l["spans"]:
+                for c in s["chars"]:
+                    ch, q = c["c"], p
+                    while q < len(T) and T[q] != ch and T[q].isspace():
+                        q += 1
+                    if q < len(T) and T[q] == ch:
+                        pos[(round(c["origin"][0], 1), round(c["origin"][1], 1), ch)] = q
+                        p = q + 1
+    return T, pos
+
+
+def place(pages: list[str], raw: str) -> list[dict[int, int]]:
+    out, at = [], 0
+    for T in pages:
+        lo = max(0, at - 300)
+        seg = raw[lo:at + len(T) + 600]
+        sm = difflib.SequenceMatcher(None, T, seg, autojunk=False)
+        m, last = {}, None
+        for a, b_, size in sm.get_matching_blocks():
+            if size >= MIN_EQUAL:
+                for k in range(size):
+                    m[a + k] = lo + b_ + k
+                last = lo + b_ + size
+        out.append(m)
+        if last is not None:
+            at = last
+    return out
+
+
+def repair(d: dict, pdf: Path) -> dict:
+    """The dry repair of one order's raw_text: every glyph whose own character differs from the text layer's,
+    placed by alignment, replaced only where raw_text holds the text layer's character."""
+    import fitz
+    raw = d.get("raw_text") or ""
+    doc = fitz.open(pdf)
+    chars = digit_chars(doc)
+    todo = [c for c in chars if c["glyph"] != c["text"]]
+    pages, offs = [], []
+    for pg in doc:
+        T, pos = page_text_offsets(pg)
+        pages.append(T)
+        offs.append(pos)
+    placed = place(pages, raw) if todo else []
+    new = list(raw)
+    skipped = Counter()
+    subs = []
+    for c in todo:
+        t = offs[c["page"]].get((round(c["origin"][0], 1), round(c["origin"][1], 1), c["text"]))
+        if t is None:
+            skipped["not in the text layer"] += 1
+            continue
+        r = placed[c["page"]].get(t)
+        if r is None:
+            skipped["raw_text differs here"] += 1
+            continue
+        if raw[r] != c["text"]:
+            skipped["raw_text has another char here"] += 1
+            continue
+        new[r] = c["glyph"]
+        subs.append({"page": c["page"] + 1, "r_off": r, "from": c["text"], "to": c["glyph"], "font": family(c["font"])})
+    return {"doc_id": d["document_id"], "chars": len(chars), "differ": len(todo), "applied": len(subs),
+            "skipped": dict(skipped), "subs": subs, "new_raw": "".join(new)}
+
+
+def cmd_dry_digits(store: Path) -> int:
+    OUT.mkdir(parents=True, exist_ok=True)
+    (OUT / "raw").mkdir(exist_ok=True)
+    tot, skipped, changed_orders = Counter(), Counter(), []
+    for d in _pdf_orders(store):
+        pdf = find_pdf(d)
+        try:
+            r = repair(d, pdf)
+        except Exception as e:  # noqa: BLE001
+            print(f"[puncfix] {d['document_id']}: ERROR {e!r}"[:200])
+            continue
+        tot.update({"orders": 1, "chars": r["chars"], "differ": r["differ"], "applied": r["applied"]})
+        skipped.update(r["skipped"])
+        if r["applied"]:
+            changed_orders.append(r["doc_id"])
+            (OUT / "raw" / f"{r['doc_id']}.json").write_text(json.dumps(
+                {"doc_id": r["doc_id"], "raw_text": r["new_raw"], "subs": r["subs"]}, ensure_ascii=False), encoding="utf-8")
+    (OUT / "dry_digits.json").write_text(json.dumps({"total": tot, "skipped": skipped, "changed_orders": changed_orders},
+                                                    ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"[puncfix] dry (digits): {tot['orders']} PDF orders; {tot['differ']:,} glyphs read differently by id, "
+          f"{tot['applied']:,} replaced in raw_text in {len(changed_orders)} orders; skipped {dict(skipped)}")
+    return 0
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["classes", "dry", "sample"])
+    ap.add_argument("cmd", choices=["classes", "families", "sample", "dry"])
     ap.add_argument("--store", default=str(ROOT / "storage" / "json_store"))
     a = ap.parse_args(argv)
     if a.cmd == "classes":
         return cmd_classes(Path(a.store))
-    raise SystemExit(f"{a.cmd}: not yet — after the class map is verified (night/PUNCFIX_CRITERION.md)")
+    if a.cmd == "families":
+        return cmd_families(Path(a.store))
+    if a.cmd == "sample":
+        return cmd_sample_digits(Path(a.store))
+    return cmd_dry_digits(Path(a.store))
 
 
 if __name__ == "__main__":
