@@ -1,6 +1,6 @@
 {
- "spent": 160.00050000000002,
- "reserved": 0.108,
+ "spent": 160.0781,
+ "reserved": 0,
  "entries": [
   {
    "id": "anchors2:31.0116#20840-644",
@@ -7194,7 +7194,7 @@
    "id": "grade-grade-opus5v2#4964-1339",
    "label": "grade-grade-opus5v2",
    "estimate": 0.108,
-   "actual": null
+   "actual": 0.0776
   },
   {
    "id": "grade-grade-second4#3360-841",
