@@ -1,0 +1,404 @@
+{
+ "21.0106|Miriam|gid17|1": {
+  "char": ".",
+  "tag": "S01-C1",
+  "n": 245,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "21.0120|Miriam|gid17|1": {
+  "char": ".",
+  "tag": "S01-C2",
+  "n": 68,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "21.0123|Miriam|gid17|1": {
+  "char": ".",
+  "tag": "S01-C3",
+  "n": 63,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "21.0201|Miriam|gid17|2": {
+  "char": ".",
+  "tag": "S01-C4",
+  "n": 34,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "21.0305|Miriam|gid17|3": {
+  "char": ".",
+  "tag": "S01-C5",
+  "n": 68,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "3.0110|Miriam|gid17|1": {
+  "char": ".",
+  "tag": "S01-C6",
+  "n": 61,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "3.0502|Miriam|gid17|0": {
+  "char": ".",
+  "tag": "S02-C1",
+  "n": 117,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "30.0117|Miriam|gid17|1": {
+  "char": ".",
+  "tag": "S02-C2",
+  "n": 242,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "30.0118|Miriam|gid17|1": {
+  "char": ".",
+  "tag": "S02-C3",
+  "n": 153,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "30.0413|Miriam|gid17|4": {
+  "char": ".",
+  "tag": "S02-C4",
+  "n": 59,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "31.0207|Miriam|gid17|2": {
+  "char": ".",
+  "tag": "S02-C5",
+  "n": 127,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "31.0214|Miriam|gid17|2": {
+  "char": ".",
+  "tag": "S02-C6",
+  "n": 213,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "31.0252|Miriam|gid17|2": {
+  "char": ".",
+  "tag": "S03-C1",
+  "n": 143,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "31.0317|Miriam|gid17|3": {
+  "char": ".",
+  "tag": "S03-C2",
+  "n": 68,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "31.0409|Miriam|gid17|4": {
+  "char": ".",
+  "tag": "S03-C3",
+  "n": 26,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "31.0503|Times New Roman,Bold|gid17|5": {
+  "char": ".",
+  "tag": "S03-C4",
+  "n": 1,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "31.0521|Miriam|gid17|5": {
+  "char": ".",
+  "tag": "S03-C5",
+  "n": 126,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "31.0603|Miriam|gid17|6": {
+  "char": ".",
+  "tag": "S03-C6",
+  "n": 128,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "31.0830|Miriam|gid17|8": {
+  "char": ".",
+  "tag": "S04-C1",
+  "n": 29,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "32.0101|Miriam|gid17|1": {
+  "char": ".",
+  "tag": "S04-C2",
+  "n": 174,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "32.0201|Miriam|gid17|2": {
+  "char": ".",
+  "tag": "S04-C3",
+  "n": 209,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "32.0202|Miriam|gid17|2": {
+  "char": ".",
+  "tag": "S04-C4",
+  "n": 333,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "32.0207|Miriam|gid17|0": {
+  "char": ".",
+  "tag": "S04-C5",
+  "n": 88,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "32.0207|Times New Roman,Bold|gid17|2": {
+  "char": ".",
+  "tag": "S04-C6",
+  "n": 1,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "32.0222|Miriam|gid17|2": {
+  "char": ".",
+  "tag": "S05-C1",
+  "n": 179,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "32.0250|Miriam|gid17|5": {
+  "char": ".",
+  "tag": "S05-C2",
+  "n": 23,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "32.0307|Miriam|gid17|3": {
+  "char": ".",
+  "tag": "S05-C3",
+  "n": 59,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "32.0315|Miriam|gid17|3": {
+  "char": ".",
+  "tag": "S05-C4",
+  "n": 115,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "32.0316|Miriam|gid17|3": {
+  "char": ".",
+  "tag": "S05-C5",
+  "n": 73,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "33.0144|Miriam|gid17|1": {
+  "char": ".",
+  "tag": "S05-C6",
+  "n": 100,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "33.0145|FrankRuehl|gid17|1": {
+  "char": ".",
+  "tag": "S06-C1",
+  "n": 408,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "33.0220|Miriam|gid17|2": {
+  "char": ".",
+  "tag": "S06-C2",
+  "n": 44,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "33.0314|Miriam|gid17|3": {
+  "char": ".",
+  "tag": "S06-C3",
+  "n": 208,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "33.0321|David|gid17|3": {
+  "char": ".",
+  "tag": "S06-C4",
+  "n": 1,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "33.0321|Miriam|gid17|3": {
+  "char": ".",
+  "tag": "S06-C5",
+  "n": 21,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "33.0350|Miriam|gid17|2": {
+  "char": ".",
+  "tag": "S06-C6",
+  "n": 306,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "33.0807|Miriam|gid17|8": {
+  "char": ".",
+  "tag": "S07-C1",
+  "n": 220,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "33.0914|Miriam|gid17|9": {
+  "char": ".",
+  "tag": "S07-C2",
+  "n": 68,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "35.0123|Miriam|gid17|5": {
+  "char": ".",
+  "tag": "S07-C3",
+  "n": 54,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "35.0201|Miriam|gid17|2": {
+  "char": ".",
+  "tag": "S07-C4",
+  "n": 63,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "35.0203|David,Bold|gid18|2": {
+  "char": ".",
+  "tag": "S07-C5",
+  "n": 1,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "35.0219|Miriam|gid17|2": {
+  "char": ".",
+  "tag": "S07-C6",
+  "n": 15,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "35.0814|Miriam|gid17|8": {
+  "char": ".",
+  "tag": "S08-C1",
+  "n": 106,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "36.0104|Miriam|gid17|1": {
+  "char": ".",
+  "tag": "S08-C2",
+  "n": 112,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "36.0109|Miriam|gid17|1": {
+  "char": ".",
+  "tag": "S08-C3",
+  "n": 37,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "36.0207|Times New Roman,Bold|gid17|2": {
+  "char": ".",
+  "tag": "S08-C4",
+  "n": 1,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "36.0306|Miriam|gid17|0": {
+  "char": ".",
+  "tag": "S08-C5",
+  "n": 32,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "36.0507|Miriam|gid17|5": {
+  "char": ".",
+  "tag": "S08-C6",
+  "n": 86,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "38.0102|Miriam|gid17|1": {
+  "char": ".",
+  "tag": "S09-C1",
+  "n": 245,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "38.0109|Miriam|gid17|1": {
+  "char": ".",
+  "tag": "S09-C2",
+  "n": 152,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "38.0117|David|gid17|1": {
+  "char": ".",
+  "tag": "S09-C3",
+  "n": 1,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "38.0121|David|gid17|1": {
+  "char": ".",
+  "tag": "S09-C4",
+  "n": 2,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "50.0405|Miriam|gid17|4": {
+  "char": ".",
+  "tag": "S09-C5",
+  "n": 154,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "58.0214|Miriam|gid17|1": {
+  "char": ".",
+  "tag": "S09-C6",
+  "n": 243,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "58.0217|Miriam|gid17|2": {
+  "char": ".",
+  "tag": "S10-C1",
+  "n": 189,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "61.0105|Miriam|gid17|1": {
+  "char": ".",
+  "tag": "S10-C2",
+  "n": 69,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "61.0106|Miriam|gid17|1": {
+  "char": ".",
+  "tag": "S10-C3",
+  "n": 22,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "61.0108|Miriam|gid17|1": {
+  "char": ".",
+  "tag": "S10-C4",
+  "n": 55,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "61.0109|Miriam|gid17|1": {
+  "char": ".",
+  "tag": "S10-C5",
+  "n": 209,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "61.0110|Miriam|gid17|1": {
+  "char": ".",
+  "tag": "S10-C6",
+  "n": 19,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "61.0117|Miriam|gid17|1": {
+  "char": ".",
+  "tag": "S11-C1",
+  "n": 116,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "61.0118|Miriam|gid17|1": {
+  "char": ".",
+  "tag": "S11-C2",
+  "n": 78,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "HKA-31-08-01|Segoe UI Semilight|gid20|1": {
+  "char": null,
+  "tag": "S11-C3",
+  "n": 2,
+  "verdict": "a real digit 1 — Segoe UI Semilight's proportional '1' (0.38/0.53 em) in the banner '31-08-01'; not punctuation, never repaired"
+ },
+ "PM-21.0203|Miriam|gid17|2": {
+  "char": ".",
+  "tag": "S11-C4",
+  "n": 214,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "PM-33.0119|Miriam|gid17|1": {
+  "char": ".",
+  "tag": "S11-C5",
+  "n": 107,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "PM-33.0342|Miriam|gid17|3": {
+  "char": ".",
+  "tag": "S11-C6",
+  "n": 58,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ },
+ "PM-33.0901|Miriam|gid17|0": {
+  "char": ".",
+  "tag": "S12-C1",
+  "n": 100,
+  "verdict": "period — 3 crops read by eye (session B, 30.09): in an order number, a clause number or at a sentence end"
+ }
+}
