@@ -1,6 +1,6 @@
 {
- "spent": 150.7038,
- "reserved": 0,
+ "spent": 160.00050000000002,
+ "reserved": 0.108,
  "entries": [
   {
    "id": "anchors2:31.0116#20840-644",
@@ -775,6 +775,12 @@
    "label": "clauseroute-82",
    "estimate": 2.5,
    "actual": 0.7485
+  },
+  {
+   "id": "compose-opus5v2_p2#5252-1335",
+   "label": "compose-opus5v2_p2",
+   "estimate": 0.58,
+   "actual": 0.58
   },
   {
    "id": "curate:130.13#3",
@@ -7185,6 +7191,12 @@
    "actual": 0.0675
   },
   {
+   "id": "grade-grade-opus5v2#4964-1339",
+   "label": "grade-grade-opus5v2",
+   "estimate": 0.108,
+   "actual": null
+  },
+  {
    "id": "grade-grade-second4#3360-841",
    "label": "grade-grade-second4",
    "estimate": 0.108,
@@ -7485,6 +7497,24 @@
    "actual": 0.12
   },
   {
+   "id": "layer1ft-pilot#4876-1338",
+   "label": "layer1ft-pilot",
+   "estimate": 0.0709,
+   "actual": 0.0723
+  },
+  {
+   "id": "layer1ft-pilot#9624-1337",
+   "label": "layer1ft-pilot",
+   "estimate": 0.0681,
+   "actual": 0.0663
+  },
+  {
+   "id": "layer1mx-pilot#22004-1340",
+   "label": "layer1mx-pilot",
+   "estimate": 0.0757,
+   "actual": 0.0779
+  },
+  {
    "id": "probe-after_v95#17028-552",
    "label": "probe-after_v95",
    "estimate": 0.784,
@@ -7717,6 +7747,18 @@
    "label": "probe-newsrc_before",
    "estimate": 1.68,
    "actual": 2.2
+  },
+  {
+   "id": "probe-opus5v2_p1#8628-1334",
+   "label": "probe-opus5v2_p1",
+   "estimate": 5.6967,
+   "actual": 4.6397
+  },
+  {
+   "id": "probe-opus5v2_p2#5252-1336",
+   "label": "probe-opus5v2_p2",
+   "estimate": 4.8033,
+   "actual": 3.8605
   },
   {
    "id": "probe-pilot150#2704-724",
