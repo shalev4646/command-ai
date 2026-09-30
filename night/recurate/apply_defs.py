@@ -42,7 +42,11 @@ NEVER = {"20.0502", "3.0502", "33.1010"}
 def section_from(defn: dict) -> tuple[dict, list[str], bool]:
     """(section, ids to drop, digit_free)."""
     if defn.get("mode") == "replace-sections":
-        title = f"עיקרי הפקודה — {defn['title']}"
+        # The section title is embedded in every clause chunk ("{doc} — {section}\nסעיף …"), so a
+        # new title moves the ranking of clauses whose text did not change: HKA-31-08-01 with the
+        # prefixed title lost an order from the ruler window (q00109, 29.09). A def that corrects an
+        # existing block in place carries the old title in `section_title`.
+        title = defn.get("section_title") or f"עיקרי הפקודה — {defn['title']}"
         return ({"id": "key-facts", "title": title,
                  "clauses": [{"number": c["number"], "text": c["text"]} for c in defn["clauses"]]},
                 list(defn.get("replaces_sections", [])), False)
@@ -74,6 +78,16 @@ def seen_numbers(defn: dict) -> dict[str, list[str]]:
     return out
 
 
+def stale_clauses(kept: list[dict], section: dict) -> list[str]:
+    """Headings of the def that the kept block already carries with OTHER text. The write-time merge keeps the
+    live clause and skips the def's one with the same heading, so a review fix applied to a corpus that already
+    holds an earlier version of the def would vanish without a sign — 3.0501's C5 fixes on the v163 corpus, caught
+    by hand in v164 (29.09). The same text again is an idempotent re-apply and passes; a replaced block is not in
+    `kept` and is never consulted."""
+    live = {c["number"]: c["text"] for s in kept if s["id"] == section["id"] for c in s.get("clauses") or []}
+    return [c["number"] for c in section["clauses"] if c["number"] in live and live[c["number"]] != c["text"]]
+
+
 def gate(section: dict, raw: str, digit_free: bool, seen: dict[str, list[str]] | None = None
          ) -> tuple[list[str], list[str], list[tuple]]:
     problems, warnings = check(section, raw, digit_free=digit_free)
@@ -96,6 +110,13 @@ def recurated_record(doc: dict, defn: dict, def_name: str, drop: list, seen: dic
     if seen:
         rec["page_verified_numbers"] = list(rec.get("page_verified_numbers", [])) + [
             {"clause": k, "numbers": v, "def": def_name} for k, v in seen.items()]
+    # whole sentences read on the page image — the support audit does not count them as low support
+    # (coverage_audit.page_verified_sentences); each carries its page and section, or it does not count
+    pvs = [{"clause": c["number"], "sentence": e.get("sentence"), "page": e.get("page"), "src": e.get("src"),
+            "def": def_name}
+           for c in defn.get("clauses", []) for e in c.get("page_verified_sentences") or [] if isinstance(e, dict)]
+    if pvs:
+        rec["page_verified_sentences"] = list(rec.get("page_verified_sentences", [])) + pvs
     return rec
 
 
@@ -119,6 +140,16 @@ def main() -> int:
             safe_print(f"[apply] {did}: not in json_store ({type(e).__name__})"); rc = 1; continue
         doc = json.loads(path.read_text(encoding="utf-8"))
         section, drop, digit_free = section_from(defn)
+        stale = stale_clauses([s for s in doc.get("sections", []) if s["id"] not in drop], section)
+        if stale:
+            safe_print(f"[apply] {did:<11} REFUSED — {len(stale)} clause(s) of the def already in the block with other "
+                       f"text; the merge would keep the live text and drop the def's without a sign:")
+            for n in stale:
+                safe_print(f"          STALE   {n[:90]}")
+            safe_print("          restore the order's block from before the def was first applied (git show <base>:<path>) "
+                       "and apply again, or fix the live clause with its own script (night/v163/fix_live_v163.py)")
+            rc = 1
+            continue
         seen = seen_numbers(defn)
         problems, warnings, misses = gate(section, doc["raw_text"], digit_free, seen)
         # the coverage gate judges the block as it will be served: the kept sections plus this one

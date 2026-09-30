@@ -94,6 +94,13 @@ GLOSSARY: dict[str, str] = {
     'ולתם': 'ועדה לתיאום מילואים',
     'קלב': 'קרוב לבית העברה',
     'שק"ם': 'קנטינה',
+    # ── renumbered orders (night/ALIAS_04101.md). The portal republishes orders under a new
+    # numbering; the corpus keeps the number it was ingested with. A soldier who types the
+    # new number gets the order's own title, which heads every chunk of it.
+    # פ"מ 04.101 = PM-35.0402 (same title and text; the one difference found, 90 vs 60 days,
+    # is the user's call and does not change the mapping)
+    '04.101': 'חופשות לחיילים המשרתים בשירות חובה',
+    '04101': 'חופשות לחיילים המשרתים בשירות חובה',
     # ── 2026-09-18 batch — soldier words with ZERO (or near-zero) occurrences
     # in the index, each expanded to a phrase that lives almost entirely in
     # the answering order (counts: night/head100/out/glossary_counts.txt;
@@ -157,6 +164,30 @@ GLOSSARY: dict[str, str] = {
     'ימי רגילה': 'חופשה שנתית',
     'לרגילה': 'חופשה שנתית',
     'ברגילה': 'חופשה שנתית',
+    # ── 2026-09-27 — the word gaps of the final161v2 misses (night/GLOSSARY_GAPS_CRITERION.md,
+    # criterion and phrasings saved before the values). haircut: the verb and its forms occur
+    # 0 times in the orders, "תספורת" and "שיער" only in 33-05-01. Measured paired: 33-05-01 and
+    # its hair clause entered the window on 3 of 3 new phrasings, zero lost on every instrument.
+    'להסתפר': 'תספורת שיער',
+    'הסתפר': 'תספורת שיער',
+    'הסתפרתי': 'תספורת שיער',
+    'הסתפרה': 'תספורת שיער',
+    'הסתפרו': 'תספורת שיער',
+    'מסתפר': 'תספורת שיער',
+    'מסתפרת': 'תספורת שיער',
+    'מסתפרים': 'תספורת שיער',
+    'תסתפר': 'תספורת שיער',
+    'אסתפר': 'תספורת שיער',
+    # NOT here, from the same round:
+    # - "טופס/צו השחרור" -> "פקודת השחרור": the PHRASE is the order's own, 14 of its 26
+    #   occurrences in 31.0103 — but retrieval scores WORDS: "פקודת" is in 113 orders, "השחרור"
+    #   in 54 (the entry above that works adds two words that live in ONE order).
+    #   Appended to "…בצו השחרור…" (frozen rs067) it moved the whole window off the topic
+    #   (PM-33.0333, PM-33.0202, 8.0101 in; 31.0103 out). Judge an expansion by its words too.
+    # - "כניסה יומית" -> "לינת בית": harmless, but its new phrasing was served without it.
+    # - "יומיות": in the orders always the adjective (נסיעות יומיות, 36.0521), and a wage word.
+    # - "משימה": the orders' own word (73 times in 22 orders); the two instrument questions
+    #   that carry it outside the diagnosed row use it in the neutral sense.
 }
 
 _QUOTES = str.maketrans({"״": '"', "”": '"', "“": '"', "׳": "'", "’": "'"})
@@ -313,6 +344,24 @@ HOMONYMS: list[dict] = [
      "senses": [
          # PM-33.0302 „מש"ק ש"ג"; הק"א 33-05-01 §5 „חייל היוצא מהמחנה"
          {"label": "שער המחנה (השומר בשער)", "cue": "", "expand": "שער המחנה יציאה מהמחנה כניסה למחנה"},
+     ]},
+    # „יומיות" (29.09, night/stage2/CRITERION.md item ד): a soldier says it for
+    # going home every evening — 35.0807's הת"ש 07 „לינת בית" — and for a daily
+    # wage (35.0206 „שיעור התגמול ליום", 56.0131 דמי כלכלה). The paid final test
+    # served rs054 „אפשר לקבל יומיות ולישון בבית?" the right clause and the model
+    # answered about pay. In the orders the word is only the adjective („נסיעות
+    # יומיות", 36.0521), so NEITHER sense expands retrieval (the glossary's rule;
+    # a measured round rejected it as a glossary key, GLOSSARY_GAPS_CRITERION):
+    # the entry exists for ANSWER_TERM_NOTE only. The pattern skips „היומיות",
+    # the definite adjective.
+    {"term": "יומיות", "pattern": r"(?<![א-ת])[ולבמכש]{0,2}יומיות(?![א-ת])",
+     "senses": [
+         {"label": 'חזרה הביתה כל ערב — לינה בבית (הת"ש 07, „לינת בית")',
+          "cue": r"לישון|ישן|ישנה|בבית|הביתה|לינה|לינת|לחזור|בבוקר|(?<![א-ת])[ולבמכשה]{0,2}(?:ערב|לילה)(?![א-ת])",
+          "expand": ""},
+         {"label": "תשלום לפי יום (שכר או תגמול יומי)",
+          "cue": r"כסף|תשלום|משלמים|לשלם|שכר|משכורת|שקל|₪|תגמול",
+          "expand": ""},
      ]},
 ]
 

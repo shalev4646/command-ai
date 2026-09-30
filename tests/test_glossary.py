@@ -53,6 +53,19 @@ def test_flag_off_by_default_in_code():
         assert G.RETRIEVE_GLOSSARY is False
 
 
+# ── renumbered orders (night/ALIAS_04101.md) ────────────────────────────────
+
+def test_new_number_of_the_leave_order_reaches_its_title():
+    title = "חופשות לחיילים המשרתים בשירות חובה"
+    for q in ('ראיתי שמפנים לפ"מ 04.101, על מה הפקודה הזאת?',
+              "לפי פקודה 04.101, מי מאשר לחייל חופשה מיוחדת?",
+              "מה כתוב ב 04101?"):
+        assert G.expansions(q) == [title], q
+    # another new number, and a number that only looks alike, stay silent
+    assert G.expansions('מה כתוב בפ"מ 07.102 על עונשים?') == []
+    assert G.expansions("יש לי 04.10 שעות") == []
+
+
 # ── the 2026-09-18 batch (night/head100/GLOSSARY_CRITERION.md) ──────────────
 
 def test_multiword_entry_accepts_hebrew_prefixes():
@@ -91,6 +104,26 @@ def test_noun_forms_of_regila_expand_but_the_adjective_does_not():
     assert G.expansions("כמה ימי רגילה מגיע לי בשנה?") == ["חופשה שנתית"]
     assert G.expansions("זו פעילות רגילה של היחידה") == []
 
+
+
+# ── the 2026-09-27 gap round (night/GLOSSARY_GAPS_CRITERION.md) ─────────────
+
+def test_haircut_verb_reaches_the_appearance_order_vocabulary():
+    # "להסתפר" and its forms occur 0 times in the orders; "תספורת"/"שיער" only in 33-05-01
+    for q in ("הסמל שלח אותי להסתפר באמצע השבוע",
+              "לא הסתפרתי לפני שחזרתי מהבית",
+              "אני חיילת, גם אני צריכה להסתפר?"):
+        assert G.expansions(q) == ["תספורת שיער"], q
+    # the order's own noun needs no bridge
+    assert G.expansions("מה כללי התספורת בצבא?") == []
+
+
+def test_gap_words_that_failed_or_are_ambiguous_stay_out():
+    # measured and rejected (a lost order, or no gain on a new phrasing), or ambiguous by
+    # count — the reasons are in the comment under the haircut entries
+    for w in ("טופס השחרור", "טופס שחרור", "צו השחרור", "צו שחרור", "כניסה יומית",
+              "יומיות", "משימה", "המשימה", "משימות"):
+        assert w not in G.GLOSSARY, w
 
 if __name__ == "__main__":
     for name, fn in list(globals().items()):

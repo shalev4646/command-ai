@@ -759,15 +759,48 @@ def load_documents() -> list[dict]:
 # 11 reserve-only. Off (=0) restores the tag-only scope for measurement.
 COMMANDER_SCOPE_ALL = os.environ.get("COMMANDER_SCOPE_ALL", "1") == "1"
 
+# The same reasoning, one step narrower, for the soldier persona (29.09,
+# night/stage2/CRITERION.md, item ה). A soldier whose question names reserve
+# service is asking about an order tagged for reservists: the final test's
+# rs007 ("משחררים אותי מהמילואים…", labelled soldier) could not pass, because
+# all three answering orders (35.0206 among them) are tagged reserve/commander
+# and _docs_for_role('soldier') kept them out of the ranking AND the router's
+# title block; five gate cases fail the same way by construction
+# (night/DIAG_rs007_rs018.md). With the flag on, such a question is scoped to
+# the soldier's orders PLUS the reserve-tagged ones — never the commander-only
+# ones. The scope is a token passed where `role` is passed to retrieval; the
+# persona (the system prompt) stays `role`. Off (the default in code), or no
+# explicit reserve word in the question: the token is `role` itself, so every
+# call is byte-identical.
+RETRIEVE_RESERVE_CUE = os.environ.get("RETRIEVE_RESERVE_CUE", "0") == "1"
+SCOPE_SOLDIER_RESERVE = "soldier+reserve"
+_RESERVE_CUE = re.compile(
+    r'(?<![א-ת])[ולבמכשה]{0,2}(?:מילואים|מילואימניק(?:ית|ים|יות)?|שמ"?פ)(?![א-ת])'
+    r'|(?<![א-ת])[ולבמכשה]{0,2}צו\s*(?:8|שמונה)(?![0-9א-ת])')
+
+
+def _scope_role(role: str | None, question: str | None) -> str | None:
+    """The retrieval scope for `role` asking `question` (RETRIEVE_RESERVE_CUE):
+    `role`, except a soldier whose question names reserve service, who gets
+    SCOPE_SOLDIER_RESERVE. Idempotent: a scope token passes through unchanged."""
+    if (RETRIEVE_RESERVE_CUE and role == "soldier" and question
+            and _RESERVE_CUE.search(question.replace("״", '"'))):
+        return SCOPE_SOLDIER_RESERVE
+    return role
+
 
 def _docs_for_role(role: str | None) -> list[dict]:
     """Documents applicable to a role. Docs without a `roles` tag (shouldn't
     happen post-ingestion, but defensive for older data) are treated as
     relevant to everyone rather than silently hidden. The commander persona
-    sees the whole corpus (see COMMANDER_SCOPE_ALL)."""
+    sees the whole corpus (see COMMANDER_SCOPE_ALL); SCOPE_SOLDIER_RESERVE
+    (only ever produced by _scope_role with RETRIEVE_RESERVE_CUE on) is the
+    union of the soldier's and the reservist's orders."""
     docs = load_documents()
     if role is None or (role == "commander" and COMMANDER_SCOPE_ALL):
         return docs
+    if role == SCOPE_SOLDIER_RESERVE:
+        return [d for d in docs if {"soldier", "reserve"} & set(d.get("roles") or ALL_ROLES)]
     return [d for d in docs if role in (d.get("roles") or ALL_ROLES)]
 
 
@@ -816,6 +849,7 @@ def _route_docs(question: str, role: str) -> set[str]:
     4096-token cache minimum, so prompt caching does NOT apply here — every
     call pays full input price (~$0.0025).
     """
+    role = _scope_role(role, question)
     try:
         response = client.with_options(timeout=8.0, max_retries=1).messages.create(
             model=REWRITE_MODEL,
@@ -1569,6 +1603,7 @@ def widen_context(chunks: list[dict], question: str, role: str,
     clause-embedding path (RETRIEVE_V3), amount-bearing clauses. Each is a no-op when its flag is
     off, so production with all flags off is byte-identical to the
     pre-extension pipeline."""
+    role = _scope_role(role, question)
     out = extend_with_hypothetical(chunks, question, role, route)
     out = extend_with_router_slots(out, question, role, route)
     out = extend_with_full_blocks(out, role, question)
@@ -1600,6 +1635,7 @@ def retrieve_for_role(question: str, role: str, route: set[str] | None = None,
     the union truncates back to MAX_CONTEXT_CHUNKS, so an extension applied here
     would be bought twice and then thrown away.
     """
+    role = _scope_role(role, question)
     docs = _docs_for_role(role)
     if RETRIEVE_CURATED_ONLY:
         docs = [d for d in docs if _has_key_facts(d)]
@@ -2083,16 +2119,20 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
     # wait the soldier spends staring at a spinner. Free: same one call, joined
     # rather than re-bought (see prefetch_hypothetical).
     prefetch_hypothetical(question)
+    # RETRIEVE_RESERVE_CUE: the retrieval scope, decided once from the raw
+    # question and carried through both passes; the persona (the system
+    # prompt below) stays `role`. Off, or no reserve word: `scope` is `role`.
+    scope = _scope_role(role, question)
     # ...and, when RETRIEVE_SPECULATIVE_ROUTE is on, the router too — joined
     # below only if the rewrite hands back the same text it was given
-    prefetch_route(question, role)
+    prefetch_route(question, scope)
     # follow-ups ("ומה לגבי מילואים?") are unsearchable on their own, and
     # first questions often carry typos that sink retrieval — search with the
     # Haiku rewrite/normalization, but answer the original question
     search_query = _standalone_question(question, history)
     # one router call per user question, shared by both retrievals below
-    route = route_for(search_query, role, raw_question=question)
-    chunks = retrieve_for_role(search_query, role, route=route, widen=False)
+    route = route_for(search_query, scope, raw_question=question)
+    chunks = retrieve_for_role(search_query, scope, route=route, widen=False)
     # The rewrite is a retrieval AID, never a gatekeeper: when it changed the
     # question, retrieve on the RAW phrasing too and merge by best score. A
     # paraphrased rewrite silently dropped the דין-משמעתי threat chunk on the
@@ -2103,7 +2143,7 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
     if not history and search_query.strip() != question.strip():
         seen = {(c["doc_id"], c.get("section"), c.get("clause")) for c in chunks}
         extra = [
-            c for c in retrieve_for_role(question, role, route=route, widen=False)
+            c for c in retrieve_for_role(question, scope, route=route, widen=False)
             if (c["doc_id"], c.get("section"), c.get("clause")) not in seen
         ]
         # RESERVED SLOTS, not a global score sort: the two retrievals' scores
@@ -2130,7 +2170,7 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
             first_window = list(chunks)
             seen = {(c["doc_id"], c.get("section"), c.get("clause")) for c in chunks}
             extra = [
-                c for c in retrieve_for_role(lacked, role, route=route, widen=False)
+                c for c in retrieve_for_role(lacked, scope, route=route, widen=False)
                 if (c["doc_id"], c.get("section"), c.get("clause")) not in seen
             ]
             if extra:
@@ -2144,11 +2184,11 @@ def stream_ai_answer(question: str, history: list[dict] | None = None, role: str
             # extend_with_lack_clauses): the answering order was already there
             # in 11 of 45 realstyle zeros, and the swap above may have dropped
             # it. No-op while RETRIEVE_LACK_CLAUSES is 0.
-            chunks = extend_with_lack_clauses(chunks, lacked, role, first_window=first_window)
+            chunks = extend_with_lack_clauses(chunks, lacked, scope, first_window=first_window)
 
     # after the union, never inside it: the union truncates to
     # MAX_CONTEXT_CHUNKS and would drop an appended chunk that was paid for
-    chunks = widen_context(chunks, question, role, route)
+    chunks = widen_context(chunks, question, scope, route)
     context = _context_from_chunks(chunks)
     system_prompt = SYSTEM_PROMPTS.get(role, SYSTEM_PROMPT_SOLDIER)
 
