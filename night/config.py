@@ -7,6 +7,7 @@ Windows stdout defaults to cp1252 and raises on Hebrew (see common.safe_print).
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -22,7 +23,12 @@ FIXES = OUT / "fixes.jsonl"              # 3b: proposed fixes with verdicts
 PROBE_BASE = OUT / "probe_baseline.jsonl"   # 4a: paid Opus answers, before
 PROBE_AFTER = OUT / "probe_after.jsonl"     # 4b: paid Opus answers, after
 GRADES = OUT / "grades.jsonl"            # 4c: 4-way labels
-LEDGER = OUT / "ledger.json"
+# The one ledger. Every worktree carries its own copy of night/out/ledger.json, so a paid step run
+# from a second tree (the v161 branch that composes an arm's second pass, 30.09) would keep its own
+# books and its own distance from the ceiling. LEDGER_PATH names the shared file instead — the money
+# tree's — for that process; night.ledger.Ledger merges entries from disk and writes atomically, so
+# two trees can share it. Unset, nothing changes.
+LEDGER = Path(os.environ["LEDGER_PATH"]).resolve() if os.environ.get("LEDGER_PATH") else OUT / "ledger.json"
 LOG = OUT / "night.log"
 
 REPORT = ROOT / "REPORT.md"
