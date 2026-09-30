@@ -19,6 +19,16 @@ RETRIEVE_SECOND_PASS_KEEP_RULING, which night/final_arm did not apply before
     venv\\Scripts\\python.exe -m night.model_arm report  opus5v2   # FREE: the criterion, from the stage-6 review file
     venv\\Scripts\\python.exe -m night.model_arm collect opus5v2 p1  # recovery: a batch that outlived its process
 
+`--model M` and `--base TAG` (anywhere on the line) name another arm on recorded deliveries: the
+answering model, and the finished run whose user turns are re-sent. The defaults — claude-opus-5 on
+final161v2 — are the opus5v2 arm. Every step of one arm must be given the same pair.
+
+`--flag NAME=VALUE` (repeatable) lights an arm's own switch — one backend reads at import to build
+the system prompt. It is applied after fly.toml's [env] and before backend, so fly.toml cannot turn
+it off, and no step spends unless the flag is lit in the request itself: the system prompt of every
+delivered role differs from the no-flag build, and every composed request carries it. Do NOT add the
+flag to fly.toml before the measurement. Every step of a flagged arm takes the same --flag.
+
 A refusal of the arm's model (stop_reason "refusal": the classifier declined,
 content empty or partial) is recorded on the row and counted as a FAILURE of
 that row — never dropped from the denominator. night.grade leaves rows without
@@ -28,8 +38,10 @@ base model would contaminate the arm. Each paid step refuses to run twice.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -41,10 +53,128 @@ from night import final_arm as FA  # noqa: E402  loads fly.toml [env] before bac
 from common import safe_print  # noqa: E402
 from night import config as C  # noqa: E402
 
-ARM_MODEL = "claude-opus-5"
-BASE_TAG = "final161v2"
+# The arm's model and the finished run whose deliveries it re-sends. The defaults are the opus5v2
+# arm (night/MODEL_ARM_CRITERION.md) and reproduce its records exactly; `configure` (--model /
+# --base) sets another pair — Opus 4.8 on final161v2, or Opus 5 on opus5v2 — for an arm that changes
+# something else (a system-prompt flag) on the same recorded deliveries (the manager, 30.09).
+DEFAULT_ARM_MODEL, DEFAULT_BASE_TAG = "claude-opus-5", "final161v2"
+ARM_MODEL = DEFAULT_ARM_MODEL
+BASE_TAG = DEFAULT_BASE_TAG
 PARTS = C.OUT / "question_parts.json"
 BASE_USAGE = C.OUT / f"usage_{BASE_TAG}.json"
+
+
+def configure(model: str | None = None, base: str | None = None) -> None:
+    """Set the arm's model and/or its base run; None leaves a value as it is."""
+    global ARM_MODEL, BASE_TAG, BASE_USAGE
+    if model:
+        ARM_MODEL = model
+    if base:
+        BASE_TAG = base
+        BASE_USAGE = C.OUT / f"usage_{BASE_TAG}.json"
+
+
+# ── the arm's own flags (--flag NAME=VALUE) ───────────────────────────────────
+# An arm that changes the system prompt is lit by an environment flag backend reads at import.
+# The flag is given on the command line and applied AFTER night.final_arm put fly.toml's [env]
+# into the environment (at import, above) and BEFORE backend is imported — so a line in fly.toml
+# cannot switch it off. (A flag must not enter fly.toml before its measurement: final_arm applies
+# that table over the environment, and a "0" there would turn a lit arm off in silence — the third
+# session's note, 30.09.) `check_flags` then refuses to spend unless the flag is lit IN THE
+# REQUEST: the system prompt each delivered role gets must differ from the one a clean process
+# builds without the flag, and `check_requests` reads it off every composed request.
+FLAGS: dict[str, str] = {}
+_ENV_BEFORE: dict[str, str | None] = {}
+_FP_CODE = ("import hashlib, json, os, sys; sys.path.insert(0, sys.argv[1]); from night import final_arm; "
+            "os.environ.update(json.loads(sys.argv[2])); import backend; "
+            "print('FP=' + json.dumps({r: hashlib.sha1(p.encode('utf-8')).hexdigest()[:12] "
+            "for r, p in backend.SYSTEM_PROMPTS.items()}))")
+
+
+def set_flags(flags: dict[str, str]) -> None:
+    """Put the arm's flags into the environment — only before backend is imported: its prompts
+    are built at import, and a flag set after that changes nothing."""
+    if not flags:
+        return
+    if "backend" in sys.modules:
+        raise SystemExit("[model_arm] --flag after backend was imported would change nothing — flags come first")
+    for k, v in flags.items():
+        _ENV_BEFORE.setdefault(k, os.environ.get(k))
+        os.environ[k] = v
+    FLAGS.update(flags)
+
+
+def _fp(text: str) -> str:
+    return hashlib.sha1((text or "").encode("utf-8")).hexdigest()[:12]
+
+
+def system_fingerprints() -> dict[str, str]:
+    """{role: fingerprint of the system prompt this process sends}."""
+    import backend
+    return {role: _fp(p) for role, p in backend.SYSTEM_PROMPTS.items()}
+
+
+def clean_fingerprints(flags: dict[str, str], env: dict[str, str] | None = None) -> dict[str, str]:
+    """The same from a fresh interpreter: fly.toml's [env] as night.final_arm applies it, then
+    `flags` on top, then backend. With no flags — what production, and the base, send."""
+    out = subprocess.run([sys.executable, "-c", _FP_CODE, str(ROOT), json.dumps(flags)], cwd=str(ROOT),
+                         env=dict(os.environ) if env is None else env, capture_output=True, text=True,
+                         encoding="utf-8", errors="replace")
+    line = next((ln for ln in out.stdout.splitlines() if ln.startswith("FP=")), None)
+    if line is None:
+        raise SystemExit(f"[model_arm] could not build the system prompts in a clean process: {out.stderr[-400:]}")
+    return json.loads(line[3:])
+
+
+def baseline_fingerprints() -> dict[str, str]:
+    """The system prompts WITHOUT the arm's flags (the environment as it was before set_flags)."""
+    env = dict(os.environ)
+    for k in FLAGS:
+        if _ENV_BEFORE.get(k) is None:
+            env.pop(k, None)
+        else:
+            env[k] = _ENV_BEFORE[k]
+    return clean_fingerprints({}, env)
+
+
+def unchanged_roles(arm_fp: dict[str, str], base_fp: dict[str, str], roles) -> list[str]:
+    """The delivered roles whose system prompt the flags did NOT change."""
+    return sorted(r for r in set(roles) if arm_fp.get(r) == base_fp.get(r))
+
+
+def check_flags(roles) -> dict[str, str]:
+    """Before any money: an arm given flags must send a request the base did not. Returns the
+    arm's fingerprints ({} when the arm has no flags — nothing to check, nothing changes)."""
+    if not FLAGS:
+        return {}
+    wrong = {k: os.environ.get(k) for k, v in FLAGS.items() if os.environ.get(k) != v}
+    if wrong:
+        raise SystemExit(f"[model_arm] flags were overwritten after they were set: now {wrong}, asked {FLAGS} — nothing was sent")
+    arm_fp, base_fp = system_fingerprints(), baseline_fingerprints()
+    same = unchanged_roles(arm_fp, base_fp, roles)
+    safe_print(f"[model_arm] flags {FLAGS}: the system prompt differs from the no-flag build for "
+               f"{sorted(set(roles) - set(same))}; identical for {same}")
+    if same:
+        raise SystemExit(f"[model_arm] the flags change nothing in the system prompt of {same} — the arm would run "
+                         f"with them OFF there. Nothing was sent.")
+    return arm_fp
+
+
+def check_requests(reqs: list, meta: list[dict], arm_fp: dict[str, str]) -> None:
+    """Every composed request carries the lit prompt of its row's role: the flag is in the
+    REQUEST, not only in the environment."""
+    if not FLAGS:
+        return
+    bad = []
+    for req, m in zip(reqs, meta):
+        system = req["params"].get("system") or []
+        text = system[0].get("text", "") if isinstance(system, list) and system else str(system)
+        if _fp(text) != arm_fp.get(m.get("role"), arm_fp.get("soldier")):
+            bad.append(m.get("id"))
+    if bad or len(reqs) != len(meta):
+        raise SystemExit(f"[model_arm] {len(bad)} of {len(reqs)} request(s) do not carry the flagged system prompt of "
+                         f"their role: {bad[:8]} — nothing was sent")
+
 
 # The criterion's row sets — fixed in night/MODEL_ARM_CRITERION.md before the run.
 # (ב): the 34 rows the stage-6 review of final161v2 called full, plus rs055,
@@ -61,6 +191,10 @@ PASS_48 = 41                                                     # FINAL_RULER_V
 FIELDS_OF_AN_ANSWER = ("answer", "sources", "context_words", "sent_user_content", "route", "stop_reason",
                        "stop_details", "refusal_stop", "truncated", "refused_flag", "usage", "model")
 QUESTION_FIELDS = ("id", "q", "clean_q", "role", "band", "persona", "situation", "source", "target_doc", "ugly")
+# What a row says about the ANSWER it got — never part of a delivery. A base that is itself an arm
+# (opus5v2) carries all of them on its rows; final161v2's rows carry only the first three.
+ANSWER_SIDE_FIELDS = ("answer", "truncated", "refused_flag", "model", "stop_reason", "stop_details",
+                      "refusal_stop", "usage", "error")
 
 
 def _path(tag: str, suffix: str = "") -> Path:
@@ -78,14 +212,14 @@ def _backend():
 
 # ── the requests ──────────────────────────────────────────────────────────────
 
-def request_params(role: str, user_content: str, model: str = ARM_MODEL) -> dict:
+def request_params(role: str, user_content: str, model: str | None = None) -> dict:
     """The answering request exactly as night.probe composes it (production's
     request shape) — only the model is the arm's. tests/test_model_arm.py pins
     the equality against probe.build_requests."""
     import backend
     system_prompt = backend.SYSTEM_PROMPTS.get(role, backend.SYSTEM_PROMPT_SOLDIER)
     return dict(
-        model=model,
+        model=model or ARM_MODEL,
         max_tokens=backend.MAX_OUTPUT_TOKENS,
         thinking={"type": "adaptive"},
         system=[{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}],
@@ -117,7 +251,7 @@ def p1_requests() -> tuple[list, list[dict]]:
         b = base[qid]
         reqs.append(Request(custom_id=f"p{i}", params=MessageCreateParamsNonStreaming(
             **request_params(b["role"], b["sent_user_content"]))))
-        meta.append({k: v for k, v in b.items() if k not in ("answer", "truncated", "refused_flag")})
+        meta.append({k: v for k, v in b.items() if k not in ANSWER_SIDE_FIELDS})
     return reqs, meta
 
 
@@ -183,6 +317,7 @@ def _run_batch(reqs: list, meta: list[dict], label: str, out_path: Path, estimat
         raise
     ticket = C.OUT / f"batch_{label}.json"
     ticket.write_text(json.dumps({"batch_id": batch.id, "label": label, "rid": rid, "out_path": str(out_path),
+                                  "model": ARM_MODEL, "base": BASE_TAG, "flags": dict(FLAGS),
                                   "meta": meta}, ensure_ascii=False), encoding="utf-8")
     C.log(f"[model_arm] {label}: batch {batch.id}, {len(reqs)} requests (reserved ${estimate:.2f}; "
           f"claim ticket {ticket.name}); polling every 60s")
@@ -248,8 +383,13 @@ def complete_grades(final: list[dict], graded: list[dict], parts: dict[str, list
 # ── the criterion ────────────────────────────────────────────────────────────
 
 def row_sets() -> tuple[list[str], list[str]]:
-    """(the 48 of FINAL_RULER_V2 (א), the 24 NO_SUCH_RULE / NOT_IN_CORPUS) — from the base review sheet."""
-    sheet = json.loads((C.OUT / f"review_sheet_{BASE_TAG}.json").read_text(encoding="utf-8"))
+    """(the 48 of FINAL_RULER_V2 (א), the 24 NO_SUCH_RULE / NOT_IN_CORPUS) — from the base review sheet.
+    The adjudication verdicts are the ruler's, the same on every run of it: a base whose own sheet is
+    not built yet (an arm before its `sheet`) is read through the default base's."""
+    path = C.OUT / f"review_sheet_{BASE_TAG}.json"
+    if not path.exists():
+        path = C.OUT / f"review_sheet_{DEFAULT_BASE_TAG}.json"
+    sheet = json.loads(path.read_text(encoding="utf-8"))
     a48 = [x["id"] for x in sheet if x["verdict"].startswith("ANSWERED_IN_CORPUS") or x["verdict"] == "UNADJUDICATED"]
     n24 = [x["id"] for x in sheet if x["verdict"] in ("NO_SUCH_RULE", "NOT_IN_CORPUS")]
     return a48, n24
@@ -319,6 +459,7 @@ def cmd_dry(tag: str) -> int:
     from night.ledger import Ledger
     usage = _base_usage()
     reqs, meta = p1_requests()
+    check_requests(reqs, meta, check_flags({m["role"] for m in meta}))
     same, differ = 0, []
     for req, m in zip(reqs, meta):
         p = req["params"]
@@ -340,6 +481,9 @@ def cmd_dry(tag: str) -> int:
     safe_print(f"[model_arm] {tag} dry — model {ARM_MODEL} — flags: {FA._flag_line()}")
     safe_print(f"[model_arm] first pass: {same}/{len(reqs)} requests count exactly the input tokens {BASE_TAG} was "
                f"billed for" + (f"; DIFFER: {differ}" if differ else ""))
+    if FLAGS and differ:
+        safe_print(f"[model_arm] the system prompt is the arm's own ({FLAGS}): the input tokens are EXPECTED to differ "
+                   f"from {BASE_TAG}'s, by the prompt's change — the price below is the base's and moves with it")
     e = estimate()
     safe_print(f"[model_arm] base {BASE_TAG}: p1 input ${e['p1_in']:.2f} + output ${e['p1_out']:.2f} "
                f"(mean {e['out_mean_p1']:.0f} output tokens); p2 ${e['p2_in_each'] + e['p2_out_each']:.4f} each "
@@ -349,7 +493,7 @@ def cmd_dry(tag: str) -> int:
         safe_print(f"[model_arm]   output x{f:.1f}: {cells}")
     ledger = Ledger(C.LEDGER)
     safe_print(f"[model_arm] ledger ${ledger.spent:.2f} spent, ${ledger.remaining():.2f} under the ceiling")
-    return 1 if differ else 0
+    return 1 if differ and not FLAGS else 0
 
 
 def cmd_p1(tag: str) -> int:
@@ -359,6 +503,7 @@ def cmd_p1(tag: str) -> int:
     if out.exists():
         safe_print(f"[model_arm] {out.name} already on disk — refusing to pay twice."); return 1
     reqs, meta = p1_requests()
+    check_requests(reqs, meta, check_flags({m["role"] for m in meta}))      # before any money
     e = estimate()
     safe_print(f"[model_arm] {tag} p1: {len(reqs)} recorded user turns -> {ARM_MODEL} — flags: {FA._flag_line()}")
     _run_batch(reqs, meta, f"probe-{tag}_p1", out, e["p1_in"] + 3 * e["p1_out"])
@@ -380,6 +525,7 @@ def cmd_p2(tag: str) -> int:
     failed = sorted(i for i, r in first.items() if r.get("error"))
     if failed:
         safe_print(f"[model_arm] first pass has failed requests {failed} — resend them before the second pass."); return 1
+    arm_fp = check_flags({r["role"] for r in first.values()})               # before the compose spend
     # production: a second search only where the answer declared a gap (app.py);
     # the question as the base delivered it (wording and role recorded in p1)
     rows = [{**{k: first[i][k] for k in QUESTION_FIELDS if k in first[i]}, "first_answer": first[i]["answer"]}
@@ -398,6 +544,7 @@ def cmd_p2(tag: str) -> int:
     models = {r["params"]["model"] for r in reqs}
     if models != {ARM_MODEL}:
         raise SystemExit(f"[model_arm] composed requests name {models}, not {ARM_MODEL}")
+    check_requests(reqs, meta, arm_fp)
     e = estimate()
     _run_batch(reqs, meta, f"probe-{tag}_p2", out, len(reqs) * (e["p2_in_each"] + 3 * e["p2_out_each"]))
     return 0
@@ -471,6 +618,10 @@ def cmd_report(tag: str) -> int:
     review = json.loads(review_path.read_text(encoding="utf-8")) if review_path.exists() else {}
     a48, n24 = row_sets()
     j = judge(review, a48, n24)
+    if (ARM_MODEL, BASE_TAG) != (DEFAULT_ARM_MODEL, DEFAULT_BASE_TAG):
+        safe_print(f"[model_arm] note: the protected rows, the answer-side rows and the 48-row bar below are those of "
+                   f"MODEL_ARM_CRITERION.md ({DEFAULT_ARM_MODEL} on {DEFAULT_BASE_TAG}); this arm ({ARM_MODEL} on "
+                   f"{BASE_TAG}) is judged by its own criterion")
     arm = {r["id"]: r for r in C.read_jsonl(_path(tag))}
     grades = {r["id"]: r for r in C.read_jsonl(C.OUT / f"grades_grade-{tag}.jsonl")}
     base_grades = {r["id"]: r for r in C.read_jsonl(C.OUT / f"grades_grade-{BASE_TAG}.jsonl")}
@@ -525,15 +676,54 @@ def cmd_collect(tag: str, which: str) -> int:
     return 0
 
 
+def _parse(argv: list[str]) -> tuple[str, str, list[str], str | None, str | None, dict[str, str]]:
+    """(command, tag, further positionals, --model, --base, {--flag NAME: VALUE}). The options may
+    stand anywhere, as `--model X` or `--model=X`; `--flag NAME=VALUE` repeats; the positionals are
+    what they were before the options existed."""
+    model = base = None
+    flags: dict[str, str] = {}
+    pos: list[str] = []
+    it = iter(argv[1:])
+    for a in it:
+        name, eq, val = a.partition("=")
+        if name in ("--model", "--base", "--flag"):
+            if not eq:
+                val = next(it, "")
+            if not val:
+                raise SystemExit(f"[model_arm] {name} needs a value")
+            if name == "--model":
+                model = val
+            elif name == "--base":
+                base = val
+            else:
+                k, eq2, v = val.partition("=")
+                if not (k and eq2):
+                    raise SystemExit(f"[model_arm] --flag takes NAME=VALUE, not {val!r}")
+                flags[k] = v
+        else:
+            pos.append(a)
+    return (pos[0] if pos else "dry"), (pos[1] if len(pos) > 1 else "opus5v2"), pos[2:], model, base, flags
+
+
+def _check_tag(tag: str) -> None:
+    if tag == BASE_TAG:
+        raise SystemExit(f"[model_arm] the arm's tag is its base's ({BASE_TAG}) — an arm is compared WITH its base, "
+                         f"it cannot write over it")
+
+
 def main(argv: list[str]) -> int:
-    # before backend is imported anywhere: backend.MODEL is read once, at import
+    cmd, tag, rest, model, base, flags = _parse(argv)
+    configure(model, base)
+    _check_tag(tag)
+    # before backend is imported anywhere: backend.MODEL and the prompts are read once, at import
+    set_flags(flags)
     os.environ["ANSWER_MODEL"] = ARM_MODEL
-    cmd = argv[1] if len(argv) > 1 else "dry"
-    tag = argv[2] if len(argv) > 2 else "opus5v2"
     fn = {"dry": cmd_dry, "p1": cmd_p1, "p2": cmd_p2, "grade": cmd_grade, "sheet": cmd_sheet,
           "report": cmd_report}.get(cmd)
     if cmd == "collect":
-        return cmd_collect(tag, argv[3])
+        if not rest:
+            raise SystemExit(__doc__)
+        return cmd_collect(tag, rest[0])
     if fn is None:
         raise SystemExit(__doc__)
     return fn(tag)

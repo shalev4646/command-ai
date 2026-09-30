@@ -1,0 +1,6 @@
+{
+ "batch_id": "msgbatch_012y24XXe172ABkTDkTFHso5",
+ "label": "grade-grade-opus5v2",
+ "created_at": "2026-09-30 07:20:36.965094+00:00",
+ "note": "the Haiku grading batch of the Opus 5 arm; custom_id g<i> = row i of probe_opus5v2.jsonl rows with an answer; recorded by session A so the grades can be collected if the grading process dies"
+}

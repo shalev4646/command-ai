@@ -1,0 +1,532 @@
+{
+ "rs000": {
+  "verdict": "full",
+  "answered_parts": 1,
+  "note": "33.0115 — דיווח על בעלות + היתר לעיסוק; אותם ציטוטים כמו 4.8, תנאי-ההיתר נוספו",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs002": {
+  "verdict": "full",
+  "answered_parts": 1,
+  "note": "35.0314 טופס נספח א' למת\"ש + חישוב הפיצוי; ועוד מגבלות-ניכוי (35.0222 8%, 36.0205, 35.0221) — כולן מהחלון",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs005": {
+  "verdict": "full",
+  "answered_parts": 1,
+  "note": "31.0513 נפקד; תלונה 630 ודין תוך 24 שעות; ניכוי שכר פרט לפחות מ-24 שעות — כמו 4.8",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs006": {
+  "verdict": "full",
+  "answered_parts": 1,
+  "note": "61.0104 ס' 11–12, 59, 10, 13 — כמו 4.8",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs007": {
+  "verdict": "not_full",
+  "answered_parts": 1,
+  "note": "35.0206 (הפקודה שבבוררות) לא בחלון — כמו 4.8; ענה מחובות איש-מילואים (PM-33.0302, ציטוט מאוחה של ס' 45+47 — מילולי) והצהיר על החסר; ביטוח לאומי כדלת",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs008": {
+  "verdict": "borderline",
+  "answered_parts": 0,
+  "note": "„המידע לא קיים\"; כלל-האיחור של PM-33.0302 (היעדר מן השירות כולל איחור ליחידה) לא הוגש בחלון (נבדק: 0 מופעים) — כמו 4.8",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs009": {
+  "verdict": "full",
+  "answered_parts": 1,
+  "note": "35.0107 — אבטחת הכספים באחריות מפקד היחידה (ציטוט זהה ל-4.8), כסף פרטי מוצהר כחסר; אותה מהות, פותח בשורת-חוסר (לקח 4: אינה חלק שלא נענה)",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs010": {
+  "verdict": "full",
+  "answered_parts": 1,
+  "note": "חוק השיפוט — ביודעין/התרשלות; ועוד 33.0114 „לפי מיטב יכולתו וידיעתו\" ואמצעים פיקודיים",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs012": {
+  "verdict": "full",
+  "answered_parts": 2,
+  "note": "נספח ב' — זקיף מוחרג מדין משמעתי; פסק בטל; אמצעים פיקודיים ושימוע — שני החלקים",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs013": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "„המידע לא קיים\" + 33.0144 (נזק לגורם אזרחי) כלא-חל; סעיף חובת-הדיווח של PM-33.0302 (מילואים) לא בחלון הזה; אין כלל ישיר בקורפוס — 4.8 גבולי",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs014": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "„המידע לא קיים\"; כלל-השיער לזכר (ס' 96) לא בחלון (נבדק: 0 מופעים), הוגש רק ס' 97 לחיילת — כמו 4.8; טענת „לחיילת בלבד\" נכונה לחלון",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs015": {
+  "verdict": "full",
+  "answered_parts": 1,
+  "note": "PM-35.0402 חופשה מיוחדת רפואית + הורה חולה + 35.0807 הת\"ש; „סא\"ל לפחות ובמערך הלוחם סרן\" — מילולי בחלון",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs017": {
+  "verdict": "full",
+  "answered_parts": 1,
+  "note": "61.0104 ס' 11–12, 59 — כמו 4.8; ועוד 61.0109 סימני פגיעת-חום",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs018": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "חוק השיפוט (שבבוררות) לא בחלון — כמו 4.8; „המידע לא קיים\" + שעות פעילות",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs019": {
+  "verdict": "full",
+  "answered_parts": 2,
+  "note": "חוק קליטת חיילים — מענק 20–60 יום ופיקדון מהיום ה-14, התעריפים (684.99/990.63 — מילוליים בחלון); אין קצבה — מוצהר; תגמול-נוסף 3.0110 ס' 6, 9 (נקודות זיכוי, 1 במאי — מילוליים)",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs020": {
+  "verdict": "full",
+  "answered_parts": 1,
+  "note": "33.0115 — אסור בלי היתר, מסלולי ההיתר ומאשריהם, שכר רק במצוקה",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs021": {
+  "verdict": "full",
+  "answered_parts": 2,
+  "note": "61.0104 ס' 5, 10, 11, 13, 14 — זכות לטיפול בהקדם, פנייה בלילה; שעת-העירה מוצהרת כחסרה — כמו 4.8",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs023": {
+  "verdict": "full",
+  "answered_parts": 2,
+  "note": "PM-33.0213 חשיכה ושקט 22:00–06:00; שמירה כחריגה; תאורה פרטנית מוצהרת — כמו 4.8",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs024": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "כלל-השרוולים (raw של 33-05-01) לא הוגש — כמו 4.8; ציטט רק 33.0501 „הופעה מסודרת\"",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs025": {
+  "verdict": "full",
+  "answered_parts": 2,
+  "note": "33.0201 הפסקת צהריים חצי שעה 12:00–14:00, לוח הזמנים אצל המפקד הממונה — כמו 4.8",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs026": {
+  "verdict": "full",
+  "answered_parts": 1,
+  "note": "35.0805 מענק נישואין + 35.0803 קופת סיוע + 35.0307 שכ\"ד + 35.0210 תשלום לאשה 80% — סוגר את הפער ש-4.8 החמיץ (גבולי→מלאה)",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs030": {
+  "verdict": "full",
+  "answered_parts": 1,
+  "note": "61.0104 ס' 5, 10, 11–13, 18–20, 34ו — הפניה למיון בידי הגורם הרפואי, חירום ללא התניה; ועוד התחייבות למיון",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs033": {
+  "verdict": "full",
+  "answered_parts": 1,
+  "note": "33-05-01 ס' 106–109 — מספר הטבעות לפי מין ושירות, אין דרישת חומר — כמו 4.8",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs034": {
+  "verdict": "full",
+  "answered_parts": 2,
+  "note": "61.0104 ס' 64, 11–12, 75–79 יום ד; ועוד 61.0109 — כמו 4.8",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs035": {
+  "verdict": "full",
+  "answered_parts": 1,
+  "note": "61.0104 ס' 64, 11–12, 75–77; 61.0109 מחלות חום — כמו 4.8",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs037": {
+  "verdict": "full",
+  "answered_parts": 1,
+  "note": "30.0117 — טקס הפרידה ביחידה או סיום ההליך במדור (שתי החלופות ש-4.8 החסיר אחת מהן); אין מספר ימים — מוצהר; הציטוט מאוחה (משפט אמצעי הושמט) — מילולי",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs039": {
+  "verdict": "full",
+  "answered_parts": 1,
+  "note": "HKA — 24/48/72 שעות לפי אורך השמ\"פ, אין מכסה שנתית — כמו 4.8",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs040": {
+  "verdict": "full",
+  "answered_parts": 1,
+  "note": "PM-35.0402 — 18 ימים בשנה, אין מכסה חודשית; „עד 5 ימי מפקד\" — מילולי בחלון; סופ\"ש ארוך אחת לחודש",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs042": {
+  "verdict": "full",
+  "answered_parts": 1,
+  "note": "PM-35.0402 נספח — 7/10/14 (הציטוט מילולי בחלון, „רמ״פ\" בגרשיים); ב' ומטה — יתרה שנתית",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs045": {
+  "verdict": "full",
+  "answered_parts": 1,
+  "note": "PM-33.0213 — 7 שעות, קיצוץ לשמירה שעתיים/4 שעות פעמיים בשבוע, השלמה 4+3 — כמו 4.8",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs046": {
+  "verdict": "full",
+  "answered_parts": 3,
+  "note": "21.0113 ס' 7–15 — מותר בתנאים, פק\"ל המחנה; ועוד 32.0502 ס' 5 (לימודים במוסד — אישור) — שלושת החלקים",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs048": {
+  "verdict": "full",
+  "answered_parts": 1,
+  "note": "36.0401 — פדיון רק ברמת פעילות א', עד 8 ימים; צבירה באישור אל\"ם (ציטוט בחלון) — כמו 4.8",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs050": {
+  "verdict": "full",
+  "answered_parts": 1,
+  "note": "33-05-01 ס' 106–109 — שרשרת אחת מוסתרת, קולר אסור — כמו 4.8",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs051": {
+  "verdict": "full",
+  "answered_parts": 1,
+  "note": "33-05-01 ס' 100–105 כולל ס' 103 לקבע — כמו 4.8",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs052": {
+  "verdict": "full",
+  "answered_parts": 1,
+  "note": "PM-33.0352 — שימוע חובה; מדרג הסמכות לפי דרגה (ציטוט מילולי בחלון, סרן קוצר) — מ\"כ אינו ברשימה; 33.0351 תרגול לא כענישה. 4.8 ענה מסמכות-הענישה (PM-33.0302); שניהם „אסור\"",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs054": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "35.0807 בחלון אך „לינת בית\"/הת\"ש 07 לא הוגשו (נבדק: 0 מופעים, רק קל\"ב נפשי 31.0116); „המידע לא קיים\" — כמו 4.8; לא פסק על תשלום",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs055": {
+  "verdict": "full",
+  "answered_parts": 1,
+  "note": "PM-33.0213 — 4 שעות רצופות לפני/אחרי המשימה + השלמת 3 שעות באותה יממה; = הפסיקה שהפרודקשן של 4.8 היה מגיש (מעבר 1)",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs057": {
+  "verdict": "full",
+  "answered_parts": 2,
+  "note": "33-05-01 ס' 98–99, 116–117; היתר ס' 43 — כמו 4.8",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs059": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "HKA לא בחלון — כמו 4.8",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs060": {
+  "verdict": "full",
+  "answered_parts": 1,
+  "note": "35.0223 ס' 7–9 — החייל ממלא, מפקד/רס\"ן חותם — כמו 4.8",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs062": {
+  "verdict": "full",
+  "answered_parts": 1,
+  "note": "PM-33.0352 — איסור נוהל גורף, שימוע, הודעה 4 שעות (ציטוט מאוחה — מילולי), מדרג; PM-35.0402 דחייה באל\"ם — כמו 4.8",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs063": {
+  "verdict": "full",
+  "answered_parts": 2,
+  "note": "21.0113 ס' 7–18 — סמכות רק במקום/פעילות מסווגים, ס' 13 מגורים; שני החלקים — כמו 4.8 (פסיקה מנוסחת „מותר בתנאים\" למפקד = „אסור בזמן חופשי רגיל\")",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs064": {
+  "verdict": "full",
+  "answered_parts": 2,
+  "note": "61.0104 ס' 5, 11–13, 18, 59; מונית מוצהרת כלא-מוסדרת — כמו 4.8 (מעבר 1 נשמר, KEEP_RULING)",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs066": {
+  "verdict": "full",
+  "answered_parts": 1,
+  "note": "PM-33.0213 שקט 22:00–06:00 — כמו 4.8",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs067": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "31.0103 בחלון; „המידע לא קיים\" — כמו 4.8",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs069": {
+  "verdict": "borderline",
+  "answered_parts": 2,
+  "note": "גבולית — הכרעת המנהל וקריאה בלתי-תלויה של סשן ב (30.09): הכותרת „אינו קורה מעצמו — מחייב בקשה יזומה או החלטה של גורם מוסמך\" וההמלצה „ולא להמתין לשחרור אוטומטי\" חזקות מהראיה (31.0117: לאחר המועד שבחוק, או בהחלטת גורם מוסמך; ובגוף עצמו: הקטעים „אינם קובעים מתי חובת המילואים נפסקת מאליה\"). המקורות נכונים והחוסר מוצהר — לא בטוחה-ושגויה; ירידה ממלאה, הגורם: ניסוח-הפסיקה (אותם מקורות כמו 4.8). הקריאה של סשן א: מלאה, סומנה מראש כהכרעה הקרובה ביותר",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs070": {
+  "verdict": "full",
+  "answered_parts": 1,
+  "note": "חוק השיפוט — אי-קיום פקודה (בלא מזיד) שנתיים / קרבי עשר; החובה עומדת — סוגר את ההחמצה של 4.8 (לא-מלאה→מלאה)",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs071": {
+  "verdict": "full",
+  "answered_parts": 2,
+  "note": "33.0220 — הנסיבות האסורות; ועוד PM-33.0352 ו-61.0104 ס' 76–80 (הפנייה לגורם רפואי) — סוגר את חלק „מה עושים\" ש-4.8 החסיר (גבולי→מלאה)",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs001": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "חסר; PM-33.0352 שימוע — ציטוט מילולי",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs003": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "חסר",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs004": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "חסר; 21.0113 ס' 9 — מילולי",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs011": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "חסר; PM-33.0202 ס' 3 — מילולי",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs016": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "חסר; PM-33.0302 מ\"כ אינו קצין שיפוט — מילולי",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs022": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "חסר; 35.0223 — מילולי, וההבחנה ציוד פרטי/צבאי נכונה",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs027": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "חסר; 33.0914 — מילולי",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs028": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "PM-33.0302 „הצדק סביר\" — כלל אמיתי (מילולי), מיושם בהיקפו; „אין דרישה לאישור\" מוצהר — כמו 4.8",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs029": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "חסר; 35.0306 הלנה — מילולי",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs031": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "חסר",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs032": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "חסר; 35.0504 — מילולי",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs036": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "21.0113 ס' 7–9 — כלל אמיתי (מילולי); „אין מגבלת זמן\" מוצהר; הכותרת „אסור בתנאים\" מתייחסת לאיסור-הנשיאה האמיתי",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs038": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "חסר; HKA 08:00 — מילולי",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs041": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "61.0104 ימי ג — כלל אמיתי (מילולי), אין מכסה — מוצהר — כמו 4.8",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs043": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "חסר",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs044": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "חסר; 33.0201 — מילולי",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs047": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "36.0301 + 35.0314 — כללים אמיתיים; טפסים 3092/869 וה-11 בחודש — מילוליים בחלון — כמו 4.8",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs049": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "35.0206 תגמול ליום + 3.0110 השגה — מילוליים; „אין שעות נוספות\" מוצהר",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs053": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "חסר; PM-21.0203 — מילולי",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs056": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "חסר; 35.0807 — מילולי",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs058": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "מעבר 1 נשמר (KEEP_RULING): 33.0501 ס' 2 „מדי שירות בתפקיד או במסגרת צבאית\" — מילולי, בהיקפו; סמכות המפקד מוצהרת כלא-מוכרעת. **לבדיקה:** כותרת „חייב\" חזקה מהגוף; 4.8 (פרודקשן) — „לא ניתן להכריע\" עם אותו ציטוט",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs061": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "חסר; PM-33.0213 שעת ט\"ש — מילולי",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs065": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "35.0222 „בחשבון שנערך ובדוק על ידי מת\"ש\" — מילולי; הכללה קלה (מת\"ש כבודק), נוהל-בירור מוצהר כחסר",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "rs068": {
+  "verdict": "not_full",
+  "answered_parts": 0,
+  "note": "חסר; PM-21.0203 — ציטוט מקוצר של משפט אמיתי (מילולי בהשמטה)",
+  "confident_wrong": false,
+  "invented": false
+ },
+ "_summary": {
+  "note": "עיון שלב 6, 30.09 סשן א', לפי night/MODEL_ARM_CRITERION.md — כל 72 השורות מול הקורפוס והבוררות, עם תשובת final161v2 ופסיקתה לצידן; 274 מחרוזות מצוטטות נבדקו מול החלון — 6 אינן מילוליות (מיזוג/השמטת משפט של טקסט אמיתי, נבדק אחת-אחת), 0 המצאות. מכנה (ד) = 48: 38 מלאות, 2 גבוליות (rs008, rs069), 8 לא מלאות. (א) 0. (ב) 1 מ-35 — rs069 גבולית בהכרעת המנהל וסשן ב (הקריאה של סשן א: מלאה) — הזרוע אינה עוברת את הקריטריון כלשונו. (ה) 0 ב-24.",
+  "strict_full": 38,
+  "borderline": 2,
+  "not_full": 8,
+  "confident_wrong": 0,
+  "invented": 0,
+  "gains_vs_base": [
+   "rs026",
+   "rs037",
+   "rs070",
+   "rs071"
+  ],
+  "closest_calls": [
+   "rs069",
+   "rs009",
+   "rs058"
+  ],
+  "drops_b": [
+   "rs069"
+  ],
+  "readings": {
+   "session_A": "rs069 full -> passes",
+   "manager_and_session_B": "rs069 borderline -> (b) fails on one row"
+  }
+ }
+}

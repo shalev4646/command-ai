@@ -21,7 +21,13 @@ from pathlib import Path
 #   ~$2   re-measure the saved 54 questions for a paired before/after
 #   ~$7   curate wave 1 (85 orders) once the PDFs are downloaded
 #   ~$0.5 grow the gate by 3 probes per new order
-CEILING_USD = 195.00
+CEILING_USD = 215.00
+# Raised 195 -> 215 on 2026-09-30, on the user's words in the coordinating
+# session's chat ("I add more 20 dolllars"), relayed by that session. At the
+# raise: $160.00 spent (the Opus 5 arm $9.08 and three layer-1 pilots $0.22 on
+# top of $150.70), $35 left under 195. What the $20 is for, each item still on
+# its own go in this session's chat: the layer-1 full run (~$1.79 batch, cap
+# $4) if pilot 3 passes, and the re-test that follows the root fix.
 # Raised 155 -> 195 on 2026-09-22, on the user's words in the coordinating
 # session's chat ("תעלה את התקרה ל-195"), relayed to this branch by that session.
 # What the $40 is meant to cover, each item still on its own approval:
