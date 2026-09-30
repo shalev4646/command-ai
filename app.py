@@ -9157,6 +9157,33 @@ def _stage_html(text: str) -> str:
     )
 
 
+_RULING_MARK = "**פסיקה:**"
+
+
+def _first_line_settled(buf: str) -> bool:
+    """Has the streamed buffer's first line — and the ruling line, if one has
+    started — ended? _stream_answer parses the chip off the buffer only then.
+    A newline alone is not enough: with a preface line ahead of the ruling
+    line, the first newline lands while "**פסיקה:** מותר" is still
+    half-streamed and chips ✓ where the full line ("מותר בתנאים") is ⚠, until
+    the rerun redraws it (independent review, 30.09.2026). No recorded answer
+    carries such a preface, so on all of them the moment and the chip are
+    unchanged; a line that never ends is still cut by the 400-char guard.
+    tests/test_stream_chip_race.py."""
+    if "\n" not in buf:
+        return False
+    m = _VERDICT_RE.search(buf)
+    if m:
+        return "\n" in buf[m.end():]
+    # no complete ruling line yet — but the line still streaming may be one
+    # whose marker is itself mid-stream ("**פסי"): not settled either. A
+    # second line that merely begins "**" (usually **מקור:**) waits the
+    # few characters until the marker is ruled out — a delay, never a
+    # different chip.
+    tail = buf.rsplit("\n", 1)[1].lstrip(" " + _BIDI_MARKS)
+    return not (tail and _RULING_MARK.startswith(tail[:len(_RULING_MARK)]))
+
+
 def _stream_answer(text_gen, acc: list[str] | None = None, think=None,
                    question: str = "") -> str:
     """Render the live answer chip-first: hold the stream until the first
@@ -9189,17 +9216,18 @@ def _stream_answer(text_gen, acc: list[str] | None = None, think=None,
     ended = True
     for chunk in it:
         buf += chunk
-        if "\n" in buf or len(buf) > 400:
+        if _first_line_settled(buf) or len(buf) > 400:
             ended = False
             break
     think.empty()
     chip, lead = None, buf
-    # parse once the first line is DECIDED: a newline landed, the stream is
+    # parse once the first line is DECIDED: it ended — and so did the ruling
+    # line, if one started (_first_line_settled) — the stream is
     # already over, or the 400-char spill guard hit — past 400 the chip
     # verdict cannot differ from the full-text rerun (either the clause
     # separator already arrived, or the clause is far beyond the badge cap
     # and both parses reject). A shorter mid-line cut must not chip.
-    if "\n" in buf or len(buf) > 400 or ended:
+    if _first_line_settled(buf) or len(buf) > 400 or ended:
         chip, lead = _verdict_chip(buf, question)
     if chip:
         st.markdown(chip, unsafe_allow_html=True)
