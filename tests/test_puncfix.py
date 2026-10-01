@@ -69,6 +69,31 @@ def test_a_scrambled_order_is_repaired_to_its_glyphs():
     assert "33.0220" in nums, nums[:12]
 
 
+def test_the_write_changes_raw_text_and_nothing_else():
+    """apply --write: the order file keeps every byte but its raw_text value (json_store has files written with
+    indent 1 and 2, and without a newline at the end — re-dumping would rewrite them all)."""
+    for indent, tail in ((1, ""), (2, ""), (2, "\n")):
+        doc = {"document_id": "x", "title": "כותרת \"מרכאות\"", "raw_text": "בלמ\"ס\n 32..2.7 \\ סוף", "n": [1, 2]}
+        text = json.dumps(doc, ensure_ascii=False, indent=indent) + tail
+        new = P.with_raw(text, doc["raw_text"], "בלמ\"ס\n 32.0207 \\ סוף")
+        assert json.loads(new) == {**doc, "raw_text": "בלמ\"ס\n 32.0207 \\ סוף"}
+        changed = [(a, b) for a, b in zip(text.split("\n"), new.split("\n")) if a != b]
+        assert len(changed) == 1 and changed[0][0].lstrip().startswith('"raw_text"'), changed
+        assert new.endswith(tail or "}") and len(text.split("\n")) == len(new.split("\n"))
+    try:
+        P.with_raw('{"title": "x"}', "a", "b")
+        raise AssertionError("a file without that raw_text must be refused")
+    except ValueError:
+        pass
+
+
+def test_the_write_refuses_another_fingerprint():
+    assert P.fingerprint([]) == P.fingerprint([])
+    a = [{"doc_id": "1", "new_raw": "x"}, {"doc_id": "2", "new_raw": "y"}]
+    assert P.fingerprint(a) == P.fingerprint(list(reversed(a)))
+    assert P.fingerprint(a) != P.fingerprint([{"doc_id": "1", "new_raw": "x"}, {"doc_id": "2", "new_raw": "z"}])
+
+
 if __name__ == "__main__":
     fails = 0
     for name, fn in sorted(globals().items()):

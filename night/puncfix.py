@@ -1,20 +1,22 @@
 # -*- coding: utf-8 -*-
-"""Punctuation coded as a digit — a free, deterministic repair from the PDF's own glyphs (night/PUNCFIX_CRITERION.md).
-DRY RUN ONLY: writes under night/out/puncfix/, never the corpus; the corpus write is session A's, as its own wave.
+"""Digits and periods behind a scrambled character map — a free, deterministic repair from the PDF's own glyph ids
+(night/PUNCFIX_CRITERION.md). Everything but `apply --write` writes under night/out/puncfix/ only; the corpus write
+is session A's, as its own wave (v166 = raw_text only).
 
-    venv\\Scripts\\python.exe -m night.puncfix classes            # the glyph classes + crop sheets for the visual check
-    venv\\Scripts\\python.exe -m night.puncfix dry                # the substitutions on raw_text, with the verified map
-    venv\\Scripts\\python.exe -m night.puncfix sample             # the pre-registered verification sample, as crop sheets
+    venv\\Scripts\\python.exe -m night.puncfix families           # the standard-order fonts, by their anchor glyphs
+    venv\\Scripts\\python.exe -m night.puncfix sample             # the pre-registered digit sample, as crop sheets
+    venv\\Scripts\\python.exe -m night.puncfix dry                # the substitutions on raw_text -> night/out/puncfix/
+    venv\\Scripts\\python.exe -m night.puncfix apply              # orders, glyphs, and the fingerprint of the write
+    venv\\Scripts\\python.exe -m night.puncfix apply --write --expect <fingerprint>      # session A only
+    venv\\Scripts\\python.exe -m night.puncfix classes            # the period-by-width classes of 30.09 (the record)
 
-The defect: some PDFs' character maps code a punctuation glyph as a digit — 33.0220's period reads "2", 33.0145's "1"
-(33.0145: "03.06.1979" -> "0310611979"). The text cannot tell such a "2" from a real one; the glyph box can: a real
-digit is as wide as its font's other digits, a period, comma or colon drawn from the same font about half that
-(night/cleantext/pagegate.py; the corpus survey 30.09: a clean gap at 0.36-0.40 em). A CLASS is one (order, font,
-glyph id) — ONE glyph of one embedded font, drawn the same every time (the glyph id comes from the PDF's text
-trace, page.get_texttrace(); the width alone could not tell a period from a colon of the same advance). Each class
-is identified once, by eye, from its crops (the map, night/puncfix_map.json); a class whose shape is unclear is not
-repaired. The ink test (ink_shape) is a reading aid only: on 30.0117 it calls 39 of one glyph's 242 occurrences a
-"colon" — a neighbour's ink inside the clip — so it never decides anything.
+The defect: some PDFs' character maps scramble the digit glyphs themselves — 32.0207 reads its periods as "0" and
+its zeros as "." ("32..2.7"), 33.0220's period reads "2" — so the text cannot be trusted to say which digit was drawn.
+The glyph id can: a font whose glyphs sit in the standard TrueType order draws 17 ".", 19-28 "0"-"9", and its
+anchors 15 ",", 16 "-", 29 ":" prove the order (STD, ANCHORS; Miriam, David, FrankRuehl — Times and Arial use
+another order and are never touched). The glyph id comes from the PDF's text trace, page.get_texttrace(). The
+width test of 30.09 (classes, night/puncfix_map.json) could tell a period from a digit but not one digit from
+another, so it decides nothing now; the ink test (ink_shape) was always a reading aid only.
 
 The stored raw_text is the PDF's text layer (8 of the 59 identical, 50 above 0.98), so every glyph is placed in it by
 alignment: a substitution is made only where the raw_text around it is the PDF's own text, unchanged — never inside
@@ -62,20 +64,24 @@ def reference_width(ws: list[float]) -> float:
     return Counter(wide or [round(w, 2) for w in ws]).most_common(1)[0][0]
 
 
-def pdf_orders(store: Path) -> list[dict]:
-    """Every order whose served text is its PDF's text layer: not web-sourced, not OCR, with the PDF on disk. The
-    repair is per glyph class wherever it occurs; the survey's 59 are where nearly all of them are."""
-    docs = []
+def pdf_order_files(store: Path) -> list[tuple[Path, dict]]:
+    """(file, order) for every order whose served text is its PDF's text layer: not web-sourced, not OCR, with the
+    PDF on disk. The repair is per glyph class wherever it occurs; the survey's 59 are where nearly all of them are."""
+    out = []
     web = set()
     wf = ROOT / "night" / "recurate" / "web_text_orders.json"
     if wf.exists():
         web = {r["document_id"] for r in json.loads(wf.read_text(encoding="utf-8"))}
     for p in sorted(store.glob("*.json")):
-        d = json.loads(p.read_text(encoding="utf-8"))
+        d = json.loads(p.read_bytes().decode("utf-8"))
         if d["document_id"] in web or d.get("ingested_from_text") or find_pdf(d) is None:
             continue
-        docs.append(d)
-    return docs
+        out.append((p, d))
+    return out
+
+
+def pdf_orders(store: Path) -> list[dict]:
+    return [d for _, d in pdf_order_files(store)]
 
 
 # ── glyphs ───────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -522,10 +528,59 @@ def cmd_dry_digits(store: Path) -> int:
     return 0
 
 
+# ── the write: session A's, as its own wave (v166 = raw_text only) ─────────────────────────────────────────────────
+def with_raw(text: str, old_raw: str, new_raw: str) -> str:
+    """An order file's text with only its raw_text value replaced. Every other byte stays as it was — indent, key
+    order, the missing newline at the end: json_store holds files written both ways, and re-dumping would rewrite
+    them all."""
+    key = '"raw_text": '
+    for ascii_ in (False, True):
+        old = key + json.dumps(old_raw, ensure_ascii=ascii_)
+        if text.count(old) == 1:
+            return text.replace(old, key + json.dumps(new_raw, ensure_ascii=ascii_), 1)
+    raise ValueError("raw_text is not stored as one JSON string found exactly once")
+
+
+def fingerprint(results: list[dict]) -> str:
+    """What was measured: each changed order's id and the sha256 of its repaired raw_text."""
+    h = hashlib.sha256()
+    for r in sorted(results, key=lambda r: r["doc_id"]):
+        h.update(f"{r['doc_id']}|{hashlib.sha256(r['new_raw'].encode('utf-8')).hexdigest()}\n".encode("utf-8"))
+    return h.hexdigest()[:16]
+
+
+def cmd_apply(store: Path, write: bool, expect: str | None) -> int:
+    todo = []
+    for p, d in pdf_order_files(store):
+        r = repair(d, find_pdf(d))
+        if r["applied"]:
+            todo.append((p, d, r))
+    fp = fingerprint([r for *_, r in todo])
+    print(f"[puncfix] apply: {len(todo)} orders, {sum(r['applied'] for *_, r in todo):,} glyphs, fingerprint {fp}")
+    if not write:
+        print("[puncfix] dry: nothing written (the write: apply --write --expect <fingerprint>)")
+        return 0
+    if expect != fp:
+        print(f"[puncfix] REFUSED: --expect {expect} is not {fp}: this store or this tool is not the measured one")
+        return 1
+    staged = []
+    for p, d, r in todo:            # every file is checked before any is written
+        new = with_raw(p.read_bytes().decode("utf-8"), d["raw_text"], r["new_raw"])
+        if json.loads(new) != {**d, "raw_text": r["new_raw"]}:
+            raise SystemExit(f"[puncfix] REFUSED: {p.name} would change more than raw_text")
+        staged.append((p, new))
+    for p, new in staged:
+        p.write_bytes(new.encode("utf-8"))
+    print(f"[puncfix] wrote raw_text of {len(staged)} orders, nothing else in them")
+    return 0
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["classes", "families", "sample", "dry"])
+    ap.add_argument("cmd", choices=["classes", "families", "sample", "dry", "apply"])
     ap.add_argument("--store", default=str(ROOT / "storage" / "json_store"))
+    ap.add_argument("--write", action="store_true", help="apply only: write the corpus (session A)")
+    ap.add_argument("--expect", help="apply --write: the fingerprint the dry apply printed")
     a = ap.parse_args(argv)
     if a.cmd == "classes":
         return cmd_classes(Path(a.store))
@@ -533,6 +588,8 @@ def main(argv: list[str]) -> int:
         return cmd_families(Path(a.store))
     if a.cmd == "sample":
         return cmd_sample_digits(Path(a.store))
+    if a.cmd == "apply":
+        return cmd_apply(Path(a.store), a.write, a.expect)
     return cmd_dry_digits(Path(a.store))
 
 
