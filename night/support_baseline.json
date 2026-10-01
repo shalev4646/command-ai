@@ -60,7 +60,7 @@
   "entity_misses": 0
  },
  "30.0117": {
-  "low_support": 3,
+  "low_support": 1,
   "entity_misses": 0
  },
  "30.0118": {
@@ -184,12 +184,12 @@
   "entity_misses": 0
  },
  "31.0503": {
-  "low_support": 1,
+  "low_support": 0,
   "entity_misses": 0
  },
  "31.0504": {
   "low_support": 1,
-  "entity_misses": 2
+  "entity_misses": 0
  },
  "31.0507": {
   "low_support": 0,
@@ -197,7 +197,7 @@
  },
  "31.0508": {
   "low_support": 0,
-  "entity_misses": 1
+  "entity_misses": 0
  },
  "31.0513": {
   "low_support": 0,
