@@ -181,8 +181,14 @@ def clause_numbers_in_raw(raw: str) -> set[int]:
             for m in re.finditer(r"(?<!\d)(\d{1,3})\s*\.\s*(?=[\sא-ת])", raw)}
 
 
+# "סעיף 428 לחוק העונשין" cites a law, not the order. Once v166 made 33.0145, 31.0601, PM-33.0302 and 3.0110
+# numbered, the gate called each such reference an invented clause of the order.
+_LAW_SECTION = re.compile(r"(?:סעיף|סעיפים)\s*\d{1,3}[א-ת]?\s*(?:\([א-ת0-9]+\)\s*)?(?:ל|ב)חוק")
+
+
 def cited_numbers(text: str) -> set[int]:
     out: set[int] = set()
+    text = _LAW_SECTION.sub(" ", text)
     for m in re.finditer(r"סעיפים?\s*(\d{1,3})\s*[–\-—]\s*(\d{1,3})", text):
         out |= {int(m.group(1)), int(m.group(2))}
     # Comma lists — "(סעיפים 1, 7, 9)" / "(סעיפים 3, 4 ו-12)". The wave-1 review

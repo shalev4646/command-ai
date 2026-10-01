@@ -37,6 +37,13 @@ def test_comma_list_citations_are_read():
     assert cited_numbers("(סעיף 43)") == {43}
 
 
+def test_a_section_of_a_law_is_not_a_citation_of_the_order():
+    """33.0145 after v166: „בסעיף 428 לחוק העונשין" is the Penal Law's section, not a clause of the order."""
+    assert cited_numbers("סחיטה באיומים כמשמעה בסעיף 428 לחוק העונשין (סעיף 1)") == {1}
+    assert cited_numbers("לפי סעיף 19א(ה) לחוק הביטוח הלאומי") == set()
+    assert cited_numbers("כאמור בסעיף 22 לעיל") == {22}
+
+
 def test_comma_list_citation_beyond_source_is_a_problem():
     problems, _ = check(_section(CLEAN + " (סעיפים 1, 7, 99)."), RAW)
     assert any("99" in p for p in problems), problems
