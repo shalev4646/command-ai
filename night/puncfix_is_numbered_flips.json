@@ -1,0 +1,392 @@
+{
+ "what": "night.curate.is_numbered per order: 5b89c65 vs the store after v166 (main 37aa440). From the next curation wave the gate verifies clause citations in the orders that turned numbered — until now it rejected every citation there — and the curator gets the numbered citation rule. Nothing switches on by itself.",
+ "numbered_after_v166": [
+  {
+   "doc_id": "21.0106",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "21.0120",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "21.0123",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "21.0201",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "21.0211",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "21.0305",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "3.0110",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "3.0502",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "30.0117",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "30.0118",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "30.0401",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "30.0403",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "30.0408",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "30.0413",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "31.0207",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "31.0214",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "31.0252",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "31.0317",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "31.0409",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "31.0508",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "31.0521",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "31.0603",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "31.0608",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "31.0830",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "31.1001",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "32.0101",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "32.0201",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "32.0202",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "32.0207",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "32.0220",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "32.0222",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "32.0250",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "32.0307",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "32.0315",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "32.0422",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "32.0501",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "33.0114",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "33.0126",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "33.0144",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "33.0145",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "33.0160",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "33.0306",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "33.0321",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "33.0325",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "33.0334",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "33.0350",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "33.0501",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "33.0807",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "33.0808",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "33.0911",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "33.1001",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "33.1112",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "33.1125",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "35.0115",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "35.0201",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "35.0217",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "35.0218",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "35.0219",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "35.0228",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "35.0232",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "35.0306",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "35.0310",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "35.0501",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "35.0802",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "35.0810",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "35.0814",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "36.0104",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "36.0109",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "36.0110",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "36.0113",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "36.0204",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "36.0218",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "36.0302",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "36.0322",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "36.0504",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "36.0515",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "38.0109",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "38.0115",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "38.0121",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "50.0204",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "50.0303",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "50.0405",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "58.0214",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "58.0217",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "61.0105",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "61.0106",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "61.0108",
+   "has_digit_block": false
+  },
+  {
+   "doc_id": "61.0109",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "61.0117",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "61.0118",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "PM-21.0203",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "PM-32.0213",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "PM-33.0137",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "PM-33.0316",
+   "has_digit_block": true
+  },
+  {
+   "doc_id": "PM-33.0901",
+   "has_digit_block": false
+  }
+ ],
+ "unnumbered_after_v166": [
+  {
+   "doc_id": "36.0304",
+   "has_digit_block": true
+  }
+ ],
+ "note_on_the_one_down": "36.0304: its repaired raw_text carries markers 1-19 but also 'טופס 869.' and 'מ- 1 ביולי 80.' at sentence ends, read as markers 869 and 80 — the density test fails. Held from v167 (the manager: next wave, page_verified_numbers + a block note, is_numbered untouched)."
+}
