@@ -289,15 +289,18 @@ def family(font: str) -> str:
 
 
 def standard_fonts(doc) -> set[str]:
-    """Fonts whose glyph order is confirmed standard: >= 2 of the anchors (15 ',', 16 '-', 29 ':') present, all
-    mapped as standard."""
+    """Fonts the repair may read by glyph id: a family whose order was read by eye (FAMILIES_IN_SCOPE, condition 1)
+    AND >= 2 of the anchors (15 ',', 16 '-', 29 ':') present, all mapped as standard. The anchors alone are not
+    enough: HKA-32-03-10's ArialMT (an FOI attachment) passes them yet draws its digits two places lower, and the
+    repair turned its correct "1) 2) 3)" into "0) 1) .)" — 42 digits, found by session A (01.10)."""
     seen: dict[str, Counter] = {}
     for pg in doc:
         for sp in pg.get_texttrace():
             for ucs, gid, _o, _b in sp["chars"]:
                 if gid in ANCHORS and ucs > 0:
                     seen.setdefault(sp["font"], Counter())[(gid, chr(ucs))] += 1
-    return {f for f, c in seen.items() if len({g for g, _ in c}) >= 2 and all(ch == ANCHORS[g] for g, ch in c)}
+    return {f for f, c in seen.items() if family(f) in FAMILIES_IN_SCOPE
+            and len({g for g, _ in c}) >= 2 and all(ch == ANCHORS[g] for g, ch in c)}
 
 
 def digit_chars(doc) -> list[dict]:

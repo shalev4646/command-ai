@@ -69,6 +69,18 @@ def test_a_scrambled_order_is_repaired_to_its_glyphs():
     assert "33.0220" in nums, nums[:12]
 
 
+def test_a_font_outside_the_families_read_by_eye_is_never_repaired():
+    """HKA-32-03-10: an ArialMT that passes the anchor test but numbers its digits two places lower. Its raw_text
+    is right ("1) 2) 3)" on page 8); the repair must leave it byte-identical."""
+    d = _doc("HKA-32-03-10")
+    pdf = P.find_pdf(d) if d else None
+    if pdf is None:
+        print("  (skipped: no PDF on disk)")
+        return
+    r = P.repair(d, pdf)
+    assert r["applied"] == 0 and r["new_raw"] == d["raw_text"], (r["applied"], r["skipped"])
+
+
 def test_the_write_changes_raw_text_and_nothing_else():
     """apply --write: the order file keeps every byte but its raw_text value (json_store has files written with
     indent 1 and 2, and without a newline at the end — re-dumping would rewrite them all)."""
