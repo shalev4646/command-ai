@@ -531,6 +531,56 @@ def cmd_dry_digits(store: Path) -> int:
     return 0
 
 
+EXT_SALT, EXT_N, EXT_PER_ORDER = "digits-ext-20261001", 15, 8
+
+
+def cmd_sample_ext(store: Path) -> int:
+    """The extended sample (night/PUNCFIX_CRITERION.md, after session A's finding of 01.10), drawn after the fix and
+    before anyone looked: for every family the repair reads other than Miriam (whose 29 stand), all its numbers of 2+
+    digits that read differently by glyph if there are <= 15, else 15 by sha1(EXT_SALT|order|page|run), <= 8 an
+    order. Each gets a page crop to read by eye."""
+    import fitz
+    by_fam: dict[str, list] = defaultdict(list)
+    docs = {}
+    for d in _pdf_orders(store):
+        did = d["document_id"]
+        try:
+            doc = fitz.open(find_pdf(d))
+        except Exception:  # noqa: BLE001
+            continue
+        for n in numbers(digit_chars(doc)):
+            fam = family(n["font"])
+            if fam != "Miriam" and n["glyph"] != n["text"] and len(n["glyph"].strip(".")) >= 2:
+                h = hashlib.sha1(f"{EXT_SALT}|{did}|{n['page']}|{n['run'][1]}|{n['run'][2]}".encode("utf-8")).hexdigest()
+                by_fam[fam].append((h, did, n))
+                docs[did] = d
+    rows = []
+    for fam, pop in sorted(by_fam.items()):
+        pop.sort(key=lambda x: x[0])
+        pick, per = [], Counter()
+        for x in pop:
+            if len(pop) > EXT_N and (len(pick) >= EXT_N or per[x[1]] >= EXT_PER_ORDER):
+                continue
+            pick.append(x)
+            per[x[1]] += 1
+        rows += [{"family": fam, "population": len(pop), "hash": h[:12], "doc_id": did, "page": n["page"] + 1,
+                  "text_layer": n["text"], "by_glyph": n["glyph"], "bbox": n["bbox"]} for h, did, n in pick]
+    (OUT / "sample_ext").mkdir(parents=True, exist_ok=True)
+    for i, r in enumerate(rows, 1):
+        doc = fitz.open(find_pdf(docs[r["doc_id"]]))
+        pg = doc[r["page"] - 1]
+        x0, y0, x1, y1 = r["bbox"]
+        clip = fitz.Rect(max(0, x0 - 170), y0 - 16, min(pg.rect.x1, x1 + 170), y1 + 16)
+        r["crop"] = f"sample_ext/{i:02d}_{r['family']}_{r['doc_id']}_p{r['page']}.png"
+        pg.get_pixmap(dpi=300, clip=clip).save(str(OUT / r["crop"]))
+    (ROOT / "night" / "puncfix_digit_sample_ext.json").write_text(json.dumps(
+        {"salt": EXT_SALT, "rule": "per family other than Miriam: all if <= 15, else 15 by hash, <= 8 an order",
+         "rows": rows}, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"[puncfix] sample-ext: {len(rows)} numbers — " + ", ".join(
+        f"{f} {sum(1 for r in rows if r['family'] == f)} of {len(by_fam[f])}" for f in sorted(by_fam)))
+    return 0
+
+
 # ── the write: session A's, as its own wave (v166 = raw_text only) ─────────────────────────────────────────────────
 def with_raw(text: str, old_raw: str, new_raw: str) -> str:
     """An order file's text with only its raw_text value replaced. Every other byte stays as it was — indent, key
@@ -580,7 +630,7 @@ def cmd_apply(store: Path, write: bool, expect: str | None) -> int:
 
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["classes", "families", "sample", "dry", "apply"])
+    ap.add_argument("cmd", choices=["classes", "families", "sample", "sample-ext", "dry", "apply"])
     ap.add_argument("--store", default=str(ROOT / "storage" / "json_store"))
     ap.add_argument("--write", action="store_true", help="apply only: write the corpus (session A)")
     ap.add_argument("--expect", help="apply --write: the fingerprint the dry apply printed")
@@ -591,6 +641,8 @@ def main(argv: list[str]) -> int:
         return cmd_families(Path(a.store))
     if a.cmd == "sample":
         return cmd_sample_digits(Path(a.store))
+    if a.cmd == "sample-ext":
+        return cmd_sample_ext(Path(a.store))
     if a.cmd == "apply":
         return cmd_apply(Path(a.store), a.write, a.expect)
     return cmd_dry_digits(Path(a.store))

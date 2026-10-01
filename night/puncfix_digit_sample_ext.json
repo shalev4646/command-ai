@@ -1,0 +1,310 @@
+{
+ "salt": "digits-ext-20261001",
+ "rule": "per family other than Miriam: all if <= 15, else 15 by hash, <= 8 an order",
+ "rows": [
+  {
+   "family": "David",
+   "population": 23,
+   "hash": "322c2a3fb4e5",
+   "doc_id": "35.0203",
+   "page": 2,
+   "text_layer": "782",
+   "by_glyph": "784",
+   "bbox": [
+    370.20001220703125,
+    237.9512176513672,
+    385.68182373046875,
+    249.2012176513672
+   ],
+   "crop": "sample_ext/01_David_35.0203_p2.png"
+  },
+  {
+   "family": "David",
+   "population": 23,
+   "hash": "4ce02b796c8d",
+   "doc_id": "35.0203",
+   "page": 2,
+   "text_layer": "06",
+   "by_glyph": "12",
+   "bbox": [
+    531.6500244140625,
+    672.6312866210938,
+    541.882080078125,
+    683.8812866210938
+   ],
+   "crop": "sample_ext/02_David_35.0203_p2.png"
+  },
+  {
+   "family": "David",
+   "population": 23,
+   "hash": "660f272386af",
+   "doc_id": "35.0203",
+   "page": 2,
+   "text_layer": "01",
+   "by_glyph": "10",
+   "bbox": [
+    531.6500244140625,
+    292.0012512207031,
+    541.882080078125,
+    303.2512512207031
+   ],
+   "crop": "sample_ext/03_David_35.0203_p2.png"
+  },
+  {
+   "family": "David",
+   "population": 23,
+   "hash": "7611a7e481d2",
+   "doc_id": "35.0203",
+   "page": 2,
+   "text_layer": "01",
+   "by_glyph": "90",
+   "bbox": [
+    290.6000061035156,
+    137.3512420654297,
+    300.8320617675781,
+    148.6012420654297
+   ],
+   "crop": "sample_ext/04_David_35.0203_p2.png"
+  },
+  {
+   "family": "David",
+   "population": 23,
+   "hash": "76a249dff092",
+   "doc_id": "35.0203",
+   "page": 1,
+   "text_layer": "60",
+   "by_glyph": "21",
+   "bbox": [
+    141.92999267578125,
+    480.4312744140625,
+    152.16204833984375,
+    491.6812744140625
+   ],
+   "crop": "sample_ext/05_David_35.0203_p1.png"
+  },
+  {
+   "family": "David",
+   "population": 23,
+   "hash": "7ad361b4d162",
+   "doc_id": "35.0203",
+   "page": 2,
+   "text_layer": "00",
+   "by_glyph": "11",
+   "bbox": [
+    531.6500244140625,
+    346.0612487792969,
+    541.882080078125,
+    357.3112487792969
+   ],
+   "crop": "sample_ext/06_David_35.0203_p2.png"
+  },
+  {
+   "family": "David",
+   "population": 23,
+   "hash": "7f531926ed38",
+   "doc_id": "35.0203",
+   "page": 3,
+   "text_layer": "03",
+   "by_glyph": "13",
+   "bbox": [
+    531.6500244140625,
+    85.58122253417969,
+    541.882080078125,
+    96.83122253417969
+   ],
+   "crop": "sample_ext/07_David_35.0203_p3.png"
+  },
+  {
+   "family": "David",
+   "population": 23,
+   "hash": "827c24a11564",
+   "doc_id": "33.0145",
+   "page": 26,
+   "text_layer": "44.0.23",
+   "by_glyph": "33.0145",
+   "bbox": [
+    221.3300018310547,
+    317.50994873046875,
+    256.18841552734375,
+    329.50994873046875
+   ],
+   "crop": "sample_ext/08_David_33.0145_p26.png"
+  },
+  {
+   "family": "David",
+   "population": 23,
+   "hash": "8836c19fb379",
+   "doc_id": "35.0203",
+   "page": 3,
+   "text_layer": "02",
+   "by_glyph": "16",
+   "bbox": [
+    531.6500244140625,
+    269.48126220703125,
+    541.882080078125,
+    280.73126220703125
+   ],
+   "crop": "sample_ext/09_David_35.0203_p3.png"
+  },
+  {
+   "family": "David",
+   "population": 23,
+   "hash": "b2f3036056f8",
+   "doc_id": "33.0145",
+   "page": 22,
+   "text_layer": "42",
+   "by_glyph": "24",
+   "bbox": [
+    520.9199829101562,
+    358.1899719238281,
+    531.5144653320312,
+    370.1899719238281
+   ],
+   "crop": "sample_ext/10_David_33.0145_p22.png"
+  },
+  {
+   "family": "David",
+   "population": 23,
+   "hash": "b706c7b54796",
+   "doc_id": "33.0145",
+   "page": 22,
+   "text_layer": "42",
+   "by_glyph": "24",
+   "bbox": [
+    492.70001220703125,
+    157.15997314453125,
+    503.2944641113281,
+    169.15997314453125
+   ],
+   "crop": "sample_ext/11_David_33.0145_p22.png"
+  },
+  {
+   "family": "FrankRuehl",
+   "population": 291,
+   "hash": "000464b48b30",
+   "doc_id": "33.0145",
+   "page": 12,
+   "text_layer": "43",
+   "by_glyph": "35",
+   "bbox": [
+    517.4400024414062,
+    84.19995880126953,
+    527.46044921875,
+    96.19995880126953
+   ],
+   "crop": "sample_ext/12_FrankRuehl_33.0145_p12.png"
+  },
+  {
+   "family": "FrankRuehl",
+   "population": 291,
+   "hash": "007570cdae72",
+   "doc_id": "33.0145",
+   "page": 11,
+   "text_layer": "7073",
+   "by_glyph": "2025",
+   "bbox": [
+    187.97000122070312,
+    782.5656127929688,
+    206.23202514648438,
+    793.6055908203125
+   ],
+   "crop": "sample_ext/13_FrankRuehl_33.0145_p11.png"
+  },
+  {
+   "family": "FrankRuehl",
+   "population": 291,
+   "hash": "0400501239c1",
+   "doc_id": "33.0145",
+   "page": 12,
+   "text_layer": "43",
+   "by_glyph": "37",
+   "bbox": [
+    517.4400024414062,
+    238.19000244140625,
+    527.46044921875,
+    250.19000244140625
+   ],
+   "crop": "sample_ext/14_FrankRuehl_33.0145_p12.png"
+  },
+  {
+   "family": "FrankRuehl",
+   "population": 291,
+   "hash": "043c14d5093f",
+   "doc_id": "33.0145",
+   "page": 15,
+   "text_layer": "31.07",
+   "by_glyph": "7.102",
+   "bbox": [
+    185.08999633789062,
+    543.50439453125,
+    209.5546417236328,
+    556.46435546875
+   ],
+   "crop": "sample_ext/15_FrankRuehl_33.0145_p15.png"
+  },
+  {
+   "family": "FrankRuehl",
+   "population": 291,
+   "hash": "052889bc1f70",
+   "doc_id": "33.0145",
+   "page": 11,
+   "text_layer": "47",
+   "by_glyph": "32",
+   "bbox": [
+    517.4400024414062,
+    430.2099609375,
+    527.46044921875,
+    442.2099609375
+   ],
+   "crop": "sample_ext/16_FrankRuehl_33.0145_p11.png"
+  },
+  {
+   "family": "FrankRuehl",
+   "population": 291,
+   "hash": "074dfefbd9e3",
+   "doc_id": "33.0145",
+   "page": 11,
+   "text_layer": "0410.1.030",
+   "by_glyph": "03.06.1979",
+   "bbox": [
+    197.08999633789062,
+    759.8856201171875,
+    238.29173278808594,
+    770.9255981445312
+   ],
+   "crop": "sample_ext/17_FrankRuehl_33.0145_p11.png"
+  },
+  {
+   "family": "FrankRuehl",
+   "population": 291,
+   "hash": "0817dba07365",
+   "doc_id": "33.0145",
+   "page": 24,
+   "text_layer": "..",
+   "by_glyph": "16",
+   "bbox": [
+    315.54998779296875,
+    782.5656127929688,
+    324.6920166015625,
+    793.6055908203125
+   ],
+   "crop": "sample_ext/18_FrankRuehl_33.0145_p24.png"
+  },
+  {
+   "family": "FrankRuehl",
+   "population": 291,
+   "hash": "092f3a04c5c3",
+   "doc_id": "33.0145",
+   "page": 1,
+   "text_layer": "7003",
+   "by_glyph": "2007",
+   "bbox": [
+    257.0899963378906,
+    782.5656127929688,
+    275.3520202636719,
+    793.6055908203125
+   ],
+   "crop": "sample_ext/19_FrankRuehl_33.0145_p1.png"
+  }
+ ]
+}
