@@ -45,7 +45,7 @@
  },
  "3.0110": {
   "low_support": 0,
-  "entity_misses": 0
+  "entity_misses": 1
  },
  "3.0501": {
   "low_support": 0,
@@ -60,12 +60,12 @@
   "entity_misses": 0
  },
  "30.0117": {
-  "low_support": 1,
+  "low_support": 3,
   "entity_misses": 0
  },
  "30.0118": {
-  "low_support": 1,
-  "entity_misses": 1
+  "low_support": 4,
+  "entity_misses": 0
  },
  "30.0401": {
   "low_support": 1,
@@ -148,7 +148,7 @@
   "entity_misses": 0
  },
  "31.0252": {
-  "low_support": 2,
+  "low_support": 4,
   "entity_misses": 0
  },
  "31.0308": {
@@ -189,7 +189,7 @@
  },
  "31.0504": {
   "low_support": 1,
-  "entity_misses": 0
+  "entity_misses": 2
  },
  "31.0507": {
   "low_support": 0,
@@ -216,7 +216,7 @@
   "entity_misses": 0
  },
  "31.0521": {
-  "low_support": 2,
+  "low_support": 3,
   "entity_misses": 0
  },
  "31.0601": {
@@ -288,7 +288,7 @@
   "entity_misses": 0
  },
  "32.0201": {
-  "low_support": 1,
+  "low_support": 3,
   "entity_misses": 0
  },
  "32.0202": {
@@ -316,7 +316,7 @@
   "entity_misses": 0
  },
  "32.0222": {
-  "low_support": 0,
+  "low_support": 2,
   "entity_misses": 1
  },
  "32.0223": {
@@ -341,7 +341,7 @@
  },
  "32.0314": {
   "low_support": 1,
-  "entity_misses": 1
+  "entity_misses": 5
  },
  "32.0315": {
   "low_support": 0,
@@ -492,12 +492,12 @@
   "entity_misses": 0
  },
  "33.0807": {
-  "low_support": 0,
+  "low_support": 1,
   "entity_misses": 0
  },
  "33.0808": {
   "low_support": 0,
-  "entity_misses": 0
+  "entity_misses": 4
  },
  "33.0909": {
   "low_support": 1,
@@ -612,8 +612,8 @@
   "entity_misses": 0
  },
  "35.0219": {
-  "low_support": 2,
-  "entity_misses": 1
+  "low_support": 4,
+  "entity_misses": 0
  },
  "35.0221": {
   "low_support": 2,
@@ -737,7 +737,7 @@
  },
  "36.0105": {
   "low_support": 1,
-  "entity_misses": 1
+  "entity_misses": 0
  },
  "36.0106": {
   "low_support": 0,
@@ -748,7 +748,7 @@
   "entity_misses": 0
  },
  "36.0109": {
-  "low_support": 1,
+  "low_support": 3,
   "entity_misses": 0
  },
  "36.0110": {
@@ -1016,7 +1016,7 @@
   "entity_misses": 0
  },
  "58.0217": {
-  "low_support": 0,
+  "low_support": 1,
   "entity_misses": 0
  },
  "58.0301": {
@@ -1036,7 +1036,7 @@
   "entity_misses": 0
  },
  "61.0106": {
-  "low_support": 0,
+  "low_support": 1,
   "entity_misses": 0
  },
  "61.0108": {
@@ -1136,7 +1136,7 @@
   "entity_misses": 0
  },
  "PM-33.0119": {
-  "low_support": 0,
+  "low_support": 1,
   "entity_misses": 0
  },
  "PM-33.0136": {
@@ -1196,7 +1196,7 @@
   "entity_misses": 0
  },
  "PM-33.0342": {
-  "low_support": 1,
+  "low_support": 2,
   "entity_misses": 0
  },
  "PM-33.0352": {
